@@ -1,0 +1,8 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System context - Edit, assign, and reparent work
+Person(actor, "Authorized user", "Edit, assign, and reparent work")
+System(mc, "Mission Control", "FaithTech Toronto contacts and project delivery")
+Rel(actor, mc, "Edit, assign, and reparent work")
+@enduml

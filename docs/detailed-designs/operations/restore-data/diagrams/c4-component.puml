@@ -1,0 +1,17 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components - Rehearse backup and restore
+Container_Boundary(release, "Mission Control release operations") {
+  Component(procedure, "RecoveryConsole", "Release procedure / harness", "Rehearse backup and restore")
+  Component(manifest, "RecoveryRecord", "Operational record", "Captures configuration, times and outcomes")
+  Component(verification, "API acceptance / Chromium page objects", "Behavior verification", "Checks restored data or measured views")
+}
+Container(api, "MissionControl.Api", ".NET", "Existing protected feature endpoints")
+ContainerDb(db, "Isolated SQL target", "Selected SQL provider", "Recovered records / load fixture")
+Rel(procedure, manifest, "Records exact run and results")
+Rel(procedure, db, "Provider command / fixture setup")
+Rel(procedure, verification, "Runs behavior checks")
+Rel(verification, api, "Calls existing endpoints", "HTTPS")
+Rel(api, db, "Reads / commits behavior", "SQL")
+@enduml

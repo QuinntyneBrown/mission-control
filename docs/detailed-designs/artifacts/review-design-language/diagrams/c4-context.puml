@@ -1,0 +1,8 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System context - Review the standalone design language
+Person(reviewer, "Design reviewer", "Reviews static design language and proposed workflows")
+System(artifact, "Review the standalone design language", "Static artifact without application database writes")
+Rel(reviewer, artifact, "Reviews manually")
+@enduml

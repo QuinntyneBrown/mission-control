@@ -1,0 +1,116 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Create and navigate the work hierarchy
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class WorkHierarchyPage {
+  +routeContext: Signal<RouteContext>
+  +openDialog(): void
+}
+class WorkItemView {
+  +state: Signal<FeatureState>
+  +submit(): void
+}
+interface IWorkItemService {
+  +create(request: CreateWorkItemCommand): Promise<FeatureResult>
+  +navigate(request: GetWorkItemsQuery): Promise<FeatureResult>
+}
+class WorkItemService {
+  -http: HttpClient
+}
+class WorkItemsController {
+  -sender: ISender
+}
+class WorkItem {
+  +id: Guid
+  +workspaceId: Guid
+  +parentId: Guid?
+  +type: WorkItemType
+  +title: string
+  +description: string?
+  +status: WorkStatus
+  +siblingPosition: int
+  +assigneeId: Guid?
+  +startDate: DateOnly?
+  +dueDate: DateOnly?
+  +storyEstimate: int?
+  +version: long
+  +createChild(type: WorkItemType, title: string): WorkItem
+}
+interface IMissionControlDataSession {
+  +query(specification): Task<ReadResult>
+  +commit(expectedVersion: long): Task<void>
+}
+class MissionControlDataSession {
+  -connection: DbConnection
+}
+WorkHierarchyPage --> WorkItemView : composes
+WorkItemView ..> IWorkItemService : inject token
+IWorkItemService <|.. WorkItemService
+IMissionControlDataSession <|.. MissionControlDataSession
+class CreateWorkItemCommand {
+  +workspaceId: Guid
+  +type: WorkItemType
+  +parentId: Guid?
+  +title: string
+  +description: string?
+  +assigneeId: Guid?
+  +startDate: DateOnly?
+  +dueDate: DateOnly?
+  +storyEstimate: int?
+}
+class CreateWorkItemCommandHandler {
+  +handle(request: CreateWorkItemCommand): Task<FeatureResult>
+}
+WorkItemsController ..> CreateWorkItemCommand : dispatches
+CreateWorkItemCommandHandler ..> CreateWorkItemCommand : handles
+CreateWorkItemCommandHandler --> WorkItem : loads / applies
+CreateWorkItemCommandHandler ..> IMissionControlDataSession : uses
+class GetWorkItemsQuery {
+  +workspaceId: Guid
+  +itemId: Guid?
+  +parentId: Guid?
+  +type: WorkItemType?
+  +status: WorkStatus?
+  +page: int
+  +pageSize: int
+}
+class GetWorkItemsQueryHandler {
+  +handle(request: GetWorkItemsQuery): Task<FeatureResult>
+}
+WorkItemsController ..> GetWorkItemsQuery : dispatches
+GetWorkItemsQueryHandler ..> GetWorkItemsQuery : handles
+GetWorkItemsQueryHandler --> WorkItem : loads / applies
+GetWorkItemsQueryHandler ..> IMissionControlDataSession : uses
+
+enum WorkItemType {
+  Initiative
+  Epic
+  Story
+  Task
+}
+enum WorkStatus {
+  ToDo
+  InProgress
+  Done
+}
+WorkItem --> WorkItemType : immutable level
+WorkItem --> WorkStatus : current status
+WorkItem "0..1" <-- "*" WorkItem : parent / children
+@enduml

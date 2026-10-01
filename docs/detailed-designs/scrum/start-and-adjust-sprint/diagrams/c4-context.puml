@@ -1,0 +1,8 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System context - Start a sprint and change its active scope
+Person(actor, "Authorized user", "Start a sprint and change its active scope")
+System(mc, "Mission Control", "FaithTech Toronto contacts and project delivery")
+Rel(actor, mc, "Start a sprint and change its active scope")
+@enduml

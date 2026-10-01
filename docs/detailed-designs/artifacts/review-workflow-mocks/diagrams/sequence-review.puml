@@ -1,0 +1,42 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Manual review - Review workflow mock artifacts
+actor "Design reviewer" as reviewer
+box "Frontend - Standalone static artifact" #E0F2FE
+  participant "MockViewer" as catalog
+  participant "Static specimen / state" as example
+  participant "--mc- token stylesheet" as tokens
+end box
+box "Backend - Application runtime excluded" #D1FADF
+  participant "No API or SQL dependency" as excluded
+end box
+reviewer -> catalog : Open independent catalog / offline file
+catalog -> example : Select named specimen or workflow state
+example -> tokens : Read visual roles
+tokens --> example : Token values
+example --> catalog : Static rendering; visible artifact label for mocks
+catalog --> reviewer : L2-048 review at required compact/medium/expanded widths
+alt Missing coverage / feedback or unreadable layout
+  reviewer -> catalog : Record review issue; revise artifact sources
+  catalog --> reviewer : Revised specimen for manual review
+else Review criteria satisfied
+  reviewer -> catalog : Record manual review outcome
+  catalog --> reviewer : Artifact remains static; no ATDD or tests
+end
+note over catalog, excluded
+No authentication, network mutation, or application database persistence occurs.
+end note
+@enduml

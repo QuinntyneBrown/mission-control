@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Add or edit work item · Mission Control mock</title>
+  <meta name="description" content="Work item form dialog for initiatives, epics, stories, and tasks: parents, assignee, dates, estimate, validation, rejected assignee, deleted parent, saving, failure, and edit conflict.">
+  <meta name="mock-area" content="Work hierarchy">
+  <meta name="mock-requirements" content="L2-015, L2-016, L2-031, L2-033.2, L2-034.1, L2-041.3, L2-041.4, L2-043.4">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body>
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Work · Add or edit item</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="create-initiative">Add initiative</option>
+          <option value="create-epic">Add epic (parent prefilled)</option>
+          <option value="create-story">Add story</option>
+          <option value="create-task">Add task</option>
+          <option value="edit">Edit story</option>
+          <option value="validation">Validation errors</option>
+          <option value="rejected">Inactive assignee rejected</option>
+          <option value="parent-deleted">Parent deleted meanwhile</option>
+          <option value="saving">Saving</option>
+          <option value="failed">Save failed</option>
+          <option value="conflict">Edit conflict</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="create-initiative">Opens from "Add initiative". Initiatives are top level, so there is no parent field. New items start in To Do. Focus moves to Title; below 576px the dialog fills the screen with actions pinned to the bottom.</p>
+    <p class="mock-note" data-when="create-epic" hidden>Launched from an initiative's "Add epic", so the parent is prefilled. Only initiatives in this project are offered.</p>
+    <p class="mock-note" data-when="create-story" hidden>Parents are grouped by initiative and limited to this project. The estimate is optional and must be a whole number of 0 or more.</p>
+    <p class="mock-note" data-when="create-task" hidden>Tasks have no estimate and follow their story's sprint.</p>
+    <p class="mock-note" data-when="edit" hidden>Editing adds Status. Clearing an optional field removes its value when saved. The parent changes only through "Move to another parent", which keeps IDs and sprint membership.</p>
+    <p class="mock-note" data-when="validation" hidden>Focus moves to the error summary; each link jumps to its field. Valid input is kept.</p>
+    <p class="mock-note" data-when="rejected" hidden>Jordan Reyes was active when the form opened but was deactivated before saving, so the server rejected the assignment. Nothing was saved; everything else is kept.</p>
+    <p class="mock-note" data-when="parent-deleted" hidden>The chosen epic was deleted while the form was open. The server refused to create an orphan, so nothing was saved.</p>
+    <p class="mock-note" data-when="saving" hidden>One request at a time: the button shows progress and repeat clicks are ignored.</p>
+    <p class="mock-note" data-when="failed" hidden>Nothing was saved and every value is kept. The button retries the same request.</p>
+    <p class="mock-note" data-when="conflict" hidden>The story changed after this form opened. Edits are kept and never resubmitted automatically; "Reload latest" loads the saved version and keeps the comparison visible.</p>
+  </div>
+
+  <div class="mock-screen">
+    <div class="mock-screen__page" inert>
+      <div class="mc-app">
+        <header class="mc-topbar">
+          <span class="mc-button mc-button--quiet mc-button--icon"><span class="mc-icon mc-icon--menu" aria-hidden="true"></span></span>
+          <span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span>
+        </header>
+        <div class="mc-sidebar">
+          <div class="mc-sidebar__head"><span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span></div>
+          <ul class="mc-nav">
+            <li><span class="mc-nav__link"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></span></li>
+            <li><span class="mc-nav__link"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></span></li>
+            <li><span class="mc-nav__link" aria-current="page"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></span></li>
+          </ul>
+          <div class="mc-nav-section">
+            <p class="mc-nav__group">Administration</p>
+            <ul class="mc-nav">
+              <li><span class="mc-nav__link"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></span></li>
+              <li><span class="mc-nav__link"><span class="mc-icon mc-icon--audit" aria-hidden="true"></span><span class="mc-nav__text">Audit log</span></span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="mc-main">
+          <div class="mc-page">
+            <div class="mc-page-header">
+              <div class="mc-page-header__main">
+                <p class="mc-h1">Community Hackathon 2026</p>
+                <div class="mc-page-header__meta"><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span><span>Responsible lead: Rafael Da Silva</span></div>
+              </div>
+              <div class="mc-page-header__actions"><span class="mc-button mc-button--primary"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add initiative</span></div>
+            </div>
+            <div class="mc-tabs">
+              <span class="mc-tabs__link"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</span>
+              <span class="mc-tabs__link" aria-current="page"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</span>
+              <span class="mc-tabs__link"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</span>
+              <span class="mc-tabs__link"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</span>
+              <span class="mc-tabs__link"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</span>
+            </div>
+            <div class="mc-card">
+              <div class="mc-stack mc-stack--xs">
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--initiative" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--initiative" aria-hidden="true"></span></span><span class="mc-type__label">Initiative</span></span>
+                  <div class="mc-tree__main"><span class="mc-tree__title">Grow Toronto's builder community</span><span class="mc-tree__meta"><span>HCK-101</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></span></div>
+                </div>
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--epic" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--epic" aria-hidden="true"></span></span><span class="mc-type__label">Epic</span></span>
+                  <div class="mc-tree__main"><span class="mc-tree__title">Hackathon team formation</span><span class="mc-tree__meta"><span>HCK-104</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></span></div>
+                </div>
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--story" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--story" aria-hidden="true"></span></span><span class="mc-type__label">Story</span></span>
+                  <div class="mc-tree__main"><span class="mc-tree__title">Volunteers can join a build team</span><span class="mc-tree__meta"><span>HCK-112</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></span></div>
+                </div>
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--epic" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--epic" aria-hidden="true"></span></span><span class="mc-type__label">Epic</span></span>
+                  <div class="mc-tree__main"><span class="mc-tree__title">Venue and logistics</span><span class="mc-tree__meta"><span>HCK-105</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span></span></div>
+                </div>
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--story" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--story" aria-hidden="true"></span></span><span class="mc-type__label">Story</span></span>
+                  <div class="mc-tree__main"><span class="mc-tree__title">Confirm venue accessibility checklist</span><span class="mc-tree__meta"><span>HCK-120</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span></span></div>
+                </div>
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--story" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--story" aria-hidden="true"></span></span><span class="mc-type__label">Story</span></span>
+                  <div class="mc-tree__main"><span class="mc-tree__title">Book AV for demo day</span><span class="mc-tree__meta"><span>HCK-121</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mc-backdrop">
+      <section class="mc-dialog mc-dialog--sheet" role="dialog" aria-modal="true" aria-labelledby="work-dialog-title" aria-describedby="work-dialog-note">
+        <header class="mc-dialog__header">
+          <div class="mc-dialog__heading">
+            <h2 class="mc-dialog__title" id="work-dialog-title">
+              <span data-when="create-initiative">Add initiative</span>
+              <span data-when="create-epic" hidden>Add epic</span>
+              <span data-when="create-story validation rejected parent-deleted saving failed" hidden>Add story</span>
+              <span data-when="create-task" hidden>Add task</span>
+              <span data-when="edit conflict" hidden>Edit story</span>
+            </h2>
+            <p class="mc-dialog__subtitle" id="work-dialog-note"><span data-when="edit conflict" hidden>HCK-112 · </span>Community Hackathon 2026 · Title is required; everything else is optional.</p>
+          </div>
+          <button class="mc-button mc-button--quiet mc-button--icon" type="button" aria-label="Close" data-nav="work-hierarchy.html"
+            data-attr-validation="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-rejected="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-parent-deleted="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-saving="disabled"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+        </header>
+
+        <form class="mc-dialog__form" novalidate data-goto-state="saving">
+          <div class="mc-dialog__body">
+            <div class="mc-live" role="alert">
+              <div class="mc-error-summary" tabindex="-1" aria-labelledby="work-errors-title" data-when="validation" hidden>
+                <p class="mc-error-summary__title" id="work-errors-title"><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Fix 3 problems to add this story</p>
+                <ul>
+                  <li><a href="#work-title">Enter a title</a></li>
+                  <li><a href="#work-due">Choose a due date on or after the start date</a></li>
+                  <li><a href="#work-estimate">Enter the estimate as a whole number of 0 or more</a></li>
+                </ul>
+              </div>
+              <div class="mc-alert mc-alert--danger" data-when="rejected" hidden>
+                <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">Jordan Reyes can't be assigned</p>
+                  <p class="mc-alert__text">Their account is inactive. Choose an active person or leave the story unassigned. Nothing was saved.</p>
+                </div>
+              </div>
+              <div class="mc-alert mc-alert--danger" data-when="parent-deleted" hidden>
+                <span class="mc-icon mc-icon--x-circle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">The parent epic no longer exists</p>
+                  <p class="mc-alert__text">Venue and logistics was deleted while you were working, so the story wasn't added. Choose another epic and save again.</p>
+                </div>
+              </div>
+              <div class="mc-alert mc-alert--danger" data-when="failed" hidden>
+                <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">We couldn't add this story</p>
+                  <p class="mc-alert__text">Nothing was saved, and your entries are still here. Try again.</p>
+                  <p class="mc-ref">Reference ID <code>a64d-1f90-7ce2</code>
+              <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="a64d-1f90-7ce2"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+            </p>
+                </div>
+              </div>
+              <div class="mc-alert mc-alert--warning" data-when="conflict" hidden>
+                <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">This story changed while you were editing</p>
+                  <p class="mc-alert__text">Priya Raman saved changes at 11:05 a.m. Your edits haven't been saved. Compare them, then reload the latest version and re-apply what you need.</p>
+                </div>
+              </div>
+            </div>
+            <div class="mc-table-wrap" data-when="conflict" hidden>
+              <table class="mc-table mc-table--stack">
+                <caption class="mc-visually-hidden">Your edits compared with the latest saved version</caption>
+                <thead><tr><th scope="col">Field</th><th scope="col">Your edit</th><th scope="col">Latest saved</th></tr></thead>
+                <tbody>
+                  <tr class="mc-table__row--highlight"><td class="mc-table__primary">Due date</td><td data-label="Your edit">Oct 9, 2026</td><td data-label="Latest saved">Oct 7, 2026</td></tr>
+                  <tr class="mc-table__row--highlight"><td class="mc-table__primary">Assignee</td><td data-label="Your edit">Mateo Silva</td><td data-label="Latest saved">Ada Okafor</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="mc-form-grid">
+              <div class="mc-field mc-field--full">
+                <label class="mc-label" for="work-title">Title</label>
+                <input class="mc-input" id="work-title" type="text" maxlength="200" required autocomplete="off"
+                  data-attr-validation="aria-invalid=true|aria-describedby=work-title-error"
+                  data-attr-rejected="value=Volunteer check-in list"
+                  data-attr-parent-deleted="value=Volunteer check-in list"
+                  data-attr-saving="value=Volunteer check-in list|readonly"
+                  data-attr-failed="value=Volunteer check-in list"
+                  data-attr-edit="value=Volunteers can join a build team"
+                  data-attr-conflict="value=Volunteers can join a build team">
+                <p class="mc-field-error" id="work-title-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Enter a title</p>
+              </div>
+
+              <div class="mc-field mc-field--full">
+                <label class="mc-label" for="work-description">Description <span class="mc-label__optional">(optional)</span></label>
+                <textarea class="mc-textarea" id="work-description" maxlength="10000" aria-describedby="work-description-count"
+                  data-attr-validation="value=A printed and on-screen list for checking volunteers in at the door."
+                  data-attr-rejected="value=A printed and on-screen list for checking volunteers in at the door."
+                  data-attr-parent-deleted="value=A printed and on-screen list for checking volunteers in at the door."
+                  data-attr-saving="value=A printed and on-screen list for checking volunteers in at the door.|readonly"
+                  data-attr-failed="value=A printed and on-screen list for checking volunteers in at the door."
+                  data-attr-edit="value=Volunteers choose a build team while they register, so mentors and the venue can plan for team sizes."
+                  data-attr-conflict="value=Volunteers choose a build team while they register, so mentors and the venue can plan for team sizes."></textarea>
+                <div class="mc-field__footer"><span class="mc-counter" id="work-description-count"><span data-unless="validation rejected parent-deleted saving failed edit conflict">0</span><span data-when="validation rejected parent-deleted saving failed" hidden>68</span><span data-when="edit conflict" hidden>106</span> / 10,000</span></div>
+              </div>
+
+              <p class="mc-hint mc-field--full" data-when="create-initiative"><span class="mc-icon mc-icon--initiative mc-icon--sm" aria-hidden="true"></span> Initiatives are top level, so they have no parent.</p>
+
+              <div class="mc-field mc-field--full" data-when="create-epic" hidden>
+                <label class="mc-label" for="work-parent-initiative">Parent initiative</label>
+                <span class="mc-select-wrap">
+                  <select class="mc-select" id="work-parent-initiative" required>
+                    <option selected>Grow Toronto's builder community</option>
+                    <option>Demo day showcase</option>
+                  </select>
+                </span>
+              </div>
+
+              <div class="mc-field mc-field--full" data-when="create-story validation rejected parent-deleted saving failed" hidden>
+                <label class="mc-label" for="work-parent-epic">Parent epic</label>
+                <span class="mc-select-wrap">
+                  <select class="mc-select" id="work-parent-epic" required
+                  data-attr-parent-deleted="aria-invalid=true|aria-describedby=work-parent-error">
+                    <option value="" data-attr-parent-deleted="selected">Choose a parent epic</option>
+                    <optgroup label="Grow Toronto's builder community">
+                      <option selected data-attr-parent-deleted="!selected">Hackathon team formation</option>
+                      <option data-unless="parent-deleted">Venue and logistics</option>
+                    </optgroup>
+                    <optgroup label="Demo day showcase">
+                      <option>Judging and feedback</option>
+                    </optgroup>
+                  </select>
+                </span>
+                <p class="mc-field-error" id="work-parent-error" data-when="parent-deleted" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Venue and logistics was deleted. Choose another epic.</p>
+              </div>
+
+              <div class="mc-field mc-field--full" data-when="create-task" hidden>
+                <label class="mc-label" for="work-parent-story">Parent story</label>
+                <p class="mc-hint" id="work-parent-story-hint">Tasks follow their story's sprint. This one will be in Sprint 8.</p>
+                <span class="mc-select-wrap">
+                  <select class="mc-select" id="work-parent-story" required aria-describedby="work-parent-story-hint">
+                    <optgroup label="Hackathon team formation">
+                      <option selected>Volunteers can join a build team</option>
+                      <option>Mentors can see team needs</option>
+                      <option>Teams can register a project idea</option>
+                      <option>Mentor matching survey</option>
+                    </optgroup>
+                    <optgroup label="Venue and logistics">
+                      <option>Confirm venue accessibility checklist</option>
+                      <option>Venue floor plan with accessible routes</option>
+                      <option>Book AV for demo day</option>
+                    </optgroup>
+                  </select>
+                </span>
+              </div>
+
+              <div class="mc-field mc-field--full" data-when="edit conflict" hidden>
+                <span class="mc-label">Parent epic</span>
+                <p class="mc-text-sm">Hackathon team formation <span class="mc-muted">· to change it, use "Move to another parent"</span></p>
+              </div>
+
+              <div class="mc-field" data-when="edit conflict" hidden>
+                <label class="mc-label" for="work-status">Status</label>
+                <span class="mc-select-wrap">
+                  <select class="mc-select" id="work-status">
+                    <option>To Do</option>
+                    <option selected>In Progress</option>
+                    <option>Done</option>
+                  </select>
+                </span>
+              </div>
+
+              <div class="mc-field">
+                <label class="mc-label" for="work-assignee">Assignee <span class="mc-label__optional">(optional)</span></label>
+                <span class="mc-select-wrap">
+                  <select class="mc-select" id="work-assignee" aria-describedby="work-assignee-hint"
+                  data-attr-rejected="aria-invalid=true|aria-describedby=work-assignee-error work-assignee-hint">
+                    <option selected>Unassigned</option>
+                    <option>Quinntyne Brown</option>
+                    <option>Priya Raman</option>
+                    <option data-attr-edit="selected">Ada Okafor</option>
+                    <option data-attr-conflict="selected">Mateo Silva</option>
+                    <option data-when="rejected" hidden data-attr-rejected="selected">Jordan Reyes</option>
+                  </select>
+                </span>
+                <p class="mc-hint" id="work-assignee-hint">Only active people are listed.</p>
+                <p class="mc-field-error" id="work-assignee-error" data-when="rejected" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Jordan Reyes is inactive. Choose an active person.</p>
+              </div>
+
+              <div class="mc-field">
+                <label class="mc-label" for="work-start">Start date <span class="mc-label__optional">(optional)</span></label>
+                <input class="mc-input" id="work-start" type="date"
+                  data-attr-validation="value=2026-10-07"
+                  data-attr-edit="value=2026-09-28"
+                  data-attr-conflict="value=2026-09-28">
+              </div>
+
+              <div class="mc-field">
+                <label class="mc-label" for="work-due">Due date <span class="mc-label__optional">(optional)</span></label>
+                <input class="mc-input" id="work-due" type="date"
+                  data-attr-validation="value=2026-10-02|aria-invalid=true|aria-describedby=work-due-error"
+                  data-attr-edit="value=2026-10-07"
+                  data-attr-conflict="value=2026-10-09">
+                <p class="mc-field-error" id="work-due-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Choose a due date on or after the start date (Oct 7, 2026)</p>
+              </div>
+
+              <div class="mc-field" data-when="create-story validation rejected parent-deleted saving failed edit conflict" hidden>
+                <label class="mc-label" for="work-estimate">Estimate <span class="mc-label__optional">(optional)</span></label>
+                <input class="mc-input" id="work-estimate" type="text" inputmode="numeric" autocomplete="off" aria-describedby="work-estimate-hint"
+                  data-attr-validation="value=2.5|aria-invalid=true|aria-describedby=work-estimate-error work-estimate-hint"
+                  data-attr-rejected="value=2"
+                  data-attr-parent-deleted="value=2"
+                  data-attr-saving="value=2|readonly"
+                  data-attr-failed="value=2"
+                  data-attr-edit="value=5"
+                  data-attr-conflict="value=5">
+                <p class="mc-hint" id="work-estimate-hint">A whole number, 0 or more.</p>
+                <p class="mc-field-error" id="work-estimate-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Enter the estimate as a whole number of 0 or more</p>
+              </div>
+
+              <p class="mc-hint mc-field--full" data-unless="edit conflict">New items start in To Do.</p>
+            </div>
+          </div>
+
+          <footer class="mc-dialog__footer">
+            <button class="mc-button" type="button" data-nav="work-hierarchy.html"
+            data-attr-validation="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-rejected="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-parent-deleted="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+              data-attr-saving="disabled">Cancel</button>
+            <button class="mc-button mc-button--primary" type="button" data-when="conflict" hidden data-goto-state="edit"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Reload latest</button>
+            <button class="mc-button mc-button--primary" type="submit" data-unless="conflict"
+              data-attr-saving="aria-busy=true|aria-disabled=true">
+              <span class="mc-spinner" aria-hidden="true" data-when="saving" hidden></span>
+              <span data-when="saving" hidden>Saving…</span>
+              <span data-when="create-initiative">Add initiative</span>
+              <span data-when="create-epic" hidden>Add epic</span>
+              <span data-when="create-story validation rejected parent-deleted failed" hidden>Add story</span>
+              <span data-when="create-task" hidden>Add task</span>
+              <span data-when="edit" hidden>Save changes</span>
+            </button>
+          </footer>
+        </form>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

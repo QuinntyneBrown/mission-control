@@ -1,0 +1,8 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System context - Sign in and end a session
+Person(actor, "Account holder", "Sign in and end a session")
+System(mc, "Mission Control", "FaithTech Toronto contacts and project delivery")
+Rel(actor, mc, "Sign in and end a session")
+@enduml

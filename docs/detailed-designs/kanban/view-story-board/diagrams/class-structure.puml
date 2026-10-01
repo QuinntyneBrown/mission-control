@@ -1,0 +1,75 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - View the Kanban story board
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class KanbanBoardPage {
+  +routeContext: Signal<RouteContext>
+  +openDialog(): void
+}
+class BoardView {
+  +state: Signal<FeatureState>
+  +submit(): void
+}
+interface IBoardService {
+  +read(request: GetKanbanBoardQuery): Promise<FeatureResult>
+}
+class BoardService {
+  -http: HttpClient
+}
+class BoardsController {
+  -sender: ISender
+}
+class BoardCard {
+  +storyId: Guid
+  +title: string
+  +assigneeName: string?
+  +status: WorkStatus
+  +position: int
+  +completedTasks: int
+  +totalTasks: int
+  +storyVersion: long
+  +boardVersion: long
+}
+interface IMissionControlDataSession {
+  +query(specification): Task<ReadResult>
+  +commit(expectedVersion: long): Task<void>
+}
+class MissionControlDataSession {
+  -connection: DbConnection
+}
+KanbanBoardPage --> BoardView : composes
+BoardView ..> IBoardService : inject token
+IBoardService <|.. BoardService
+IMissionControlDataSession <|.. MissionControlDataSession
+class GetKanbanBoardQuery {
+  +workspaceId: Guid
+  +status: WorkStatus?
+  +page: int
+  +pageSize: int
+}
+class GetKanbanBoardQueryHandler {
+  +handle(request: GetKanbanBoardQuery): Task<FeatureResult>
+}
+BoardsController ..> GetKanbanBoardQuery : dispatches
+GetKanbanBoardQueryHandler ..> GetKanbanBoardQuery : handles
+GetKanbanBoardQueryHandler --> BoardCard : loads / applies
+GetKanbanBoardQueryHandler ..> IMissionControlDataSession : uses
+
+@enduml

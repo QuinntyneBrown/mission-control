@@ -1,0 +1,125 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Provision and manage accounts
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class AccountsPage {
+  +routeContext: Signal<RouteContext>
+  +openDialog(): void
+}
+class AccountView {
+  +state: Signal<FeatureState>
+  +submit(): void
+}
+interface IAccountService {
+  +read(request: GetAccountQuery): Promise<FeatureResult>
+  +provision(request: ProvisionAccountCommand): Promise<FeatureResult>
+  +change_access(request: UpdateAccountCommand): Promise<FeatureResult>
+  +replace_password(request: ReplacePasswordCommand): Promise<FeatureResult>
+}
+class AccountService {
+  -http: HttpClient
+}
+class AccountsController {
+  -sender: ISender
+}
+class UserAccount {
+  +id: Guid
+  +firstName: string
+  +lastName: string
+  +normalizedEmail: string
+  +role: AccountRole
+  +active: bool
+  +passwordHash: string
+  +credentialVersion: long
+  +version: long
+  +changeAccess(role: AccountRole, active: bool): void
+  +replacePassword(hash: string): void
+}
+interface IMissionControlDataSession {
+  +query(specification): Task<ReadResult>
+  +commit(expectedVersion: long): Task<void>
+}
+class MissionControlDataSession {
+  -connection: DbConnection
+}
+AccountsPage --> AccountView : composes
+AccountView ..> IAccountService : inject token
+IAccountService <|.. AccountService
+IMissionControlDataSession <|.. MissionControlDataSession
+class GetAccountQuery {
+  +id: Guid?
+  +page: int
+  +pageSize: int
+}
+class GetAccountQueryHandler {
+  +handle(request: GetAccountQuery): Task<FeatureResult>
+}
+AccountsController ..> GetAccountQuery : dispatches
+GetAccountQueryHandler ..> GetAccountQuery : handles
+GetAccountQueryHandler --> UserAccount : loads / applies
+GetAccountQueryHandler ..> IMissionControlDataSession : uses
+class ProvisionAccountCommand {
+  +firstName: string
+  +lastName: string
+  +email: string
+  +password: string
+  +role: AccountRole
+}
+class ProvisionAccountCommandHandler {
+  +handle(request: ProvisionAccountCommand): Task<FeatureResult>
+}
+AccountsController ..> ProvisionAccountCommand : dispatches
+ProvisionAccountCommandHandler ..> ProvisionAccountCommand : handles
+ProvisionAccountCommandHandler --> UserAccount : loads / applies
+ProvisionAccountCommandHandler ..> IMissionControlDataSession : uses
+class UpdateAccountCommand {
+  +id: Guid
+  +firstName: string
+  +lastName: string
+  +role: AccountRole
+  +active: bool
+  +expectedVersion: long
+}
+class UpdateAccountCommandHandler {
+  +handle(request: UpdateAccountCommand): Task<FeatureResult>
+}
+AccountsController ..> UpdateAccountCommand : dispatches
+UpdateAccountCommandHandler ..> UpdateAccountCommand : handles
+UpdateAccountCommandHandler --> UserAccount : loads / applies
+UpdateAccountCommandHandler ..> IMissionControlDataSession : uses
+class ReplacePasswordCommand {
+  +id: Guid
+  +password: string
+  +expectedVersion: long
+}
+class ReplacePasswordCommandHandler {
+  +handle(request: ReplacePasswordCommand): Task<FeatureResult>
+}
+AccountsController ..> ReplacePasswordCommand : dispatches
+ReplacePasswordCommandHandler ..> ReplacePasswordCommand : handles
+ReplacePasswordCommandHandler --> UserAccount : loads / applies
+ReplacePasswordCommandHandler ..> IMissionControlDataSession : uses
+
+enum AccountRole {
+  Administrator
+  Collaborator
+}
+UserAccount --> AccountRole : SQL authority
+@enduml

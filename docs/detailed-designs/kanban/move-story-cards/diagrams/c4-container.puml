@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers - Move and reorder story cards
+Person(actor, "Authorized user", "Move and reorder story cards")
+System_Boundary(mc, "Mission Control") {
+  Container(web, "Mission Control web client", "Angular", "Move and reorder story cards")
+  Container(api, "MissionControl.Api", ".NET", "Authorized application handlers")
+  ContainerDb(db, "Mission Control database", "SQL - provider <TO SUPPLY>", "BoardPlacement and related records")
+}
+Rel(actor, web, "Uses")
+Rel(web, api, "Requests feature behavior", "HTTPS / JSON")
+Rel(api, db, "Reads or commits feature records", "Parameterized SQL")
+@enduml

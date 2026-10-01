@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Change delivery mode · Mission Control mock</title>
+  <meta name="description" content="Delivery-mode confirmation for Scrum to Kanban and Kanban to Scrum, listing what is kept, plus the active-sprint block, progress, and failure.">
+  <meta name="mock-area" content="Projects">
+  <meta name="mock-requirements" content="L2-005, L2-027, L2-031.5, L2-033.2, L2-043.4">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body>
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Projects · Change delivery mode</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="to-kanban">Scrum to Kanban</option>
+          <option value="to-scrum">Kanban to Scrum</option>
+          <option value="blocked">Blocked by active sprint</option>
+          <option value="saving">Switching</option>
+          <option value="failed">Switch failed</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="to-kanban">Administrator-only. Shown as if Community Hackathon 2026 had no active sprint. Focus starts on Cancel; Escape closes without changes. Success shows "Now using Kanban — Sprint plans and history are kept."</p>
+    <p class="mock-note" data-when="to-scrum" hidden>Switching back to Scrum restores planning and starting for the kept Sprint 3 plan, and Sprints 1–2 history stays readable. Success shows "Now using Scrum — Your sprint plans and history are available again."</p>
+    <p class="mock-note" data-when="blocked" hidden>While Sprint 8 is active the API answers 409 and nothing changes. The dialog explains the fix instead of offering the switch.</p>
+    <p class="mock-note" data-when="saving" hidden>The confirm button shows progress and ignores repeat clicks. The switch is atomic: everything changes, or nothing does.</p>
+    <p class="mock-note" data-when="failed" hidden>Nothing changed. "Switch to Kanban" tries again; the reference ID matches the server's diagnostic record.</p>
+  </div>
+
+  <div class="mock-screen">
+    <div class="mock-screen__page" inert>
+      <div class="mc-app">
+        <header class="mc-topbar">
+          <span class="mc-button mc-button--quiet mc-button--icon"><span class="mc-icon mc-icon--menu" aria-hidden="true"></span></span>
+          <span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span>
+        </header>
+        <div class="mc-sidebar">
+          <div class="mc-sidebar__head"><span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span></div>
+          <ul class="mc-nav">
+        <li><span class="mc-nav__link"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></span></li>
+        <li><span class="mc-nav__link"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></span></li>
+        <li><span class="mc-nav__link" aria-current="page"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></span></li>
+          </ul>
+          <div class="mc-nav-section">
+            <p class="mc-nav__group">Administration</p>
+            <ul class="mc-nav">
+          <li><span class="mc-nav__link"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></span></li>
+          <li><span class="mc-nav__link"><span class="mc-icon mc-icon--audit" aria-hidden="true"></span><span class="mc-nav__text">Audit log</span></span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="mc-main">
+          <div class="mc-page">
+            <div data-unless="to-scrum">
+            <div class="mc-breadcrumbs"><ol><li><span>Projects</span></li><li><span aria-current="page">Community Hackathon 2026</span></li></ol></div>
+            <div class="mc-page-header">
+              <div class="mc-page-header__main">
+                <p class="mc-h1">Community Hackathon 2026</p>
+                <div class="mc-page-header__meta"><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span><span>Responsible lead: Rafael Da Silva</span></div>
+              </div>
+              <div class="mc-page-header__actions"><span class="mc-button">Project actions<span class="mc-icon mc-icon--chevron-down mc-icon--sm" aria-hidden="true"></span></span></div>
+            </div>
+            <ul class="mc-tabs">
+              <li><span class="mc-tabs__link" aria-current="page"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</span></li>
+            </ul>
+            <div class="mc-split">
+              <div class="mc-card mc-stack mc-stack--sm"><p class="mc-h3">About this project</p><span class="mc-skeleton mc-w-80"></span><span class="mc-skeleton mc-w-60"></span></div>
+              <div class="mc-card mc-stack mc-stack--sm"><p class="mc-h3">Delivery</p><span class="mc-skeleton mc-w-60"></span><span class="mc-skeleton mc-w-40"></span></div>
+            </div>
+            </div>
+            <div data-when="to-scrum" hidden>
+            <div class="mc-breadcrumbs"><ol><li><span>Projects</span></li><li><span aria-current="page">Prayer Wall App</span></li></ol></div>
+            <div class="mc-page-header">
+              <div class="mc-page-header__main">
+                <p class="mc-h1">Prayer Wall App</p>
+                <div class="mc-page-header__meta"><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span><span>Responsible lead: Grace Mensah</span></div>
+              </div>
+              <div class="mc-page-header__actions"><span class="mc-button">Project actions<span class="mc-icon mc-icon--chevron-down mc-icon--sm" aria-hidden="true"></span></span></div>
+            </div>
+            <ul class="mc-tabs">
+              <li><span class="mc-tabs__link" aria-current="page"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</span></li>
+            </ul>
+            <div class="mc-split">
+              <div class="mc-card mc-stack mc-stack--sm"><p class="mc-h3">About this project</p><span class="mc-skeleton mc-w-80"></span><span class="mc-skeleton mc-w-60"></span></div>
+              <div class="mc-card mc-stack mc-stack--sm"><p class="mc-h3">Delivery</p><span class="mc-skeleton mc-w-60"></span><span class="mc-skeleton mc-w-40"></span></div>
+            </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mc-backdrop">
+      <section class="mc-dialog mc-dialog--sm" role="alertdialog" aria-modal="true" aria-labelledby="mode-title" aria-describedby="mode-text">
+        <header class="mc-dialog__header">
+          <span class="mc-dialog__icon" data-unless="blocked"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span></span>
+          <span class="mc-dialog__icon mc-dialog__icon--warning" data-when="blocked" hidden><span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span></span>
+          <div class="mc-dialog__heading">
+            <h2 class="mc-dialog__title" id="mode-title">
+              <span data-when="to-kanban saving failed">Switch Community Hackathon 2026 to Kanban?</span>
+              <span data-when="to-scrum" hidden>Switch Prayer Wall App to Scrum?</span>
+              <span data-when="blocked" hidden>Close Sprint 8 first</span>
+            </h2>
+          </div>
+        </header>
+
+        <div class="mc-dialog__body">
+          <div class="mc-live" role="alert">
+            <div class="mc-alert mc-alert--danger" data-when="failed" hidden>
+              <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+              <div class="mc-alert__body">
+                <p class="mc-alert__title">We couldn't change the delivery mode</p>
+                <p class="mc-alert__text">Nothing changed. Try again.</p>
+                <p class="mc-ref">Reference ID <code>7b14-c9e0-3a6f</code>
+                  <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="7b14-c9e0-3a6f"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div id="mode-text" class="mc-stack mc-stack--sm">
+            <p data-when="to-kanban saving failed">Work moves to a continuous Kanban board. Nothing is deleted.</p>
+            <p data-when="to-scrum" hidden>Sprint 3's plan and the history of Sprints 1 and 2 become available again. Nothing is deleted.</p>
+            <p data-when="blocked" hidden>Community Hackathon 2026 can't change its delivery mode while Sprint 8 is active. Close the sprint, then try again.</p>
+          </div>
+
+          <div data-unless="blocked">
+            <div class="mc-stack mc-stack--sm">
+              <p class="mc-strong mc-text-sm" id="kept-title">What stays the same</p>
+              <ul class="mc-checklist" aria-labelledby="kept-title">
+                <li class="mc-checklist__item"><span class="mc-icon mc-icon--check" aria-hidden="true"></span><span>Initiatives, epics, stories, and tasks keep their IDs and parents</span></li>
+                <li class="mc-checklist__item"><span class="mc-icon mc-icon--check" aria-hidden="true"></span><span>Statuses, ordering, and assignments stay as they are</span></li>
+                <li class="mc-checklist__item"><span class="mc-icon mc-icon--check" aria-hidden="true"></span><span>Sprint plans and sprint history are kept</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="mc-alert mc-alert--neutral" data-when="to-kanban saving failed">
+            <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__text">While the project uses Kanban, sprints can't be planned or started. Switch back to Scrum to use them again.</p>
+            </div>
+          </div>
+          <div class="mc-alert mc-alert--neutral" data-when="to-scrum" hidden>
+            <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__text">The Board tab shows the active sprint once one starts. Until then, plan or start Sprint 3 from Sprints.</p>
+            </div>
+          </div>
+
+          <div class="mc-cluster" data-when="blocked" hidden>
+            <button class="mc-button mc-button--sm" type="button" data-nav="../scrum/close-sprint-dialog.html">
+              <span class="mc-icon mc-icon--stop-circle" aria-hidden="true"></span>Close Sprint 8
+            </button>
+          </div>
+        </div>
+
+        <footer class="mc-dialog__footer">
+          <button class="mc-button" type="button" data-unless="blocked" data-nav="project-overview.html" data-attr-to-scrum="data-nav=project-overview.html#state=kanban-preserved" data-attr-saving="disabled">Cancel</button>
+          <button class="mc-button mc-button--primary" type="button" data-when="to-kanban saving failed" data-goto-state="saving"
+            data-attr-saving="aria-busy=true|aria-disabled=true">
+            <span class="mc-spinner" aria-hidden="true" data-when="saving" hidden></span>
+            <span data-unless="saving">Switch to Kanban</span>
+            <span data-when="saving" hidden>Switching…</span>
+          </button>
+          <button class="mc-button mc-button--primary" type="button" data-when="to-scrum" hidden data-nav="project-overview.html">Switch to Scrum</button>
+          <button class="mc-button mc-button--primary" type="button" data-when="blocked" hidden data-nav="project-overview.html">Close</button>
+        </footer>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

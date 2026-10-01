@@ -1,0 +1,8 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System context - Plan sprints and allocate stories
+Person(actor, "Authorized user", "Plan sprints and allocate stories")
+System(mc, "Mission Control", "FaithTech Toronto contacts and project delivery")
+Rel(actor, mc, "Plan sprints and allocate stories")
+@enduml

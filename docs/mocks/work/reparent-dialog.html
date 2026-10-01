@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Move to another parent · Mission Control mock</title>
+  <meta name="description" content="Reparent dialog that moves a story to another epic in the same project with a path preview, rejection, saving, and failure states.">
+  <meta name="mock-area" content="Work hierarchy">
+  <meta name="mock-requirements" content="L2-016.3, L2-016.4, L2-031, L2-033.2, L2-040.2">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body>
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Work · Move to another parent</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="default">Choose a new parent</option>
+          <option value="rejected">Target no longer valid</option>
+          <option value="saving">Moving</option>
+          <option value="failed">Move failed</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="default">Only epics in this project are offered; the current parent is shown but can't be chosen. The preview shows the new path before anything changes. The search filters the list as you type.</p>
+    <p class="mock-note" data-when="rejected" hidden>The server refused the move because the chosen epic was deleted meanwhile. The hierarchy is unchanged.</p>
+    <p class="mock-note" data-when="saving" hidden>The move is one request; the story and its tasks change parent together or not at all.</p>
+    <p class="mock-note" data-when="failed" hidden>Nothing moved. "Move story" retries the same request.</p>
+  </div>
+
+  <div class="mock-screen">
+    <div class="mock-screen__page" inert>
+      <div class="mc-app">
+        <header class="mc-topbar">
+          <span class="mc-button mc-button--quiet mc-button--icon"><span class="mc-icon mc-icon--menu" aria-hidden="true"></span></span>
+          <span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span>
+        </header>
+        <div class="mc-sidebar">
+          <div class="mc-sidebar__head"><span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span></div>
+          <ul class="mc-nav">
+            <li><span class="mc-nav__link"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></span></li>
+            <li><span class="mc-nav__link"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></span></li>
+            <li><span class="mc-nav__link" aria-current="page"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></span></li>
+          </ul>
+          <div class="mc-nav-section">
+            <p class="mc-nav__group">Administration</p>
+            <ul class="mc-nav">
+              <li><span class="mc-nav__link"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></span></li>
+              <li><span class="mc-nav__link"><span class="mc-icon mc-icon--audit" aria-hidden="true"></span><span class="mc-nav__text">Audit log</span></span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="mc-main">
+          <div class="mc-page">
+            <div class="mc-page-header">
+              <div class="mc-page-header__main">
+                <p class="mc-h1">Community Hackathon 2026</p>
+                <div class="mc-page-header__meta"><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span><span>Responsible lead: Rafael Da Silva</span></div>
+              </div>
+              <div class="mc-page-header__actions"><span class="mc-button mc-button--primary"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add initiative</span></div>
+            </div>
+            <div class="mc-tabs">
+              <span class="mc-tabs__link"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</span>
+              <span class="mc-tabs__link" aria-current="page"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</span>
+              <span class="mc-tabs__link"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</span>
+              <span class="mc-tabs__link"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</span>
+              <span class="mc-tabs__link"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</span>
+            </div>
+            <div class="mc-card">
+              <div class="mc-stack mc-stack--xs">
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--initiative" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--initiative" aria-hidden="true"></span></span><span class="mc-type__label">Initiative</span></span>
+                  <div class="mc-tree__main"><span class="mc-tree__title">Grow Toronto's builder community</span><span class="mc-tree__meta"><span>HCK-101</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></span></div>
+                </div>
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--epic" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--epic" aria-hidden="true"></span></span><span class="mc-type__label">Epic</span></span>
+                  <div class="mc-tree__main"><span class="mc-tree__title">Hackathon team formation</span><span class="mc-tree__meta"><span>HCK-104</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></span></div>
+                </div>
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--story" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--story" aria-hidden="true"></span></span><span class="mc-type__label">Story</span></span>
+                  <div class="mc-tree__main"><span class="mc-tree__title">Volunteers can join a build team</span><span class="mc-tree__meta"><span>HCK-112</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></span></div>
+                </div>
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--epic" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--epic" aria-hidden="true"></span></span><span class="mc-type__label">Epic</span></span>
+                  <div class="mc-tree__main"><span class="mc-tree__title">Venue and logistics</span><span class="mc-tree__meta"><span>HCK-105</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span></span></div>
+                </div>
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--story" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--story" aria-hidden="true"></span></span><span class="mc-type__label">Story</span></span>
+                  <div class="mc-tree__main"><span class="mc-tree__title">Confirm venue accessibility checklist</span><span class="mc-tree__meta"><span>HCK-120</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span></span></div>
+                </div>
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--story" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--story" aria-hidden="true"></span></span><span class="mc-type__label">Story</span></span>
+                  <div class="mc-tree__main"><span class="mc-tree__title">Book AV for demo day</span><span class="mc-tree__meta"><span>HCK-121</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mc-backdrop">
+      <section class="mc-dialog mc-dialog--sheet" role="dialog" aria-modal="true" aria-labelledby="move-title" aria-describedby="move-note">
+        <header class="mc-dialog__header">
+          <div class="mc-dialog__heading">
+            <h2 class="mc-dialog__title" id="move-title">Move to another epic</h2>
+            <p class="mc-dialog__subtitle">Confirm venue accessibility checklist · HCK-120</p>
+          </div>
+          <button class="mc-button mc-button--quiet mc-button--icon" type="button" aria-label="Close" data-nav="work-hierarchy.html" data-attr-saving="disabled"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+        </header>
+        <form class="mc-dialog__form" novalidate data-goto-state="saving">
+          <div class="mc-dialog__body">
+            <div class="mc-live" role="alert">
+              <div class="mc-alert mc-alert--danger" data-when="rejected" hidden>
+                <span class="mc-icon mc-icon--x-circle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">That epic can't be used</p>
+                  <p class="mc-alert__text">Judging and feedback was deleted while you were choosing. Nothing changed: the story is still under Venue and logistics. Choose another epic.</p>
+                </div>
+              </div>
+              <div class="mc-alert mc-alert--danger" data-when="failed" hidden>
+                <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">We couldn't move this story</p>
+                  <p class="mc-alert__text">Nothing changed. Try again.</p>
+                  <p class="mc-ref">Reference ID <code>0c5f-b832-6e19</code>
+              <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="0c5f-b832-6e19"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+            </p>
+                </div>
+              </div>
+            </div>
+
+            <dl class="mc-dl">
+              <dt>Current path</dt>
+              <dd>Grow Toronto's builder community › Venue and logistics</dd>
+            </dl>
+
+            <div class="mc-field">
+              <label class="mc-label" for="move-search">Find an epic</label>
+              <div class="mc-search">
+                <span class="mc-icon mc-icon--search" aria-hidden="true"></span>
+                <input class="mc-input" id="move-search" type="search" autocomplete="off" placeholder="Epic or initiative name">
+              </div>
+            </div>
+
+            <fieldset class="mc-choice-group" aria-describedby="move-choice-error"
+                  data-attr-rejected="aria-invalid=true"
+                  data-attr-saving="disabled">
+              <legend>New parent epic</legend>
+              <p class="mc-field-error" id="move-choice-error" data-when="rejected" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Judging and feedback no longer exists. Choose another epic.</p>
+              <div class="mc-choice-group__options">
+                  <label class="mc-choice">
+                    <input type="radio" name="parent" checked data-attr-saving="checked" data-attr-rejected="!checked" data-attr-failed="!checked">
+                    <span class="mc-choice__body">
+                      <span class="mc-choice__title"><span class="mc-icon mc-icon--epic" aria-hidden="true"></span>Hackathon team formation</span>
+                      <span class="mc-choice__text">In Grow Toronto's builder community · 14 stories</span>
+                    </span>
+                  </label>
+                  <label class="mc-choice">
+                    <input type="radio" name="parent" disabled>
+                    <span class="mc-choice__body">
+                      <span class="mc-choice__title"><span class="mc-icon mc-icon--epic" aria-hidden="true"></span>Venue and logistics</span>
+                      <span class="mc-choice__text">Current parent</span>
+                    </span>
+                  </label>
+                  <label class="mc-choice">
+                    <input type="radio" name="parent" data-attr-rejected="checked" data-attr-failed="checked">
+                    <span class="mc-choice__body">
+                      <span class="mc-choice__title"><span class="mc-icon mc-icon--epic" aria-hidden="true"></span>Judging and feedback</span>
+                      <span class="mc-choice__text">In Demo day showcase · 4 stories</span>
+                    </span>
+                  </label>
+              </div>
+            </fieldset>
+
+            <div class="mc-alert mc-alert--neutral" id="move-note">
+              <span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>
+              <div class="mc-alert__body">
+                <p class="mc-alert__title">New path</p>
+                <p class="mc-alert__text" data-unless="rejected failed">Grow Toronto's builder community › Hackathon team formation › Confirm venue accessibility checklist</p>
+                <p class="mc-alert__text" data-when="rejected failed" hidden>Demo day showcase › Judging and feedback › Confirm venue accessibility checklist</p>
+                <p class="mc-alert__text mc-muted">It keeps its ID, tasks, and sprint membership and goes to the end of its new parent's list.</p>
+              </div>
+            </div>
+          </div>
+          <footer class="mc-dialog__footer">
+            <button class="mc-button" type="button" data-nav="work-hierarchy.html" data-attr-saving="disabled">Cancel</button>
+            <button class="mc-button mc-button--primary" type="submit" data-attr-saving="aria-busy=true|aria-disabled=true">
+              <span class="mc-spinner" aria-hidden="true" data-when="saving" hidden></span>
+              <span data-unless="saving">Move story</span>
+              <span data-when="saving" hidden>Moving…</span>
+            </button>
+          </footer>
+        </form>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

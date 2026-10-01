@@ -1,0 +1,53 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Behavior - Confirm navigation away from unsaved input
+actor "Account holder" as actor
+box "Frontend - Mission Control application" #E0F2FE
+  participant "Application page / dialog" as page
+  participant "Session / form signals" as state
+  participant "Router / focus management" as router
+end box
+box "Backend - MissionControl.Api" #D1FADF
+  participant "Protected API" as api
+end box
+actor -> page : Navigate / cancel edited form / sign out
+page -> state : Compare draft with saved baseline (L2-031)
+alt Dirty and not pending
+  state --> page : Open named unsaved-changes dialog
+  page -> router : Trap focus; initially focus Stay / Keep editing (L2-033)
+  router --> actor : Confirmation choices
+  alt Stay / Escape
+    actor -> page : Keep editing
+    page -> router : Close confirmation and restore trigger focus
+    router --> actor : Draft intact
+  else Discard
+    actor -> page : Discard changes
+    page -> state : Drop draft; no save request
+    state --> page : Saved baseline unchanged
+    page -> router : Navigate / close / confirmed logout
+    router --> actor : Focus destination heading / surviving trigger
+  end
+else Pending save
+  state --> page : Wait for result; suppress repeat submit (L2-031)
+else Clean form
+  state --> page : Navigation permitted
+  page -> router : Open destination
+  router --> actor : Focus heading (L2-029)
+end
+note over page, api
+Cancellation and discarded input send no mutation request.
+end note
+@enduml

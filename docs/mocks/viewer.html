@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mock viewer</title>
+  <meta name="description" content="Preview any Mission Control mock and state at the review widths.">
+  <link rel="stylesheet" href="assets/tokens.css">
+  <link rel="stylesheet" href="assets/mocks.css">
+  <script src="assets/mocks.js" defer></script>
+  <script src="assets/catalog.js" defer></script>
+</head>
+<body>
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Responsive viewer</span>
+      <a href="index.html">All mocks</a>
+    </div>
+  </div>
+
+  <main class="mock-viewer" id="main">
+    <form class="mock-viewer__controls" aria-label="Preview settings">
+      <div class="mc-field mc-toolbar__grow">
+        <label class="mc-label" for="viewer-mock">Mock</label>
+        <span class="mc-select-wrap"><select class="mc-select" id="viewer-mock"></select></span>
+      </div>
+      <div class="mc-field mc-toolbar__field">
+        <label class="mc-label" for="viewer-state">State</label>
+        <span class="mc-select-wrap"><select class="mc-select" id="viewer-state"></select></span>
+      </div>
+      <fieldset class="mc-choice-group">
+        <legend>Width</legend>
+        <div class="mc-chips" id="viewer-widths">
+          <button class="mc-chip" type="button" data-width="320" aria-pressed="false">320</button>
+          <button class="mc-chip" type="button" data-width="375" aria-pressed="true">375</button>
+          <button class="mc-chip" type="button" data-width="768" aria-pressed="false">768</button>
+          <button class="mc-chip" type="button" data-width="1440" aria-pressed="false">1440</button>
+          <button class="mc-chip" type="button" data-width="1920" aria-pressed="false">1920</button>
+        </div>
+      </fieldset>
+      <a class="mc-button mc-button--sm" id="viewer-open" href="index.html" target="_blank" rel="noopener">
+        <span class="mc-icon mc-icon--external" aria-hidden="true"></span>Open in new tab
+      </a>
+    </form>
+    <div class="mock-viewer__stage">
+      <iframe class="mock-viewer__frame" id="viewer-frame" title="Mock preview" width="375" height="800"></iframe>
+    </div>
+  </main>
+
+  <script>
+    /* Viewer chrome only: loads a mock into a fixed-width frame. */
+    window.addEventListener('DOMContentLoaded', function () {
+      var catalog = window.MOCK_CATALOG || [];
+      var params = new URLSearchParams(location.search);
+      var mockSelect = document.getElementById('viewer-mock');
+      var stateSelect = document.getElementById('viewer-state');
+      var frame = document.getElementById('viewer-frame');
+      var open = document.getElementById('viewer-open');
+      var widths = document.getElementById('viewer-widths');
+      var width = Number(params.get('w')) || 375;
+
+      var groups = {};
+      catalog.forEach(function (mock) {
+        if (!groups[mock.area]) {
+          groups[mock.area] = document.createElement('optgroup');
+          groups[mock.area].label = mock.area;
+          mockSelect.appendChild(groups[mock.area]);
+        }
+        groups[mock.area].appendChild(new Option(mock.title, mock.path));
+      });
+      if (params.get('mock')) {
+        mockSelect.value = params.get('mock');
+      }
+
+      function current() {
+        return catalog.find(function (mock) { return mock.path === mockSelect.value; }) || catalog[0];
+      }
+
+      function fillStates(preferred) {
+        var mock = current();
+        stateSelect.innerHTML = '';
+        (mock ? mock.states : []).forEach(function (state) {
+          stateSelect.appendChild(new Option(state.label, state.id));
+        });
+        if (preferred) {
+          stateSelect.value = preferred;
+        }
+      }
+
+      function render() {
+        var mock = current();
+        if (!mock) {
+          return;
+        }
+        var src = mock.path + (stateSelect.value ? '#state=' + stateSelect.value : '');
+        frame.src = src;
+        frame.width = String(width);
+        frame.style.width = width + 'px';
+        open.href = src;
+        widths.querySelectorAll('[data-width]').forEach(function (button) {
+          button.setAttribute('aria-pressed', String(Number(button.dataset.width) === width));
+        });
+        var query = new URLSearchParams({ mock: mock.path, state: stateSelect.value, w: String(width) });
+        history.replaceState(null, '', '?' + query.toString());
+      }
+
+      mockSelect.addEventListener('change', function () { fillStates(); render(); });
+      stateSelect.addEventListener('change', render);
+      widths.addEventListener('click', function (event) {
+        var button = event.target.closest('[data-width]');
+        if (button) {
+          width = Number(button.dataset.width);
+          render();
+        }
+      });
+
+      fillStates(params.get('state'));
+      render();
+    });
+  </script>
+</body>
+</html>

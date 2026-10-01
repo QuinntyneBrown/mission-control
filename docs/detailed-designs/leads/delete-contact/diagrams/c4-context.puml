@@ -1,0 +1,8 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System context - Delete an unreferenced lead contact
+Person(actor, "Administrator", "Delete an unreferenced lead contact")
+System(mc, "Mission Control", "FaithTech Toronto contacts and project delivery")
+Rel(actor, mc, "Delete an unreferenced lead contact")
+@enduml

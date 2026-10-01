@@ -1,0 +1,74 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Behavior - Read hierarchy, filtered list, or detail
+actor "Authorized user" as actor
+box "Frontend - Mission Control application" #E0F2FE
+  participant "WorkHierarchyPage / WorkItemView" as page
+  participant "IWorkItemService / WorkItemService" as client
+end box
+box "Backend - MissionControl.Api" #D1FADF
+  participant "CurrentAccountAuthorization" as access
+  participant "WorkItemsController" as ctrl
+end box
+box "Backend - MissionControl.Application and Domain" #ECFDF3
+  participant "ValidationBehavior" as validation
+  participant "GetWorkItemsQueryHandler" as handler
+  participant "WorkItem" as entity
+end box
+box "Backend - MissionControl.Infrastructure" #FFF4E5
+  database "Mission Control SQL" as db
+end box
+actor -> page : Read hierarchy, filtered list, or detail
+page -> client : Build typed GetWorkItemsQuery
+client -> access : GET /api/workspaces/{id}/work-items[/{itemId}]
+access -> access : L2-002 validate signature, issuer, audience, subject, expiry
+access -> db : Read current status, role and credential version
+db --> access : Current account access
+alt Missing / invalid account or JWT; forbidden capability
+  access --> client : 401 / 403; audit denial without payloads
+  client --> page : Clear session on 401 / show denied state on 403
+else Authorized
+  access -> ctrl : Authorized request
+ctrl -> validation : Send GetWorkItemsQuery through MediatR 12.5.0
+validation -> validation : Validate request fields and bounds
+alt Invalid request
+  validation --> ctrl : 400 field errors; no business mutation
+  ctrl --> client : Validation ProblemDetails
+  client --> page : Keep valid input; focus linked error summary
+else Valid request
+  validation -> handler : Handle GetWorkItemsQuery
+  handler -> db : L2-045 read bounded siblings/list; count full matches; order by sibling position/ID
+  db --> handler : SQL result / current records
+  handler -> entity : L2-029 resolve ancestor path and unset optional fields
+  entity --> handler : Hierarchy or detail projection
+  alt Missing workspace/item or invalid filter
+    handler --> ctrl : Typed failure for stated category; no partial mutation
+    ctrl --> client : ProblemDetails with readable category
+    client --> page : Preserve input / saved view; offer reload or retry
+  else Behavior succeeds
+    db --> handler : Bounded persisted projection; full matching count
+    handler --> ctrl : Typed result
+    ctrl --> client : Success response
+    client --> page : Update signal state and announce outcome
+    page --> actor : Present persisted result / operational status
+  end
+end
+end
+note over ctrl, db
+Unexpected failures return generic 500 plus correlation ID (L2-043).
+Diagnostics exclude secrets and contact payloads.
+end note
+@enduml

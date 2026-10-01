@@ -1,0 +1,48 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Behavior - Measure cold Chromium view readiness
+actor "Release operator" as actor
+box "Frontend - Operations console / Chromium harness" #E0F2FE
+  participant "PerformanceHarness" as handler
+end box
+box "Backend - MissionControl.Api existing endpoints" #D1FADF
+  participant "Existing feature API" as api
+end box
+box "Backend - Application / operational verification" #ECFDF3
+  participant "PerformanceResult" as entity
+end box
+box "Backend - Infrastructure / selected SQL provider" #FFF4E5
+  database "Verified isolated SQL target / source backup" as db
+end box
+actor -> handler : Measure cold Chromium view readiness
+  handler -> db : Use isolated populated API and stated environment
+  db --> handler : Fixture ready
+  handler -> entity : Open each view 30 times with cold frontend cache and page objects
+  entity --> handler : p95 usable-control time and exact environment manifest
+alt Missing essential controls, overlap, or p95 above 2.5 seconds
+  handler -> entity : Record failure; leave readiness/result unresolved
+  entity --> handler : Failed run record
+  handler --> actor : Failure and recovery guidance; no passing claim
+else Procedure succeeds
+  handler -> api : Verify through existing feature endpoints / health / page objects
+  api -> db : Read or commit representative protected behavior
+  db --> api : Persisted result
+  api --> handler : Result without secrets
+  handler -> entity : Record exact environment, timings and verified outcome
+  entity --> handler : Completed run record
+  handler --> actor : Rehearsal / measurement result
+end
+@enduml

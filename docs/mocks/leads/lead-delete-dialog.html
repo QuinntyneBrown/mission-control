@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Delete lead · Mission Control mock</title>
+  <meta name="description" content="Delete-lead confirmation naming the contact, the City Lead contact case, a delete blocked by project ownership, progress, and failure.">
+  <meta name="mock-area" content="Leads">
+  <meta name="mock-requirements" content="L2-012, L2-013.3, L2-031.5, L2-033.2, L2-043.4">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body>
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Leads · Delete lead</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="default">Confirm (Hana Kim)</option>
+          <option value="city-lead">City Lead's contact</option>
+          <option value="blocked">Blocked by project</option>
+          <option value="deleting">Deleting</option>
+          <option value="failed">Delete failed</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="default">Opened from a lead's Delete action. Focus starts on Cancel, the safe choice; Escape or Cancel closes without a request and returns focus to the Delete button. The dialog names the lead and category.</p>
+    <p class="mock-note" data-when="city-lead" hidden>Deleting Quinntyne Brown's City contact is allowed. It never touches the administrator account, its password, status, or permissions.</p>
+    <p class="mock-note" data-when="blocked" hidden>Grace Mensah is the responsible lead for Prayer Wall App, so the API answers 409 and nothing changes, even for a direct request. The dialog explains the fix and offers no delete button.</p>
+    <p class="mock-note" data-when="deleting" hidden>The delete button shows progress and ignores repeat clicks; Cancel waits. On success the dialog closes, the directory reloads without the lead, and a toast confirms it.</p>
+    <p class="mock-note" data-when="failed" hidden>Nothing was deleted. "Delete lead" tries again; the reference ID matches the server's diagnostic record.</p>
+  </div>
+
+  <div class="mock-screen">
+    <div class="mock-screen__page" inert>
+      <div class="mc-app">
+        <header class="mc-topbar">
+          <span class="mc-button mc-button--quiet mc-button--icon"><span class="mc-icon mc-icon--menu" aria-hidden="true"></span></span>
+          <span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span>
+        </header>
+        <div class="mc-sidebar">
+          <div class="mc-sidebar__head"><span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span></div>
+          <ul class="mc-nav">
+        <li><span class="mc-nav__link"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></span></li>
+        <li><span class="mc-nav__link" aria-current="page"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></span></li>
+        <li><span class="mc-nav__link"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></span></li>
+          </ul>
+          <div class="mc-nav-section">
+            <p class="mc-nav__group">Administration</p>
+            <ul class="mc-nav">
+          <li><span class="mc-nav__link"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></span></li>
+          <li><span class="mc-nav__link"><span class="mc-icon mc-icon--audit" aria-hidden="true"></span><span class="mc-nav__text">Audit log</span></span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="mc-main">
+          <div class="mc-page">
+            <div class="mc-page-header">
+              <div class="mc-page-header__main">
+                <p class="mc-h1">Leads</p>
+                <p class="mc-page-header__subtitle">Contact details for Create, Communication, City, Prayer, and Event leads.</p>
+              </div>
+              <div class="mc-page-header__actions"><span class="mc-button mc-button--primary"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add lead</span></div>
+            </div>
+            <div class="mc-table-wrap">
+              <table class="mc-table mc-table--stack">
+                <thead><tr><th>Name</th><th>Category</th><th>Email</th><th>Phone</th></tr></thead>
+                <tbody>
+                  <tr><td class="mc-table__primary">Kenji Ito</td><td data-label="Category"><span class="mc-pill mc-pill--create"><span class="mc-icon mc-icon--category-create" aria-hidden="true"></span>Create</span></td><td data-label="Email">kenji.ito<wbr>@example.org</td><td data-label="Phone">+1 416 555 0112</td></tr>
+                  <tr><td class="mc-table__primary">Mara Johnson</td><td data-label="Category"><span class="mc-pill mc-pill--prayer"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer</span></td><td data-label="Email">mara.johnson<wbr>@example.org</td><td data-label="Phone">+1 416 555 0113</td></tr>
+                  <tr><td class="mc-table__primary">Hana Kim</td><td data-label="Category"><span class="mc-pill mc-pill--create"><span class="mc-icon mc-icon--category-create" aria-hidden="true"></span>Create</span></td><td data-label="Email">hana.kim<wbr>@example.org</td><td data-label="Phone">+1 416 555 0114</td></tr>
+                  <tr><td class="mc-table__primary">Piotr Kowalski</td><td data-label="Category"><span class="mc-pill mc-pill--prayer"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer</span></td><td data-label="Email">piotr.kowalski<wbr>@example.org</td><td data-label="Phone">+1 647 555 0115</td></tr>
+                  <tr><td class="mc-table__primary">Élise Laurent</td><td data-label="Category"><span class="mc-pill mc-pill--communication"><span class="mc-icon mc-icon--category-communication" aria-hidden="true"></span>Communication</span></td><td data-label="Email">elise.laurent<wbr>@example.org</td><td data-label="Phone">+1 416 555 0116</td></tr>
+                  <tr><td class="mc-table__primary">Grace Mensah</td><td data-label="Category"><span class="mc-pill mc-pill--prayer"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer</span></td><td data-label="Email">grace.mensah<wbr>@example.org</td><td data-label="Phone">+1 416 555 0117</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mc-backdrop">
+      <section class="mc-dialog mc-dialog--sm" role="alertdialog" aria-modal="true" aria-labelledby="delete-title" aria-describedby="delete-text">
+        <header class="mc-dialog__header">
+          <span class="mc-dialog__icon mc-dialog__icon--danger" data-unless="blocked"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></span>
+          <span class="mc-dialog__icon mc-dialog__icon--warning" data-when="blocked" hidden><span class="mc-icon mc-icon--lock" aria-hidden="true"></span></span>
+          <div class="mc-dialog__heading">
+            <h2 class="mc-dialog__title" id="delete-title">
+              <span data-when="default deleting failed">Delete Hana Kim?</span>
+              <span data-when="city-lead" hidden>Delete Quinntyne Brown's City contact?</span>
+              <span data-when="blocked" hidden>Grace Mensah can't be deleted yet</span>
+            </h2>
+          </div>
+        </header>
+
+        <div class="mc-dialog__body">
+          <div class="mc-live" role="alert">
+            <div class="mc-alert mc-alert--danger" data-when="failed" hidden>
+              <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+              <div class="mc-alert__body">
+                <p class="mc-alert__title">We couldn't delete this lead</p>
+                <p class="mc-alert__text">Nothing was deleted. Try again.</p>
+                <p class="mc-ref">Reference ID <code>e81c-04d7-5a29</code>
+                  <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="e81c-04d7-5a29"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div id="delete-text" class="mc-stack mc-stack--sm">
+            <p data-when="default deleting failed">Hana Kim will be removed from the Create leads in the directory. This can't be undone.</p>
+            <p data-when="default deleting failed" class="mc-muted mc-text-sm">No sign-in accounts or project work will be deleted.</p>
+
+            <p data-when="city-lead" hidden>This removes the City contact for Quinntyne Brown from the directory. This can't be undone.</p>
+            <p data-when="city-lead" hidden class="mc-muted mc-text-sm">Quinntyne Brown's administrator account, password, and permissions don't change.</p>
+
+            <p data-when="blocked" hidden>Grace Mensah is the responsible lead for a project. Assign another responsible lead or remove Grace Mensah from that project first.</p>
+          </div>
+
+          <ul class="mc-list" data-when="blocked" hidden>
+            <li class="mc-list__item">
+              <span class="mc-stat__icon"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span></span>
+              <div class="mc-list__main">
+                <a class="mc-list__title" href="../projects/project-overview.html#state=kanban-preserved">Prayer Wall App</a>
+                <span class="mc-list__meta">Responsible lead: Grace Mensah</span>
+              </div>
+              <div class="mc-list__aside">
+                <button class="mc-button mc-button--sm" type="button" data-nav="../projects/project-form-dialog.html#state=edit">
+                  <span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit project
+                </button>
+              </div>
+            </li>
+          </ul>
+          <p class="mc-hint" data-when="blocked" hidden>Deleting a lead never deletes projects or work.</p>
+        </div>
+
+        <footer class="mc-dialog__footer">
+          <button class="mc-button" type="button" data-unless="blocked" data-nav="lead-directory.html" data-attr-deleting="disabled">Cancel</button>
+          <button class="mc-button mc-button--danger" type="button" data-unless="blocked city-lead" data-goto-state="deleting"
+            data-attr-deleting="aria-busy=true|aria-disabled=true">
+            <span class="mc-spinner" aria-hidden="true" data-when="deleting" hidden></span>
+            <span data-unless="deleting">Delete lead</span>
+            <span data-when="deleting" hidden>Deleting…</span>
+          </button>
+          <button class="mc-button mc-button--danger" type="button" data-when="city-lead" hidden data-nav="lead-directory.html">Delete contact</button>
+          <button class="mc-button mc-button--primary" type="button" data-when="blocked" hidden data-nav="lead-detail.html#state=lead">Close</button>
+        </footer>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

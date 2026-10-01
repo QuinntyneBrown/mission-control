@@ -1,0 +1,21 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components - Initialize and protect the administrator
+Container_Boundary(runtime, "Mission Control initialization / API runtime") {
+  Component(init, "DatabaseInitializer", "Infrastructure coordinator", "Runs migrations and required Application seeds")
+  Component(migrations, "IMigrationRunner / SQL adapter", "Infrastructure", "Applies schema under initialization lock")
+  Component(admin, "EnsureAdministratorCommandHandler", "Application / MediatR 12.5.0", "Creates or repairs protected account")
+  Component(city, "EnsureCityLeadCommandHandler", "Application / MediatR 12.5.0", "Seeds independent contact once")
+  Component(health, "Health endpoints / GetReadinessQueryHandler", "API and Application", "Separates liveness from readiness")
+}
+ContainerDb(db, "Mission Control SQL", "SQL", "Schema, accounts, contacts, and seed marker")
+Rel(init, migrations, "Migrates under lock")
+Rel(init, admin, "Dispatches ensure command")
+Rel(init, city, "Dispatches City contact command")
+Rel(migrations, db, "Applies versioned schema")
+Rel(admin, db, "Preserves password / repairs capabilities")
+Rel(city, db, "Creates or adopts independent contact")
+Rel(health, db, "Checks access and compatible schema")
+Rel(health, init, "Checks required initialization result")
+@enduml

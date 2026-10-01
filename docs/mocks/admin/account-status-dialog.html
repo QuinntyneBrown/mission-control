@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Deactivate or reactivate account · Mission Control mock</title>
+  <meta name="description" content="Confirmation dialog for deactivating or reactivating an account, the designated administrator conflict, and saving and failure states.">
+  <meta name="mock-area" content="Administration">
+  <meta name="mock-requirements" content="L2-002.3, L2-004, L2-008.1, L2-031.5, L2-033.2, L2-043.4">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body>
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Administration · Account status</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="deactivate">Deactivate</option>
+          <option value="reactivate">Reactivate</option>
+          <option value="blocked">Designated administrator (409)</option>
+          <option value="saving">Deactivating</option>
+          <option value="failed">Deactivation failed</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="deactivate">Administrator-only. Focus starts on Cancel, the safe choice. Deactivation keeps the account, its assignments, and its audit history; Mateo's existing token is refused on the next request. Success shows the toast "Account deactivated: Mateo Silva can't sign in. Their assignments are kept."</p>
+    <p class="mock-note" data-when="reactivate" hidden>Reactivation restores sign-in with the existing password and the same role. Success shows the toast "Account reactivated: Jordan Reyes can sign in again."</p>
+    <p class="mock-note" data-when="blocked" hidden>The interface never offers Deactivate for the designated administrator. This is the API's 409 answer when the request is made anyway, for example from an outdated page. Nothing changed, so the only action is Close.</p>
+    <p class="mock-note" data-when="saving" hidden>Both buttons wait while the request is in progress, so the action can't be sent twice.</p>
+    <p class="mock-note" data-when="failed" hidden>Nothing changed: Mateo can still sign in. Try again repeats the same request.</p>
+  </div>
+
+  <div class="mock-screen">
+    <div class="mock-screen__page" inert>
+      <div class="mc-app">
+        <header class="mc-topbar">
+          <span class="mc-button mc-button--quiet mc-button--icon"><span class="mc-icon mc-icon--menu" aria-hidden="true"></span></span>
+          <span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span>
+        </header>
+        <div class="mc-sidebar">
+          <div class="mc-sidebar__head"><span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span></div>
+          <ul class="mc-nav">
+            <li><span class="mc-nav__link"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></span></li>
+            <li><span class="mc-nav__link"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></span></li>
+            <li><span class="mc-nav__link"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></span></li>
+          </ul>
+          <div class="mc-nav-section">
+            <p class="mc-nav__group">Administration</p>
+            <ul class="mc-nav">
+              <li><span class="mc-nav__link" aria-current="page"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></span></li>
+              <li><span class="mc-nav__link"><span class="mc-icon mc-icon--audit" aria-hidden="true"></span><span class="mc-nav__text">Audit log</span></span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="mc-main">
+          <div class="mc-page">
+            <div class="mc-page-header">
+              <div class="mc-page-header__main">
+                <p class="mc-h1">Accounts</p>
+                <p class="mc-page-header__subtitle">Sign-in accounts and roles. Lead contacts are managed separately in Leads.</p>
+              </div>
+              <div class="mc-page-header__actions"><span class="mc-button mc-button--primary"><span class="mc-icon mc-icon--user-plus" aria-hidden="true"></span>Add account</span></div>
+            </div>
+            <div class="mc-table-wrap">
+              <table class="mc-table mc-table--stack">
+                <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr></thead>
+                <tbody>
+                  <tr><td class="mc-table__primary">Quinntyne Brown</td><td data-label="Email">quinntynebrown<wbr>@gmail.com</td><td data-label="Role"><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>Administrator</span></td><td data-label="Status"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Active</span></td></tr>
+                  <tr><td class="mc-table__primary">Ada Okafor</td><td data-label="Email">ada.okafor<wbr>@example.org</td><td data-label="Role"><span class="mc-pill"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span></td><td data-label="Status"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Active</span></td></tr>
+                  <tr><td class="mc-table__primary">Priya Raman</td><td data-label="Email">priya.raman<wbr>@example.org</td><td data-label="Role"><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>Administrator</span></td><td data-label="Status"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Active</span></td></tr>
+                  <tr><td class="mc-table__primary">Jordan Reyes</td><td data-label="Email">jordan.reyes<wbr>@example.org</td><td data-label="Role"><span class="mc-pill"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span></td><td data-label="Status"><span class="mc-pill"><span class="mc-icon mc-icon--ban" aria-hidden="true"></span>Inactive</span></td></tr>
+                  <tr><td class="mc-table__primary">Mateo Silva</td><td data-label="Email">mateo.silva<wbr>@example.org</td><td data-label="Role"><span class="mc-pill"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span></td><td data-label="Status"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Active</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mc-backdrop">
+      <section class="mc-dialog mc-dialog--sm" role="alertdialog" aria-modal="true" aria-labelledby="status-dialog-title" aria-describedby="status-dialog-text">
+        <header class="mc-dialog__header">
+          <span class="mc-dialog__icon mc-dialog__icon--danger" data-when="deactivate saving failed"><span class="mc-icon mc-icon--user-x" aria-hidden="true"></span></span>
+          <span class="mc-dialog__icon mc-dialog__icon--success" data-when="reactivate" hidden><span class="mc-icon mc-icon--user-check" aria-hidden="true"></span></span>
+          <span class="mc-dialog__icon mc-dialog__icon--warning" data-when="blocked" hidden><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span></span>
+          <div class="mc-dialog__heading">
+            <h2 class="mc-dialog__title" id="status-dialog-title">
+              <span data-when="deactivate saving failed">Deactivate Mateo Silva?</span>
+              <span data-when="reactivate" hidden>Reactivate Jordan Reyes?</span>
+              <span data-when="blocked" hidden>Quinntyne Brown can't be deactivated</span>
+            </h2>
+            <p class="mc-dialog__subtitle">
+              <span data-when="deactivate saving failed">mateo.silva<wbr>@example.org · Collaborator</span>
+              <span data-when="reactivate" hidden>jordan.reyes<wbr>@example.org · Collaborator · Inactive since Sep 12, 2026</span>
+              <span data-when="blocked" hidden>quinntynebrown<wbr>@gmail.com · Administrator</span>
+            </p>
+          </div>
+        </header>
+
+        <div class="mc-dialog__body">
+          <div class="mc-live" role="alert">
+            <div class="mc-alert mc-alert--danger" data-when="failed" hidden>
+              <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+              <div class="mc-alert__body">
+                <p class="mc-alert__title">We couldn't deactivate this account</p>
+                <p class="mc-alert__text">Nothing changed. Mateo can still sign in. Try again.</p>
+                <p class="mc-ref">Reference ID <code>6a0e-b3c5-71d8</code>
+                  <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="6a0e-b3c5-71d8"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div id="status-dialog-text">
+            <p data-when="deactivate saving failed">Mateo Silva won't be able to sign in. Access ends on their next request. Their assignments and history are kept, and you can reactivate the account later.</p>
+            <p data-when="reactivate" hidden>Jordan Reyes will be able to sign in again with their existing password, as a Collaborator. Replace the password first if they no longer know it.</p>
+            <p data-when="blocked" hidden>Quinntyne Brown is the designated administrator and must stay active. Nothing was changed.</p>
+          </div>
+          <p class="mc-hint" data-when="blocked" hidden>This keeps at least one administrator able to manage Mission Control.</p>
+        </div>
+
+        <footer class="mc-dialog__footer">
+          <button class="mc-button" type="button" data-unless="blocked" data-nav="accounts.html"
+            data-attr-saving="disabled">Cancel</button>
+          <button class="mc-button mc-button--primary" type="button" data-when="blocked" hidden data-nav="account-detail.html#state=designated">Close</button>
+          <button class="mc-button mc-button--danger" type="button" data-when="deactivate saving failed" data-goto-state="saving"
+            data-attr-saving="aria-busy=true|aria-disabled=true">
+            <span class="mc-spinner" aria-hidden="true" data-when="saving" hidden></span>
+            <span data-when="deactivate">Deactivate account</span>
+            <span data-when="saving" hidden>Deactivating…</span>
+            <span data-when="failed" hidden>Try again</span>
+          </button>
+          <button class="mc-button mc-button--primary" type="button" data-when="reactivate" hidden data-nav="accounts.html">
+            <span class="mc-icon mc-icon--user-check" aria-hidden="true"></span>Reactivate account
+          </button>
+        </footer>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

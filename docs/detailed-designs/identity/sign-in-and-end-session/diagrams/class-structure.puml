@@ -1,0 +1,87 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Sign in and end a session
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class LoginPage {
+  +routeContext: Signal<RouteContext>
+  +openDialog(): void
+}
+class SessionView {
+  +state: Signal<FeatureState>
+  +submit(): void
+}
+interface ISessionService {
+  +login(request: LoginCommand): Promise<FeatureResult>
+  +check_access(request: GetCurrentSessionQuery): Promise<FeatureResult>
+}
+class SessionService {
+  -http: HttpClient
+}
+class SessionsController {
+  -sender: ISender
+}
+class UserAccount {
+  +id: Guid
+  +normalizedEmail: string
+  +passwordHash: string
+  +active: bool
+  +role: AccountRole
+  +credentialVersion: long
+  +verifyPassword(password: string): bool
+}
+interface IMissionControlDataSession {
+  +query(specification): Task<ReadResult>
+  +commit(expectedVersion: long): Task<void>
+}
+class MissionControlDataSession {
+  -connection: DbConnection
+}
+LoginPage --> SessionView : composes
+SessionView ..> ISessionService : inject token
+ISessionService <|.. SessionService
+IMissionControlDataSession <|.. MissionControlDataSession
+class LoginCommand {
+  +email: string
+  +password: string
+}
+class LoginCommandHandler {
+  +handle(request: LoginCommand): Task<FeatureResult>
+}
+SessionsController ..> LoginCommand : dispatches
+LoginCommandHandler ..> LoginCommand : handles
+LoginCommandHandler --> UserAccount : loads / applies
+LoginCommandHandler ..> IMissionControlDataSession : uses
+class GetCurrentSessionQuery {
+  +subject: Guid
+}
+class GetCurrentSessionQueryHandler {
+  +handle(request: GetCurrentSessionQuery): Task<FeatureResult>
+}
+SessionsController ..> GetCurrentSessionQuery : dispatches
+GetCurrentSessionQueryHandler ..> GetCurrentSessionQuery : handles
+GetCurrentSessionQueryHandler --> UserAccount : loads / applies
+GetCurrentSessionQueryHandler ..> IMissionControlDataSession : uses
+
+enum AccountRole {
+  Administrator
+  Collaborator
+}
+UserAccount --> AccountRole : SQL authority
+@enduml

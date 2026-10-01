@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sprint board · Mission Control mock</title>
+  <meta name="description" content="Active sprint board for Sprint 8 with the sprint goal, scope changes, compact column selector, empty, failed-move, loading, and error states.">
+  <meta name="mock-area" content="Scrum sprints">
+  <meta name="mock-requirements" content="L2-019.4, L2-020, L2-021, L2-023, L2-024, L2-030.3, L2-032, L2-033, L2-045.4">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body data-attr-collaborator="data-role=collaborator">
+  <a class="mc-skip-link" href="#main">Skip to main content</a>
+
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Scrum · Sprint board</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="default">Administrator</option>
+          <option value="scope-log">Scope changes</option>
+          <option value="no-stories">Active sprint with no stories</option>
+          <option value="no-active">No active sprint</option>
+          <option value="move-failed">Move failed</option>
+          <option value="collaborator">Collaborator</option>
+          <option value="loading">Loading</option>
+          <option value="error">Load failed</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="default">Shows only Sprint 8's stories, in the same To Do, In Progress, and Done columns as Kanban. Drag a card or use Move; either saves its status and position. Moving a story with open tasks to Done asks first. Below 576px a column selector shows one column at a time; from 576 to 991px the board scrolls inside its own region. The project header and tabs stay pinned while the tab content scrolls; on phones only the tabs stay pinned.</p>
+    <p class="mock-note" data-when="scope-log" hidden>Every scope change after the start is recorded with who made it and when. The initial scope at the start stays in the sprint's history.</p>
+    <p class="mock-note" data-when="no-stories" hidden>An active sprint can start empty or lose all its stories. The columns stay visible so the board keeps its shape, and Add stories opens the scope dialog.</p>
+    <p class="mock-note" data-when="no-active" hidden>The Board tab of a Scrum project with no active sprint. Starting a sprint opens its board here.</p>
+    <p class="mock-note" data-when="move-failed" hidden>The save was rejected, so the card returns to its last saved column and position. The failure is announced, and Retry sends the move again.</p>
+    <p class="mock-note" data-when="collaborator" hidden>Collaborators can move cards, change scope, and close the sprint. Project settings are hidden.</p>
+    <p class="mock-note" data-when="loading" hidden>Columns keep their shape while stories load. Screen readers hear "Loading Sprint 8 board".</p>
+  </div>
+
+  <div class="mc-app">
+    <header class="mc-topbar">
+      <button class="mc-button mc-button--quiet mc-button--icon" type="button" data-toggle aria-controls="mc-sidebar" aria-expanded="false" aria-label="Open navigation">
+        <span class="mc-icon mc-icon--menu" aria-hidden="true"></span>
+      </button>
+      <a class="mc-brand" href="../home/home.html">
+        <span class="mc-brand__mark" aria-hidden="true">MC</span>
+        <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span>
+      </a>
+    </header>
+
+    <nav class="mc-sidebar" id="mc-sidebar" aria-label="Primary">
+      <div class="mc-sidebar__head">
+        <a class="mc-brand" href="../home/home.html">
+          <span class="mc-brand__mark" aria-hidden="true">MC</span>
+          <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span>
+        </a>
+        <button class="mc-button mc-button--quiet mc-button--icon mc-sidebar__close" type="button" data-close="mc-sidebar" aria-label="Close navigation">
+          <span class="mc-icon mc-icon--close" aria-hidden="true"></span>
+        </button>
+      </div>
+      <ul class="mc-nav">
+        <li><a class="mc-nav__link" href="../home/home.html"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></a></li>
+        <li><a class="mc-nav__link" href="../leads/lead-directory.html"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></a></li>
+        <li><a class="mc-nav__link" href="../projects/project-list.html" aria-current="page"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></a></li>
+      </ul>
+      <div class="mc-nav-section mock-admin-only">
+        <p class="mc-nav__group" id="nav-admin">Administration</p>
+        <ul class="mc-nav" aria-labelledby="nav-admin">
+          <li><a class="mc-nav__link" href="../admin/accounts.html"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></a></li>
+          <li><a class="mc-nav__link" href="../admin/audit-log.html"><span class="mc-icon mc-icon--audit" aria-hidden="true"></span><span class="mc-nav__text">Audit log</span></a></li>
+        </ul>
+      </div>
+      <div class="mc-sidebar__foot">
+        <button class="mc-user-button" type="button" data-toggle aria-controls="user-menu" aria-expanded="false">
+          <span class="mc-avatar mock-admin-only" aria-hidden="true">QB</span>
+          <span class="mc-avatar mock-collaborator-only" aria-hidden="true">AO</span>
+          <span class="mc-user-button__text">
+            <span class="mc-user-button__name mock-admin-only">Quinntyne Brown</span>
+            <span class="mc-user-button__name mock-collaborator-only">Ada Okafor</span>
+            <span class="mc-user-button__role mock-admin-only">Administrator</span>
+            <span class="mc-user-button__role mock-collaborator-only">Collaborator</span>
+          </span>
+          <span class="mc-icon mc-icon--chevron-up mc-icon--sm" aria-hidden="true"></span>
+        </button>
+        <div class="mc-menu" id="user-menu">
+          <div class="mc-menu__header">
+            <div class="mc-stack mc-stack--xs mock-admin-only">
+              <strong>Quinntyne Brown</strong>
+              <span class="mc-muted mc-text-sm">quinntynebrown@gmail.com</span>
+              <span><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>Administrator</span></span>
+            </div>
+            <div class="mc-stack mc-stack--xs mock-collaborator-only">
+              <strong>Ada Okafor</strong>
+              <span class="mc-muted mc-text-sm">ada.okafor@example.org</span>
+              <span><span class="mc-pill"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span></span>
+            </div>
+          </div>
+          <div class="mc-menu__separator"></div>
+          <button class="mc-menu__item" type="button" data-nav="../auth/login.html#state=signed-out">
+            <span class="mc-icon mc-icon--log-out" aria-hidden="true"></span>Sign out
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="mc-main" id="main" tabindex="-1">
+      <div class="mc-page">
+        <div class="mc-project-header">
+          <nav class="mc-breadcrumbs" aria-label="Breadcrumb">
+            <ol>
+              <li><a href="../projects/project-list.html">Projects</a></li>
+              <li><span aria-current="page">Community Hackathon 2026</span></li>
+            </ol>
+          </nav>
+          <header class="mc-page-header">
+            <div class="mc-page-header__main">
+              <h1 class="mc-page-header__title" tabindex="-1">Community Hackathon 2026</h1>
+              <div class="mc-page-header__meta">
+                <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
+                <span>Responsible lead: <a href="../leads/lead-detail.html#state=lead">Rafael Da Silva</a></span>
+              </div>
+            </div>
+            <div class="mc-page-header__actions">
+              <div class="mc-menu-anchor mock-admin-only">
+                <button class="mc-button" type="button" data-toggle aria-controls="project-actions" aria-expanded="false">
+                  Project actions<span class="mc-icon mc-icon--chevron-down mc-icon--sm" aria-hidden="true"></span>
+                </button>
+                <div class="mc-menu" id="project-actions">
+                  <button class="mc-menu__item" type="button" data-nav="../projects/project-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit project</button>
+                  <button class="mc-menu__item" type="button" data-nav="../projects/mode-change-dialog.html#state=blocked"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
+                  <div class="mc-menu__separator"></div>
+                  <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="../projects/project-delete-dialog.html#state=blocked"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
+                </div>
+              </div>
+            </div>
+          </header>
+          <nav class="mc-project-tabs" aria-label="Project sections">
+            <ul class="mc-tabs">
+            <li><a class="mc-tabs__link" href="../projects/project-overview.html"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</a></li>
+            <li><a class="mc-tabs__link" href="../work/work-hierarchy.html"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</a></li>
+            <li><a class="mc-tabs__link" href="../backlog/backlog.html"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</a></li>
+            <li><a class="mc-tabs__link" href="../scrum/sprint-board.html" aria-current="page"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</a></li>
+            <li><a class="mc-tabs__link" href="../scrum/sprints.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</a></li>
+            </ul>
+          </nav>
+        </div>
+
+        <section class="mc-card mc-mb-6" aria-labelledby="sprint-heading" data-unless="no-active loading error">
+          <div class="mc-card__header">
+            <div class="mc-stack mc-stack--xs">
+              <div class="mc-cluster mc-cluster--sm">
+                <h2 class="mc-card__title" id="sprint-heading">Sprint 8</h2>
+                <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--play" aria-hidden="true"></span>Active</span>
+              </div>
+              <p class="mc-text-sm mc-muted">Sep 28 – Oct 9, 2026 · 9 days left</p>
+            </div>
+            <div class="mc-cluster mc-cluster--sm">
+              <button class="mc-button" type="button" aria-controls="scope-log" aria-expanded="false" data-goto-state="scope-log"
+                data-attr-scope-log="aria-expanded=true|data-goto-state=default">
+                <span class="mc-icon mc-icon--history" aria-hidden="true"></span>Scope changes
+              </button>
+              <button class="mc-button" type="button" data-nav="sprint-scope-dialog.html">
+                <span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Change scope
+              </button>
+              <button class="mc-button" type="button" data-nav="close-sprint-dialog.html">
+                <span class="mc-icon mc-icon--stop-circle" aria-hidden="true"></span>Close sprint
+              </button>
+            </div>
+          </div>
+          <dl class="mc-dl"><dt>Goal</dt><dd>Teams can form and register ideas before kickoff</dd></dl>
+          <div class="mc-progress mc-mt-4" data-unless="no-stories">
+            <span class="mc-progress__bar" aria-hidden="true"><span class="mc-progress__fill mc-w-33"></span></span>
+            <span>2 of 6 stories done · 3 of 15 points</span>
+          </div>
+          <p class="mc-text-sm mc-muted mc-mt-4" data-when="no-stories" hidden>No stories yet</p>
+        </section>
+
+        <section class="mc-card mc-mb-6" id="scope-log" aria-labelledby="scope-heading" data-when="scope-log" hidden>
+          <div class="mc-card__header">
+            <h2 class="mc-card__title" id="scope-heading">Scope changes</h2>
+            <span class="mc-text-sm mc-muted">Started with 5 stories · now 6</span>
+          </div>
+          <ol class="mc-timeline">
+            <li class="mc-timeline__item"><span class="mc-timeline__time">Sep 29, 2026, 2:10 p.m.</span>Ada Okafor added <a href="../work/work-item-detail.html">HCK-125 Volunteer check-in list</a>.</li>
+            <li class="mc-timeline__item"><span class="mc-timeline__time">Sep 28, 2026, 9:15 a.m.</span>Quinntyne Brown started Sprint 8 with 5 stories: HCK-112, HCK-118, HCK-119, HCK-121, and HCK-124.</li>
+          </ol>
+        </section>
+
+        <div class="mc-empty mc-empty--compact mc-mb-6" data-when="no-stories" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--inbox mc-icon--lg" aria-hidden="true"></span></span>
+          <h2 class="mc-empty__title">Sprint 8 has no stories yet</h2>
+          <p class="mc-empty__text">Add unfinished stories from the backlog. Each change is recorded in the sprint's history.</p>
+          <div class="mc-empty__actions">
+            <button class="mc-button mc-button--primary" type="button" data-nav="sprint-scope-dialog.html">
+              <span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add stories
+            </button>
+          </div>
+        </div>
+
+        <section aria-labelledby="board-heading" data-unless="no-active loading error">
+          <h2 class="mc-visually-hidden" id="board-heading">Sprint 8 board</h2>
+          <div class="mc-column-select">
+            <div class="mc-segmented mc-w-full" role="group" aria-label="Board column">
+              <button class="mc-segmented__button" type="button" data-board-column="todo" aria-controls="sprint-board" aria-pressed="true">
+                <span>To Do</span><span><span class="mc-visually-hidden">, </span><span data-unless="no-stories">2</span><span data-when="no-stories" hidden>0</span><span class="mc-visually-hidden"> stories</span></span>
+              </button>
+              <button class="mc-segmented__button" type="button" data-board-column="progress" aria-controls="sprint-board" aria-pressed="false">
+                <span>In Progress</span><span><span class="mc-visually-hidden">, </span><span data-unless="no-stories">2</span><span data-when="no-stories" hidden>0</span><span class="mc-visually-hidden"> stories</span></span>
+              </button>
+              <button class="mc-segmented__button" type="button" data-board-column="done" aria-controls="sprint-board" aria-pressed="false">
+                <span>Done</span><span><span class="mc-visually-hidden">, </span><span data-unless="no-stories">2</span><span data-when="no-stories" hidden>0</span><span class="mc-visually-hidden"> stories</span></span>
+              </button>
+            </div>
+          </div>
+          <div class="mc-board-scroll" role="region" aria-label="Sprint 8 board columns" tabindex="0">
+            <div class="mc-board" id="sprint-board" data-column="todo">
+            <section class="mc-board__column" data-column="todo" aria-labelledby="col-todo">
+              <header class="mc-board__column-header">
+                <h3 class="mc-board__column-title" id="col-todo"><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span></h3>
+                <span class="mc-board__count"><span data-unless="no-stories">2 stories</span><span data-when="no-stories" hidden>0 stories</span></span>
+              </header>
+              <ul class="mc-board__list" data-unless="no-stories" aria-labelledby="col-todo">
+                  <li class="mc-story-card" data-attr-move-failed="class=mc-story-card mc-story-card--error">
+                    <div class="mc-story-card__top">
+                      <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip"></span></span>
+                      <div class="mc-story-card__titles">
+                        <a class="mc-story-card__title" href="../work/work-item-detail.html">Mentors can see team needs</a>
+                        <span class="mc-story-card__path">HCK-118 · Hackathon team formation</span>
+                      </div>
+                    </div>
+                    <div class="mc-story-card__meta">
+                      <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span>
+                      <span class="mc-nowrap">No tasks · 3 pts</span>
+                    </div>
+                    <p class="mc-field-error" data-when="move-failed" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Move didn't save. Back in To Do.</p>
+                    <div class="mc-story-card__actions">
+                      <button class="mc-button mc-button--sm" type="button" data-nav="../kanban/move-story-dialog.html" aria-label="Move Mentors can see team needs"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    </div>
+                  </li>
+                  <li class="mc-story-card">
+                    <div class="mc-story-card__top">
+                      <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip"></span></span>
+                      <div class="mc-story-card__titles">
+                        <a class="mc-story-card__title" href="../work/work-item-detail.html">Volunteer check-in list</a>
+                        <span class="mc-story-card__path">HCK-125 · Hackathon team formation</span>
+                      </div>
+                    </div>
+                    <div class="mc-story-card__meta">
+                      <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span>
+                      <span class="mc-nowrap">0/3 tasks · 2 pts</span>
+                    </div>
+                    <div class="mc-story-card__actions">
+                      <button class="mc-button mc-button--sm" type="button" data-nav="../kanban/move-story-dialog.html" aria-label="Move Volunteer check-in list"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    </div>
+                  </li>
+              </ul>
+              <p class="mc-board__empty" data-when="no-stories" hidden>Nothing to do yet</p>
+            </section>
+            <section class="mc-board__column" data-column="progress" aria-labelledby="col-progress">
+              <header class="mc-board__column-header">
+                <h3 class="mc-board__column-title" id="col-progress"><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></h3>
+                <span class="mc-board__count"><span data-unless="no-stories">2 stories</span><span data-when="no-stories" hidden>0 stories</span></span>
+              </header>
+              <ul class="mc-board__list" data-unless="no-stories" aria-labelledby="col-progress">
+                  <li class="mc-story-card">
+                    <div class="mc-story-card__top">
+                      <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip"></span></span>
+                      <div class="mc-story-card__titles">
+                        <a class="mc-story-card__title" href="../work/work-item-detail.html">Volunteers can join a build team</a>
+                        <span class="mc-story-card__path">HCK-112 · Hackathon team formation</span>
+                      </div>
+                    </div>
+                    <div class="mc-story-card__meta">
+                      <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span>
+                      <span class="mc-nowrap">2/5 tasks · 5 pts</span>
+                    </div>
+                    <div class="mc-story-card__actions">
+                      <button class="mc-button mc-button--sm" type="button" data-nav="../kanban/move-story-dialog.html" aria-label="Move Volunteers can join a build team"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    </div>
+                  </li>
+                  <li class="mc-story-card">
+                    <div class="mc-story-card__top">
+                      <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip"></span></span>
+                      <div class="mc-story-card__titles">
+                        <a class="mc-story-card__title" href="../work/work-item-detail.html">Book AV for demo day</a>
+                        <span class="mc-story-card__path">HCK-121 · Venue and logistics</span>
+                      </div>
+                    </div>
+                    <div class="mc-story-card__meta">
+                      <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span>
+                      <span class="mc-nowrap">1/2 tasks · 2 pts</span>
+                    </div>
+                    <div class="mc-story-card__actions">
+                      <button class="mc-button mc-button--sm" type="button" data-nav="../kanban/move-story-dialog.html" aria-label="Move Book AV for demo day"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    </div>
+                  </li>
+              </ul>
+              <p class="mc-board__empty" data-when="no-stories" hidden>Nothing in progress</p>
+            </section>
+            <section class="mc-board__column" data-column="done" aria-labelledby="col-done">
+              <header class="mc-board__column-header">
+                <h3 class="mc-board__column-title" id="col-done"><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span></h3>
+                <span class="mc-board__count"><span data-unless="no-stories">2 stories</span><span data-when="no-stories" hidden>0 stories</span></span>
+              </header>
+              <ul class="mc-board__list" data-unless="no-stories" aria-labelledby="col-done">
+                  <li class="mc-story-card">
+                    <div class="mc-story-card__top">
+                      <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip"></span></span>
+                      <div class="mc-story-card__titles">
+                        <a class="mc-story-card__title" href="../work/work-item-detail.html">Teams can register a project idea</a>
+                        <span class="mc-story-card__path">HCK-119 · Hackathon team formation</span>
+                      </div>
+                    </div>
+                    <div class="mc-story-card__meta">
+                      <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span>
+                      <span class="mc-nowrap">2/2 tasks · 2 pts</span>
+                    </div>
+                    <div class="mc-story-card__actions">
+                      <button class="mc-button mc-button--sm" type="button" data-nav="../kanban/move-story-dialog.html" aria-label="Move Teams can register a project idea"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    </div>
+                  </li>
+                  <li class="mc-story-card">
+                    <div class="mc-story-card__top">
+                      <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip"></span></span>
+                      <div class="mc-story-card__titles">
+                        <a class="mc-story-card__title" href="../work/work-item-detail.html">Publish the kickoff agenda</a>
+                        <span class="mc-story-card__path">HCK-124 · Hackathon team formation</span>
+                      </div>
+                    </div>
+                    <div class="mc-story-card__meta">
+                      <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span>
+                      <span class="mc-nowrap">2/2 tasks · 1 pt</span>
+                    </div>
+                    <div class="mc-story-card__actions">
+                      <button class="mc-button mc-button--sm" type="button" data-nav="../kanban/move-story-dialog.html" aria-label="Move Publish the kickoff agenda"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    </div>
+                  </li>
+              </ul>
+              <p class="mc-board__empty" data-when="no-stories" hidden>Nothing done yet</p>
+            </section>
+            </div>
+          </div>
+        </section>
+
+        <div class="mc-empty" data-when="no-active" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--sprint mc-icon--lg" aria-hidden="true"></span></span>
+          <h2 class="mc-empty__title">No active sprint</h2>
+          <p class="mc-empty__text">Sprint 9 is planned for Oct 13 – Oct 23, 2026. Start it when the team is ready, or plan another sprint.</p>
+          <div class="mc-empty__actions">
+            <button class="mc-button" type="button" data-nav="sprint-form-dialog.html">
+              <span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Plan sprint
+            </button>
+            <button class="mc-button mc-button--primary" type="button" data-nav="start-sprint-dialog.html">
+              <span class="mc-icon mc-icon--play" aria-hidden="true"></span>Start Sprint 9
+            </button>
+          </div>
+        </div>
+
+        <p class="mc-visually-hidden" role="status" data-when="loading" hidden>Loading Sprint 8 board</p>
+        <div data-when="loading" hidden aria-hidden="true">
+          <div class="mc-card mc-mb-6">
+            <div class="mc-stack">
+              <span class="mc-skeleton mc-skeleton--title"></span>
+              <span class="mc-skeleton mc-w-60"></span>
+              <span class="mc-skeleton mc-w-40"></span>
+            </div>
+          </div>
+          <div class="mc-board-scroll">
+            <div class="mc-board">
+              <div class="mc-board__column">
+                <span class="mc-skeleton mc-w-40"></span>
+                <span class="mc-skeleton mc-skeleton--block"></span>
+                <span class="mc-skeleton mc-skeleton--block"></span>
+              </div>
+              <div class="mc-board__column">
+                <span class="mc-skeleton mc-w-40"></span>
+                <span class="mc-skeleton mc-skeleton--block"></span>
+                <span class="mc-skeleton mc-skeleton--block"></span>
+              </div>
+              <div class="mc-board__column">
+                <span class="mc-skeleton mc-w-40"></span>
+                <span class="mc-skeleton mc-skeleton--block"></span>
+                <span class="mc-skeleton mc-skeleton--block"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mc-empty mc-empty--error" role="alert" data-when="error" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--alert-circle mc-icon--lg" aria-hidden="true"></span></span>
+          <h2 class="mc-empty__title">We couldn't load the sprint board</h2>
+          <p class="mc-empty__text">Nothing was changed. Check your connection and try again. If it keeps happening, share the reference ID with your administrator.</p>
+          <p class="mc-ref">Reference ID <code>3e8a-1f04-b96c</code>
+            <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="3e8a-1f04-b96c"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+          </p>
+          <div class="mc-empty__actions">
+            <button class="mc-button mc-button--primary" type="button" data-goto-state="loading">
+              <span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="mc-toast-region" role="status" aria-live="polite">
+    <div class="mc-toast mc-toast--danger" role="alert" data-when="move-failed" hidden>
+      <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Couldn't move story</p>
+        <p class="mc-toast__text">"Mentors can see team needs" is back in To Do. Your change wasn't saved.</p>
+        <div class="mc-toast__actions">
+          <button class="mc-button mc-button--sm" type="button" data-goto-state="default"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Retry</button>
+        </div>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </div>
+</body>
+</html>

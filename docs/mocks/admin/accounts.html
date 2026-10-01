@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Accounts · Mission Control mock</title>
+  <meta name="description" content="Administrator-only list of sign-in accounts with roles, status, the protected designated administrator, and loading and error states.">
+  <meta name="mock-area" content="Administration">
+  <meta name="mock-requirements" content="L2-004, L2-005, L2-008.2, L2-029, L2-030, L2-032, L2-034, L2-043.4">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body>
+  <a class="mc-skip-link" href="#main">Skip to main content</a>
+
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Administration · Accounts</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="default">Accounts</option>
+          <option value="loading">Loading</option>
+          <option value="error">Load failed</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="default">Administrator-only. A collaborator never sees the Accounts link, and opening this URL directly shows the <a href="../shell/status-pages.html#state=access-denied">access-denied page</a>. Quinntyne Brown is the designated administrator: there is no Deactivate action for that account. Below 768px each row becomes a labelled card.</p>
+    <p class="mock-note" data-when="loading" hidden>A skeleton holds the table's shape while accounts load, so the page never looks empty. Screen readers hear "Loading accounts".</p>
+    <p class="mock-note" data-when="error" hidden>The request failed. Try again repeats it; the reference ID matches the server's diagnostic record.</p>
+  </div>
+
+  <div class="mc-app">
+    <header class="mc-topbar">
+      <button class="mc-button mc-button--quiet mc-button--icon" type="button" data-toggle aria-controls="mc-sidebar" aria-expanded="false" aria-label="Open navigation">
+        <span class="mc-icon mc-icon--menu" aria-hidden="true"></span>
+      </button>
+      <a class="mc-brand" href="../home/home.html">
+        <span class="mc-brand__mark" aria-hidden="true">MC</span>
+        <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span>
+      </a>
+    </header>
+
+    <nav class="mc-sidebar" id="mc-sidebar" aria-label="Primary">
+      <div class="mc-sidebar__head">
+        <a class="mc-brand" href="../home/home.html">
+          <span class="mc-brand__mark" aria-hidden="true">MC</span>
+          <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span>
+        </a>
+        <button class="mc-button mc-button--quiet mc-button--icon mc-sidebar__close" type="button" data-close="mc-sidebar" aria-label="Close navigation">
+          <span class="mc-icon mc-icon--close" aria-hidden="true"></span>
+        </button>
+      </div>
+      <ul class="mc-nav">
+        <li><a class="mc-nav__link" href="../home/home.html"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></a></li>
+        <li><a class="mc-nav__link" href="../leads/lead-directory.html"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></a></li>
+        <li><a class="mc-nav__link" href="../projects/project-list.html"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></a></li>
+      </ul>
+      <div class="mc-nav-section mock-admin-only">
+        <p class="mc-nav__group" id="nav-admin">Administration</p>
+        <ul class="mc-nav" aria-labelledby="nav-admin">
+          <li><a class="mc-nav__link" href="accounts.html" aria-current="page"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></a></li>
+          <li><a class="mc-nav__link" href="audit-log.html"><span class="mc-icon mc-icon--audit" aria-hidden="true"></span><span class="mc-nav__text">Audit log</span></a></li>
+        </ul>
+      </div>
+      <div class="mc-sidebar__foot">
+        <button class="mc-user-button" type="button" data-toggle aria-controls="user-menu" aria-expanded="false">
+          <span class="mc-avatar mock-admin-only" aria-hidden="true">QB</span>
+          <span class="mc-avatar mock-collaborator-only" aria-hidden="true">AO</span>
+          <span class="mc-user-button__text">
+            <span class="mc-user-button__name mock-admin-only">Quinntyne Brown</span>
+            <span class="mc-user-button__name mock-collaborator-only">Ada Okafor</span>
+            <span class="mc-user-button__role mock-admin-only">Administrator</span>
+            <span class="mc-user-button__role mock-collaborator-only">Collaborator</span>
+          </span>
+          <span class="mc-icon mc-icon--chevron-up mc-icon--sm" aria-hidden="true"></span>
+        </button>
+        <div class="mc-menu" id="user-menu">
+          <div class="mc-menu__header">
+            <div class="mc-stack mc-stack--xs mock-admin-only">
+              <strong>Quinntyne Brown</strong>
+              <span class="mc-muted mc-text-sm">quinntynebrown@gmail.com</span>
+              <span><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>Administrator</span></span>
+            </div>
+            <div class="mc-stack mc-stack--xs mock-collaborator-only">
+              <strong>Ada Okafor</strong>
+              <span class="mc-muted mc-text-sm">ada.okafor@example.org</span>
+              <span><span class="mc-pill"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span></span>
+            </div>
+          </div>
+          <div class="mc-menu__separator"></div>
+          <button class="mc-menu__item" type="button" data-nav="../auth/login.html#state=signed-out">
+            <span class="mc-icon mc-icon--log-out" aria-hidden="true"></span>Sign out
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="mc-main" id="main" tabindex="-1">
+      <div class="mc-page">
+        <header class="mc-page-header">
+          <div class="mc-page-header__main">
+            <h1 class="mc-page-header__title" tabindex="-1">Accounts</h1>
+            <p class="mc-page-header__subtitle">Sign-in accounts and roles. Lead contacts are managed separately in Leads.</p>
+          </div>
+          <div class="mc-page-header__actions">
+            <button class="mc-button mc-button--primary" type="button" data-nav="account-form-dialog.html">
+              <span class="mc-icon mc-icon--user-plus" aria-hidden="true"></span>Add account
+            </button>
+          </div>
+        </header>
+
+        <div class="mc-live" role="status" aria-live="polite">
+          <div class="mc-results-meta" data-when="default">
+            <span>5 accounts · 4 active, 1 inactive</span><span>Sorted by last name</span>
+          </div>
+          <p class="mc-visually-hidden" data-when="loading" hidden>Loading accounts</p>
+        </div>
+
+        <!-- Accounts -->
+        <div class="mc-table-wrap" data-when="default">
+          <table class="mc-table mc-table--stack">
+            <caption class="mc-visually-hidden">Accounts</caption>
+            <thead>
+              <tr>
+                <th scope="col">Name and email</th>
+                <th scope="col">Role</th>
+                <th scope="col">Status</th>
+                <th scope="col"><span class="mc-visually-hidden">Actions</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="mc-table__primary">
+                  <div class="mc-cluster mc-cluster--sm">
+                    <a href="account-detail.html#state=designated">Quinntyne Brown</a>
+                    <span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>Protected</span>
+                  </div>
+                  <span class="mc-table__secondary">quinntynebrown<wbr>@gmail.com</span>
+                  <span class="mc-table__secondary">Designated administrator · can't be deactivated or demoted</span>
+                </td>
+                <td data-label="Role"><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>Administrator</span></td>
+                <td data-label="Status"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Active</span></td>
+                <td data-label="Actions">
+                  <span class="mc-nowrap">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="account-form-dialog.html#state=designated" aria-label="Edit Quinntyne Brown"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span></button>
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="replace-password-dialog.html#state=own" aria-label="Replace password for Quinntyne Brown"><span class="mc-icon mc-icon--key" aria-hidden="true"></span></button>
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td class="mc-table__primary"><a href="account-detail.html">Ada Okafor</a><span class="mc-table__secondary">ada.okafor<wbr>@example.org</span></td>
+                <td data-label="Role"><span class="mc-pill"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span></td>
+                <td data-label="Status"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Active</span></td>
+                <td data-label="Actions">
+                  <span class="mc-nowrap">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="account-form-dialog.html#state=edit" aria-label="Edit Ada Okafor"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span></button>
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="replace-password-dialog.html" aria-label="Replace password for Ada Okafor"><span class="mc-icon mc-icon--key" aria-hidden="true"></span></button>
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="account-status-dialog.html#state=deactivate" aria-label="Deactivate Ada Okafor"><span class="mc-icon mc-icon--user-x" aria-hidden="true"></span></button>
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td class="mc-table__primary"><a href="account-detail.html">Priya Raman</a><span class="mc-table__secondary">priya.raman<wbr>@example.org</span></td>
+                <td data-label="Role"><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>Administrator</span></td>
+                <td data-label="Status"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Active</span></td>
+                <td data-label="Actions">
+                  <span class="mc-nowrap">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="account-form-dialog.html#state=edit" aria-label="Edit Priya Raman"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span></button>
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="replace-password-dialog.html" aria-label="Replace password for Priya Raman"><span class="mc-icon mc-icon--key" aria-hidden="true"></span></button>
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="account-status-dialog.html#state=deactivate" aria-label="Deactivate Priya Raman"><span class="mc-icon mc-icon--user-x" aria-hidden="true"></span></button>
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td class="mc-table__primary"><a href="account-detail.html#state=inactive">Jordan Reyes</a><span class="mc-table__secondary">jordan.reyes<wbr>@example.org</span></td>
+                <td data-label="Role"><span class="mc-pill"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span></td>
+                <td data-label="Status">
+                  <span class="mc-pill"><span class="mc-icon mc-icon--ban" aria-hidden="true"></span>Inactive</span>
+                  <span class="mc-table__secondary">Since Sep 12, 2026</span>
+                </td>
+                <td data-label="Actions">
+                  <span class="mc-nowrap">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="account-form-dialog.html#state=edit" aria-label="Edit Jordan Reyes"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span></button>
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="replace-password-dialog.html" aria-label="Replace password for Jordan Reyes"><span class="mc-icon mc-icon--key" aria-hidden="true"></span></button>
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="account-status-dialog.html#state=reactivate" aria-label="Reactivate Jordan Reyes"><span class="mc-icon mc-icon--user-check" aria-hidden="true"></span></button>
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td class="mc-table__primary"><a href="account-detail.html">Mateo Silva</a><span class="mc-table__secondary">mateo.silva<wbr>@example.org</span></td>
+                <td data-label="Role"><span class="mc-pill"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span></td>
+                <td data-label="Status"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Active</span></td>
+                <td data-label="Actions">
+                  <span class="mc-nowrap">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="account-form-dialog.html#state=edit" aria-label="Edit Mateo Silva"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span></button>
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="replace-password-dialog.html" aria-label="Replace password for Mateo Silva"><span class="mc-icon mc-icon--key" aria-hidden="true"></span></button>
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="account-status-dialog.html" aria-label="Deactivate Mateo Silva"><span class="mc-icon mc-icon--user-x" aria-hidden="true"></span></button>
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="mc-hint mc-mt-4" data-when="default">Accounts can be deactivated but not deleted, so assignments and audit history keep their owner.</p>
+
+        <!-- Loading -->
+        <div class="mc-table-wrap" data-when="loading" hidden aria-hidden="true">
+          <div class="mc-loading-row"><span class="mc-skeleton mc-w-25"></span><span class="mc-skeleton mc-w-40"></span><span class="mc-skeleton mc-skeleton--pill"></span><span class="mc-skeleton mc-skeleton--pill"></span></div>
+          <div class="mc-loading-row"><span class="mc-skeleton mc-w-25"></span><span class="mc-skeleton mc-w-40"></span><span class="mc-skeleton mc-skeleton--pill"></span><span class="mc-skeleton mc-skeleton--pill"></span></div>
+          <div class="mc-loading-row"><span class="mc-skeleton mc-w-25"></span><span class="mc-skeleton mc-w-40"></span><span class="mc-skeleton mc-skeleton--pill"></span><span class="mc-skeleton mc-skeleton--pill"></span></div>
+          <div class="mc-loading-row"><span class="mc-skeleton mc-w-25"></span><span class="mc-skeleton mc-w-40"></span><span class="mc-skeleton mc-skeleton--pill"></span><span class="mc-skeleton mc-skeleton--pill"></span></div>
+          <div class="mc-loading-row"><span class="mc-skeleton mc-w-25"></span><span class="mc-skeleton mc-w-40"></span><span class="mc-skeleton mc-skeleton--pill"></span><span class="mc-skeleton mc-skeleton--pill"></span></div>
+        </div>
+
+        <!-- Error -->
+        <div class="mc-empty mc-empty--error" role="alert" data-when="error" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--alert-circle mc-icon--lg" aria-hidden="true"></span></span>
+          <h2 class="mc-empty__title">We couldn't load accounts</h2>
+          <p class="mc-empty__text">Check your connection and try again. If it keeps happening, share the reference ID with whoever supports Mission Control.</p>
+          <p class="mc-ref">Reference ID <code>3e8b-c71d-05fa</code>
+            <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="3e8b-c71d-05fa"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+          </p>
+          <div class="mc-empty__actions">
+            <button class="mc-button mc-button--primary" type="button" data-goto-state="loading">
+              <span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

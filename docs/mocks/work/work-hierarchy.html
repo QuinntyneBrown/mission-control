@@ -1,0 +1,753 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Work hierarchy · Mission Control mock</title>
+  <meta name="description" content="Project work as an Initiative, Epic, Story, Task outline with sibling reordering, row actions, bounded batches, and empty, loading, and error states.">
+  <meta name="mock-area" content="Work hierarchy">
+  <meta name="mock-requirements" content="L2-005.4, L2-015, L2-016, L2-017, L2-018, L2-029.2, L2-032, L2-033, L2-037.2, L2-045.4">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body data-attr-collaborator="data-role=collaborator">
+  <a class="mc-skip-link" href="#main">Skip to main content</a>
+
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Work · Hierarchy</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="default">Administrator</option>
+          <option value="move-menu">Row menu open</option>
+          <option value="collaborator">Collaborator</option>
+          <option value="empty">Empty project</option>
+          <option value="large">Large set (bounded batches)</option>
+          <option value="batch-error">Next batch failed</option>
+          <option value="loading">Loading</option>
+          <option value="error">Load failed</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="default">Initiative → Epic → Story → Task as an outline. Each toggle reports its expanded state. Move up and Move down change sibling order only and are announced, for example "Book AV for demo day moved to position 2 of 6". Below 768px they move into the row menu. The mock draws a representative part of the project, not all 24 stories and 55 tasks. The project header and tabs stay pinned while the tab content scrolls; on phones only the tabs stay pinned.</p>
+    <p class="mock-note" data-when="move-menu" hidden>The row menu holds every action, so nothing depends on hover or dragging. Move to position… covers reorders that cross pages. Delete appears only for administrators and opens a confirmation that names the item.</p>
+    <p class="mock-note" data-when="collaborator" hidden>Collaborators can add, edit, move, and reorder work. Delete is shown disabled with the reason; the API still refuses it.</p>
+    <p class="mock-note" data-when="empty" hidden>A new project has no work yet. Both roles can add the first initiative.</p>
+    <p class="mock-note" data-when="large" hidden>Shown with a larger dataset. Children load in bounded batches of up to 100; counts always come from the full data. Loading more keeps focus on the button and announces "100 more stories loaded".</p>
+    <p class="mock-note" data-when="batch-error" hidden>The failed batch leaves loaded items in place and offers Retry with a reference ID.</p>
+    <p class="mock-note" data-when="loading" hidden>A skeleton outline holds the layout while work loads. Screen readers hear "Loading work".</p>
+  </div>
+
+  <div class="mc-app">
+    <header class="mc-topbar">
+      <button class="mc-button mc-button--quiet mc-button--icon" type="button" data-toggle aria-controls="mc-sidebar" aria-expanded="false" aria-label="Open navigation">
+        <span class="mc-icon mc-icon--menu" aria-hidden="true"></span>
+      </button>
+      <a class="mc-brand" href="../home/home.html">
+        <span class="mc-brand__mark" aria-hidden="true">MC</span>
+        <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span>
+      </a>
+    </header>
+
+    <nav class="mc-sidebar" id="mc-sidebar" aria-label="Primary">
+      <div class="mc-sidebar__head">
+        <a class="mc-brand" href="../home/home.html">
+          <span class="mc-brand__mark" aria-hidden="true">MC</span>
+          <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span>
+        </a>
+        <button class="mc-button mc-button--quiet mc-button--icon mc-sidebar__close" type="button" data-close="mc-sidebar" aria-label="Close navigation">
+          <span class="mc-icon mc-icon--close" aria-hidden="true"></span>
+        </button>
+      </div>
+      <ul class="mc-nav">
+        <li><a class="mc-nav__link" href="../home/home.html"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></a></li>
+        <li><a class="mc-nav__link" href="../leads/lead-directory.html"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></a></li>
+        <li><a class="mc-nav__link" href="../projects/project-list.html" aria-current="page"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></a></li>
+      </ul>
+      <div class="mc-nav-section mock-admin-only">
+        <p class="mc-nav__group" id="nav-admin">Administration</p>
+        <ul class="mc-nav" aria-labelledby="nav-admin">
+          <li><a class="mc-nav__link" href="../admin/accounts.html"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></a></li>
+          <li><a class="mc-nav__link" href="../admin/audit-log.html"><span class="mc-icon mc-icon--audit" aria-hidden="true"></span><span class="mc-nav__text">Audit log</span></a></li>
+        </ul>
+      </div>
+      <div class="mc-sidebar__foot">
+        <button class="mc-user-button" type="button" data-toggle aria-controls="user-menu" aria-expanded="false">
+          <span class="mc-avatar mock-admin-only" aria-hidden="true">QB</span>
+          <span class="mc-avatar mock-collaborator-only" aria-hidden="true">AO</span>
+          <span class="mc-user-button__text">
+            <span class="mc-user-button__name mock-admin-only">Quinntyne Brown</span>
+            <span class="mc-user-button__name mock-collaborator-only">Ada Okafor</span>
+            <span class="mc-user-button__role mock-admin-only">Administrator</span>
+            <span class="mc-user-button__role mock-collaborator-only">Collaborator</span>
+          </span>
+          <span class="mc-icon mc-icon--chevron-up mc-icon--sm" aria-hidden="true"></span>
+        </button>
+        <div class="mc-menu" id="user-menu">
+          <div class="mc-menu__header">
+            <div class="mc-stack mc-stack--xs mock-admin-only">
+              <strong>Quinntyne Brown</strong>
+              <span class="mc-muted mc-text-sm">quinntynebrown@gmail.com</span>
+              <span><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>Administrator</span></span>
+            </div>
+            <div class="mc-stack mc-stack--xs mock-collaborator-only">
+              <strong>Ada Okafor</strong>
+              <span class="mc-muted mc-text-sm">ada.okafor@example.org</span>
+              <span><span class="mc-pill"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span></span>
+            </div>
+          </div>
+          <div class="mc-menu__separator"></div>
+          <button class="mc-menu__item" type="button" data-nav="../auth/login.html#state=signed-out">
+            <span class="mc-icon mc-icon--log-out" aria-hidden="true"></span>Sign out
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="mc-main" id="main" tabindex="-1">
+      <div class="mc-page">
+        <div class="mc-project-header">
+          <nav class="mc-breadcrumbs" aria-label="Breadcrumb">
+            <ol>
+              <li><a href="../projects/project-list.html">Projects</a></li>
+              <li><span aria-current="page">Community Hackathon 2026</span></li>
+            </ol>
+          </nav>
+          <header class="mc-page-header">
+            <div class="mc-page-header__main">
+              <h1 class="mc-page-header__title" tabindex="-1">Community Hackathon 2026</h1>
+              <div class="mc-page-header__meta">
+                <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
+                <span>Responsible lead: <a href="../leads/lead-detail.html#state=lead">Rafael Da Silva</a></span>
+              </div>
+            </div>
+            <div class="mc-page-header__actions">
+              <button class="mc-button mc-button--primary" type="button" data-nav="work-item-form-dialog.html#state=create-initiative">
+                <span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add initiative
+              </button>
+              <div class="mc-menu-anchor mock-admin-only">
+                <button class="mc-button" type="button" data-toggle aria-controls="project-actions" aria-expanded="false">
+                  Project actions<span class="mc-icon mc-icon--chevron-down mc-icon--sm" aria-hidden="true"></span>
+                </button>
+                <div class="mc-menu" id="project-actions">
+                  <button class="mc-menu__item" type="button" data-nav="../projects/project-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit project</button>
+                  <button class="mc-menu__item" type="button" data-nav="../projects/mode-change-dialog.html#state=blocked"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
+                  <div class="mc-menu__separator"></div>
+                  <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="../projects/project-delete-dialog.html#state=blocked"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
+                </div>
+              </div>
+            </div>
+          </header>
+          <nav class="mc-project-tabs" aria-label="Project sections">
+            <ul class="mc-tabs">
+              <li><a class="mc-tabs__link" href="../projects/project-overview.html"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</a></li>
+              <li><a class="mc-tabs__link" href="work-hierarchy.html" aria-current="page"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</a></li>
+              <li><a class="mc-tabs__link" href="../backlog/backlog.html"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</a></li>
+              <li><a class="mc-tabs__link" href="../scrum/sprint-board.html"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</a></li>
+              <li><a class="mc-tabs__link" href="../scrum/sprints.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</a></li>
+            </ul>
+          </nav>
+        </div>
+
+        <div class="mc-live" role="status" aria-live="polite">
+          <p class="mc-visually-hidden" data-when="loading" hidden>Loading work</p>
+        </div>
+
+        <div class="mc-alert mc-alert--neutral mc-alert--page mock-collaborator-only">
+          <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
+          <div class="mc-alert__body">
+            <p class="mc-alert__text">You can add, edit, and reorder work. Only administrators can delete it.</p>
+          </div>
+        </div>
+
+        <section aria-labelledby="work-heading" data-unless="empty loading error">
+          <div class="mc-section__header">
+            <h2 class="mc-section__title" id="work-heading">Work</h2>
+            <a class="mc-link mc-text-sm" href="work-list.html">View as a filtered list</a>
+          </div>
+          <div class="mc-card mc-tree-card">
+            <ul class="mc-tree" aria-labelledby="work-heading">
+          <li>
+            <div class="mc-tree__row">
+              <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-tree__toggle" type="button" aria-expanded="true" aria-label="Children of Grow Toronto's builder community"><span class="mc-icon mc-icon--chevron-right" aria-hidden="true"></span></button>
+              <span class="mc-type mc-type--initiative" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--initiative" aria-hidden="true"></span></span><span class="mc-type__label">Initiative</span></span>
+              <div class="mc-tree__main">
+                <a class="mc-tree__title" href="work-item-detail.html#state=initiative"><span class="mc-visually-hidden">Initiative: </span>Grow Toronto's builder community</a>
+                <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Initiative</span><span>HCK-101</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">QB</span>Quinntyne Brown</span><span>2 epics</span></div>
+              </div>
+              <div class="mc-tree__actions">
+                <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Grow Toronto's builder community” up" disabled><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Grow Toronto's builder community” down"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                <div class="mc-menu-anchor">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-101" aria-expanded="false" aria-label="Actions for Grow Toronto's builder community"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                  <div class="mc-menu" id="menu-hck-101">
+                      <a class="mc-menu__item" href="work-item-detail.html#state=initiative"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                      <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
+                      <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-epic"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add epic</button>
+                      <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                      <div class="mc-menu__separator"></div>
+                      <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=has-children"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
+                      <span class="mc-menu__item mock-collaborator-only" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Delete<span class="mc-menu__hint">Only administrators can delete work</span></span></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <ul>
+              <li>
+                <div class="mc-tree__row">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-tree__toggle" type="button" aria-expanded="true" aria-label="Children of Hackathon team formation"><span class="mc-icon mc-icon--chevron-right" aria-hidden="true"></span></button>
+                  <span class="mc-type mc-type--epic" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--epic" aria-hidden="true"></span></span><span class="mc-type__label">Epic</span></span>
+                  <div class="mc-tree__main">
+                    <a class="mc-tree__title" href="work-item-detail.html#state=epic"><span class="mc-visually-hidden">Epic: </span>Hackathon team formation</a>
+                    <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Epic</span><span>HCK-104</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span><span><span data-unless="large batch-error">14 stories</span><span data-when="large batch-error" hidden>340 stories</span></span></div>
+                  </div>
+                  <div class="mc-tree__actions">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Hackathon team formation” up" disabled><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Hackathon team formation” down"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-104" aria-expanded="false" aria-label="Actions for Hackathon team formation"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="menu-hck-104">
+                          <a class="mc-menu__item" href="work-item-detail.html#state=epic"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                          <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
+                          <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-story"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add story</button>
+                          <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                          <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                          <div class="mc-menu__separator"></div>
+                          <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=has-children"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
+                          <span class="mc-menu__item mock-collaborator-only" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Delete<span class="mc-menu__hint">Only administrators can delete work</span></span></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <ul>
+                  <li>
+                    <div class="mc-tree__row">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-tree__toggle" type="button" aria-expanded="true" aria-label="Children of Volunteers can join a build team"><span class="mc-icon mc-icon--chevron-right" aria-hidden="true"></span></button>
+                      <span class="mc-type mc-type--story" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--story" aria-hidden="true"></span></span><span class="mc-type__label">Story</span></span>
+                      <div class="mc-tree__main">
+                        <a class="mc-tree__title" href="work-item-detail.html"><span class="mc-visually-hidden">Story: </span>Volunteers can join a build team</a>
+                        <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Story</span><span>HCK-112</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span><span>5 tasks · 2 done</span><span><span class="mc-icon mc-icon--sprint mc-icon--sm" aria-hidden="true"></span> Sprint 8</span></div>
+                      </div>
+                      <div class="mc-tree__actions">
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Volunteers can join a build team” up" disabled><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Volunteers can join a build team” down"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                        <div class="mc-menu-anchor">
+                          <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-112" aria-expanded="false" aria-label="Actions for Volunteers can join a build team"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                          <div class="mc-menu" id="menu-hck-112">
+                              <a class="mc-menu__item" href="work-item-detail.html"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                              <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
+                              <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-task"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add task</button>
+                              <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                              <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                              <div class="mc-menu__separator"></div>
+                              <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=has-children"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
+                              <span class="mc-menu__item mock-collaborator-only" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Delete<span class="mc-menu__hint">Only administrators can delete work</span></span></span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <ul>
+                      <li>
+                        <div class="mc-tree__row">
+                          <span class="mc-tree__spacer"></span>
+                          <span class="mc-type mc-type--task" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--task" aria-hidden="true"></span></span><span class="mc-type__label">Task</span></span>
+                          <div class="mc-tree__main">
+                            <a class="mc-tree__title" href="work-item-detail.html#state=task"><span class="mc-visually-hidden">Task: </span>Design the team sign-up form</a>
+                            <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Task</span><span>HCK-113</span><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span></div>
+                          </div>
+                          <div class="mc-tree__actions">
+                            <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Design the team sign-up form” up" disabled><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                            <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Design the team sign-up form” down"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                            <div class="mc-menu-anchor">
+                              <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-113" aria-expanded="false" aria-label="Actions for Design the team sign-up form"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                              <div class="mc-menu" id="menu-hck-113">
+                                  <a class="mc-menu__item" href="work-item-detail.html#state=task"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                                  <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
+                                  <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                                  <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                                  <div class="mc-menu__separator"></div>
+                                  <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
+                                  <span class="mc-menu__item mock-collaborator-only" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Delete<span class="mc-menu__hint">Only administrators can delete work</span></span></span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </li>
+                      <li>
+                        <div class="mc-tree__row">
+                          <span class="mc-tree__spacer"></span>
+                          <span class="mc-type mc-type--task" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--task" aria-hidden="true"></span></span><span class="mc-type__label">Task</span></span>
+                          <div class="mc-tree__main">
+                            <a class="mc-tree__title" href="work-item-detail.html#state=task"><span class="mc-visually-hidden">Task: </span>Write confirmation message copy</a>
+                            <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Task</span><span>HCK-114</span><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span></div>
+                          </div>
+                          <div class="mc-tree__actions">
+                            <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Write confirmation message copy” up"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                            <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Write confirmation message copy” down"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                            <div class="mc-menu-anchor">
+                              <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-114" aria-expanded="false" aria-label="Actions for Write confirmation message copy"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                              <div class="mc-menu" id="menu-hck-114">
+                                  <a class="mc-menu__item" href="work-item-detail.html#state=task"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                                  <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
+                                  <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                                  <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                                  <div class="mc-menu__separator"></div>
+                                  <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
+                                  <span class="mc-menu__item mock-collaborator-only" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Delete<span class="mc-menu__hint">Only administrators can delete work</span></span></span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </li>
+                      <li>
+                        <div class="mc-tree__row">
+                          <span class="mc-tree__spacer"></span>
+                          <span class="mc-type mc-type--task" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--task" aria-hidden="true"></span></span><span class="mc-type__label">Task</span></span>
+                          <div class="mc-tree__main">
+                            <a class="mc-tree__title" href="work-item-detail.html#state=task"><span class="mc-visually-hidden">Task: </span>Add team capacity limits</a>
+                            <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Task</span><span>HCK-115</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span></div>
+                          </div>
+                          <div class="mc-tree__actions">
+                            <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Add team capacity limits” up"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                            <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Add team capacity limits” down"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                            <div class="mc-menu-anchor">
+                              <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-115" aria-expanded="false" aria-label="Actions for Add team capacity limits"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                              <div class="mc-menu" id="menu-hck-115">
+                                  <a class="mc-menu__item" href="work-item-detail.html#state=task"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                                  <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
+                                  <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                                  <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                                  <div class="mc-menu__separator"></div>
+                                  <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
+                                  <span class="mc-menu__item mock-collaborator-only" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Delete<span class="mc-menu__hint">Only administrators can delete work</span></span></span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </li>
+                      <li>
+                        <div class="mc-tree__row">
+                          <span class="mc-tree__spacer"></span>
+                          <span class="mc-type mc-type--task" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--task" aria-hidden="true"></span></span><span class="mc-type__label">Task</span></span>
+                          <div class="mc-tree__main">
+                            <a class="mc-tree__title" href="work-item-detail.html#state=task"><span class="mc-visually-hidden">Task: </span>Review accessibility of the sign-up flow</a>
+                            <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Task</span><span>HCK-116</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-unset">Unassigned</span></div>
+                          </div>
+                          <div class="mc-tree__actions">
+                            <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Review accessibility of the sign-up flow” up"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                            <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Review accessibility of the sign-up flow” down"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                            <div class="mc-menu-anchor">
+                              <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-116" aria-expanded="false" aria-label="Actions for Review accessibility of the sign-up flow"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                              <div class="mc-menu" id="menu-hck-116">
+                                  <a class="mc-menu__item" href="work-item-detail.html#state=task"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                                  <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
+                                  <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                                  <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                                  <div class="mc-menu__separator"></div>
+                                  <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
+                                  <span class="mc-menu__item mock-collaborator-only" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Delete<span class="mc-menu__hint">Only administrators can delete work</span></span></span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </li>
+                      <li>
+                        <div class="mc-tree__row">
+                          <span class="mc-tree__spacer"></span>
+                          <span class="mc-type mc-type--task" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--task" aria-hidden="true"></span></span><span class="mc-type__label">Task</span></span>
+                          <div class="mc-tree__main">
+                            <a class="mc-tree__title" href="work-item-detail.html#state=task"><span class="mc-visually-hidden">Task: </span>Publish team list for mentors</a>
+                            <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Task</span><span>HCK-117</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span></div>
+                          </div>
+                          <div class="mc-tree__actions">
+                            <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Publish team list for mentors” up"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                            <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Publish team list for mentors” down" disabled><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                            <div class="mc-menu-anchor">
+                              <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-117" aria-expanded="false" aria-label="Actions for Publish team list for mentors"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                              <div class="mc-menu" id="menu-hck-117">
+                                  <a class="mc-menu__item" href="work-item-detail.html#state=task"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                                  <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
+                                  <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                                  <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                                  <div class="mc-menu__separator"></div>
+                                  <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
+                                  <span class="mc-menu__item mock-collaborator-only" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Delete<span class="mc-menu__hint">Only administrators can delete work</span></span></span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </li>
+                    </ul>
+                  </li>
+                  <li>
+                    <div class="mc-tree__row">
+                      <span class="mc-tree__spacer"></span>
+                      <span class="mc-type mc-type--story" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--story" aria-hidden="true"></span></span><span class="mc-type__label">Story</span></span>
+                      <div class="mc-tree__main">
+                        <a class="mc-tree__title" href="work-item-detail.html"><span class="mc-visually-hidden">Story: </span>Mentors can see team needs</a>
+                        <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Story</span><span>HCK-118</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span><span>No tasks</span><span><span class="mc-icon mc-icon--sprint mc-icon--sm" aria-hidden="true"></span> Sprint 8</span></div>
+                      </div>
+                      <div class="mc-tree__actions">
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Mentors can see team needs” up"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Mentors can see team needs” down"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                        <div class="mc-menu-anchor">
+                          <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-118" aria-expanded="false" aria-label="Actions for Mentors can see team needs"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                          <div class="mc-menu" id="menu-hck-118">
+                              <a class="mc-menu__item" href="work-item-detail.html"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                              <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
+                              <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-task"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add task</button>
+                              <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                              <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                              <div class="mc-menu__separator"></div>
+                              <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=in-sprint"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
+                              <span class="mc-menu__item mock-collaborator-only" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Delete<span class="mc-menu__hint">Only administrators can delete work</span></span></span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="mc-tree__row">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-tree__toggle" type="button" aria-expanded="false" aria-label="Children of Teams can register a project idea"><span class="mc-icon mc-icon--chevron-right" aria-hidden="true"></span></button>
+                      <span class="mc-type mc-type--story" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--story" aria-hidden="true"></span></span><span class="mc-type__label">Story</span></span>
+                      <div class="mc-tree__main">
+                        <a class="mc-tree__title" href="work-item-detail.html"><span class="mc-visually-hidden">Story: </span>Teams can register a project idea</a>
+                        <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Story</span><span>HCK-119</span><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span><span>2 tasks · 2 done</span><span><span class="mc-icon mc-icon--sprint mc-icon--sm" aria-hidden="true"></span> Sprint 8</span></div>
+                      </div>
+                      <div class="mc-tree__actions">
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Teams can register a project idea” up"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Teams can register a project idea” down"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                        <div class="mc-menu-anchor">
+                          <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-119" aria-expanded="false" aria-label="Actions for Teams can register a project idea"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                          <div class="mc-menu" id="menu-hck-119">
+                              <a class="mc-menu__item" href="work-item-detail.html"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                              <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
+                              <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-task"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add task</button>
+                              <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                              <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                              <div class="mc-menu__separator"></div>
+                              <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=has-children"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
+                              <span class="mc-menu__item mock-collaborator-only" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Delete<span class="mc-menu__hint">Only administrators can delete work</span></span></span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="mc-tree__row">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-tree__toggle" type="button" aria-expanded="false" aria-label="Children of Mentor matching survey"><span class="mc-icon mc-icon--chevron-right" aria-hidden="true"></span></button>
+                      <span class="mc-type mc-type--story" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--story" aria-hidden="true"></span></span><span class="mc-type__label">Story</span></span>
+                      <div class="mc-tree__main">
+                        <a class="mc-tree__title" href="work-item-detail.html"><span class="mc-visually-hidden">Story: </span>Mentor matching survey</a>
+                        <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Story</span><span>HCK-110</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span><span>3 tasks · 1 done</span><span>Not in a sprint</span></div>
+                      </div>
+                      <div class="mc-tree__actions">
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Mentor matching survey” up"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Mentor matching survey” down" disabled><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                        <div class="mc-menu-anchor">
+                          <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-110" aria-expanded="false" aria-label="Actions for Mentor matching survey"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                          <div class="mc-menu" id="menu-hck-110">
+                              <a class="mc-menu__item" href="work-item-detail.html"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                              <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
+                              <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-task"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add task</button>
+                              <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                              <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                              <div class="mc-menu__separator"></div>
+                              <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=has-children"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
+                              <span class="mc-menu__item mock-collaborator-only" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Delete<span class="mc-menu__hint">Only administrators can delete work</span></span></span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                  <li data-when="large" hidden>
+                    <div class="mc-tree__more mc-cluster">
+                      <span class="mc-text-sm mc-muted">Showing 100 of 340 stories</span>
+                      <button class="mc-button mc-button--sm" type="button" data-goto-state="batch-error"><span class="mc-icon mc-icon--chevron-down" aria-hidden="true"></span>Load 100 more</button>
+                    </div>
+                  </li>
+                  <li data-when="batch-error" hidden>
+                    <div class="mc-tree__more">
+                      <div class="mc-alert mc-alert--danger" role="alert">
+                        <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+                        <div class="mc-alert__body">
+                          <p class="mc-alert__title">Couldn't load more stories</p>
+                          <p class="mc-alert__text">The 100 stories already shown are still here. Showing 100 of 340.</p>
+                          <p class="mc-ref">Reference ID <code>e81c-3a07-d95b</code>
+              <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="e81c-3a07-d95b"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+            </p>
+                          <div class="mc-alert__actions"><button class="mc-button mc-button--sm" type="button" data-goto-state="large"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Retry</button></div>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </li>
+              <li>
+                <div class="mc-tree__row">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-tree__toggle" type="button" aria-expanded="true" aria-label="Children of Venue and logistics"><span class="mc-icon mc-icon--chevron-right" aria-hidden="true"></span></button>
+                  <span class="mc-type mc-type--epic" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--epic" aria-hidden="true"></span></span><span class="mc-type__label">Epic</span></span>
+                  <div class="mc-tree__main">
+                    <a class="mc-tree__title" href="work-item-detail.html#state=epic"><span class="mc-visually-hidden">Epic: </span>Venue and logistics</a>
+                    <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Epic</span><span>HCK-105</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span><span>6 stories</span></div>
+                  </div>
+                  <div class="mc-tree__actions">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Venue and logistics” up"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Venue and logistics” down" disabled><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-105" aria-expanded="false" aria-label="Actions for Venue and logistics"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="menu-hck-105">
+                          <a class="mc-menu__item" href="work-item-detail.html#state=epic"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                          <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
+                          <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-story"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add story</button>
+                          <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                          <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                          <div class="mc-menu__separator"></div>
+                          <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=has-children"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
+                          <span class="mc-menu__item mock-collaborator-only" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Delete<span class="mc-menu__hint">Only administrators can delete work</span></span></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <ul>
+                  <li>
+                    <div class="mc-tree__row">
+                      <span class="mc-tree__spacer"></span>
+                      <span class="mc-type mc-type--story" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--story" aria-hidden="true"></span></span><span class="mc-type__label">Story</span></span>
+                      <div class="mc-tree__main">
+                        <a class="mc-tree__title" href="work-item-detail.html#state=unset"><span class="mc-visually-hidden">Story: </span>Confirm venue accessibility checklist</a>
+                        <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Story</span><span>HCK-120</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-unset">Unassigned</span><span>No tasks</span><span>Not in a sprint</span></div>
+                      </div>
+                      <div class="mc-tree__actions">
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Confirm venue accessibility checklist” up" disabled><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Confirm venue accessibility checklist” down"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                        <div class="mc-menu-anchor">
+                          <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-120" aria-expanded="false" aria-label="Actions for Confirm venue accessibility checklist"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                          <div class="mc-menu" id="menu-hck-120">
+                              <a class="mc-menu__item" href="work-item-detail.html#state=unset"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                              <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
+                              <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-task"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add task</button>
+                              <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                              <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                              <div class="mc-menu__separator"></div>
+                              <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=history"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
+                              <span class="mc-menu__item mock-collaborator-only" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Delete<span class="mc-menu__hint">Only administrators can delete work</span></span></span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="mc-tree__row">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-tree__toggle" type="button" aria-expanded="false" aria-label="Children of Venue floor plan with accessible routes"><span class="mc-icon mc-icon--chevron-right" aria-hidden="true"></span></button>
+                      <span class="mc-type mc-type--story" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--story" aria-hidden="true"></span></span><span class="mc-type__label">Story</span></span>
+                      <div class="mc-tree__main">
+                        <a class="mc-tree__title" href="work-item-detail.html"><span class="mc-visually-hidden">Story: </span>Venue floor plan with accessible routes</a>
+                        <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Story</span><span>HCK-129</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span><span>2 tasks · 1 done</span><span>Not in a sprint</span></div>
+                      </div>
+                      <div class="mc-tree__actions">
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Venue floor plan with accessible routes” up"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Venue floor plan with accessible routes” down"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                        <div class="mc-menu-anchor">
+                          <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-129" aria-expanded="false" aria-label="Actions for Venue floor plan with accessible routes"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                          <div class="mc-menu" id="menu-hck-129">
+                              <a class="mc-menu__item" href="work-item-detail.html"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                              <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
+                              <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-task"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add task</button>
+                              <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                              <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                              <div class="mc-menu__separator"></div>
+                              <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=has-children"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
+                              <span class="mc-menu__item mock-collaborator-only" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Delete<span class="mc-menu__hint">Only administrators can delete work</span></span></span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="mc-tree__row">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-tree__toggle" type="button" aria-expanded="false" aria-label="Children of Book AV for demo day"><span class="mc-icon mc-icon--chevron-right" aria-hidden="true"></span></button>
+                      <span class="mc-type mc-type--story" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--story" aria-hidden="true"></span></span><span class="mc-type__label">Story</span></span>
+                      <div class="mc-tree__main">
+                        <a class="mc-tree__title" href="work-item-detail.html"><span class="mc-visually-hidden">Story: </span>Book AV for demo day</a>
+                        <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Story</span><span>HCK-121</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span><span>2 tasks · 1 done</span><span><span class="mc-icon mc-icon--sprint mc-icon--sm" aria-hidden="true"></span> Sprint 8</span></div>
+                      </div>
+                      <div class="mc-tree__actions">
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Book AV for demo day” up"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Book AV for demo day” down" disabled><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                        <div class="mc-menu-anchor">
+                          <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-121" aria-expanded="false" aria-label="Actions for Book AV for demo day" data-open-when="move-menu"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                          <div class="mc-menu" id="menu-hck-121">
+                              <a class="mc-menu__item" href="work-item-detail.html"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                              <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
+                              <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-task"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add task</button>
+                              <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                              <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                              <div class="mc-menu__separator"></div>
+                              <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=has-children"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
+                              <span class="mc-menu__item mock-collaborator-only" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Delete<span class="mc-menu__hint">Only administrators can delete work</span></span></span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+          <li>
+            <div class="mc-tree__row">
+              <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-tree__toggle" type="button" aria-expanded="true" aria-label="Children of Demo day showcase"><span class="mc-icon mc-icon--chevron-right" aria-hidden="true"></span></button>
+              <span class="mc-type mc-type--initiative" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--initiative" aria-hidden="true"></span></span><span class="mc-type__label">Initiative</span></span>
+              <div class="mc-tree__main">
+                <a class="mc-tree__title" href="work-item-detail.html#state=initiative"><span class="mc-visually-hidden">Initiative: </span>Demo day showcase</a>
+                <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Initiative</span><span>HCK-102</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-unset">Unassigned</span><span>1 epic</span></div>
+              </div>
+              <div class="mc-tree__actions">
+                <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Demo day showcase” up"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Demo day showcase” down" disabled><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                <div class="mc-menu-anchor">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-102" aria-expanded="false" aria-label="Actions for Demo day showcase"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                  <div class="mc-menu" id="menu-hck-102">
+                      <a class="mc-menu__item" href="work-item-detail.html#state=initiative"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                      <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
+                      <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-epic"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add epic</button>
+                      <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                      <div class="mc-menu__separator"></div>
+                      <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=has-children"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
+                      <span class="mc-menu__item mock-collaborator-only" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Delete<span class="mc-menu__hint">Only administrators can delete work</span></span></span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <ul>
+              <li>
+                <div class="mc-tree__row">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-tree__toggle" type="button" aria-expanded="true" aria-label="Children of Judging and feedback"><span class="mc-icon mc-icon--chevron-right" aria-hidden="true"></span></button>
+                  <span class="mc-type mc-type--epic" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--epic" aria-hidden="true"></span></span><span class="mc-type__label">Epic</span></span>
+                  <div class="mc-tree__main">
+                    <a class="mc-tree__title" href="work-item-detail.html#state=epic"><span class="mc-visually-hidden">Epic: </span>Judging and feedback</a>
+                    <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Epic</span><span>HCK-106</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-unset">Unassigned</span><span>4 stories</span></div>
+                  </div>
+                  <div class="mc-tree__actions">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Judging and feedback” up" disabled><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Judging and feedback” down" disabled><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-106" aria-expanded="false" aria-label="Actions for Judging and feedback"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="menu-hck-106">
+                          <a class="mc-menu__item" href="work-item-detail.html#state=epic"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                          <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
+                          <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-story"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add story</button>
+                          <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                          <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                          <div class="mc-menu__separator"></div>
+                          <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=has-children"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
+                          <span class="mc-menu__item mock-collaborator-only" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Delete<span class="mc-menu__hint">Only administrators can delete work</span></span></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <ul>
+                  <li>
+                    <div class="mc-tree__row">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-tree__toggle" type="button" aria-expanded="false" aria-label="Children of Judges can score demos"><span class="mc-icon mc-icon--chevron-right" aria-hidden="true"></span></button>
+                      <span class="mc-type mc-type--story" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--story" aria-hidden="true"></span></span><span class="mc-type__label">Story</span></span>
+                      <div class="mc-tree__main">
+                        <a class="mc-tree__title" href="work-item-detail.html"><span class="mc-visually-hidden">Story: </span>Judges can score demos</a>
+                        <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Story</span><span>HCK-122</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span><span>4 tasks · 0 done</span><span><span class="mc-icon mc-icon--sprint mc-icon--sm" aria-hidden="true"></span> Sprint 9</span></div>
+                      </div>
+                      <div class="mc-tree__actions">
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Judges can score demos” up" disabled><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Judges can score demos” down"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                        <div class="mc-menu-anchor">
+                          <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-122" aria-expanded="false" aria-label="Actions for Judges can score demos"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                          <div class="mc-menu" id="menu-hck-122">
+                              <a class="mc-menu__item" href="work-item-detail.html"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                              <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
+                              <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-task"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add task</button>
+                              <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                              <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                              <div class="mc-menu__separator"></div>
+                              <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=has-children"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
+                              <span class="mc-menu__item mock-collaborator-only" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Delete<span class="mc-menu__hint">Only administrators can delete work</span></span></span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                  <li>
+                    <div class="mc-tree__row">
+                      <span class="mc-tree__spacer"></span>
+                      <span class="mc-type mc-type--story" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--story" aria-hidden="true"></span></span><span class="mc-type__label">Story</span></span>
+                      <div class="mc-tree__main">
+                        <a class="mc-tree__title" href="work-item-detail.html#state=inactive-assignee"><span class="mc-visually-hidden">Story: </span>&lt;script&gt;alert(1)&lt;/script&gt; feedback form</a>
+                        <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Story</span><span>HCK-123</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true">JR</span>Jordan Reyes (inactive)</span><span>No tasks</span><span>Not in a sprint</span></div>
+                      </div>
+                      <div class="mc-tree__actions">
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “&lt;script&gt;alert(1)&lt;/script&gt; feedback form” up"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “&lt;script&gt;alert(1)&lt;/script&gt; feedback form” down" disabled><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                        <div class="mc-menu-anchor">
+                          <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-123" aria-expanded="false" aria-label="Actions for &lt;script&gt;alert(1)&lt;/script&gt; feedback form"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                          <div class="mc-menu" id="menu-hck-123">
+                              <a class="mc-menu__item" href="work-item-detail.html#state=inactive-assignee"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                              <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
+                              <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-task"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add task</button>
+                              <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                              <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                              <div class="mc-menu__separator"></div>
+                              <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
+                              <span class="mc-menu__item mock-collaborator-only" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Delete<span class="mc-menu__hint">Only administrators can delete work</span></span></span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+            </ul>
+          </div>
+        </section>
+
+        <div class="mc-empty" data-when="empty" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--hierarchy mc-icon--lg" aria-hidden="true"></span></span>
+          <h2 class="mc-empty__title">No work yet</h2>
+          <p class="mc-empty__text">Start with an initiative, then add epics, stories, and tasks under it.</p>
+          <div class="mc-empty__actions">
+            <button class="mc-button mc-button--primary" type="button" data-nav="work-item-form-dialog.html#state=create-initiative"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add initiative</button>
+          </div>
+        </div>
+
+        <div class="mc-card" data-when="loading" hidden aria-hidden="true">
+              <div class="mc-loading-row"><span class="mc-skeleton mc-skeleton--avatar"></span><span class="mc-skeleton mc-w-40"></span><span class="mc-skeleton mc-skeleton--pill"></span></div>
+              <div class="mc-loading-row"><span class="mc-skeleton mc-skeleton--avatar"></span><span class="mc-skeleton mc-w-40"></span><span class="mc-skeleton mc-skeleton--pill"></span></div>
+              <div class="mc-loading-row"><span class="mc-skeleton mc-skeleton--avatar"></span><span class="mc-skeleton mc-w-40"></span><span class="mc-skeleton mc-skeleton--pill"></span></div>
+              <div class="mc-loading-row"><span class="mc-skeleton mc-skeleton--avatar"></span><span class="mc-skeleton mc-w-40"></span><span class="mc-skeleton mc-skeleton--pill"></span></div>
+              <div class="mc-loading-row"><span class="mc-skeleton mc-skeleton--avatar"></span><span class="mc-skeleton mc-w-40"></span><span class="mc-skeleton mc-skeleton--pill"></span></div>
+              <div class="mc-loading-row"><span class="mc-skeleton mc-skeleton--avatar"></span><span class="mc-skeleton mc-w-40"></span><span class="mc-skeleton mc-skeleton--pill"></span></div>
+        </div>
+
+        <div class="mc-empty mc-empty--error" role="alert" data-when="error" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--alert-circle mc-icon--lg" aria-hidden="true"></span></span>
+          <h2 class="mc-empty__title">We couldn't load this project's work</h2>
+          <p class="mc-empty__text">Check your connection and try again. If it keeps happening, share the reference ID with your administrator.</p>
+          <p class="mc-ref">Reference ID <code>4b9e-07c2-a1f6</code>
+              <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="4b9e-07c2-a1f6"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+            </p>
+          <div class="mc-empty__actions">
+            <button class="mc-button mc-button--primary" type="button" data-goto-state="loading"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

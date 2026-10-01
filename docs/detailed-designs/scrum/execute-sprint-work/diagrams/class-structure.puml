@@ -1,0 +1,73 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Execute work on the active sprint board
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class SprintBoardPage {
+  +routeContext: Signal<RouteContext>
+  +openDialog(): void
+}
+class BoardView {
+  +state: Signal<FeatureState>
+  +submit(): void
+}
+interface IBoardService {
+  +read(request: GetActiveSprintBoardQuery): Promise<FeatureResult>
+}
+class BoardService {
+  -http: HttpClient
+}
+class BoardsController {
+  -sender: ISender
+}
+class SprintBoardCard {
+  +sprintId: Guid
+  +storyId: Guid
+  +status: WorkStatus
+  +position: int
+  +completedTasks: int
+  +totalTasks: int
+  +boardVersion: long
+}
+interface IMissionControlDataSession {
+  +query(specification): Task<ReadResult>
+  +commit(expectedVersion: long): Task<void>
+}
+class MissionControlDataSession {
+  -connection: DbConnection
+}
+SprintBoardPage --> BoardView : composes
+BoardView ..> IBoardService : inject token
+IBoardService <|.. BoardService
+IMissionControlDataSession <|.. MissionControlDataSession
+class GetActiveSprintBoardQuery {
+  +workspaceId: Guid
+  +status: WorkStatus?
+  +page: int
+  +pageSize: int
+}
+class GetActiveSprintBoardQueryHandler {
+  +handle(request: GetActiveSprintBoardQuery): Task<FeatureResult>
+}
+BoardsController ..> GetActiveSprintBoardQuery : dispatches
+GetActiveSprintBoardQueryHandler ..> GetActiveSprintBoardQuery : handles
+GetActiveSprintBoardQueryHandler --> SprintBoardCard : loads / applies
+GetActiveSprintBoardQueryHandler ..> IMissionControlDataSession : uses
+
+@enduml

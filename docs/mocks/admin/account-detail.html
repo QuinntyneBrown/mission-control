@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Account details · Mission Control mock</title>
+  <meta name="description" content="Administrator view of one sign-in account: an ordinary collaborator, the protected designated administrator, an inactive account, and not-found and loading states.">
+  <meta name="mock-area" content="Administration">
+  <meta name="mock-requirements" content="L2-004, L2-005.2, L2-008, L2-013.3, L2-029.4, L2-032, L2-034">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body>
+  <a class="mc-skip-link" href="#main">Skip to main content</a>
+
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Administration · Account details</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="default">Collaborator account</option>
+          <option value="designated">Designated administrator</option>
+          <option value="inactive">Inactive account</option>
+          <option value="not-found">Not found</option>
+          <option value="loading">Loading</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="default">Administrator-only; collaborators who open this URL get the <a href="../shell/status-pages.html#state=access-denied">access-denied page</a>. The account and Ada's Prayer lead contact are separate records: changing one never changes the other.</p>
+    <p class="mock-note" data-when="designated" hidden>The designated administrator can't be deleted, deactivated, demoted, or have its email changed; the API answers 409 if anyone tries. Deactivate stays visible but disabled, and the reason is written out rather than hidden in a tooltip. Replacing the password is allowed.</p>
+    <p class="mock-note" data-when="inactive" hidden>Deactivation keeps the account, its assignments, and its audit history. Jordan's existing token stops working on the next request. Reactivate restores sign-in with the existing password.</p>
+    <p class="mock-note" data-when="not-found" hidden>Shown for an unknown account ID. Accounts are never deleted, so this usually means a mistyped or outdated link.</p>
+    <p class="mock-note" data-when="loading" hidden>Screen readers hear "Loading account". The skeleton keeps the header and details layout so nothing jumps when data arrives.</p>
+  </div>
+
+  <div class="mc-app">
+    <header class="mc-topbar">
+      <button class="mc-button mc-button--quiet mc-button--icon" type="button" data-toggle aria-controls="mc-sidebar" aria-expanded="false" aria-label="Open navigation">
+        <span class="mc-icon mc-icon--menu" aria-hidden="true"></span>
+      </button>
+      <a class="mc-brand" href="../home/home.html">
+        <span class="mc-brand__mark" aria-hidden="true">MC</span>
+        <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span>
+      </a>
+    </header>
+
+    <nav class="mc-sidebar" id="mc-sidebar" aria-label="Primary">
+      <div class="mc-sidebar__head">
+        <a class="mc-brand" href="../home/home.html">
+          <span class="mc-brand__mark" aria-hidden="true">MC</span>
+          <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span>
+        </a>
+        <button class="mc-button mc-button--quiet mc-button--icon mc-sidebar__close" type="button" data-close="mc-sidebar" aria-label="Close navigation">
+          <span class="mc-icon mc-icon--close" aria-hidden="true"></span>
+        </button>
+      </div>
+      <ul class="mc-nav">
+        <li><a class="mc-nav__link" href="../home/home.html"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></a></li>
+        <li><a class="mc-nav__link" href="../leads/lead-directory.html"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></a></li>
+        <li><a class="mc-nav__link" href="../projects/project-list.html"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></a></li>
+      </ul>
+      <div class="mc-nav-section mock-admin-only">
+        <p class="mc-nav__group" id="nav-admin">Administration</p>
+        <ul class="mc-nav" aria-labelledby="nav-admin">
+          <li><a class="mc-nav__link" href="accounts.html" aria-current="page"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></a></li>
+          <li><a class="mc-nav__link" href="audit-log.html"><span class="mc-icon mc-icon--audit" aria-hidden="true"></span><span class="mc-nav__text">Audit log</span></a></li>
+        </ul>
+      </div>
+      <div class="mc-sidebar__foot">
+        <button class="mc-user-button" type="button" data-toggle aria-controls="user-menu" aria-expanded="false">
+          <span class="mc-avatar mock-admin-only" aria-hidden="true">QB</span>
+          <span class="mc-avatar mock-collaborator-only" aria-hidden="true">AO</span>
+          <span class="mc-user-button__text">
+            <span class="mc-user-button__name mock-admin-only">Quinntyne Brown</span>
+            <span class="mc-user-button__name mock-collaborator-only">Ada Okafor</span>
+            <span class="mc-user-button__role mock-admin-only">Administrator</span>
+            <span class="mc-user-button__role mock-collaborator-only">Collaborator</span>
+          </span>
+          <span class="mc-icon mc-icon--chevron-up mc-icon--sm" aria-hidden="true"></span>
+        </button>
+        <div class="mc-menu" id="user-menu">
+          <div class="mc-menu__header">
+            <div class="mc-stack mc-stack--xs mock-admin-only">
+              <strong>Quinntyne Brown</strong>
+              <span class="mc-muted mc-text-sm">quinntynebrown@gmail.com</span>
+              <span><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>Administrator</span></span>
+            </div>
+            <div class="mc-stack mc-stack--xs mock-collaborator-only">
+              <strong>Ada Okafor</strong>
+              <span class="mc-muted mc-text-sm">ada.okafor@example.org</span>
+              <span><span class="mc-pill"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span></span>
+            </div>
+          </div>
+          <div class="mc-menu__separator"></div>
+          <button class="mc-menu__item" type="button" data-nav="../auth/login.html#state=signed-out">
+            <span class="mc-icon mc-icon--log-out" aria-hidden="true"></span>Sign out
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="mc-main" id="main" tabindex="-1">
+      <div class="mc-page">
+        <nav class="mc-breadcrumbs" aria-label="Breadcrumb" data-unless="not-found">
+          <ol>
+            <li><a href="accounts.html">Accounts</a></li>
+            <li>
+              <span aria-current="page" data-when="default">Ada Okafor</span>
+              <span aria-current="page" data-when="designated" hidden>Quinntyne Brown</span>
+              <span aria-current="page" data-when="inactive" hidden>Jordan Reyes</span>
+              <span data-when="loading" hidden>Loading…</span>
+            </li>
+          </ol>
+        </nav>
+
+        <!-- Header -->
+        <header class="mc-page-header" data-when="default designated inactive">
+          <div class="mc-page-header__main">
+            <h1 class="mc-page-header__title" tabindex="-1">
+              <span data-when="default">Ada Okafor</span>
+              <span data-when="designated" hidden>Quinntyne Brown</span>
+              <span data-when="inactive" hidden>Jordan Reyes</span>
+            </h1>
+            <div class="mc-page-header__meta">
+              <span data-when="default inactive"><span class="mc-pill"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span></span>
+              <span data-when="designated" hidden><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>Administrator</span></span>
+              <span data-when="default designated"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Active</span></span>
+              <span data-when="inactive" hidden><span class="mc-pill"><span class="mc-icon mc-icon--ban" aria-hidden="true"></span>Inactive</span></span>
+              <span data-when="designated" hidden><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span>Protected</span></span>
+            </div>
+          </div>
+          <div class="mc-page-header__actions">
+            <button class="mc-button" type="button" data-nav="account-form-dialog.html#state=edit"
+              data-attr-designated="data-nav=account-form-dialog.html#state=designated">
+              <span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit
+            </button>
+            <button class="mc-button" type="button" data-nav="replace-password-dialog.html"
+              data-attr-designated="data-nav=replace-password-dialog.html#state=own">
+              <span class="mc-icon mc-icon--key" aria-hidden="true"></span>Replace password
+            </button>
+            <button class="mc-button" type="button" data-when="default designated" data-nav="account-status-dialog.html#state=deactivate"
+              data-attr-designated="disabled|aria-describedby=protected-reason">
+              <span class="mc-icon mc-icon--user-x" aria-hidden="true"></span>Deactivate
+            </button>
+            <button class="mc-button mc-button--primary" type="button" data-when="inactive" hidden data-nav="account-status-dialog.html#state=reactivate">
+              <span class="mc-icon mc-icon--user-check" aria-hidden="true"></span>Reactivate
+            </button>
+          </div>
+        </header>
+
+        <!-- Protected explanation (designated administrator) -->
+        <div class="mc-alert mc-alert--page" data-when="designated" hidden>
+          <span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>
+          <div class="mc-alert__body">
+            <p class="mc-alert__title">This is the designated administrator</p>
+            <p class="mc-alert__text" id="protected-reason">So that Mission Control always has an administrator, this account can't be deleted, deactivated, or demoted, and its email can't be changed. Its password can be replaced, and setup never resets it.</p>
+          </div>
+        </div>
+
+        <!-- Inactive explanation -->
+        <div class="mc-alert mc-alert--neutral mc-alert--page" data-when="inactive" hidden>
+          <span class="mc-icon mc-icon--ban" aria-hidden="true"></span>
+          <div class="mc-alert__body">
+            <p class="mc-alert__title">Inactive since Sep 12, 2026</p>
+            <p class="mc-alert__text">Can't sign in; assignments and history are kept. Their one assigned story, <a href="../work/work-item-detail.html#state=inactive-assignee">HCK-123</a>, still shows them as its assignee.</p>
+          </div>
+        </div>
+
+        <!-- Details -->
+        <div class="mc-split" data-when="default designated inactive">
+          <section class="mc-card" aria-labelledby="account-details-title">
+            <div class="mc-card__header">
+              <h2 class="mc-card__title" id="account-details-title">Account details</h2>
+            </div>
+            <dl class="mc-dl">
+              <dt>Email</dt>
+              <dd>
+                <span data-when="default">ada.okafor<wbr>@example.org</span>
+                <span data-when="designated" hidden>quinntynebrown<wbr>@gmail.com</span>
+                <span data-when="inactive" hidden>jordan.reyes<wbr>@example.org</span>
+                <p class="mc-hint" data-unless="designated">Email identifies the account and can't be edited.</p>
+                <p class="mc-reason" data-when="designated" hidden><span class="mc-icon mc-icon--lock" aria-hidden="true"></span>Locked for the designated administrator.</p>
+              </dd>
+
+              <dt>Role</dt>
+              <dd>
+                <div class="mc-stack mc-stack--xs" data-when="default inactive">
+                  <span class="mc-strong">Collaborator</span>
+                  <span class="mc-muted mc-text-sm">Read leads and projects; add and update work; run boards and sprints.</span>
+                </div>
+                <div class="mc-stack mc-stack--xs" data-when="designated" hidden>
+                  <span class="mc-strong">Administrator</span>
+                  <span class="mc-muted mc-text-sm">Everything, including leads, projects, accounts, and the audit log.</span>
+                  <span class="mc-reason"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span>Can't be changed for the designated administrator.</span>
+                </div>
+              </dd>
+
+              <dt>Status</dt>
+              <dd>
+                <span data-when="default">Active · can sign in</span>
+                <span data-when="designated" hidden>Active · always stays active</span>
+                <span data-when="inactive" hidden>Inactive since Sep 12, 2026 · can't sign in</span>
+              </dd>
+
+              <dt>Added on</dt>
+              <dd>
+                <span data-when="default">Sep 3, 2026 by Quinntyne Brown</span>
+                <span data-when="designated" hidden>Sep 1, 2026 · created when Mission Control was set up</span>
+                <span data-when="inactive" hidden>Sep 3, 2026 by Priya Raman</span>
+              </dd>
+            </dl>
+          </section>
+
+          <section class="mc-card mc-card--quiet" aria-labelledby="account-contact-title">
+            <div class="mc-card__header">
+              <h2 class="mc-card__title" id="account-contact-title">Accounts and leads</h2>
+            </div>
+            <div class="mc-stack mc-stack--sm mc-text-sm">
+              <p class="mc-muted">A sign-in account and a lead contact are separate records. Changing one never changes the other.</p>
+              <p data-when="default">Ada Okafor is also listed as a <a href="../leads/lead-detail.html#state=lead">Prayer lead</a>.</p>
+              <p data-when="designated" hidden>Quinntyne Brown is also the <a href="../leads/lead-detail.html">City Lead</a>. Editing or deleting that contact doesn't affect this account.</p>
+              <p data-when="inactive" hidden>Jordan Reyes has no lead contact.</p>
+            </div>
+          </section>
+        </div>
+
+        <!-- Not found -->
+        <div class="mc-empty mc-empty--page mc-empty--neutral" data-when="not-found" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--compass mc-icon--lg" aria-hidden="true"></span></span>
+          <h1 class="mc-empty__title" tabindex="-1">Account not found</h1>
+          <p class="mc-empty__text">We couldn't find an account at this link. It may be mistyped or out of date.</p>
+          <div class="mc-empty__actions">
+            <a class="mc-button mc-button--primary" href="accounts.html"><span class="mc-icon mc-icon--arrow-left" aria-hidden="true"></span>Back to accounts</a>
+          </div>
+        </div>
+
+        <!-- Loading -->
+        <div class="mc-live" role="status" aria-live="polite">
+          <p class="mc-visually-hidden" data-when="loading" hidden>Loading account</p>
+        </div>
+        <div class="mc-stack mc-stack--lg" data-when="loading" hidden aria-hidden="true">
+          <div class="mc-stack mc-stack--sm">
+            <span class="mc-skeleton mc-skeleton--title"></span>
+            <div class="mc-cluster mc-cluster--sm"><span class="mc-skeleton mc-skeleton--pill"></span><span class="mc-skeleton mc-skeleton--pill"></span></div>
+          </div>
+          <div class="mc-split">
+            <div class="mc-card mc-stack">
+              <span class="mc-skeleton mc-w-40"></span>
+              <span class="mc-skeleton mc-w-80"></span>
+              <span class="mc-skeleton mc-w-60"></span>
+              <span class="mc-skeleton mc-w-80"></span>
+            </div>
+            <div class="mc-card mc-stack">
+              <span class="mc-skeleton mc-w-60"></span>
+              <span class="mc-skeleton mc-w-80"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

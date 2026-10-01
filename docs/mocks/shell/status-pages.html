@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Status pages · Mission Control mock</title>
+  <meta name="description" content="Signed-in status pages: not found, access denied, unexpected error with a reference ID, and can't reach Mission Control.">
+  <meta name="mock-area" content="Shell">
+  <meta name="mock-requirements" content="L2-002.4, L2-004.5, L2-010.4, L2-029.3, L2-029.4, L2-032.3, L2-033.4, L2-043.1, L2-043.4">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body data-attr-access-denied="data-role=collaborator">
+  <a class="mc-skip-link" href="#main">Skip to main content</a>
+
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Shell · Status pages</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="not-found">Not found</option>
+          <option value="access-denied">Access denied</option>
+          <option value="error">Unexpected error</option>
+          <option value="offline">Can't reach Mission Control</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="not-found">Shown for an unknown route or a record that no longer exists (the API returned 404). The shell stays, so every permitted destination is one step away. Focus moves to the heading.</p>
+    <p class="mock-note" data-when="access-denied" hidden>A collaborator opened a direct link to Accounts or the Audit log. Nothing protected was requested or shown. The same page appears if a permission was removed mid-session (API 403).</p>
+    <p class="mock-note" data-when="error" hidden>The API returned 500. The reference ID is the correlation ID of the server's diagnostic record; no stack traces or internal details are shown.</p>
+    <p class="mock-note" data-when="offline" hidden>The browser couldn't reach the API. What's already on screen stays; Try again repeats the request.</p>
+  </div>
+
+  <div class="mc-app">
+    <header class="mc-topbar">
+      <button class="mc-button mc-button--quiet mc-button--icon" type="button" data-toggle aria-controls="mc-sidebar" aria-expanded="false" aria-label="Open navigation">
+        <span class="mc-icon mc-icon--menu" aria-hidden="true"></span>
+      </button>
+      <a class="mc-brand" href="../home/home.html">
+        <span class="mc-brand__mark" aria-hidden="true">MC</span>
+        <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span>
+      </a>
+    </header>
+
+    <nav class="mc-sidebar" id="mc-sidebar" aria-label="Primary">
+      <div class="mc-sidebar__head">
+        <a class="mc-brand" href="../home/home.html">
+          <span class="mc-brand__mark" aria-hidden="true">MC</span>
+          <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span>
+        </a>
+        <button class="mc-button mc-button--quiet mc-button--icon mc-sidebar__close" type="button" data-close="mc-sidebar" aria-label="Close navigation">
+          <span class="mc-icon mc-icon--close" aria-hidden="true"></span>
+        </button>
+      </div>
+      <ul class="mc-nav">
+        <li><a class="mc-nav__link" href="../home/home.html"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></a></li>
+        <li><a class="mc-nav__link" href="../leads/lead-directory.html"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></a></li>
+        <li><a class="mc-nav__link" href="../projects/project-list.html"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></a></li>
+      </ul>
+      <div class="mc-nav-section mock-admin-only">
+        <p class="mc-nav__group" id="nav-admin">Administration</p>
+        <ul class="mc-nav" aria-labelledby="nav-admin">
+          <li><a class="mc-nav__link" href="../admin/accounts.html"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></a></li>
+          <li><a class="mc-nav__link" href="../admin/audit-log.html"><span class="mc-icon mc-icon--audit" aria-hidden="true"></span><span class="mc-nav__text">Audit log</span></a></li>
+        </ul>
+      </div>
+      <div class="mc-sidebar__foot">
+        <button class="mc-user-button" type="button" data-toggle aria-controls="user-menu" aria-expanded="false">
+          <span class="mc-avatar mock-admin-only" aria-hidden="true">QB</span>
+          <span class="mc-avatar mock-collaborator-only" aria-hidden="true">AO</span>
+          <span class="mc-user-button__text">
+            <span class="mc-user-button__name mock-admin-only">Quinntyne Brown</span>
+            <span class="mc-user-button__name mock-collaborator-only">Ada Okafor</span>
+            <span class="mc-user-button__role mock-admin-only">Administrator</span>
+            <span class="mc-user-button__role mock-collaborator-only">Collaborator</span>
+          </span>
+          <span class="mc-icon mc-icon--chevron-up mc-icon--sm" aria-hidden="true"></span>
+        </button>
+        <div class="mc-menu" id="user-menu">
+          <div class="mc-menu__header">
+            <div class="mc-stack mc-stack--xs mock-admin-only">
+              <strong>Quinntyne Brown</strong>
+              <span class="mc-muted mc-text-sm">quinntynebrown@gmail.com</span>
+              <span><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>Administrator</span></span>
+            </div>
+            <div class="mc-stack mc-stack--xs mock-collaborator-only">
+              <strong>Ada Okafor</strong>
+              <span class="mc-muted mc-text-sm">ada.okafor@example.org</span>
+              <span><span class="mc-pill"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span></span>
+            </div>
+          </div>
+          <div class="mc-menu__separator"></div>
+          <button class="mc-menu__item" type="button" data-nav="../auth/login.html#state=signed-out">
+            <span class="mc-icon mc-icon--log-out" aria-hidden="true"></span>Sign out
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="mc-main" id="main" tabindex="-1">
+      <div class="mc-page">
+
+        <!-- Not found -->
+        <section class="mc-empty mc-empty--page mc-empty--neutral" data-when="not-found" aria-labelledby="not-found-title">
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--compass mc-icon--lg" aria-hidden="true"></span></span>
+          <h1 class="mc-empty__title" id="not-found-title" tabindex="-1">That page doesn't exist</h1>
+          <p class="mc-empty__text">The link may be out of date, or what it pointed to was deleted. Check the address, or pick up from one of these places.</p>
+          <div class="mc-empty__actions">
+            <a class="mc-button mc-button--primary" href="../home/home.html"><span class="mc-icon mc-icon--home" aria-hidden="true"></span>Go to Home</a>
+            <a class="mc-button" href="../projects/project-list.html">View projects</a>
+            <a class="mc-button" href="../leads/lead-directory.html">View leads</a>
+          </div>
+        </section>
+
+        <!-- Access denied -->
+        <section class="mc-empty mc-empty--page mc-empty--warning" data-when="access-denied" hidden aria-labelledby="access-denied-title">
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--lock mc-icon--lg" aria-hidden="true"></span></span>
+          <h1 class="mc-empty__title" id="access-denied-title" tabindex="-1">You don't have access to this page</h1>
+          <p class="mc-empty__text">Accounts and the audit log are for administrators, and your role is Collaborator. If you need access, ask an administrator.</p>
+          <div class="mc-empty__actions">
+            <a class="mc-button mc-button--primary" href="../home/home.html"><span class="mc-icon mc-icon--home" aria-hidden="true"></span>Go to Home</a>
+            <a class="mc-button" href="../projects/project-list.html">View projects</a>
+          </div>
+        </section>
+
+        <!-- Unexpected error -->
+        <section class="mc-empty mc-empty--page mc-empty--error" data-when="error" hidden aria-labelledby="error-title">
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--alert-octagon mc-icon--lg" aria-hidden="true"></span></span>
+          <h1 class="mc-empty__title" id="error-title" tabindex="-1">Something went wrong</h1>
+          <p class="mc-empty__text">Mission Control hit an unexpected problem and nothing was changed. Try again. If it keeps happening, share the reference ID with your administrator.</p>
+          <p class="mc-ref">Reference ID <code>e27a-6b0c-93f1</code>
+            <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="e27a-6b0c-93f1"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+          </p>
+          <div class="mc-empty__actions">
+            <button class="mc-button mc-button--primary" type="button" data-goto-state="error"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again</button>
+            <a class="mc-button" href="../home/home.html">Go to Home</a>
+          </div>
+        </section>
+
+        <!-- Offline -->
+        <section class="mc-empty mc-empty--page mc-empty--neutral" data-when="offline" hidden aria-labelledby="offline-title">
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--wifi-off mc-icon--lg" aria-hidden="true"></span></span>
+          <h1 class="mc-empty__title" id="offline-title" tabindex="-1">Can't reach Mission Control</h1>
+          <p class="mc-empty__text">Check your internet connection, then try again. Changes can't be saved until you're back online.</p>
+          <div class="mc-empty__actions">
+            <button class="mc-button mc-button--primary" type="button" data-goto-state="offline"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again</button>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

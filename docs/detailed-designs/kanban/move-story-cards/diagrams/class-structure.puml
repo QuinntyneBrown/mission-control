@@ -1,0 +1,76 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Move and reorder story cards
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class KanbanBoardPage {
+  +routeContext: Signal<RouteContext>
+  +openDialog(): void
+}
+class BoardView {
+  +state: Signal<FeatureState>
+  +submit(): void
+}
+interface IBoardService {
+  +move(request: MoveStoryCommand): Promise<FeatureResult>
+}
+class BoardService {
+  -http: HttpClient
+}
+class BoardsController {
+  -sender: ISender
+}
+class BoardPlacement {
+  +boardId: Guid
+  +storyId: Guid
+  +status: WorkStatus
+  +position: int
+  +version: long
+  +move(status: WorkStatus, position: int): void
+}
+interface IMissionControlDataSession {
+  +query(specification): Task<ReadResult>
+  +commit(expectedVersion: long): Task<void>
+}
+class MissionControlDataSession {
+  -connection: DbConnection
+}
+KanbanBoardPage --> BoardView : composes
+BoardView ..> IBoardService : inject token
+IBoardService <|.. BoardService
+IMissionControlDataSession <|.. MissionControlDataSession
+class MoveStoryCommand {
+  +workspaceId: Guid
+  +storyId: Guid
+  +boardId: Guid
+  +destination: WorkStatus
+  +targetPosition: int
+  +expectedStoryVersion: long
+  +expectedBoardVersion: long
+  +completionCondition: CompletionCondition?
+}
+class MoveStoryCommandHandler {
+  +handle(request: MoveStoryCommand): Task<FeatureResult>
+}
+BoardsController ..> MoveStoryCommand : dispatches
+MoveStoryCommandHandler ..> MoveStoryCommand : handles
+MoveStoryCommandHandler --> BoardPlacement : loads / applies
+MoveStoryCommandHandler ..> IMissionControlDataSession : uses
+
+@enduml

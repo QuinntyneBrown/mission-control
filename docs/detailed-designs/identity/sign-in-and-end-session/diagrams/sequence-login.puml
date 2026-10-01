@@ -1,0 +1,85 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Behavior - Authenticate credentials
+actor "Account holder" as actor
+box "Frontend - Mission Control application" #E0F2FE
+  participant "LoginPage / SessionView" as page
+  participant "ISessionService / SessionService" as client
+end box
+box "Backend - MissionControl.Api" #D1FADF
+  participant "HTTPS / CORS / SessionsController" as ctrl
+end box
+box "Backend - MissionControl.Application and Domain" #ECFDF3
+  participant "LoginCommandValidator" as validator
+  participant "LoginCommandHandler" as handler
+  participant "Password verification / token issuer ports" as security
+end box
+box "Backend - MissionControl.Infrastructure" #FFF4E5
+  database "Mission Control SQL" as db
+end box
+actor -> page : Submit email and exact password
+page -> client : Build LoginCommand; prevent duplicate submission
+client -> ctrl : POST /api/sessions over HTTPS
+ctrl -> validator : MediatR 12.5.0 validation pipeline
+validator -> validator : Validate email; do not trim password
+alt Invalid fields
+  validator --> ctrl : 400 field messages
+  ctrl --> client : Validation ProblemDetails
+  client --> page : Keep email; focus linked errors
+else Valid request
+  validator -> handler : Handle LoginCommand
+  handler -> db : L2-038 lock normalized-email attempt state; check rolling window
+  db --> handler : Failure count and blocked-until instant
+  alt Within throttle interval
+    handler -> db : Append throttled audit; no account status change
+    db --> handler : Recorded outcome
+    handler --> ctrl : 429 with retry timing; no token
+    ctrl --> client : Generic throttle result
+    client --> page : Keep email and show retry guidance
+  else Attempt permitted
+    handler -> db : L2-001 read account identity/hash/status
+    db --> handler : Account or absent identity
+    handler -> security : Verify exact password; dummy hash for unknown identity
+    security --> handler : Credential validity
+    alt Unknown / wrong password / inactive account
+      handler -> db : Increment failure window; fifth sets 15-minute throttle
+      db --> handler : Failure state saved
+      handler -> db : L2-039 append denied audit without credentials/contact payload
+      db --> handler : Audit recorded
+      handler --> ctrl : Same generic 401; no token
+      ctrl --> client : Credential denial
+      client --> page : Clear password; retain email
+    else Active valid account
+      handler -> security : L2-036 sign subject/credential version; expiry now plus 30 minutes
+      security --> handler : JWT and expiry
+      handler -> db : Reset failures and record successful-login audit
+      alt Audit/reset commit fails
+        db --> handler : Rollback; no successful-login audit
+        handler --> ctrl : Generic 500 plus diagnostic correlation ID; no token response
+        ctrl --> client : Failed authentication operation
+        client --> page : Service error; preserve retry context
+      else Commit succeeds
+        db --> handler : Successful-login outcome committed
+        handler --> ctrl : Intended JWT response and expiry
+        ctrl --> client : 200 login result
+        client -> client : L2-003 hold token only in memory
+        client --> page : Safe account/capability summary
+        page --> actor : Open Home or permitted internal return route
+      end
+    end
+  end
+end
+@enduml

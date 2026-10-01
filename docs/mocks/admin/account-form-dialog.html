@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Add or edit account · Mission Control mock</title>
+  <meta name="description" content="Account dialog for provisioning and editing sign-in accounts: validation, duplicate email, saving, failure, success, editing names and role, the locked designated administrator, and an edit conflict.">
+  <meta name="mock-area" content="Administration">
+  <meta name="mock-requirements" content="L2-004, L2-005.2, L2-008, L2-031, L2-033.2, L2-034.1, L2-036, L2-041.3, L2-043.4">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body>
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Administration · Add or edit account</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="create">Add (empty)</option>
+          <option value="validation">Validation errors</option>
+          <option value="duplicate">Duplicate email</option>
+          <option value="saving">Saving</option>
+          <option value="failed">Save failed</option>
+          <option value="created">Account added</option>
+          <option value="edit">Edit names and role</option>
+          <option value="designated">Edit designated administrator</option>
+          <option value="conflict">Edit conflict</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="create">Administrator-only. Opens from "Add account", with focus on First name. Collaborator is preselected as the lower-privilege role. Accounts are provisioned privately; there is no public sign-up. Below 576px the dialog fills the screen.</p>
+    <p class="mock-note" data-when="validation" hidden>Focus moves to the error summary. Names and email are trimmed; the password is never trimmed, and a 12–128 character length is the only rule shown. Valid input is kept.</p>
+    <p class="mock-note" data-when="duplicate" hidden>Account emails are unique after trimming and case folding, so the API answers 409 and no account is created. Lead contacts don't count: a lead may share an account's email.</p>
+    <p class="mock-note" data-when="saving" hidden>Save shows progress and ignores repeat clicks, so only one account can be created.</p>
+    <p class="mock-note" data-when="failed" hidden>Nothing was created. Every value, including the password, is kept for a retry.</p>
+    <p class="mock-note" data-when="created" hidden>The password is never shown again or sent anywhere. Lena can sign in immediately. Done returns to the account list, where the new row appears.</p>
+    <p class="mock-note" data-when="edit" hidden>Email is shown as text because it can't change. A role change applies on Ada's next request. Passwords are replaced from their own dialog.</p>
+    <p class="mock-note" data-when="designated" hidden>Names can be edited, but the role choice is disabled and the reason is written beside it. A forced API request to demote or change the email returns 409.</p>
+    <p class="mock-note" data-when="conflict" hidden>The account changed after the form opened. The edits are kept and never resubmitted automatically. "Reload latest" loads the saved version so edits can be re-applied.</p>
+  </div>
+
+  <div class="mock-screen">
+    <div class="mock-screen__page" inert>
+      <div class="mc-app">
+        <header class="mc-topbar">
+          <span class="mc-button mc-button--quiet mc-button--icon"><span class="mc-icon mc-icon--menu" aria-hidden="true"></span></span>
+          <span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span>
+        </header>
+        <div class="mc-sidebar">
+          <div class="mc-sidebar__head"><span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span></div>
+          <ul class="mc-nav">
+            <li><span class="mc-nav__link"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></span></li>
+            <li><span class="mc-nav__link"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></span></li>
+            <li><span class="mc-nav__link"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></span></li>
+          </ul>
+          <div class="mc-nav-section">
+            <p class="mc-nav__group">Administration</p>
+            <ul class="mc-nav">
+              <li><span class="mc-nav__link" aria-current="page"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></span></li>
+              <li><span class="mc-nav__link"><span class="mc-icon mc-icon--audit" aria-hidden="true"></span><span class="mc-nav__text">Audit log</span></span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="mc-main">
+          <div class="mc-page">
+            <div class="mc-page-header">
+              <div class="mc-page-header__main">
+                <p class="mc-h1">Accounts</p>
+                <p class="mc-page-header__subtitle">Sign-in accounts and roles. Lead contacts are managed separately in Leads.</p>
+              </div>
+              <div class="mc-page-header__actions"><span class="mc-button mc-button--primary"><span class="mc-icon mc-icon--user-plus" aria-hidden="true"></span>Add account</span></div>
+            </div>
+            <div class="mc-table-wrap">
+              <table class="mc-table mc-table--stack">
+                <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th></tr></thead>
+                <tbody>
+                  <tr><td class="mc-table__primary">Quinntyne Brown</td><td data-label="Email">quinntynebrown<wbr>@gmail.com</td><td data-label="Role"><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>Administrator</span></td><td data-label="Status"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Active</span></td></tr>
+                  <tr><td class="mc-table__primary">Ada Okafor</td><td data-label="Email">ada.okafor<wbr>@example.org</td><td data-label="Role"><span class="mc-pill"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span></td><td data-label="Status"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Active</span></td></tr>
+                  <tr><td class="mc-table__primary">Priya Raman</td><td data-label="Email">priya.raman<wbr>@example.org</td><td data-label="Role"><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>Administrator</span></td><td data-label="Status"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Active</span></td></tr>
+                  <tr><td class="mc-table__primary">Jordan Reyes</td><td data-label="Email">jordan.reyes<wbr>@example.org</td><td data-label="Role"><span class="mc-pill"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span></td><td data-label="Status"><span class="mc-pill"><span class="mc-icon mc-icon--ban" aria-hidden="true"></span>Inactive</span></td></tr>
+                  <tr><td class="mc-table__primary">Mateo Silva</td><td data-label="Email">mateo.silva<wbr>@example.org</td><td data-label="Role"><span class="mc-pill"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span></td><td data-label="Status"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Active</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mc-backdrop">
+      <section class="mc-dialog mc-dialog--sheet" role="dialog" aria-modal="true" aria-labelledby="account-dialog-title" aria-describedby="account-dialog-note">
+        <header class="mc-dialog__header">
+          <div class="mc-dialog__heading">
+            <h2 class="mc-dialog__title" id="account-dialog-title">
+              <span data-unless="edit designated conflict">Add account</span>
+              <span data-when="edit designated conflict" hidden>Edit account</span>
+            </h2>
+            <p class="mc-dialog__subtitle" id="account-dialog-note">
+              <span data-when="edit conflict" hidden>Ada Okafor · </span>
+              <span data-when="designated" hidden>Quinntyne Brown · </span>
+              <span data-unless="created">All fields are required.</span>
+              <span data-when="created" hidden>Lena Fischer can sign in now.</span>
+            </p>
+          </div>
+          <button class="mc-button mc-button--quiet mc-button--icon" type="button" aria-label="Close" data-nav="accounts.html"
+            data-attr-validation="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-duplicate="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-saving="disabled">
+            <span class="mc-icon mc-icon--close" aria-hidden="true"></span>
+          </button>
+        </header>
+
+        <!-- Success: account added -->
+        <div class="mc-dialog__body" data-when="created" hidden>
+          <div class="mc-live" role="status" aria-live="polite">
+            <div class="mc-alert mc-alert--success">
+              <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+              <div class="mc-alert__body">
+                <p class="mc-alert__title">Account added for Lena Fischer</p>
+                <p class="mc-alert__text">lena.fischer<wbr>@example.org · Collaborator · Active</p>
+              </div>
+            </div>
+          </div>
+          <div class="mc-alert mc-alert--warning">
+            <span class="mc-icon mc-icon--key" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">Share the initial password with Lena directly</p>
+              <p class="mc-alert__text">Mission Control doesn't send email, and the password won't be shown again. Lena can sign in right away; an administrator can replace the password later.</p>
+            </div>
+          </div>
+          <p class="mc-hint">No lead contact was added. If Lena also holds a lead responsibility, add them in Leads separately.</p>
+        </div>
+        <footer class="mc-dialog__footer" data-when="created" hidden>
+          <button class="mc-button" type="button" data-goto-state="create">
+            <span class="mc-icon mc-icon--user-plus" aria-hidden="true"></span>Add another account
+          </button>
+          <button class="mc-button mc-button--primary" type="button" data-nav="accounts.html">Done</button>
+        </footer>
+
+        <form class="mc-dialog__form" novalidate data-goto-state="saving" data-unless="created">
+          <div class="mc-dialog__body">
+            <!-- Outcome messages -->
+            <div class="mc-live" role="alert">
+              <div class="mc-error-summary" tabindex="-1" aria-labelledby="account-errors-title" data-when="validation" hidden>
+                <p class="mc-error-summary__title" id="account-errors-title"><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Fix 3 problems to add this account</p>
+                <ul>
+                  <li><a href="#account-last">Enter a last name</a></li>
+                  <li><a href="#account-email">Enter an email address like name@example.org</a></li>
+                  <li><a href="#account-password">Use at least 12 characters for the password</a></li>
+                </ul>
+              </div>
+
+              <div class="mc-alert mc-alert--danger" data-when="duplicate" hidden>
+                <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">An account already uses this email</p>
+                  <p class="mc-alert__text">ada.okafor@example.org belongs to Ada Okafor's account. Each account needs its own email. No account was added.</p>
+                  <div class="mc-alert__actions">
+                    <a class="mc-button mc-button--sm" href="account-detail.html">View Ada Okafor's account</a>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mc-alert mc-alert--danger" data-when="failed" hidden>
+                <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">We couldn't add this account</p>
+                  <p class="mc-alert__text">Nothing was saved, and your entries are still here. Try again.</p>
+                  <p class="mc-ref">Reference ID <code>91c4-2ad7-e60b</code>
+                    <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="91c4-2ad7-e60b"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                  </p>
+                </div>
+              </div>
+
+              <div class="mc-alert mc-alert--warning" data-when="conflict" hidden>
+                <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">This account changed while you were editing</p>
+                  <p class="mc-alert__text">Priya Raman saved changes at 11:08 a.m. Your edits haven't been saved. Compare them, then reload the latest version and re-apply what you need.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="mc-table-wrap" data-when="conflict" hidden>
+              <table class="mc-table mc-table--stack">
+                <caption class="mc-visually-hidden">Your edits compared with the latest saved version</caption>
+                <thead>
+                  <tr><th scope="col">Field</th><th scope="col">Your edit</th><th scope="col">Latest saved</th></tr>
+                </thead>
+                <tbody>
+                  <tr class="mc-table__row--highlight"><td class="mc-table__primary">Last name</td><td data-label="Your edit">Okafor</td><td data-label="Latest saved">Okafor-Bello</td></tr>
+                  <tr class="mc-table__row--highlight"><td class="mc-table__primary">Role</td><td data-label="Your edit">Administrator</td><td data-label="Latest saved">Collaborator</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Designated administrator explanation -->
+            <div class="mc-alert" data-when="designated" hidden>
+              <span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>
+              <div class="mc-alert__body">
+                <p class="mc-alert__title">Designated administrator</p>
+                <p class="mc-alert__text" id="designated-reason">This account keeps the Administrator role and its email can't change, so Mission Control always has an administrator. The name can still be edited.</p>
+              </div>
+            </div>
+
+            <!-- Fields -->
+            <div class="mc-form-grid">
+              <div class="mc-field">
+                <label class="mc-label" for="account-first">First name</label>
+                <input class="mc-input" id="account-first" name="firstName" type="text" autocomplete="off" maxlength="100" required
+                  data-attr-validation="value=Lena"
+                  data-attr-duplicate="value=Adaeze"
+                  data-attr-saving="value=Lena|readonly"
+                  data-attr-failed="value=Lena"
+                  data-attr-edit="value=Ada"
+                  data-attr-designated="value=Quinntyne"
+                  data-attr-conflict="value=Ada">
+              </div>
+
+              <div class="mc-field">
+                <label class="mc-label" for="account-last">Last name</label>
+                <input class="mc-input" id="account-last" name="lastName" type="text" autocomplete="off" maxlength="100" required
+                  data-attr-validation="aria-invalid=true|aria-describedby=account-last-error"
+                  data-attr-duplicate="value=Okafor"
+                  data-attr-saving="value=Fischer|readonly"
+                  data-attr-failed="value=Fischer"
+                  data-attr-edit="value=Okafor"
+                  data-attr-designated="value=Brown"
+                  data-attr-conflict="value=Okafor">
+                <p class="mc-field-error" id="account-last-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Enter a last name</p>
+              </div>
+
+              <!-- Email: editable when adding, read-only text when editing -->
+              <div class="mc-field mc-field--full" data-unless="edit designated conflict">
+                <label class="mc-label" for="account-email">Email</label>
+                <p class="mc-hint" id="account-email-hint">They'll use this to sign in. It can't be changed later.</p>
+                <input class="mc-input" id="account-email" name="email" type="email" autocomplete="off" spellcheck="false" maxlength="254" required aria-describedby="account-email-hint"
+                  data-attr-validation="value=lena.fischer@|aria-invalid=true|aria-describedby=account-email-hint account-email-error"
+                  data-attr-duplicate="value=Ada.Okafor@example.org|aria-invalid=true|aria-describedby=account-email-hint account-email-duplicate"
+                  data-attr-saving="value=lena.fischer@example.org|readonly"
+                  data-attr-failed="value=lena.fischer@example.org">
+                <p class="mc-field-error" id="account-email-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Enter an email address like name@example.org</p>
+                <p class="mc-field-error" id="account-email-duplicate" data-when="duplicate" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Already used by Ada Okafor's account</p>
+              </div>
+              <div class="mc-field mc-field--full" data-when="edit designated conflict" hidden>
+                <span class="mc-label">Email</span>
+                <p>
+                  <span data-unless="designated">ada.okafor<wbr>@example.org</span>
+                  <span data-when="designated" hidden>quinntynebrown<wbr>@gmail.com</span>
+                </p>
+                <p class="mc-hint" data-unless="designated">Email identifies the account and can't be changed.</p>
+                <p class="mc-reason" data-when="designated" hidden><span class="mc-icon mc-icon--lock" aria-hidden="true"></span>Locked for the designated administrator.</p>
+              </div>
+
+              <fieldset class="mc-choice-group mc-choice-group--two" aria-describedby="account-role-hint"
+                data-attr-designated="disabled|aria-describedby=account-role-hint designated-reason">
+                <legend>Role</legend>
+                <div class="mc-choice-group__options">
+                  <label class="mc-choice">
+                    <input type="radio" name="role" value="administrator"
+                      data-attr-designated="checked"
+                      data-attr-conflict="checked">
+                    <span class="mc-choice__body">
+                      <span class="mc-choice__title"><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>Administrator</span>
+                      <span class="mc-choice__text">Everything, including leads, projects, accounts, and the audit log.</span>
+                    </span>
+                  </label>
+                  <label class="mc-choice">
+                    <input type="radio" name="role" value="collaborator" checked
+                      data-attr-designated="!checked"
+                      data-attr-conflict="!checked">
+                    <span class="mc-choice__body">
+                      <span class="mc-choice__title"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span>
+                      <span class="mc-choice__text">Read leads and projects; add and update work; run boards and sprints.</span>
+                    </span>
+                  </label>
+                </div>
+                <p class="mc-hint" id="account-role-hint">
+                  <span data-unless="edit designated conflict">Roles grant permissions. Lead categories don't.</span>
+                  <span data-when="edit conflict" hidden>Role changes take effect on their next request.</span>
+                  <span data-when="designated" hidden>The designated administrator keeps the Administrator role.</span>
+                </p>
+              </fieldset>
+
+              <div class="mc-field mc-field--full" data-unless="edit designated conflict">
+                <label class="mc-label" for="account-password">Initial password</label>
+                <p class="mc-hint" id="account-password-hint">At least 12 characters. Share it with them directly; Mission Control doesn't send email.</p>
+                <div class="mc-input-group">
+                  <input class="mc-input" id="account-password" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required aria-describedby="account-password-hint"
+                    data-attr-validation="value=short-pw|aria-invalid=true|aria-describedby=account-password-hint account-password-error"
+                    data-attr-duplicate="value=Mock-Initial-2026"
+                    data-attr-saving="value=Mock-Initial-2026|readonly"
+                    data-attr-failed="value=Mock-Initial-2026">
+                  <button class="mc-button" type="button" data-toggle-password aria-controls="account-password" aria-pressed="false" aria-label="Show password">
+                    <span class="mc-icon mc-icon--eye" aria-hidden="true"></span>
+                  </button>
+                </div>
+                <p class="mc-field-error" id="account-password-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Use at least 12 characters for the password</p>
+              </div>
+
+              <p class="mc-hint mc-field--full" data-unless="edit designated conflict">Creating an account doesn't add a lead contact.</p>
+              <p class="mc-hint mc-field--full" data-when="edit designated conflict" hidden>To set a new password, use <a href="replace-password-dialog.html">Replace password</a>.</p>
+            </div>
+          </div>
+
+          <footer class="mc-dialog__footer">
+            <button class="mc-button" type="button" data-nav="accounts.html"
+              data-attr-validation="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+              data-attr-duplicate="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+              data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+              data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+              data-attr-saving="disabled">Cancel</button>
+            <button class="mc-button mc-button--primary" type="button" data-when="conflict" hidden data-goto-state="edit">
+              <span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Reload latest
+            </button>
+            <button class="mc-button mc-button--primary" type="submit" data-unless="conflict"
+              data-attr-saving="aria-busy=true|aria-disabled=true">
+              <span class="mc-spinner" aria-hidden="true" data-when="saving" hidden></span>
+              <span data-when="saving" hidden>Adding account…</span>
+              <span data-unless="saving edit designated">Add account</span>
+              <span data-when="edit designated" hidden>Save changes</span>
+            </button>
+          </footer>
+        </form>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

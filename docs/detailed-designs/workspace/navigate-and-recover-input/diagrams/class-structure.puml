@@ -1,0 +1,70 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Navigate with context and preserve form input
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class ApplicationShell {
+  +routeContext: Signal<RouteContext>
+  +openDialog(): void
+}
+class SessionView {
+  +state: Signal<FeatureState>
+  +submit(): void
+}
+interface ISessionService {
+  +restore_route(request: GetCurrentSessionQuery): Promise<FeatureResult>
+}
+class SessionService {
+  -http: HttpClient
+}
+class SessionsController {
+  -sender: ISender
+}
+class RouteContext {
+  +requestedPath: string
+  +workspaceId: Guid?
+  +ancestorIds: Guid[]
+  +dirty: bool
+  +pending: bool
+  +sessionGeneration: long
+  +canLeave(): bool
+}
+interface IMissionControlDataSession {
+  +query(specification): Task<ReadResult>
+  +commit(expectedVersion: long): Task<void>
+}
+class MissionControlDataSession {
+  -connection: DbConnection
+}
+ApplicationShell --> SessionView : composes
+SessionView ..> ISessionService : inject token
+ISessionService <|.. SessionService
+IMissionControlDataSession <|.. MissionControlDataSession
+class GetCurrentSessionQuery {
+  +subject: Guid
+}
+class GetCurrentSessionQueryHandler {
+  +handle(request: GetCurrentSessionQuery): Task<FeatureResult>
+}
+SessionsController ..> GetCurrentSessionQuery : dispatches
+GetCurrentSessionQueryHandler ..> GetCurrentSessionQuery : handles
+GetCurrentSessionQueryHandler --> RouteContext : loads / applies
+GetCurrentSessionQueryHandler ..> IMissionControlDataSession : uses
+
+@enduml

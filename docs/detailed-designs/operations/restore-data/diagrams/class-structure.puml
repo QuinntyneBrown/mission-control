@@ -1,0 +1,36 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Rehearse backup and restore
+class RecoveryRecord {
+  +backupPoint: DateTimeOffset
+  +sourceEnvironment: string
+  +targetEnvironment: string
+  +startedAtUtc: DateTimeOffset
+  +endedAtUtc: DateTimeOffset?
+  +verificationOutcome: string
+  +failures: string[]
+}
+class RecoveryConsole {
+  +run(configuration: OperationConfiguration): RecoveryRecord
+}
+class OperationConfiguration {
+  +environment: string
+  +sqlProvider: string
+  +externalSecretsAvailable: bool
+}
+RecoveryConsole ..> OperationConfiguration : consumes
+RecoveryConsole --> RecoveryRecord : records outcome
+@enduml

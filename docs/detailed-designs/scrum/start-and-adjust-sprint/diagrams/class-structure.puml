@@ -1,0 +1,106 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Start a sprint and change its active scope
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class SprintsPage {
+  +routeContext: Signal<RouteContext>
+  +openDialog(): void
+}
+class SprintView {
+  +state: Signal<FeatureState>
+  +submit(): void
+}
+interface ISprintService {
+  +start(request: StartSprintCommand): Promise<FeatureResult>
+  +scope(request: ChangeSprintScopeCommand): Promise<FeatureResult>
+}
+class SprintService {
+  -http: HttpClient
+}
+class SprintsController {
+  -sender: ISender
+}
+class Sprint {
+  +id: Guid
+  +workspaceId: Guid
+  +name: string
+  +goal: string
+  +startDate: DateOnly
+  +endDate: DateOnly
+  +status: SprintStatus
+  +startedAtUtc: DateTimeOffset?
+  +closedAtUtc: DateTimeOffset?
+  +version: long
+  +start(at: DateTimeOffset): void
+  +changeScope(storyIds: Guid[], actorId: Guid): void
+}
+interface IMissionControlDataSession {
+  +query(specification): Task<ReadResult>
+  +commit(expectedVersion: long): Task<void>
+}
+class MissionControlDataSession {
+  -connection: DbConnection
+}
+SprintsPage --> SprintView : composes
+SprintView ..> ISprintService : inject token
+ISprintService <|.. SprintService
+IMissionControlDataSession <|.. MissionControlDataSession
+class StartSprintCommand {
+  +workspaceId: Guid
+  +sprintId: Guid
+  +expectedVersion: long
+}
+class StartSprintCommandHandler {
+  +handle(request: StartSprintCommand): Task<FeatureResult>
+}
+SprintsController ..> StartSprintCommand : dispatches
+StartSprintCommandHandler ..> StartSprintCommand : handles
+StartSprintCommandHandler --> Sprint : loads / applies
+StartSprintCommandHandler ..> IMissionControlDataSession : uses
+class ChangeSprintScopeCommand {
+  +workspaceId: Guid
+  +sprintId: Guid
+  +addStoryIds: Guid[]
+  +removeStoryIds: Guid[]
+  +expectedVersion: long
+}
+class ChangeSprintScopeCommandHandler {
+  +handle(request: ChangeSprintScopeCommand): Task<FeatureResult>
+}
+SprintsController ..> ChangeSprintScopeCommand : dispatches
+ChangeSprintScopeCommandHandler ..> ChangeSprintScopeCommand : handles
+ChangeSprintScopeCommandHandler --> Sprint : loads / applies
+ChangeSprintScopeCommandHandler ..> IMissionControlDataSession : uses
+
+class OpenSprintMembership {
+  +workspaceId: Guid
+  +storyId: Guid
+  +sprintId: Guid
+}
+class SprintStoryOutcome {
+  +recordedStoryId: Guid
+  +recordedTitle: string
+  +statusAtClosure: WorkStatus
+  +recordedDestinationId: Guid?
+  +recordedDestinationName: string?
+}
+Sprint "1" *-- "*" SprintStoryOutcome : immutable outcomes at closure
+Sprint ..> OpenSprintMembership : live allocation / historical source
+@enduml

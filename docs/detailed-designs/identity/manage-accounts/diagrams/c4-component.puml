@@ -1,0 +1,35 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components - Provision and manage accounts
+Container(web, "Mission Control web client", "Angular", "AccountsPage / AccountView")
+ContainerDb(db, "Mission Control database", "SQL", "Versioned feature records and audit events")
+Container_Boundary(api, "MissionControl.Api runtime") {
+  Component(ctrl, "AccountsController", "API boundary", "Binds request and dispatches through MediatR 12.5.0")
+  Component(access, "CurrentAccountAuthorization", "API authentication / authorization", "Validates JWT and checks current SQL account access")
+  Component(validation, "ValidationBehavior", "Application pipeline", "Invokes request validators")
+  Component(entity, "UserAccount", "Domain / read model", "Provision and manage accounts")
+  Component(store, "MissionControlDataSession", "Infrastructure", "Implements Application data port; commits transactions")
+Rel(web, access, "Calls through IAccountService / AccountService", "HTTPS")
+Rel(access, db, "Checks current access for protected requests", "SQL")
+Rel(access, ctrl, "Forwards authorized request; login remains public")
+Rel(ctrl, validation, "Sends typed request")
+Component(h0, "GetAccountQueryHandler", "Application / MediatR", "Read account directory and details")
+Rel(validation, h0, "Dispatches validated request")
+Rel(h0, entity, "Reads / applies domain behavior")
+Rel(h0, store, "Loads / persists state")
+Component(h1, "ProvisionAccountCommandHandler", "Application / MediatR", "Provision account")
+Rel(validation, h1, "Dispatches validated request")
+Rel(h1, entity, "Reads / applies domain behavior")
+Rel(h1, store, "Loads / persists state")
+Component(h2, "UpdateAccountCommandHandler", "Application / MediatR", "Edit names, role, or active status")
+Rel(validation, h2, "Dispatches validated request")
+Rel(h2, entity, "Reads / applies domain behavior")
+Rel(h2, store, "Loads / persists state")
+Component(h3, "ReplacePasswordCommandHandler", "Application / MediatR", "Replace account password")
+Rel(validation, h3, "Dispatches validated request")
+Rel(h3, entity, "Reads / applies domain behavior")
+Rel(h3, store, "Loads / persists state")
+}
+Rel(store, db, "Executes bounded queries / atomic writes", "SQL")
+@enduml

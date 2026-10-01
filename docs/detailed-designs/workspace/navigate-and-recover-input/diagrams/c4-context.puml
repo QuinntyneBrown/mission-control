@@ -1,0 +1,8 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System context - Navigate with context and preserve form input
+Person(actor, "Authorized user", "Navigate with context and preserve form input")
+System(mc, "Mission Control", "FaithTech Toronto contacts and project delivery")
+Rel(actor, mc, "Navigate with context and preserve form input")
+@enduml

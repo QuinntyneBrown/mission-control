@@ -1,0 +1,74 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Behavior - Read and filter immutable audit events
+actor "Administrator" as actor
+box "Frontend - Mission Control application" #E0F2FE
+  participant "AuditLogPage / AuditEventView" as page
+  participant "IAuditEventService / AuditEventService" as client
+end box
+box "Backend - MissionControl.Api" #D1FADF
+  participant "CurrentAccountAuthorization" as access
+  participant "AuditEventsController" as ctrl
+end box
+box "Backend - MissionControl.Application and Domain" #ECFDF3
+  participant "ValidationBehavior" as validation
+  participant "ListAuditEventsQueryHandler" as handler
+  participant "AuditEvent" as entity
+end box
+box "Backend - MissionControl.Infrastructure" #FFF4E5
+  database "Mission Control SQL" as db
+end box
+actor -> page : Read and filter immutable audit events
+page -> client : Build typed ListAuditEventsQuery
+client -> access : GET /api/audit-events
+access -> access : L2-002 validate signature, issuer, audience, subject, expiry
+access -> db : Read current status, role and credential version
+db --> access : Current account access
+alt Missing / invalid account or JWT; forbidden capability
+  access --> client : 401 / 403; audit denial without payloads
+  client --> page : Clear session on 401 / show denied state on 403
+else Authorized
+  access -> ctrl : Authorized request
+ctrl -> validation : Send ListAuditEventsQuery through MediatR 12.5.0
+validation -> validation : Validate request fields and bounds
+alt Invalid request
+  validation --> ctrl : 400 field errors; no business mutation
+  ctrl --> client : Validation ProblemDetails
+  client --> page : Keep valid input; focus linked error summary
+else Valid request
+  validation -> handler : Handle ListAuditEventsQuery
+  handler -> db : L2-039 bounded read of immutable event metadata; AND filters
+  db --> handler : SQL result / current records
+  handler -> entity : Project timestamp, actor ID, operation, target, outcome, correlation
+  entity --> handler : Safe audit rows; no secret or contact payload
+  alt Invalid filter / date range
+    handler --> ctrl : Typed failure for stated category; no partial mutation
+    ctrl --> client : ProblemDetails with readable category
+    client --> page : Preserve input / saved view; offer reload or retry
+  else Behavior succeeds
+    db --> handler : Bounded persisted projection; full matching count
+    handler --> ctrl : Typed result
+    ctrl --> client : Success response
+    client --> page : Update signal state and announce outcome
+    page --> actor : Present persisted result / operational status
+  end
+end
+end
+note over ctrl, db
+Unexpected failures return generic 500 plus correlation ID (L2-043).
+Diagnostics exclude secrets and contact payloads.
+end note
+@enduml

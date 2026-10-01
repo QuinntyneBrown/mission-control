@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Move to position · Mission Control mock</title>
+  <meta name="description" content="Keyboard and pagination-safe reordering dialog for sibling order and backlog priority, with range validation and failure.">
+  <meta name="mock-area" content="Work hierarchy">
+  <meta name="mock-requirements" content="L2-017, L2-020.2, L2-031, L2-033, L2-034.2">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body>
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Work · Move to position</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="default">Sibling order</option>
+          <option value="backlog">Backlog priority</option>
+          <option value="out-of-range">Position out of range</option>
+          <option value="failed">Move failed</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="default">The keyboard and touch alternative to dragging. It also works when the target is on another page. The result is announced: "Book AV for demo day moved to position 2 of 6".</p>
+    <p class="mock-note" data-when="backlog" hidden>Backlog priority is separate from the order inside an epic, so this move doesn't change the parent or the sibling order.</p>
+    <p class="mock-note" data-when="out-of-range" hidden>The position is checked before sending. Focus stays on the field and the error is announced.</p>
+    <p class="mock-note" data-when="failed" hidden>The saved order is unchanged and shown again. "Try again" resends the same move.</p>
+  </div>
+
+  <div class="mock-screen">
+    <div class="mock-screen__page" inert>
+      <div class="mc-app">
+        <header class="mc-topbar">
+          <span class="mc-button mc-button--quiet mc-button--icon"><span class="mc-icon mc-icon--menu" aria-hidden="true"></span></span>
+          <span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span>
+        </header>
+        <div class="mc-sidebar">
+          <div class="mc-sidebar__head"><span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span></div>
+          <ul class="mc-nav">
+            <li><span class="mc-nav__link"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></span></li>
+            <li><span class="mc-nav__link"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></span></li>
+            <li><span class="mc-nav__link" aria-current="page"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></span></li>
+          </ul>
+          <div class="mc-nav-section">
+            <p class="mc-nav__group">Administration</p>
+            <ul class="mc-nav">
+              <li><span class="mc-nav__link"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></span></li>
+              <li><span class="mc-nav__link"><span class="mc-icon mc-icon--audit" aria-hidden="true"></span><span class="mc-nav__text">Audit log</span></span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="mc-main">
+          <div class="mc-page">
+            <div class="mc-page-header">
+              <div class="mc-page-header__main">
+                <p class="mc-h1">Community Hackathon 2026</p>
+                <div class="mc-page-header__meta"><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span><span>Responsible lead: Rafael Da Silva</span></div>
+              </div>
+              <div class="mc-page-header__actions"><span class="mc-button mc-button--primary"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add initiative</span></div>
+            </div>
+            <div class="mc-tabs">
+              <span class="mc-tabs__link"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</span>
+              <span class="mc-tabs__link" aria-current="page"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</span>
+              <span class="mc-tabs__link"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</span>
+              <span class="mc-tabs__link"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</span>
+              <span class="mc-tabs__link"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</span>
+            </div>
+            <div class="mc-card">
+              <div class="mc-stack mc-stack--xs">
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--initiative" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--initiative" aria-hidden="true"></span></span><span class="mc-type__label">Initiative</span></span>
+                  <div class="mc-tree__main"><span class="mc-tree__title">Grow Toronto's builder community</span><span class="mc-tree__meta"><span>HCK-101</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></span></div>
+                </div>
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--epic" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--epic" aria-hidden="true"></span></span><span class="mc-type__label">Epic</span></span>
+                  <div class="mc-tree__main"><span class="mc-tree__title">Hackathon team formation</span><span class="mc-tree__meta"><span>HCK-104</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></span></div>
+                </div>
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--story" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--story" aria-hidden="true"></span></span><span class="mc-type__label">Story</span></span>
+                  <div class="mc-tree__main"><span class="mc-tree__title">Volunteers can join a build team</span><span class="mc-tree__meta"><span>HCK-112</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></span></div>
+                </div>
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--epic" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--epic" aria-hidden="true"></span></span><span class="mc-type__label">Epic</span></span>
+                  <div class="mc-tree__main"><span class="mc-tree__title">Venue and logistics</span><span class="mc-tree__meta"><span>HCK-105</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span></span></div>
+                </div>
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--story" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--story" aria-hidden="true"></span></span><span class="mc-type__label">Story</span></span>
+                  <div class="mc-tree__main"><span class="mc-tree__title">Confirm venue accessibility checklist</span><span class="mc-tree__meta"><span>HCK-120</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span></span></div>
+                </div>
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--story" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--story" aria-hidden="true"></span></span><span class="mc-type__label">Story</span></span>
+                  <div class="mc-tree__main"><span class="mc-tree__title">Book AV for demo day</span><span class="mc-tree__meta"><span>HCK-121</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mc-backdrop">
+      <section class="mc-dialog mc-dialog--sm" role="dialog" aria-modal="true" aria-labelledby="pos-title" aria-describedby="pos-note">
+        <header class="mc-dialog__header">
+          <div class="mc-dialog__heading">
+            <h2 class="mc-dialog__title" id="pos-title">Move “Book AV for demo day”</h2>
+            <p class="mc-dialog__subtitle" id="pos-note">
+              <span data-unless="backlog out-of-range">Order within Venue and logistics · now 6 of 6</span>
+              <span data-when="backlog out-of-range" hidden>Backlog priority · now 2 of 24</span>
+            </p>
+          </div>
+          <button class="mc-button mc-button--quiet mc-button--icon" type="button" aria-label="Close" data-nav="work-hierarchy.html"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+        </header>
+        <form class="mc-dialog__form" novalidate>
+          <div class="mc-dialog__body">
+            <div class="mc-live" role="alert">
+              <div class="mc-alert mc-alert--danger" data-when="failed" hidden>
+                <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">We couldn't save the new order</p>
+                  <p class="mc-alert__text">Nothing changed. Book AV for demo day is still 6 of 6.</p>
+                  <p class="mc-ref">Reference ID <code>7b1e-c4a9-35d0</code>
+              <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="7b1e-c4a9-35d0"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+            </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="mc-field" data-unless="backlog out-of-range">
+              <label class="mc-label" for="pos-sibling">New position</label>
+              <span class="mc-select-wrap">
+                <select class="mc-select" id="pos-sibling">
+                  <option>Position 1 · top</option>
+                  <option selected>Position 2</option>
+                  <option>Position 3</option>
+                  <option>Position 4</option>
+                  <option>Position 5</option>
+                  <option>Position 6 · last (current)</option>
+                </select>
+              </span>
+              <p class="mc-hint">Changes the order under Venue and logistics only.</p>
+            </div>
+
+            <div data-unless="backlog out-of-range">
+              <p class="mc-label mc-mb-4" id="pos-preview-label">Result</p>
+              <ol class="mc-list" aria-labelledby="pos-preview-label">
+                <li class="mc-list__item"><span class="mc-list__rank">1</span><span class="mc-list__main"><span class="mc-list__title">Confirm venue accessibility checklist</span></span></li>
+                <li class="mc-list__item mc-list__item--selected"><span class="mc-list__rank">2</span><span class="mc-list__main"><span class="mc-list__title">Book AV for demo day</span></span></li>
+                <li class="mc-list__item"><span class="mc-list__rank">3</span><span class="mc-list__main"><span class="mc-list__title">Venue floor plan with accessible routes</span></span></li>
+                <li class="mc-list__item"><span class="mc-list__rank">4</span><span class="mc-list__main"><span class="mc-list__title">Dietary needs survey for attendees</span></span></li>
+                <li class="mc-list__item"><span class="mc-list__rank">5</span><span class="mc-list__main"><span class="mc-list__title">Venue shortlist</span></span></li>
+                <li class="mc-list__item"><span class="mc-list__rank">6</span><span class="mc-list__main"><span class="mc-list__title">Sponsor thank-you page</span></span></li>
+              </ol>
+            </div>
+
+            <div class="mc-field" data-when="backlog out-of-range" hidden>
+              <label class="mc-label" for="pos-backlog">New priority</label>
+              <p class="mc-hint" id="pos-backlog-hint">1 is the top of the backlog, 24 the bottom. The epic and the order inside it don't change.</p>
+              <input class="mc-input" id="pos-backlog" type="text" inputmode="numeric" autocomplete="off" aria-describedby="pos-backlog-hint" value="2"
+                  data-attr-out-of-range="value=30|aria-invalid=true|aria-describedby=pos-backlog-error pos-backlog-hint">
+              <p class="mc-field-error" id="pos-backlog-error" data-when="out-of-range" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Enter a position from 1 to 24.</p>
+            </div>
+          </div>
+          <footer class="mc-dialog__footer">
+            <button class="mc-button" type="button" data-nav="work-hierarchy.html">Cancel</button>
+            <button class="mc-button mc-button--primary" type="submit" data-nav="work-hierarchy.html" data-attr-out-of-range="!data-nav">
+              <span data-unless="failed">Move</span>
+              <span data-when="failed" hidden>Try again</span>
+            </button>
+          </footer>
+        </form>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

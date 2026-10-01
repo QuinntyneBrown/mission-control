@@ -1,0 +1,8 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System context - Execute work on the active sprint board
+Person(actor, "Authorized user", "Execute work on the active sprint board")
+System(mc, "Mission Control", "FaithTech Toronto contacts and project delivery")
+Rel(actor, mc, "Execute work on the active sprint board")
+@enduml

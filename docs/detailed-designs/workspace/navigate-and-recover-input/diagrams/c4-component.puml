@@ -1,0 +1,23 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components - Navigate with context and preserve form input
+Container(web, "Mission Control web client", "Angular", "ApplicationShell / SessionView")
+ContainerDb(db, "Mission Control database", "SQL", "Versioned feature records and audit events")
+Container_Boundary(api, "MissionControl.Api runtime") {
+  Component(ctrl, "SessionsController", "API boundary", "Binds request and dispatches through MediatR 12.5.0")
+  Component(access, "CurrentAccountAuthorization", "API authentication / authorization", "Validates JWT and checks current SQL account access")
+  Component(validation, "ValidationBehavior", "Application pipeline", "Invokes request validators")
+  Component(entity, "RouteContext", "Domain / read model", "Navigate with context and preserve form input")
+  Component(store, "MissionControlDataSession", "Infrastructure", "Implements Application data port; commits transactions")
+Rel(web, access, "Calls through ISessionService / SessionService", "HTTPS")
+Rel(access, db, "Checks current access for protected requests", "SQL")
+Rel(access, ctrl, "Forwards authorized request; login remains public")
+Rel(ctrl, validation, "Sends typed request")
+Component(h0, "GetCurrentSessionQueryHandler", "Application / MediatR", "Check session and restore a permitted route")
+Rel(validation, h0, "Dispatches validated request")
+Rel(h0, entity, "Reads / applies domain behavior")
+Rel(h0, store, "Loads / persists state")
+}
+Rel(store, db, "Executes bounded queries / atomic writes", "SQL")
+@enduml

@@ -1,0 +1,8 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System context - Review security and mutation audit events
+Person(actor, "Administrator", "Review security and mutation audit events")
+System(mc, "Mission Control", "FaithTech Toronto contacts and project delivery")
+Rel(actor, mc, "Review security and mutation audit events")
+@enduml

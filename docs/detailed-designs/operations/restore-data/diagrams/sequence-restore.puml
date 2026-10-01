@@ -1,0 +1,49 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Behavior - Restore and verify isolated recovery
+actor "Release operator" as actor
+box "Frontend - Operations console / Chromium harness" #E0F2FE
+  participant "RecoveryConsole" as handler
+end box
+box "Backend - MissionControl.Api existing endpoints" #D1FADF
+  participant "Existing feature API" as api
+end box
+box "Backend - Application / operational verification" #ECFDF3
+  participant "RecoveryRecord" as entity
+end box
+box "Backend - Infrastructure / selected SQL provider" #FFF4E5
+  database "Verified isolated SQL target / source backup" as db
+end box
+actor -> handler : Restore and verify isolated recovery
+  handler -> db : L2-044 restore backup into verified separate target
+  db --> handler : Restored SQL state
+  handler -> entity : Compare IDs, links, ordering, and immutable outcomes
+  entity --> handler : Verification results
+  handler -> db : L2-007 initialize without resetting existing password
+alt Restore failure / mismatched data / unsafe target
+  handler -> entity : Record failure; leave readiness/result unresolved
+  entity --> handler : Failed run record
+  handler --> actor : Failure and recovery guidance; no passing claim
+else Procedure succeeds
+  handler -> api : Verify through existing feature endpoints / health / page objects
+  api -> db : Read or commit representative protected behavior
+  db --> api : Persisted result
+  api --> handler : Result without secrets
+  handler -> entity : Record exact environment, timings and verified outcome
+  entity --> handler : Completed run record
+  handler --> actor : Rehearsal / measurement result
+end
+@enduml

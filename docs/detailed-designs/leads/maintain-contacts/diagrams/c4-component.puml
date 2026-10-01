@@ -1,0 +1,27 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components - Create and edit lead contacts
+Container(web, "Mission Control web client", "Angular", "LeadDirectoryPage / LeadView")
+ContainerDb(db, "Mission Control database", "SQL", "Versioned feature records and audit events")
+Container_Boundary(api, "MissionControl.Api runtime") {
+  Component(ctrl, "LeadsController", "API boundary", "Binds request and dispatches through MediatR 12.5.0")
+  Component(access, "CurrentAccountAuthorization", "API authentication / authorization", "Validates JWT and checks current SQL account access")
+  Component(validation, "ValidationBehavior", "Application pipeline", "Invokes request validators")
+  Component(entity, "LeadContact", "Domain / read model", "Create and edit lead contacts")
+  Component(store, "MissionControlDataSession", "Infrastructure", "Implements Application data port; commits transactions")
+Rel(web, access, "Calls through ILeadService / LeadService", "HTTPS")
+Rel(access, db, "Checks current access for protected requests", "SQL")
+Rel(access, ctrl, "Forwards authorized request; login remains public")
+Rel(ctrl, validation, "Sends typed request")
+Component(h0, "CreateLeadCommandHandler", "Application / MediatR", "Create a lead")
+Rel(validation, h0, "Dispatches validated request")
+Rel(h0, entity, "Reads / applies domain behavior")
+Rel(h0, store, "Loads / persists state")
+Component(h1, "UpdateLeadCommandHandler", "Application / MediatR", "Edit a lead")
+Rel(validation, h1, "Dispatches validated request")
+Rel(h1, entity, "Reads / applies domain behavior")
+Rel(h1, store, "Loads / persists state")
+}
+Rel(store, db, "Executes bounded queries / atomic writes", "SQL")
+@enduml

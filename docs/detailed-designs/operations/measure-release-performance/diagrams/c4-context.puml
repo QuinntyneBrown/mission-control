@@ -1,0 +1,8 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System context - Measure release workflow performance
+Person(actor, "Deployment operator", "Measure release workflow performance")
+System(ops, "Mission Control release operations", "Repeatable operations against isolated or deployed SQL")
+Rel(actor, ops, "Measure release workflow performance")
+@enduml

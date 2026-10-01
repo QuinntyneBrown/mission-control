@@ -1,0 +1,91 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Review home coverage and progress
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class HomePage {
+  +routeContext: Signal<RouteContext>
+  +openDialog(): void
+}
+class HomeView {
+  +state: Signal<FeatureState>
+  +submit(): void
+}
+interface IHomeService {
+  +leads(request: GetLeadCoverageQuery): Promise<FeatureResult>
+  +projects(request: GetWorkspaceProgressQuery): Promise<FeatureResult>
+  +sprints(request: GetActiveSprintSummaryQuery): Promise<FeatureResult>
+}
+class HomeService {
+  -http: HttpClient
+}
+class HomeController {
+  -sender: ISender
+}
+class HomeSummary {
+  +leadCounts: CategoryCount[]
+  +projects: WorkspaceProgress[]
+  +activeSprints: ActiveSprintSummary[]
+  +loadedAtUtc: DateTimeOffset
+}
+interface IMissionControlDataSession {
+  +query(specification): Task<ReadResult>
+  +commit(expectedVersion: long): Task<void>
+}
+class MissionControlDataSession {
+  -connection: DbConnection
+}
+HomePage --> HomeView : composes
+HomeView ..> IHomeService : inject token
+IHomeService <|.. HomeService
+IMissionControlDataSession <|.. MissionControlDataSession
+class GetLeadCoverageQuery {
+  +includeZeroCategories: bool
+}
+class GetLeadCoverageQueryHandler {
+  +handle(request: GetLeadCoverageQuery): Task<FeatureResult>
+}
+HomeController ..> GetLeadCoverageQuery : dispatches
+GetLeadCoverageQueryHandler ..> GetLeadCoverageQuery : handles
+GetLeadCoverageQueryHandler --> HomeSummary : loads / applies
+GetLeadCoverageQueryHandler ..> IMissionControlDataSession : uses
+class GetWorkspaceProgressQuery {
+  +page: int
+  +pageSize: int
+}
+class GetWorkspaceProgressQueryHandler {
+  +handle(request: GetWorkspaceProgressQuery): Task<FeatureResult>
+}
+HomeController ..> GetWorkspaceProgressQuery : dispatches
+GetWorkspaceProgressQueryHandler ..> GetWorkspaceProgressQuery : handles
+GetWorkspaceProgressQueryHandler --> HomeSummary : loads / applies
+GetWorkspaceProgressQueryHandler ..> IMissionControlDataSession : uses
+class GetActiveSprintSummaryQuery {
+  +page: int
+  +pageSize: int
+}
+class GetActiveSprintSummaryQueryHandler {
+  +handle(request: GetActiveSprintSummaryQuery): Task<FeatureResult>
+}
+HomeController ..> GetActiveSprintSummaryQuery : dispatches
+GetActiveSprintSummaryQueryHandler ..> GetActiveSprintSummaryQuery : handles
+GetActiveSprintSummaryQueryHandler --> HomeSummary : loads / applies
+GetActiveSprintSummaryQueryHandler ..> IMissionControlDataSession : uses
+
+@enduml

@@ -1,0 +1,8 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System context - Find and read lead contacts
+Person(actor, "Authorized user", "Find and read lead contacts")
+System(mc, "Mission Control", "FaithTech Toronto contacts and project delivery")
+Rel(actor, mc, "Find and read lead contacts")
+@enduml

@@ -1,0 +1,111 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Edit, assign, and reparent work
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class WorkItemDetailPage {
+  +routeContext: Signal<RouteContext>
+  +openDialog(): void
+}
+class WorkItemView {
+  +state: Signal<FeatureState>
+  +submit(): void
+}
+interface IWorkItemService {
+  +edit(request: UpdateWorkItemCommand): Promise<FeatureResult>
+  +reparent(request: ReparentWorkItemCommand): Promise<FeatureResult>
+}
+class WorkItemService {
+  -http: HttpClient
+}
+class WorkItemsController {
+  -sender: ISender
+}
+class WorkItem {
+  +id: Guid
+  +workspaceId: Guid
+  +parentId: Guid?
+  +type: WorkItemType
+  +title: string
+  +description: string?
+  +status: WorkStatus
+  +siblingPosition: int
+  +assigneeId: Guid?
+  +startDate: DateOnly?
+  +dueDate: DateOnly?
+  +storyEstimate: int?
+  +version: long
+  +edit(details: WorkItemDetails): void
+  +reparent(parentId: Guid, position: int): void
+}
+interface IMissionControlDataSession {
+  +query(specification): Task<ReadResult>
+  +commit(expectedVersion: long): Task<void>
+}
+class MissionControlDataSession {
+  -connection: DbConnection
+}
+WorkItemDetailPage --> WorkItemView : composes
+WorkItemView ..> IWorkItemService : inject token
+IWorkItemService <|.. WorkItemService
+IMissionControlDataSession <|.. MissionControlDataSession
+class UpdateWorkItemCommand {
+  +workspaceId: Guid
+  +itemId: Guid
+  +details: WorkItemDetails
+  +expectedVersion: long
+  +completionCondition: CompletionCondition?
+}
+class UpdateWorkItemCommandHandler {
+  +handle(request: UpdateWorkItemCommand): Task<FeatureResult>
+}
+WorkItemsController ..> UpdateWorkItemCommand : dispatches
+UpdateWorkItemCommandHandler ..> UpdateWorkItemCommand : handles
+UpdateWorkItemCommandHandler --> WorkItem : loads / applies
+UpdateWorkItemCommandHandler ..> IMissionControlDataSession : uses
+class ReparentWorkItemCommand {
+  +workspaceId: Guid
+  +itemId: Guid
+  +targetParentId: Guid
+  +expectedVersion: long
+  +expectedOrderVersion: long
+}
+class ReparentWorkItemCommandHandler {
+  +handle(request: ReparentWorkItemCommand): Task<FeatureResult>
+}
+WorkItemsController ..> ReparentWorkItemCommand : dispatches
+ReparentWorkItemCommandHandler ..> ReparentWorkItemCommand : handles
+ReparentWorkItemCommandHandler --> WorkItem : loads / applies
+ReparentWorkItemCommandHandler ..> IMissionControlDataSession : uses
+
+enum WorkItemType {
+  Initiative
+  Epic
+  Story
+  Task
+}
+enum WorkStatus {
+  ToDo
+  InProgress
+  Done
+}
+WorkItem --> WorkItemType : immutable level
+WorkItem --> WorkStatus : current status
+WorkItem "0..1" <-- "*" WorkItem : parent / children
+@enduml

@@ -1,0 +1,387 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Home · Mission Control mock</title>
+  <meta name="description" content="Home summaries: lead category coverage, projects with work counts by type and status, and active sprints, with first-run, loading, and error states.">
+  <meta name="mock-area" content="Home">
+  <meta name="mock-requirements" content="L2-005.4, L2-028, L2-029.1, L2-030.2, L2-032, L2-043.4">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body data-attr-collaborator="data-role=collaborator" data-attr-first-run-collaborator="data-role=collaborator">
+  <a class="mc-skip-link" href="#main">Skip to main content</a>
+
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Home</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="default">Administrator</option>
+          <option value="collaborator">Collaborator</option>
+          <option value="first-run-admin">First run (administrator)</option>
+          <option value="first-run-collaborator">First run (collaborator)</option>
+          <option value="no-active-sprints">No active sprints</option>
+          <option value="loading">Loading</option>
+          <option value="error">Load failed</option>
+          <option value="section-error">Projects section failed</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="default">Every total is counted from all saved records, not from the rows visible on any page. Empty categories show 0. Each number links to the matching filtered directory, project, work list, or sprint.</p>
+    <p class="mock-note" data-when="collaborator" hidden>Collaborators see the same summaries. "New project" and the Administration links are absent because only administrators manage projects and accounts.</p>
+    <p class="mock-note" data-when="first-run-admin" hidden>Right after setup, the only record is the seeded City contact for Quinntyne Brown. The Projects empty state offers the next permitted action.</p>
+    <p class="mock-note" data-when="first-run-collaborator" hidden>Collaborators can't add projects, so the empty state explains who can instead of offering a button.</p>
+    <p class="mock-note" data-when="no-active-sprints" hidden>Sprint 8 has closed and Sprint 9 is planned but not started. Counts still come from all saved records.</p>
+    <p class="mock-note" data-when="loading" hidden>Each section keeps its shape with skeletons until its request finishes, so nothing looks empty. Screen readers hear "Loading home".</p>
+    <p class="mock-note" data-when="error" hidden>Every summary request failed. Try again reloads the page's data; the reference ID matches the server's diagnostic record.</p>
+    <p class="mock-note" data-when="section-error" hidden>Only the Projects request failed. Leads and sprints still show, and Retry reloads just that section.</p>
+  </div>
+
+  <div class="mc-app">
+    <header class="mc-topbar">
+      <button class="mc-button mc-button--quiet mc-button--icon" type="button" data-toggle aria-controls="mc-sidebar" aria-expanded="false" aria-label="Open navigation">
+        <span class="mc-icon mc-icon--menu" aria-hidden="true"></span>
+      </button>
+      <a class="mc-brand" href="home.html">
+        <span class="mc-brand__mark" aria-hidden="true">MC</span>
+        <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span>
+      </a>
+    </header>
+
+    <nav class="mc-sidebar" id="mc-sidebar" aria-label="Primary">
+      <div class="mc-sidebar__head">
+        <a class="mc-brand" href="home.html">
+          <span class="mc-brand__mark" aria-hidden="true">MC</span>
+          <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span>
+        </a>
+        <button class="mc-button mc-button--quiet mc-button--icon mc-sidebar__close" type="button" data-close="mc-sidebar" aria-label="Close navigation">
+          <span class="mc-icon mc-icon--close" aria-hidden="true"></span>
+        </button>
+      </div>
+      <ul class="mc-nav">
+        <li><a class="mc-nav__link" href="home.html" aria-current="page"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></a></li>
+        <li><a class="mc-nav__link" href="../leads/lead-directory.html"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></a></li>
+        <li><a class="mc-nav__link" href="../projects/project-list.html"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></a></li>
+      </ul>
+      <div class="mc-nav-section mock-admin-only">
+        <p class="mc-nav__group" id="nav-admin">Administration</p>
+        <ul class="mc-nav" aria-labelledby="nav-admin">
+          <li><a class="mc-nav__link" href="../admin/accounts.html"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></a></li>
+          <li><a class="mc-nav__link" href="../admin/audit-log.html"><span class="mc-icon mc-icon--audit" aria-hidden="true"></span><span class="mc-nav__text">Audit log</span></a></li>
+        </ul>
+      </div>
+      <div class="mc-sidebar__foot">
+        <button class="mc-user-button" type="button" data-toggle aria-controls="user-menu" aria-expanded="false">
+          <span class="mc-avatar mock-admin-only" aria-hidden="true">QB</span>
+          <span class="mc-avatar mock-collaborator-only" aria-hidden="true">AO</span>
+          <span class="mc-user-button__text">
+            <span class="mc-user-button__name mock-admin-only">Quinntyne Brown</span>
+            <span class="mc-user-button__name mock-collaborator-only">Ada Okafor</span>
+            <span class="mc-user-button__role mock-admin-only">Administrator</span>
+            <span class="mc-user-button__role mock-collaborator-only">Collaborator</span>
+          </span>
+          <span class="mc-icon mc-icon--chevron-up mc-icon--sm" aria-hidden="true"></span>
+        </button>
+        <div class="mc-menu" id="user-menu">
+          <div class="mc-menu__header">
+            <div class="mc-stack mc-stack--xs mock-admin-only">
+              <strong>Quinntyne Brown</strong>
+              <span class="mc-muted mc-text-sm">quinntynebrown@gmail.com</span>
+              <span><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>Administrator</span></span>
+            </div>
+            <div class="mc-stack mc-stack--xs mock-collaborator-only">
+              <strong>Ada Okafor</strong>
+              <span class="mc-muted mc-text-sm">ada.okafor@example.org</span>
+              <span><span class="mc-pill"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span></span>
+            </div>
+          </div>
+          <div class="mc-menu__separator"></div>
+          <button class="mc-menu__item" type="button" data-nav="../auth/login.html#state=signed-out">
+            <span class="mc-icon mc-icon--log-out" aria-hidden="true"></span>Sign out
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="mc-main" id="main" tabindex="-1">
+      <div class="mc-page">
+        <header class="mc-page-header">
+          <div class="mc-page-header__main">
+            <h1 class="mc-page-header__title" tabindex="-1">Home</h1>
+            <p class="mc-page-header__subtitle">FaithTech Toronto's leads, projects, and sprints at a glance.</p>
+          </div>
+          <div class="mc-page-header__actions mock-admin-only" data-unless="loading error">
+            <button class="mc-button mc-button--primary" type="button" data-nav="../projects/project-form-dialog.html">
+              <span class="mc-icon mc-icon--plus" aria-hidden="true"></span>New project
+            </button>
+          </div>
+        </header>
+
+        <div class="mc-live" role="status" aria-live="polite">
+          <p class="mc-visually-hidden" data-when="loading" hidden>Loading home</p>
+        </div>
+
+        <!-- Full-page error -->
+        <div class="mc-empty mc-empty--error" role="alert" data-when="error" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--alert-circle mc-icon--lg" aria-hidden="true"></span></span>
+          <h2 class="mc-empty__title">We couldn't load your home summaries</h2>
+          <p class="mc-empty__text">Nothing was changed. Check your connection and try again. If it keeps happening, share the reference ID with your administrator.</p>
+          <p class="mc-ref">Reference ID <code>9e1b-3c70-a5d4</code>
+            <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="9e1b-3c70-a5d4"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+          </p>
+          <div class="mc-empty__actions">
+            <button class="mc-button mc-button--primary" type="button" data-goto-state="loading">
+              <span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again
+            </button>
+          </div>
+        </div>
+
+        <!-- Loading skeletons -->
+        <div class="mc-stack mc-stack--2xl" data-when="loading" hidden aria-hidden="true">
+          <section class="mc-stack">
+            <span class="mc-skeleton mc-skeleton--title"></span>
+            <div class="mc-grid mc-grid--stats">
+              <span class="mc-skeleton mc-skeleton--tall"></span>
+              <span class="mc-skeleton mc-skeleton--tall"></span>
+              <span class="mc-skeleton mc-skeleton--tall"></span>
+              <span class="mc-skeleton mc-skeleton--tall"></span>
+              <span class="mc-skeleton mc-skeleton--tall"></span>
+            </div>
+          </section>
+          <section class="mc-stack">
+            <span class="mc-skeleton mc-skeleton--title"></span>
+            <span class="mc-skeleton mc-skeleton--tall"></span>
+            <span class="mc-skeleton mc-skeleton--tall"></span>
+          </section>
+          <section class="mc-stack">
+            <span class="mc-skeleton mc-skeleton--title"></span>
+            <span class="mc-skeleton mc-skeleton--block"></span>
+          </section>
+        </div>
+
+        <!-- Loaded content -->
+        <div data-unless="loading error">
+
+          <!-- Lead coverage -->
+          <section class="mc-section" aria-labelledby="leads-heading">
+            <div class="mc-section__header">
+              <h2 class="mc-section__title" id="leads-heading">Lead coverage</h2>
+              <p class="mc-section__hint">
+                <span data-unless="first-run-admin first-run-collaborator">37 leads across five categories ·</span>
+                <span data-when="first-run-admin first-run-collaborator" hidden>1 lead across five categories ·</span>
+                <a href="../leads/lead-directory.html">View all leads</a>
+              </p>
+            </div>
+            <div class="mc-grid mc-grid--stats">
+              <a class="mc-stat mc-stat--create" href="../leads/lead-directory.html?category=create">
+                <span class="mc-stat__label"><span class="mc-stat__icon"><span class="mc-icon mc-icon--category-create" aria-hidden="true"></span></span>Create</span>
+                <span class="mc-stat__value"><span data-unless="first-run-admin first-run-collaborator">9</span><span data-when="first-run-admin first-run-collaborator" hidden>0</span><span class="mc-visually-hidden"> leads</span></span>
+                <span class="mc-stat__hint"><span data-unless="first-run-admin first-run-collaborator">View Create leads</span><span data-when="first-run-admin first-run-collaborator" hidden>No leads yet</span></span>
+              </a>
+              <a class="mc-stat mc-stat--communication" href="../leads/lead-directory.html?category=communication">
+                <span class="mc-stat__label"><span class="mc-stat__icon"><span class="mc-icon mc-icon--category-communication" aria-hidden="true"></span></span>Communication</span>
+                <span class="mc-stat__value"><span data-unless="first-run-admin first-run-collaborator">8</span><span data-when="first-run-admin first-run-collaborator" hidden>0</span><span class="mc-visually-hidden"> leads</span></span>
+                <span class="mc-stat__hint"><span data-unless="first-run-admin first-run-collaborator">View Communication leads</span><span data-when="first-run-admin first-run-collaborator" hidden>No leads yet</span></span>
+              </a>
+              <a class="mc-stat mc-stat--city" href="../leads/lead-directory.html?category=city">
+                <span class="mc-stat__label"><span class="mc-stat__icon"><span class="mc-icon mc-icon--category-city" aria-hidden="true"></span></span>City</span>
+                <span class="mc-stat__value"><span data-unless="first-run-admin first-run-collaborator">6</span><span data-when="first-run-admin first-run-collaborator" hidden>1</span><span class="mc-visually-hidden"> leads</span></span>
+                <span class="mc-stat__hint">City Lead: Quinntyne Brown</span>
+              </a>
+              <a class="mc-stat mc-stat--prayer" href="../leads/lead-directory.html?category=prayer">
+                <span class="mc-stat__label"><span class="mc-stat__icon"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span></span>Prayer</span>
+                <span class="mc-stat__value"><span data-unless="first-run-admin first-run-collaborator">14</span><span data-when="first-run-admin first-run-collaborator" hidden>0</span><span class="mc-visually-hidden"> leads</span></span>
+                <span class="mc-stat__hint"><span data-unless="first-run-admin first-run-collaborator">View Prayer leads</span><span data-when="first-run-admin first-run-collaborator" hidden>No leads yet</span></span>
+              </a>
+              <a class="mc-stat mc-stat--event" href="../leads/lead-directory.html?category=event#state=zero-results">
+                <span class="mc-stat__label"><span class="mc-stat__icon"><span class="mc-icon mc-icon--category-event" aria-hidden="true"></span></span>Event</span>
+                <span class="mc-stat__value">0<span class="mc-visually-hidden"> leads</span></span>
+                <span class="mc-stat__hint">No leads yet</span>
+              </a>
+            </div>
+          </section>
+
+          <!-- Projects -->
+          <section class="mc-section" aria-labelledby="projects-heading">
+            <div class="mc-section__header">
+              <h2 class="mc-section__title" id="projects-heading">Projects</h2>
+              <p class="mc-section__hint" data-unless="first-run-admin first-run-collaborator section-error">3 projects · <a href="../projects/project-list.html">View all projects</a></p>
+            </div>
+
+            <!-- Projects failed to load (section only) -->
+            <div class="mc-alert mc-alert--danger" role="alert" data-when="section-error" hidden>
+              <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+              <div class="mc-alert__body">
+                <p class="mc-alert__title">We couldn't load projects</p>
+                <p class="mc-alert__text">Leads and sprints loaded. Try again to load project summaries.</p>
+                <p class="mc-ref">Reference ID <code>41fd-0a6e-b2c8</code>
+                  <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="41fd-0a6e-b2c8"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                </p>
+                <div class="mc-alert__actions">
+                  <button class="mc-button mc-button--sm" type="button" data-goto-state="default">
+                    <span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Retry
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- No projects yet -->
+            <div class="mc-empty" data-when="first-run-admin first-run-collaborator" hidden>
+              <span class="mc-empty__icon"><span class="mc-icon mc-icon--folder mc-icon--lg" aria-hidden="true"></span></span>
+              <h3 class="mc-empty__title">No projects yet</h3>
+              <p class="mc-empty__text mock-admin-only">Projects hold initiatives, epics, stories, and tasks, delivered with Kanban or Scrum. Start one to organize the city's work.</p>
+              <p class="mc-empty__text mock-collaborator-only">An administrator can add projects. Once they do, you'll be able to plan and update the work here.</p>
+              <div class="mc-empty__actions mock-admin-only">
+                <button class="mc-button mc-button--primary" type="button" data-nav="../projects/project-form-dialog.html">
+                  <span class="mc-icon mc-icon--plus" aria-hidden="true"></span>New project
+                </button>
+              </div>
+            </div>
+
+            <div class="mc-stack" data-unless="first-run-admin first-run-collaborator section-error">
+              <article class="mc-card" aria-labelledby="project-hck-title">
+                <div class="mc-split mc-split--even">
+                  <div class="mc-stack mc-stack--sm">
+                    <div class="mc-cluster mc-cluster--sm">
+                      <h3 class="mc-card__title" id="project-hck-title"><a class="mc-link-quiet" href="../projects/project-overview.html">Community Hackathon 2026</a></h3>
+                      <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
+                    </div>
+                    <p class="mc-text-sm mc-muted">Plan and run Toronto's fall build weekend: teams, venues, volunteers, and demo day.</p>
+                    <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Rafael Da Silva</a></p>
+                    <p class="mc-text-sm">
+                        <span data-unless="no-active-sprints">Active sprint: <a href="../scrum/sprint-board.html">Sprint 8</a> · 9 days left</span>
+                        <span data-when="no-active-sprints" hidden>No active sprint · Sprint 9 is planned</span>
+                    </p>
+                    <p class="mc-text-sm mc-muted">84 work items in total</p>
+                  </div>
+                  <table class="mc-counts">
+                    <caption class="mc-visually-hidden">Community Hackathon 2026 work items by type and status</caption>
+                    <thead>
+                      <tr><th scope="col">Type</th><th scope="col">To Do</th><th scope="col">In Progress</th><th scope="col">Done</th><th scope="col">Total</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><th scope="row">Initiatives</th><td><a href="../work/work-list.html?project=hck&amp;type=initiative&amp;status=todo" aria-label="1 initiative to do">1</a></td><td><a href="../work/work-list.html?project=hck&amp;type=initiative&amp;status=in-progress" aria-label="1 initiative in progress">1</a></td><td><a href="../work/work-list.html?project=hck&amp;type=initiative&amp;status=done#state=zero-results" aria-label="0 initiatives done">0</a></td><td><a href="../work/work-list.html?project=hck&amp;type=initiative" aria-label="2 initiatives in total">2</a></td></tr>
+                        <tr><th scope="row">Epics</th><td><a href="../work/work-list.html?project=hck&amp;type=epic&amp;status=todo" aria-label="2 epics to do">2</a></td><td><a href="../work/work-list.html?project=hck&amp;type=epic&amp;status=in-progress" aria-label="1 epic in progress">1</a></td><td><a href="../work/work-list.html?project=hck&amp;type=epic&amp;status=done#state=zero-results" aria-label="0 epics done">0</a></td><td><a href="../work/work-list.html?project=hck&amp;type=epic" aria-label="3 epics in total">3</a></td></tr>
+                        <tr><th scope="row">Stories</th><td><a href="../work/work-list.html?project=hck&amp;type=story&amp;status=todo" aria-label="9 stories to do">9</a></td><td><a href="../work/work-list.html?project=hck&amp;type=story&amp;status=in-progress" aria-label="4 stories in progress">4</a></td><td><a href="../work/work-list.html?project=hck&amp;type=story&amp;status=done" aria-label="11 stories done">11</a></td><td><a href="../work/work-list.html?project=hck&amp;type=story" aria-label="24 stories in total">24</a></td></tr>
+                        <tr><th scope="row">Tasks</th><td><a href="../work/work-list.html?project=hck&amp;type=task&amp;status=todo" aria-label="18 tasks to do">18</a></td><td><a href="../work/work-list.html?project=hck&amp;type=task&amp;status=in-progress" aria-label="6 tasks in progress">6</a></td><td><a href="../work/work-list.html?project=hck&amp;type=task&amp;status=done" aria-label="31 tasks done">31</a></td><td><a href="../work/work-list.html?project=hck&amp;type=task" aria-label="55 tasks in total">55</a></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+              <article class="mc-card" aria-labelledby="project-web-title">
+                <div class="mc-split mc-split--even">
+                  <div class="mc-stack mc-stack--sm">
+                    <div class="mc-cluster mc-cluster--sm">
+                      <h3 class="mc-card__title" id="project-web-title"><a class="mc-link-quiet" href="../projects/project-overview.html#state=kanban">Church Website Refresh</a></h3>
+                      <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
+                    </div>
+                    <p class="mc-text-sm mc-muted">Refresh partner church websites with accessible templates and a simple publishing guide.</p>
+                    <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Lucia Alvarez</a></p>
+                    <p class="mc-text-sm">
+                        Kanban board · <a href="../kanban/kanban-board.html">Open board</a>
+                    </p>
+                    <p class="mc-text-sm mc-muted">60 work items in total</p>
+                  </div>
+                  <table class="mc-counts">
+                    <caption class="mc-visually-hidden">Church Website Refresh work items by type and status</caption>
+                    <thead>
+                      <tr><th scope="col">Type</th><th scope="col">To Do</th><th scope="col">In Progress</th><th scope="col">Done</th><th scope="col">Total</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><th scope="row">Initiatives</th><td><a href="../work/work-list.html?project=web&amp;type=initiative&amp;status=todo#state=zero-results" aria-label="0 initiatives to do">0</a></td><td><a href="../work/work-list.html?project=web&amp;type=initiative&amp;status=in-progress" aria-label="1 initiative in progress">1</a></td><td><a href="../work/work-list.html?project=web&amp;type=initiative&amp;status=done#state=zero-results" aria-label="0 initiatives done">0</a></td><td><a href="../work/work-list.html?project=web&amp;type=initiative" aria-label="1 initiative in total">1</a></td></tr>
+                        <tr><th scope="row">Epics</th><td><a href="../work/work-list.html?project=web&amp;type=epic&amp;status=todo" aria-label="1 epic to do">1</a></td><td><a href="../work/work-list.html?project=web&amp;type=epic&amp;status=in-progress" aria-label="1 epic in progress">1</a></td><td><a href="../work/work-list.html?project=web&amp;type=epic&amp;status=done" aria-label="1 epic done">1</a></td><td><a href="../work/work-list.html?project=web&amp;type=epic" aria-label="3 epics in total">3</a></td></tr>
+                        <tr><th scope="row">Stories</th><td><a href="../work/work-list.html?project=web&amp;type=story&amp;status=todo" aria-label="6 stories to do">6</a></td><td><a href="../work/work-list.html?project=web&amp;type=story&amp;status=in-progress" aria-label="3 stories in progress">3</a></td><td><a href="../work/work-list.html?project=web&amp;type=story&amp;status=done" aria-label="7 stories done">7</a></td><td><a href="../work/work-list.html?project=web&amp;type=story" aria-label="16 stories in total">16</a></td></tr>
+                        <tr><th scope="row">Tasks</th><td><a href="../work/work-list.html?project=web&amp;type=task&amp;status=todo" aria-label="12 tasks to do">12</a></td><td><a href="../work/work-list.html?project=web&amp;type=task&amp;status=in-progress" aria-label="5 tasks in progress">5</a></td><td><a href="../work/work-list.html?project=web&amp;type=task&amp;status=done" aria-label="23 tasks done">23</a></td><td><a href="../work/work-list.html?project=web&amp;type=task" aria-label="40 tasks in total">40</a></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+              <article class="mc-card" aria-labelledby="project-prw-title">
+                <div class="mc-split mc-split--even">
+                  <div class="mc-stack mc-stack--sm">
+                    <div class="mc-cluster mc-cluster--sm">
+                      <h3 class="mc-card__title" id="project-prw-title"><a class="mc-link-quiet" href="../projects/project-overview.html#state=kanban-preserved">Prayer Wall App</a></h3>
+                      <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
+                    </div>
+                    <p class="mc-text-sm mc-muted">A small app for sharing prayer needs within a community, built by volunteers.</p>
+                    <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Grace Mensah</a></p>
+                    <p class="mc-text-sm">
+                        Sprints paused while using Kanban · Sprint 3 is planned
+                    </p>
+                    <p class="mc-text-sm mc-muted">43 work items in total</p>
+                  </div>
+                  <table class="mc-counts">
+                    <caption class="mc-visually-hidden">Prayer Wall App work items by type and status</caption>
+                    <thead>
+                      <tr><th scope="col">Type</th><th scope="col">To Do</th><th scope="col">In Progress</th><th scope="col">Done</th><th scope="col">Total</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><th scope="row">Initiatives</th><td><a href="../work/work-list.html?project=prw&amp;type=initiative&amp;status=todo#state=zero-results" aria-label="0 initiatives to do">0</a></td><td><a href="../work/work-list.html?project=prw&amp;type=initiative&amp;status=in-progress" aria-label="1 initiative in progress">1</a></td><td><a href="../work/work-list.html?project=prw&amp;type=initiative&amp;status=done#state=zero-results" aria-label="0 initiatives done">0</a></td><td><a href="../work/work-list.html?project=prw&amp;type=initiative" aria-label="1 initiative in total">1</a></td></tr>
+                        <tr><th scope="row">Epics</th><td><a href="../work/work-list.html?project=prw&amp;type=epic&amp;status=todo" aria-label="1 epic to do">1</a></td><td><a href="../work/work-list.html?project=prw&amp;type=epic&amp;status=in-progress" aria-label="1 epic in progress">1</a></td><td><a href="../work/work-list.html?project=prw&amp;type=epic&amp;status=done#state=zero-results" aria-label="0 epics done">0</a></td><td><a href="../work/work-list.html?project=prw&amp;type=epic" aria-label="2 epics in total">2</a></td></tr>
+                        <tr><th scope="row">Stories</th><td><a href="../work/work-list.html?project=prw&amp;type=story&amp;status=todo" aria-label="5 stories to do">5</a></td><td><a href="../work/work-list.html?project=prw&amp;type=story&amp;status=in-progress" aria-label="2 stories in progress">2</a></td><td><a href="../work/work-list.html?project=prw&amp;type=story&amp;status=done" aria-label="5 stories done">5</a></td><td><a href="../work/work-list.html?project=prw&amp;type=story" aria-label="12 stories in total">12</a></td></tr>
+                        <tr><th scope="row">Tasks</th><td><a href="../work/work-list.html?project=prw&amp;type=task&amp;status=todo" aria-label="9 tasks to do">9</a></td><td><a href="../work/work-list.html?project=prw&amp;type=task&amp;status=in-progress" aria-label="4 tasks in progress">4</a></td><td><a href="../work/work-list.html?project=prw&amp;type=task&amp;status=done" aria-label="15 tasks done">15</a></td><td><a href="../work/work-list.html?project=prw&amp;type=task" aria-label="28 tasks in total">28</a></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <!-- Active sprints -->
+          <section class="mc-section" aria-labelledby="sprints-heading">
+            <div class="mc-section__header">
+              <h2 class="mc-section__title" id="sprints-heading">Active sprints</h2>
+              <p class="mc-section__hint" data-unless="first-run-admin first-run-collaborator no-active-sprints">1 active sprint</p>
+            </div>
+
+            <article class="mc-card" data-unless="first-run-admin first-run-collaborator no-active-sprints" aria-labelledby="sprint-8-title">
+              <div class="mc-card__header">
+                <div class="mc-stack mc-stack--xs">
+                  <h3 class="mc-card__title" id="sprint-8-title"><a class="mc-link-quiet" href="../scrum/sprint-board.html">Sprint 8</a></h3>
+                  <p class="mc-text-sm mc-muted"><a href="../projects/project-overview.html">Community Hackathon 2026</a> · Sep 28 – Oct 9, 2026</p>
+                </div>
+                <span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--clock" aria-hidden="true"></span>9 days left</span>
+              </div>
+              <div class="mc-stack mc-stack--sm">
+                <p><span class="mc-eyebrow">Goal</span><br>Teams can form and register ideas before kickoff</p>
+                <div class="mc-progress">
+                  <span class="mc-progress__bar" aria-hidden="true"><span class="mc-progress__fill mc-w-33"></span></span>
+                  <span>2 of 6 stories done</span>
+                </div>
+              </div>
+              <div class="mc-card__footer">
+                <span class="mc-cluster mc-cluster--sm">
+                  <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>2 To Do</span>
+                  <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>2 In Progress</span>
+                  <span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>2 Done</span>
+                </span>
+                <a class="mc-link" href="../scrum/sprint-board.html">Open sprint board</a>
+              </div>
+            </article>
+
+            <div class="mc-empty mc-empty--neutral mc-empty--compact" data-when="no-active-sprints" hidden>
+              <span class="mc-empty__icon"><span class="mc-icon mc-icon--sprint mc-icon--lg" aria-hidden="true"></span></span>
+              <h3 class="mc-empty__title">No active sprints</h3>
+              <p class="mc-empty__text">Sprint 9 in Community Hackathon 2026 is planned for Oct 13 – Oct 23, 2026. Start it from the project's sprints when the team is ready.</p>
+              <div class="mc-empty__actions">
+                <a class="mc-button" href="../scrum/sprints.html">View sprints</a>
+              </div>
+            </div>
+
+            <p class="mc-muted mc-text-sm" data-when="first-run-admin first-run-collaborator" hidden>No active sprints. Sprints appear here once a Scrum project starts one.</p>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

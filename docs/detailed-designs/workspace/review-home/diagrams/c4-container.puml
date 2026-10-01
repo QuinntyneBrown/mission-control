@@ -1,0 +1,14 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers - Review home coverage and progress
+Person(actor, "Authorized user", "Review home coverage and progress")
+System_Boundary(mc, "Mission Control") {
+  Container(web, "Mission Control web client", "Angular", "Review home coverage and progress")
+  Container(api, "MissionControl.Api", ".NET", "Authorized application handlers")
+  ContainerDb(db, "Mission Control database", "SQL - provider <TO SUPPLY>", "HomeSummary and related records")
+}
+Rel(actor, web, "Uses")
+Rel(web, api, "Requests feature behavior", "HTTPS / JSON")
+Rel(api, db, "Reads or commits feature records", "Parameterized SQL")
+@enduml

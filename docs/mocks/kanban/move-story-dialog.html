@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Move story · Mission Control mock</title>
+  <meta name="description" content="Accessible move dialog for board cards: choose a column and position without dragging, with a Done step that leads to the unfinished-tasks confirmation, plus saving and failed states.">
+  <meta name="mock-area" content="Kanban">
+  <meta name="mock-requirements" content="L2-019, L2-020.2, L2-020.3, L2-021, L2-024.4, L2-031, L2-033.2, L2-034, L2-043.4">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body>
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Boards · Move story</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="default">Choose column and position</option>
+          <option value="to-done">Moving to Done</option>
+          <option value="saving">Saving</option>
+          <option value="failed">Move failed</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="default">The accessible alternative to dragging, opened from any card's Move button on Kanban and sprint boards (shown here from the Sprint 8 board). It opens on the card's current column and position; here the user has chosen In Progress, position 2. Focus starts on the column choice, Escape or Cancel returns focus to the Move button, and below 576px it fills the screen.</p>
+    <p class="mock-note" data-when="to-done" hidden>Shown for "Volunteers can join a build team", which has 3 of 5 tasks unfinished. Choosing Done changes the primary action to Continue, which opens the unfinished-tasks confirmation before anything is saved.</p>
+    <p class="mock-note" data-when="saving" hidden>One request; the button shows progress and repeat clicks are ignored. On success the dialog closes, focus returns to the card's Move button, and a toast confirms "Moved to In Progress — "Mentors can see team needs" is position 2 of 3."</p>
+    <p class="mock-note" data-when="failed" hidden>Nothing moved: the card keeps its last saved place. The choices are kept, so Move story retries the same move.</p>
+  </div>
+
+  <div class="mock-screen">
+    <div class="mock-screen__page" inert>
+      <div class="mc-app">
+        <header class="mc-topbar">
+          <span class="mc-button mc-button--quiet mc-button--icon"><span class="mc-icon mc-icon--menu" aria-hidden="true"></span></span>
+          <span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span>
+          <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span>
+        </header>
+        <div class="mc-sidebar">
+          <div class="mc-sidebar__head"><span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span>
+          <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span></div>
+          <ul class="mc-nav">
+            <li><span class="mc-nav__link"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></span></li>
+            <li><span class="mc-nav__link"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></span></li>
+            <li><span class="mc-nav__link" aria-current="page"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></span></li>
+          </ul>
+          <div class="mc-nav-section">
+            <p class="mc-nav__group">Administration</p>
+            <ul class="mc-nav">
+              <li><span class="mc-nav__link"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></span></li>
+              <li><span class="mc-nav__link"><span class="mc-icon mc-icon--audit" aria-hidden="true"></span><span class="mc-nav__text">Audit log</span></span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="mc-main">
+          <div class="mc-page">
+            <div class="mc-breadcrumbs"><ol><li><span>Projects</span></li><li><span>Community Hackathon 2026</span></li></ol></div>
+            <div class="mc-page-header">
+              <div class="mc-page-header__main">
+                <p class="mc-h1">Community Hackathon 2026</p>
+                <div class="mc-page-header__meta"><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span><span>Sprint 8 · Sep 28 – Oct 9, 2026</span></div>
+              </div>
+            </div>
+            <ul class="mc-tabs">
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</span></li>
+              <li><span class="mc-tabs__link" aria-current="page"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</span></li>
+            </ul>
+            <div class="mc-board-scroll">
+            <div class="mc-board">
+              <div class="mc-board__column">
+                <div class="mc-board__column-header"><span class="mc-board__column-title"><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span></span><span class="mc-board__count">2</span></div>
+                <ul class="mc-board__list">
+                  <li class="mc-story-card">
+                    <div class="mc-story-card__titles"><span class="mc-story-card__title">Mentors can see team needs</span><span class="mc-story-card__path">HCK-118 · Hackathon team formation</span></div>
+                    <div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span><span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>No tasks</span></div>
+                  </li>
+                  <li class="mc-story-card">
+                    <div class="mc-story-card__titles"><span class="mc-story-card__title">Volunteer check-in list</span><span class="mc-story-card__path">HCK-125 · Hackathon team formation</span></div>
+                    <div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span><span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>0/3 tasks done</span></div>
+                  </li>
+                </ul>
+              </div>
+              <div class="mc-board__column">
+                <div class="mc-board__column-header"><span class="mc-board__column-title"><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></span><span class="mc-board__count">2</span></div>
+                <ul class="mc-board__list">
+                  <li class="mc-story-card">
+                    <div class="mc-story-card__titles"><span class="mc-story-card__title">Volunteers can join a build team</span><span class="mc-story-card__path">HCK-112 · Hackathon team formation</span></div>
+                    <div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span><span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>2/5 tasks done</span></div>
+                  </li>
+                  <li class="mc-story-card">
+                    <div class="mc-story-card__titles"><span class="mc-story-card__title">Book AV for demo day</span><span class="mc-story-card__path">HCK-121 · Venue and logistics</span></div>
+                    <div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span><span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>1/2 tasks done</span></div>
+                  </li>
+                </ul>
+              </div>
+              <div class="mc-board__column">
+                <div class="mc-board__column-header"><span class="mc-board__column-title"><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span></span><span class="mc-board__count">2</span></div>
+                <ul class="mc-board__list">
+                  <li class="mc-story-card">
+                    <div class="mc-story-card__titles"><span class="mc-story-card__title">Teams can register a project idea</span><span class="mc-story-card__path">HCK-119 · Hackathon team formation</span></div>
+                    <div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span><span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>2/2 tasks done</span></div>
+                  </li>
+                  <li class="mc-story-card">
+                    <div class="mc-story-card__titles"><span class="mc-story-card__title">Publish the kickoff agenda</span><span class="mc-story-card__path">HCK-124 · Hackathon team formation</span></div>
+                    <div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span><span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>2/2 tasks done</span></div>
+                  </li>
+                </ul>
+              </div>
+            </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mc-backdrop">
+      <section class="mc-dialog mc-dialog--sheet" role="dialog" aria-modal="true" aria-labelledby="move-dialog-title" aria-describedby="move-dialog-note">
+        <header class="mc-dialog__header">
+          <div class="mc-dialog__heading">
+            <h2 class="mc-dialog__title" id="move-dialog-title">
+              <span data-unless="to-done">Move "Mentors can see team needs"</span>
+              <span data-when="to-done" hidden>Move "Volunteers can join a build team"</span>
+            </h2>
+            <p class="mc-dialog__subtitle" id="move-dialog-note">
+              <span data-unless="to-done">HCK-118 · Now in To Do, position 1 of 2</span>
+              <span data-when="to-done" hidden>HCK-112 · Now in In Progress, position 1 of 2</span>
+            </p>
+          </div>
+          <button class="mc-button mc-button--quiet mc-button--icon" type="button" aria-label="Close" data-nav="../scrum/sprint-board.html" data-attr-saving="disabled"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+        </header>
+
+        <form class="mc-dialog__form" novalidate data-goto-state="saving">
+          <div class="mc-dialog__body">
+            <div class="mc-live" role="alert">
+              <div class="mc-alert mc-alert--danger" data-when="failed" hidden>
+                <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">We couldn't move this story</p>
+                  <p class="mc-alert__text">It's still in To Do, position 1 of 2. Your choices are kept. Try again.</p>
+                  <p class="mc-ref">Reference ID <code>e1d4-7a05-c39b</code>
+            <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="e1d4-7a05-c39b"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+          </p>
+                </div>
+              </div>
+            </div>
+
+            <fieldset class="mc-choice-group mc-choice-group--row" data-attr-saving="disabled">
+              <legend>Column</legend>
+              <div class="mc-choice-group__options">
+                  <label class="mc-choice">
+                    <input type="radio" name="status" value="todo" data-attr-to-done="!checked">
+                    <span class="mc-choice__body">
+                      <span class="mc-choice__title"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
+                      <span class="mc-choice__text">2 stories</span>
+                    </span>
+                  </label>
+                  <label class="mc-choice">
+                    <input type="radio" name="status" value="progress" checked data-attr-to-done="!checked">
+                    <span class="mc-choice__body">
+                      <span class="mc-choice__title"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span>
+                      <span class="mc-choice__text">2 stories</span>
+                    </span>
+                  </label>
+                  <label class="mc-choice">
+                    <input type="radio" name="status" value="done" data-attr-to-done="checked">
+                    <span class="mc-choice__body">
+                      <span class="mc-choice__title"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span>
+                      <span class="mc-choice__text">2 stories</span>
+                    </span>
+                  </label>
+              </div>
+            </fieldset>
+
+            <div class="mc-field">
+              <label class="mc-label" for="move-position">Position in column</label>
+              <p class="mc-hint" id="move-position-hint">Order within a column is separate from backlog priority.</p>
+              <span class="mc-select-wrap">
+                <select class="mc-select" id="move-position" aria-describedby="move-position-hint" data-attr-saving="disabled">
+                  <option data-unless="to-done">Top of column</option>
+                  <option data-unless="to-done" selected data-attr-to-done="!selected">After "Volunteers can join a build team"</option>
+                  <option data-unless="to-done">Bottom of column, after "Book AV for demo day"</option>
+                  <option data-when="to-done" hidden data-attr-to-done="selected">Top of column</option>
+                  <option data-when="to-done" hidden>After "Teams can register a project idea"</option>
+                  <option data-when="to-done" hidden>Bottom of column, after "Publish the kickoff agenda"</option>
+                </select>
+              </span>
+            </div>
+
+            <p class="mc-hint" data-unless="to-done"><strong>Result:</strong> In Progress, position 2 of 3.</p>
+
+            <div class="mc-alert mc-alert--warning" data-when="to-done" hidden>
+              <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
+              <div class="mc-alert__body">
+                <p class="mc-alert__title">3 of 5 tasks aren't done</p>
+                <p class="mc-alert__text">Next, you'll confirm whether to mark this story Done anyway. Its tasks keep their current status.</p>
+              </div>
+            </div>
+          </div>
+
+          <footer class="mc-dialog__footer">
+            <button class="mc-button" type="button" data-nav="../scrum/sprint-board.html" data-attr-saving="disabled">Cancel</button>
+            <button class="mc-button mc-button--primary" type="button" data-when="to-done" hidden data-nav="unfinished-tasks-dialog.html">
+              Continue<span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>
+            </button>
+            <button class="mc-button mc-button--primary" type="submit" data-unless="to-done" data-attr-saving="aria-busy=true|aria-disabled=true">
+              <span class="mc-spinner" aria-hidden="true" data-when="saving" hidden></span>
+              <span data-when="saving" hidden>Moving…</span>
+              <span data-unless="saving">Move story</span>
+            </button>
+          </footer>
+        </form>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

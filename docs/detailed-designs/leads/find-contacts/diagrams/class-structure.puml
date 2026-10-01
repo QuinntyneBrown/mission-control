@@ -1,0 +1,92 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Find and read lead contacts
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class LeadDirectoryPage {
+  +routeContext: Signal<RouteContext>
+  +openDialog(): void
+}
+class LeadView {
+  +state: Signal<FeatureState>
+  +submit(): void
+}
+interface ILeadService {
+  +search(request: ListLeadsQuery): Promise<FeatureResult>
+  +read(request: GetLeadQuery): Promise<FeatureResult>
+}
+class LeadService {
+  -http: HttpClient
+}
+class LeadsController {
+  -sender: ISender
+}
+class LeadContact {
+  +id: Guid
+  +firstName: string
+  +lastName: string
+  +email: string
+  +phone: string?
+  +category: LeadCategory
+  +version: long
+}
+interface IMissionControlDataSession {
+  +query(specification): Task<ReadResult>
+  +commit(expectedVersion: long): Task<void>
+}
+class MissionControlDataSession {
+  -connection: DbConnection
+}
+LeadDirectoryPage --> LeadView : composes
+LeadView ..> ILeadService : inject token
+ILeadService <|.. LeadService
+IMissionControlDataSession <|.. MissionControlDataSession
+class ListLeadsQuery {
+  +search: string?
+  +category: LeadCategory?
+  +page: int
+  +pageSize: int
+}
+class ListLeadsQueryHandler {
+  +handle(request: ListLeadsQuery): Task<FeatureResult>
+}
+LeadsController ..> ListLeadsQuery : dispatches
+ListLeadsQueryHandler ..> ListLeadsQuery : handles
+ListLeadsQueryHandler --> LeadContact : loads / applies
+ListLeadsQueryHandler ..> IMissionControlDataSession : uses
+class GetLeadQuery {
+  +id: Guid
+}
+class GetLeadQueryHandler {
+  +handle(request: GetLeadQuery): Task<FeatureResult>
+}
+LeadsController ..> GetLeadQuery : dispatches
+GetLeadQueryHandler ..> GetLeadQuery : handles
+GetLeadQueryHandler --> LeadContact : loads / applies
+GetLeadQueryHandler ..> IMissionControlDataSession : uses
+
+enum LeadCategory {
+  Create
+  Communication
+  City
+  Prayer
+  Event
+}
+LeadContact --> LeadCategory : one responsibility
+@enduml

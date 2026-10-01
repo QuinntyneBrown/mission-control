@@ -1,0 +1,47 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Behavior - Observe liveness and readiness
+actor "Deployment operator" as actor
+box "Frontend - Operations health client" #E0F2FE
+  participant "Initialization / health client" as page
+end box
+box "Backend - MissionControl.Api" #D1FADF
+  participant "Host / health endpoints" as ctrl
+end box
+box "Backend - MissionControl.Application and Domain" #ECFDF3
+  participant "EnsureAdministrator / EnsureCityLead handlers" as handler
+  participant "Account / contact / readiness state" as entity
+end box
+box "Backend - MissionControl.Infrastructure" #FFF4E5
+  participant "DatabaseInitializer" as init
+  database "Mission Control SQL" as db
+end box
+actor -> page : Run initialization / request health
+page -> ctrl : Deployment startup / health probe
+alt Liveness probe
+  ctrl --> page : L2-042 process alive: 200; independent of SQL
+else Readiness probe
+  ctrl -> init : Read required initialization status
+  init --> ctrl : Required seed result
+  ctrl -> db : Check SQL access and schema compatibility
+  db --> ctrl : Available / unavailable
+  alt All readiness checks succeed
+    ctrl --> page : 200 ready
+  else Required initialization, schema, or SQL unavailable
+    ctrl --> page : 503 unavailable; no secret details
+  end
+end
+@enduml

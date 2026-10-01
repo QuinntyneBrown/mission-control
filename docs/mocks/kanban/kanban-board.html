@@ -1,0 +1,1227 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kanban board · Mission Control mock</title>
+  <meta name="description" content="Kanban board with story cards, drag and accessible Move controls, a compact column selector, and dragging, saving, failed, conflict, empty, load-more, paused-sprint, loading, and error states.">
+  <meta name="mock-area" content="Kanban">
+  <meta name="mock-requirements" content="L2-005.4, L2-019, L2-020, L2-021, L2-027.3, L2-030.3, L2-032, L2-033, L2-034.2, L2-035.4, L2-045.4">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body data-attr-collaborator="data-role=collaborator">
+  <a class="mc-skip-link" href="#main">Skip to main content</a>
+
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Projects · Kanban board</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="default">Board</option>
+          <option value="dragging">Dragging a card</option>
+          <option value="pending">Move saving</option>
+          <option value="move-failed">Move failed</option>
+          <option value="conflict">Board changed</option>
+          <option value="empty">Empty board</option>
+          <option value="empty-column">Empty column</option>
+          <option value="load-more">Load more</option>
+          <option value="card-menu">Card menu open</option>
+          <option value="collaborator">Collaborator</option>
+          <option value="preserved">Kanban with paused sprints</option>
+          <option value="loading">Loading</option>
+          <option value="error">Load failed</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="default">Stories are cards; tasks stay inside their story. Each story appears once, in its status column, in saved column order (separate from backlog priority). 992px and wider shows all columns; 576–991px scrolls inside the board region; below 576px a column selector shows one column at a time. Every card has a visible Move button and menu, so nothing needs dragging or hover. The project header and tabs stay pinned while the tab content scrolls; on phones only the tabs stay pinned.</p>
+    <p class="mock-note" data-when="dragging" hidden>Pointer drag: the card lifts and a placeholder shows where it will land. Counts change only after the move is saved.</p>
+    <p class="mock-note" data-when="pending" hidden>The card moves at once and shows "Saving…" until the server confirms; screen readers hear "Moving Template for partner church homepage to In Progress". On success a toast says "Moved to In Progress — "Template for partner church homepage" is position 2 of 4."</p>
+    <p class="mock-note" data-when="move-failed" hidden>The save failed, so the card returns to its last saved place (To Do, position 1) with an error outline. The toast explains and offers Retry; screen readers hear it as an alert.</p>
+    <p class="mock-note" data-when="conflict" hidden>Someone else changed the board while this move was saving. Nothing was applied; Reload board shows the latest saved columns without resubmitting.</p>
+    <p class="mock-note" data-when="empty" hidden>A new project with no stories yet. All three columns stay visible, and both roles can add work.</p>
+    <p class="mock-note" data-when="empty-column" hidden>An empty column keeps its place and says so.</p>
+    <p class="mock-note" data-when="load-more" hidden>Shown with a larger dataset (140 Done stories); the card list is abbreviated. Columns load in batches and counts always reflect the full total. Screen readers hear "Loaded 25 more Done stories".</p>
+    <p class="mock-note" data-when="card-menu" hidden>The card menu offers the same moves as dragging. Move up is unavailable at the top of a column, and the reason is shown.</p>
+    <p class="mock-note" data-when="collaborator" hidden>Collaborators can move cards and add stories. Project settings are administrator-only, so Project actions is absent.</p>
+    <p class="mock-note" data-when="preserved" hidden>Prayer Wall App switched to Kanban with its sprints kept. The board works as usual; sprint planning and starting are paused until it returns to Scrum.</p>
+    <p class="mock-note" data-when="loading" hidden>Skeleton columns hold the layout so the board never looks empty while loading. Screen readers hear "Loading board".</p>
+    <p class="mock-note" data-when="error" hidden>The reference ID matches the server's diagnostic record.</p>
+  </div>
+
+  <div class="mc-app">
+    <header class="mc-topbar">
+      <button class="mc-button mc-button--quiet mc-button--icon" type="button" data-toggle aria-controls="mc-sidebar" aria-expanded="false" aria-label="Open navigation">
+        <span class="mc-icon mc-icon--menu" aria-hidden="true"></span>
+      </button>
+      <a class="mc-brand" href="../home/home.html">
+        <span class="mc-brand__mark" aria-hidden="true">MC</span>
+          <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span>
+      </a>
+    </header>
+
+    <nav class="mc-sidebar" id="mc-sidebar" aria-label="Primary">
+      <div class="mc-sidebar__head">
+        <a class="mc-brand" href="../home/home.html">
+          <span class="mc-brand__mark" aria-hidden="true">MC</span>
+          <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span>
+        </a>
+        <button class="mc-button mc-button--quiet mc-button--icon mc-sidebar__close" type="button" data-close="mc-sidebar" aria-label="Close navigation">
+          <span class="mc-icon mc-icon--close" aria-hidden="true"></span>
+        </button>
+      </div>
+      <ul class="mc-nav">
+        <li><a class="mc-nav__link" href="../home/home.html"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></a></li>
+        <li><a class="mc-nav__link" href="../leads/lead-directory.html"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></a></li>
+        <li><a class="mc-nav__link" href="../projects/project-list.html" aria-current="page"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></a></li>
+      </ul>
+      <div class="mc-nav-section mock-admin-only">
+        <p class="mc-nav__group" id="nav-admin">Administration</p>
+        <ul class="mc-nav" aria-labelledby="nav-admin">
+          <li><a class="mc-nav__link" href="../admin/accounts.html"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></a></li>
+          <li><a class="mc-nav__link" href="../admin/audit-log.html"><span class="mc-icon mc-icon--audit" aria-hidden="true"></span><span class="mc-nav__text">Audit log</span></a></li>
+        </ul>
+      </div>
+      <div class="mc-sidebar__foot">
+        <button class="mc-user-button" type="button" data-toggle aria-controls="user-menu" aria-expanded="false">
+          <span class="mc-avatar mock-admin-only" aria-hidden="true">QB</span>
+          <span class="mc-avatar mock-collaborator-only" aria-hidden="true">AO</span>
+          <span class="mc-user-button__text">
+            <span class="mc-user-button__name mock-admin-only">Quinntyne Brown</span>
+            <span class="mc-user-button__name mock-collaborator-only">Ada Okafor</span>
+            <span class="mc-user-button__role mock-admin-only">Administrator</span>
+            <span class="mc-user-button__role mock-collaborator-only">Collaborator</span>
+          </span>
+          <span class="mc-icon mc-icon--chevron-up mc-icon--sm" aria-hidden="true"></span>
+        </button>
+        <div class="mc-menu" id="user-menu">
+          <div class="mc-menu__header">
+            <div class="mc-stack mc-stack--xs mock-admin-only">
+              <strong>Quinntyne Brown</strong>
+              <span class="mc-muted mc-text-sm">quinntynebrown@gmail.com</span>
+              <span><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>Administrator</span></span>
+            </div>
+            <div class="mc-stack mc-stack--xs mock-collaborator-only">
+              <strong>Ada Okafor</strong>
+              <span class="mc-muted mc-text-sm">ada.okafor@example.org</span>
+              <span><span class="mc-pill"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span></span>
+            </div>
+          </div>
+          <div class="mc-menu__separator"></div>
+          <button class="mc-menu__item" type="button" data-nav="../auth/login.html#state=signed-out">
+            <span class="mc-icon mc-icon--log-out" aria-hidden="true"></span>Sign out
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="mc-main" id="main" tabindex="-1">
+      <div class="mc-page">
+        <div class="mc-project-header">
+          <nav class="mc-breadcrumbs" aria-label="Breadcrumb">
+            <ol>
+              <li><a href="../projects/project-list.html">Projects</a></li>
+              <li><span aria-current="page" data-unless="empty preserved">Church Website Refresh</span><span aria-current="page" data-when="empty" hidden>Youth Coding Night</span><span aria-current="page" data-when="preserved" hidden>Prayer Wall App</span></li>
+            </ol>
+          </nav>
+          <header class="mc-page-header">
+            <div class="mc-page-header__main">
+              <h1 class="mc-page-header__title" tabindex="-1"><span data-unless="empty preserved">Church Website Refresh</span><span data-when="empty" hidden>Youth Coding Night</span><span data-when="preserved" hidden>Prayer Wall App</span></h1>
+              <div class="mc-page-header__meta" data-unless="empty preserved">
+                <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
+                <span>Responsible lead: <a href="../leads/lead-detail.html#state=lead">Lucia Alvarez</a></span>
+              </div>
+              <div class="mc-page-header__meta" data-when="empty" hidden>
+                <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
+                <span>Responsible lead: <span class="mc-unset">None</span></span>
+              </div>
+              <div class="mc-page-header__meta" data-when="preserved" hidden>
+                <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
+                <span>Responsible lead: <a href="../leads/lead-detail.html#state=lead">Grace Mensah</a></span>
+              </div>
+            </div>
+            <div class="mc-page-header__actions">
+              <button class="mc-button mc-button--primary" type="button" data-nav="../work/work-item-form-dialog.html#state=create-story" data-unless="empty">
+                <span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add story
+              </button>
+              <button class="mc-button mc-button--primary" type="button" data-nav="../work/work-item-form-dialog.html#state=create-initiative" data-when="empty" hidden>
+                <span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add initiative
+              </button>
+              <div class="mc-menu-anchor mock-admin-only">
+                <button class="mc-button" type="button" data-toggle aria-controls="project-actions" aria-expanded="false">
+                  Project actions<span class="mc-icon mc-icon--chevron-down mc-icon--sm" aria-hidden="true"></span>
+                </button>
+                <div class="mc-menu" id="project-actions">
+                  <button class="mc-menu__item" type="button" data-nav="../projects/project-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit project</button>
+                  <button class="mc-menu__item" type="button" data-nav="../projects/mode-change-dialog.html#state=to-scrum"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
+                  <div class="mc-menu__separator"></div>
+                  <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="../projects/project-delete-dialog.html#state=blocked" data-attr-empty="data-nav=../projects/project-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
+                </div>
+              </div>
+            </div>
+          </header>
+          <nav class="mc-project-tabs" aria-label="Project sections">
+            <ul class="mc-tabs">
+              <li><a class="mc-tabs__link" href="../projects/project-overview.html"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</a></li>
+              <li><a class="mc-tabs__link" href="../work/work-hierarchy.html"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</a></li>
+              <li><a class="mc-tabs__link" href="../backlog/backlog.html"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</a></li>
+              <li><a class="mc-tabs__link" href="../kanban/kanban-board.html" aria-current="page"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</a></li>
+              <li data-when="preserved" hidden><a class="mc-tabs__link" href="../scrum/sprints.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</a></li>
+            </ul>
+          </nav>
+        </div>
+
+        <h2 class="mc-visually-hidden">Board</h2>
+        <p class="mc-section__hint mc-mb-4" data-unless="loading error empty">Drag a card by its handle or use Move. Column order is separate from backlog priority.</p>
+
+        <div class="mc-alert mc-alert--page" data-when="preserved" hidden>
+          <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
+          <div class="mc-alert__body">
+            <p class="mc-alert__title">Sprints are paused while this project uses Kanban</p>
+            <p class="mc-alert__text">Sprint 3 (planned) and the history of Sprints 1 and 2 are kept. Switch the project back to Scrum to plan or start sprints.</p>
+            <div class="mc-alert__actions">
+              <button class="mc-button mc-button--sm mock-admin-only" type="button" data-nav="../projects/mode-change-dialog.html#state=to-scrum"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
+              <a class="mc-button mc-button--sm" href="../scrum/sprints.html#state=kanban-paused"><span class="mc-icon mc-icon--history" aria-hidden="true"></span>View sprint history</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="mc-live" role="alert">
+          <div class="mc-alert mc-alert--warning mc-alert--page" data-when="conflict" hidden>
+            <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">The board changed</p>
+              <p class="mc-alert__text">Someone else moved stories while you were working, so your last move wasn't applied. Reload to see the latest board.</p>
+              <div class="mc-alert__actions">
+                <button class="mc-button mc-button--sm" type="button" data-goto-state="default"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Reload board</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mc-live" role="status" aria-live="polite">
+          <p class="mc-visually-hidden" data-when="pending" hidden>Moving Template for partner church homepage to In Progress, position 2 of 4.</p>
+          <p class="mc-visually-hidden" data-when="load-more" hidden>Loaded 25 more Done stories.</p>
+          <p class="mc-visually-hidden" data-when="loading" hidden>Loading board</p>
+        </div>
+
+        <div class="mc-empty mc-empty--compact mc-mb-6" data-when="empty" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--board mc-icon--lg" aria-hidden="true"></span></span>
+          <h3 class="mc-empty__title">No stories on this board yet</h3>
+          <p class="mc-empty__text">Stories appear here once they're added under an epic. Start with an initiative and an epic.</p>
+          <div class="mc-empty__actions">
+            <button class="mc-button mc-button--primary" type="button" data-nav="../work/work-item-form-dialog.html#state=create-initiative"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add initiative</button>
+            <a class="mc-button" href="../work/work-hierarchy.html#state=empty">Open Work</a>
+          </div>
+        </div>
+
+        <div data-unless="empty preserved loading error">
+          <div class="mc-column-select">
+            <div class="mc-segmented mc-w-full" role="group" aria-label="Choose a column">
+            <button class="mc-segmented__button" type="button" data-board-column="todo" aria-controls="board-web" aria-pressed="true"><span>To Do</span><span><span data-unless="pending">6</span><span data-when="pending" hidden>5</span><span class="mc-visually-hidden"> stories</span></span></button>
+            <button class="mc-segmented__button" type="button" data-board-column="progress" aria-controls="board-web" aria-pressed="false"><span>In Progress</span><span><span data-unless="pending empty-column">3</span><span data-when="pending" hidden>4</span><span data-when="empty-column" hidden>0</span><span class="mc-visually-hidden"> stories</span></span></button>
+            <button class="mc-segmented__button" type="button" data-board-column="done" aria-controls="board-web" aria-pressed="false"><span>Done</span><span><span data-unless="empty-column load-more">7</span><span data-when="empty-column" hidden>10</span><span data-when="load-more" hidden>140</span><span class="mc-visually-hidden"> stories</span></span></button>
+            </div>
+          </div>
+          <div class="mc-board-scroll" role="region" aria-label="Church Website Refresh board" tabindex="0">
+          <div class="mc-board" id="board-web" data-column="todo">
+            <section class="mc-board__column" data-column="todo" aria-labelledby="board-web-todo-title">
+              <div class="mc-board__column-header">
+                <h3 class="mc-board__column-title" id="board-web-todo-title"><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span></h3>
+                <span class="mc-board__count"><span data-unless="pending">6</span><span data-when="pending" hidden>5</span><span class="mc-visually-hidden"> stories</span></span>
+              </div>
+              <ol class="mc-board__list" aria-labelledby="board-web-todo-title">
+                <li class="mc-story-card" data-unless="dragging pending" data-attr-move-failed="class=mc-story-card mc-story-card--error">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Template for partner church homepage</a>
+                      <span class="mc-story-card__path">WEB-118 · Accessible templates</span>
+                    </div>
+                  </div>
+                  <p class="mc-field-error" data-when="move-failed" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Move didn't save. Back in To Do.</p>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>0/4 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Template for partner church homepage"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-118" aria-expanded="false" aria-label="More actions for Template for partner church homepage" data-open-when="card-menu"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-WEB-118">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span><span class="mc-menu__item-text">Move up<span class="mc-menu__hint">Already at the top of the column</span></span></button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Publishing guide outline</a>
+                      <span class="mc-story-card__path">WEB-120 · Publishing guide</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>1/3 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Publishing guide outline"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-120" aria-expanded="false" aria-label="More actions for Publishing guide outline"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-WEB-120">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Accessible colour palette for templates</a>
+                      <span class="mc-story-card__path">WEB-119 · Accessible templates</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true"><span class="mc-icon mc-icon--user mc-icon--sm" aria-hidden="true"></span></span>Unassigned</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>0/2 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Accessible colour palette for templates"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-119" aria-expanded="false" aria-label="More actions for Accessible colour palette for templates"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-WEB-119">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Sermon archive page layout</a>
+                      <span class="mc-story-card__path">WEB-121 · Accessible templates</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>0/1 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Sermon archive page layout"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-121" aria-expanded="false" aria-label="More actions for Sermon archive page layout"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-WEB-121">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Guide: updating service times</a>
+                      <span class="mc-story-card__path">WEB-122 · Publishing guide</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true"><span class="mc-icon mc-icon--user mc-icon--sm" aria-hidden="true"></span></span>Unassigned</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>0/2 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Guide: updating service times"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-122" aria-expanded="false" aria-label="More actions for Guide: updating service times"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-WEB-122">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Volunteer sign-up embed</a>
+                      <span class="mc-story-card__path">WEB-123 · Accessible templates</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>No tasks</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Volunteer sign-up embed"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-123" aria-expanded="false" aria-label="More actions for Volunteer sign-up embed"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-WEB-123">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span><span class="mc-menu__item-text">Move down<span class="mc-menu__hint">Already at the bottom of the column</span></span></button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              </ol>
+            </section>
+            <section class="mc-board__column" data-column="progress" aria-labelledby="board-web-progress-title">
+              <div class="mc-board__column-header">
+                <h3 class="mc-board__column-title" id="board-web-progress-title"><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></h3>
+                <span class="mc-board__count"><span data-unless="pending empty-column">3</span><span data-when="pending" hidden>4</span><span data-when="empty-column" hidden>0</span><span class="mc-visually-hidden"> stories</span></span>
+              </div>
+              <ol class="mc-board__list" aria-labelledby="board-web-progress-title">
+                <li class="mc-story-card" data-unless="empty-column">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Event listing component</a>
+                      <span class="mc-story-card__path">WEB-115 · Accessible templates</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>2/5 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Event listing component"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-115" aria-expanded="false" aria-label="More actions for Event listing component"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-WEB-115">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span><span class="mc-menu__item-text">Move up<span class="mc-menu__hint">Already at the top of the column</span></span></button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card mc-story-card--dragging" data-when="dragging" hidden inert>
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Template for partner church homepage</a>
+                      <span class="mc-story-card__path">WEB-118 · Accessible templates</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>0/4 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Template for partner church homepage"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-118-drag" aria-expanded="false" aria-label="More actions for Template for partner church homepage"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-WEB-118-drag">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-drop-placeholder" data-when="dragging" hidden aria-hidden="true"></li>
+                <li class="mc-story-card mc-story-card--pending" data-when="pending" hidden>
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Template for partner church homepage</a>
+                      <span class="mc-story-card__path">WEB-118 · Accessible templates</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>0/4 tasks done</span>
+                  </div>
+                  <p class="mc-loading-inline"><span class="mc-spinner" aria-hidden="true"></span>Saving…</p>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Template for partner church homepage"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-118-pending" aria-expanded="false" aria-label="More actions for Template for partner church homepage"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-WEB-118-pending">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card" data-unless="empty-column">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Contact form with spam protection</a>
+                      <span class="mc-story-card__path">WEB-117 · Accessible templates</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>2/4 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Contact form with spam protection"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-117" aria-expanded="false" aria-label="More actions for Contact form with spam protection"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-WEB-117">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card" data-unless="empty-column">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Image alt text checklist</a>
+                      <span class="mc-story-card__path">WEB-116 · Publishing guide</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>1/2 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Image alt text checklist"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-116" aria-expanded="false" aria-label="More actions for Image alt text checklist"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-WEB-116">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span><span class="mc-menu__item-text">Move down<span class="mc-menu__hint">Already at the bottom of the column</span></span></button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-board__empty" data-when="empty-column" hidden>Nothing in progress</li>
+              </ol>
+            </section>
+            <section class="mc-board__column" data-column="done" aria-labelledby="board-web-done-title">
+              <div class="mc-board__column-header">
+                <h3 class="mc-board__column-title" id="board-web-done-title"><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span></h3>
+                <span class="mc-board__count"><span data-unless="empty-column load-more">7</span><span data-when="empty-column" hidden>10</span><span data-when="load-more" hidden>140</span><span class="mc-visually-hidden"> stories</span></span>
+              </div>
+              <ol class="mc-board__list" aria-labelledby="board-web-done-title">
+                <li class="mc-story-card" data-when="empty-column" hidden>
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Event listing component</a>
+                      <span class="mc-story-card__path">WEB-115 · Accessible templates</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>2/5 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Event listing component"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-115-done" aria-expanded="false" aria-label="More actions for Event listing component"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-WEB-115-done">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card" data-when="empty-column" hidden>
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Contact form with spam protection</a>
+                      <span class="mc-story-card__path">WEB-117 · Accessible templates</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>2/4 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Contact form with spam protection"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-117-done" aria-expanded="false" aria-label="More actions for Contact form with spam protection"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-WEB-117-done">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card" data-when="empty-column" hidden>
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Image alt text checklist</a>
+                      <span class="mc-story-card__path">WEB-116 · Publishing guide</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>1/2 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Image alt text checklist"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-116-done" aria-expanded="false" aria-label="More actions for Image alt text checklist"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-WEB-116-done">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Audit current partner sites</a>
+                      <span class="mc-story-card__path">WEB-108 · Site audit</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>4/4 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Audit current partner sites"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-108" aria-expanded="false" aria-label="More actions for Audit current partner sites"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-WEB-108">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span><span class="mc-menu__item-text">Move up<span class="mc-menu__hint">Already at the top of the column</span></span></button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Collect partner church logos</a>
+                      <span class="mc-story-card__path">WEB-109 · Site audit</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>2/2 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Collect partner church logos"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-109" aria-expanded="false" aria-label="More actions for Collect partner church logos"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-WEB-109">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Choose a hosting approach</a>
+                      <span class="mc-story-card__path">WEB-110 · Site audit</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">QB</span>Quinntyne Brown</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>3/3 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Choose a hosting approach"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-110" aria-expanded="false" aria-label="More actions for Choose a hosting approach"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-WEB-110">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Navigation pattern for small sites</a>
+                      <span class="mc-story-card__path">WEB-111 · Accessible templates</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>3/3 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Navigation pattern for small sites"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-111" aria-expanded="false" aria-label="More actions for Navigation pattern for small sites"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-WEB-111">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Footer with service times</a>
+                      <span class="mc-story-card__path">WEB-112 · Accessible templates</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>2/2 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Footer with service times"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-112" aria-expanded="false" aria-label="More actions for Footer with service times"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-WEB-112">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Readable type scale</a>
+                      <span class="mc-story-card__path">WEB-113 · Accessible templates</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>1/1 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Readable type scale"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-113" aria-expanded="false" aria-label="More actions for Readable type scale"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-WEB-113">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Interview two church admins</a>
+                      <span class="mc-story-card__path">WEB-114 · Site audit</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">QB</span>Quinntyne Brown</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>2/2 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Interview two church admins"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-114" aria-expanded="false" aria-label="More actions for Interview two church admins"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-WEB-114">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span><span class="mc-menu__item-text">Move down<span class="mc-menu__hint">Already at the bottom of the column</span></span></button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-board__more" data-when="load-more" hidden>
+                  <span>Showing 25 of 140</span>
+                  <button class="mc-button mc-button--sm mc-button--block" type="button"><span class="mc-icon mc-icon--chevron-down" aria-hidden="true"></span>Load 25 more</button>
+                </li>
+              </ol>
+            </section>
+          </div>
+          </div>
+        </div>
+
+        <div data-when="empty" hidden>
+          <div class="mc-column-select">
+            <div class="mc-segmented mc-w-full" role="group" aria-label="Choose a column">
+            <button class="mc-segmented__button" type="button" data-board-column="todo" aria-controls="board-ycn" aria-pressed="true"><span>To Do</span><span><span>0</span><span class="mc-visually-hidden"> stories</span></span></button>
+            <button class="mc-segmented__button" type="button" data-board-column="progress" aria-controls="board-ycn" aria-pressed="false"><span>In Progress</span><span><span>0</span><span class="mc-visually-hidden"> stories</span></span></button>
+            <button class="mc-segmented__button" type="button" data-board-column="done" aria-controls="board-ycn" aria-pressed="false"><span>Done</span><span><span>0</span><span class="mc-visually-hidden"> stories</span></span></button>
+            </div>
+          </div>
+          <div class="mc-board-scroll" role="region" aria-label="Youth Coding Night board" tabindex="0">
+          <div class="mc-board" id="board-ycn" data-column="todo">
+            <section class="mc-board__column" data-column="todo" aria-labelledby="board-ycn-todo-title">
+              <div class="mc-board__column-header">
+                <h3 class="mc-board__column-title" id="board-ycn-todo-title"><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span></h3>
+                <span class="mc-board__count"><span>0</span><span class="mc-visually-hidden"> stories</span></span>
+              </div>
+              <ol class="mc-board__list" aria-labelledby="board-ycn-todo-title">
+                <li class="mc-board__empty">No stories to do</li>
+              </ol>
+            </section>
+            <section class="mc-board__column" data-column="progress" aria-labelledby="board-ycn-progress-title">
+              <div class="mc-board__column-header">
+                <h3 class="mc-board__column-title" id="board-ycn-progress-title"><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></h3>
+                <span class="mc-board__count"><span>0</span><span class="mc-visually-hidden"> stories</span></span>
+              </div>
+              <ol class="mc-board__list" aria-labelledby="board-ycn-progress-title">
+                <li class="mc-board__empty">Nothing in progress</li>
+              </ol>
+            </section>
+            <section class="mc-board__column" data-column="done" aria-labelledby="board-ycn-done-title">
+              <div class="mc-board__column-header">
+                <h3 class="mc-board__column-title" id="board-ycn-done-title"><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span></h3>
+                <span class="mc-board__count"><span>0</span><span class="mc-visually-hidden"> stories</span></span>
+              </div>
+              <ol class="mc-board__list" aria-labelledby="board-ycn-done-title">
+                <li class="mc-board__empty">Nothing done yet</li>
+              </ol>
+            </section>
+          </div>
+          </div>
+        </div>
+
+        <div data-when="preserved" hidden>
+          <div class="mc-column-select">
+            <div class="mc-segmented mc-w-full" role="group" aria-label="Choose a column">
+            <button class="mc-segmented__button" type="button" data-board-column="todo" aria-controls="board-prw" aria-pressed="true"><span>To Do</span><span><span>5</span><span class="mc-visually-hidden"> stories</span></span></button>
+            <button class="mc-segmented__button" type="button" data-board-column="progress" aria-controls="board-prw" aria-pressed="false"><span>In Progress</span><span><span>2</span><span class="mc-visually-hidden"> stories</span></span></button>
+            <button class="mc-segmented__button" type="button" data-board-column="done" aria-controls="board-prw" aria-pressed="false"><span>Done</span><span><span>5</span><span class="mc-visually-hidden"> stories</span></span></button>
+            </div>
+          </div>
+          <div class="mc-board-scroll" role="region" aria-label="Prayer Wall App board" tabindex="0">
+          <div class="mc-board" id="board-prw" data-column="todo">
+            <section class="mc-board__column" data-column="todo" aria-labelledby="board-prw-todo-title">
+              <div class="mc-board__column-header">
+                <h3 class="mc-board__column-title" id="board-prw-todo-title"><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span></h3>
+                <span class="mc-board__count"><span>5</span><span class="mc-visually-hidden"> stories</span></span>
+              </div>
+              <ol class="mc-board__list" aria-labelledby="board-prw-todo-title">
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Report a post for review</a>
+                      <span class="mc-story-card__path">PRW-114 · Moderation</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true"><span class="mc-icon mc-icon--user mc-icon--sm" aria-hidden="true"></span></span>Unassigned</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>0/2 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Report a post for review"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-PRW-114" aria-expanded="false" aria-label="More actions for Report a post for review"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-PRW-114">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span><span class="mc-menu__item-text">Move up<span class="mc-menu__hint">Already at the top of the column</span></span></button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Moderator queue</a>
+                      <span class="mc-story-card__path">PRW-115 · Moderation</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>0/3 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Moderator queue"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-PRW-115" aria-expanded="false" aria-label="More actions for Moderator queue"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-PRW-115">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Plain-language community guidelines</a>
+                      <span class="mc-story-card__path">PRW-118 · Moderation</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>1/2 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Plain-language community guidelines"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-PRW-118" aria-expanded="false" aria-label="More actions for Plain-language community guidelines"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-PRW-118">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Anonymous posting option</a>
+                      <span class="mc-story-card__path">PRW-116 · Sharing prayer needs</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>0/2 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Anonymous posting option"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-PRW-116" aria-expanded="false" aria-label="More actions for Anonymous posting option"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-PRW-116">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Daily digest settings</a>
+                      <span class="mc-story-card__path">PRW-117 · Sharing prayer needs</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true"><span class="mc-icon mc-icon--user mc-icon--sm" aria-hidden="true"></span></span>Unassigned</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>0/2 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Daily digest settings"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-PRW-117" aria-expanded="false" aria-label="More actions for Daily digest settings"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-PRW-117">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span><span class="mc-menu__item-text">Move down<span class="mc-menu__hint">Already at the bottom of the column</span></span></button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              </ol>
+            </section>
+            <section class="mc-board__column" data-column="progress" aria-labelledby="board-prw-progress-title">
+              <div class="mc-board__column-header">
+                <h3 class="mc-board__column-title" id="board-prw-progress-title"><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></h3>
+                <span class="mc-board__count"><span>2</span><span class="mc-visually-hidden"> stories</span></span>
+              </div>
+              <ol class="mc-board__list" aria-labelledby="board-prw-progress-title">
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Mark a prayer as answered</a>
+                      <span class="mc-story-card__path">PRW-112 · Sharing prayer needs</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>2/3 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Mark a prayer as answered"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-PRW-112" aria-expanded="false" aria-label="More actions for Mark a prayer as answered"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-PRW-112">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span><span class="mc-menu__item-text">Move up<span class="mc-menu__hint">Already at the top of the column</span></span></button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Prayer post character limit</a>
+                      <span class="mc-story-card__path">PRW-113 · Sharing prayer needs</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>0/2 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Prayer post character limit"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-PRW-113" aria-expanded="false" aria-label="More actions for Prayer post character limit"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-PRW-113">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span><span class="mc-menu__item-text">Move down<span class="mc-menu__hint">Already at the bottom of the column</span></span></button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              </ol>
+            </section>
+            <section class="mc-board__column" data-column="done" aria-labelledby="board-prw-done-title">
+              <div class="mc-board__column-header">
+                <h3 class="mc-board__column-title" id="board-prw-done-title"><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span></h3>
+                <span class="mc-board__count"><span>5</span><span class="mc-visually-hidden"> stories</span></span>
+              </div>
+              <ol class="mc-board__list" aria-labelledby="board-prw-done-title">
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Post a prayer need</a>
+                      <span class="mc-story-card__path">PRW-107 · Sharing prayer needs</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>3/3 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Post a prayer need"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-PRW-107" aria-expanded="false" aria-label="More actions for Post a prayer need"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-PRW-107">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span><span class="mc-menu__item-text">Move up<span class="mc-menu__hint">Already at the top of the column</span></span></button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">See recent prayer needs</a>
+                      <span class="mc-story-card__path">PRW-108 · Sharing prayer needs</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>2/2 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move See recent prayer needs"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-PRW-108" aria-expanded="false" aria-label="More actions for See recent prayer needs"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-PRW-108">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Pray for a need</a>
+                      <span class="mc-story-card__path">PRW-109 · Sharing prayer needs</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>2/2 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Pray for a need"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-PRW-109" aria-expanded="false" aria-label="More actions for Pray for a need"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-PRW-109">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Invite-only access</a>
+                      <span class="mc-story-card__path">PRW-110 · Sharing prayer needs</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">QB</span>Quinntyne Brown</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>3/3 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Invite-only access"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-PRW-110" aria-expanded="false" aria-label="More actions for Invite-only access"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-PRW-110">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+                <li class="mc-story-card">
+                  <div class="mc-story-card__top">
+                    <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                    <div class="mc-story-card__titles">
+                      <a class="mc-story-card__title" href="../work/work-item-detail.html">Readable mobile layout</a>
+                      <span class="mc-story-card__path">PRW-111 · Sharing prayer needs</span>
+                    </div>
+                  </div>
+                  <div class="mc-story-card__meta">
+                    <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span>
+                    <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>2/2 tasks done</span>
+                  </div>
+                  <div class="mc-story-card__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Readable mobile layout"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-PRW-111" aria-expanded="false" aria-label="More actions for Readable mobile layout"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="card-menu-PRW-111">
+                        <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span><span class="mc-menu__item-text">Move down<span class="mc-menu__hint">Already at the bottom of the column</span></span></button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              </ol>
+            </section>
+          </div>
+          </div>
+        </div>
+
+        <div class="mc-board-scroll" data-when="loading" hidden aria-hidden="true">
+          <div class="mc-board">
+            <div class="mc-board__column">
+              <div class="mc-board__column-header"><span class="mc-skeleton mc-skeleton--pill"></span><span class="mc-skeleton mc-w-25"></span></div>
+              <span class="mc-skeleton mc-skeleton--tall"></span>
+              <span class="mc-skeleton mc-skeleton--tall"></span>
+              <span class="mc-skeleton mc-skeleton--tall"></span>
+            </div>
+            <div class="mc-board__column">
+              <div class="mc-board__column-header"><span class="mc-skeleton mc-skeleton--pill"></span><span class="mc-skeleton mc-w-25"></span></div>
+              <span class="mc-skeleton mc-skeleton--tall"></span>
+              <span class="mc-skeleton mc-skeleton--tall"></span>
+              <span class="mc-skeleton mc-skeleton--tall"></span>
+            </div>
+            <div class="mc-board__column">
+              <div class="mc-board__column-header"><span class="mc-skeleton mc-skeleton--pill"></span><span class="mc-skeleton mc-w-25"></span></div>
+              <span class="mc-skeleton mc-skeleton--tall"></span>
+              <span class="mc-skeleton mc-skeleton--tall"></span>
+              <span class="mc-skeleton mc-skeleton--tall"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mc-empty mc-empty--error" role="alert" data-when="error" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--alert-circle mc-icon--lg" aria-hidden="true"></span></span>
+          <h3 class="mc-empty__title">We couldn't load the board</h3>
+          <p class="mc-empty__text">Check your connection and try again. If it keeps happening, share the reference ID with your administrator.</p>
+          <p class="mc-ref">Reference ID <code>b07e-6c19-52da</code>
+            <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="b07e-6c19-52da"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+          </p>
+          <div class="mc-empty__actions">
+            <button class="mc-button mc-button--primary" type="button" data-goto-state="loading"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="mc-toast-region" role="status" aria-live="polite">
+    <div class="mc-toast mc-toast--danger" role="alert" data-when="move-failed" hidden>
+      <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Couldn't move story</p>
+        <p class="mc-toast__text">"Template for partner church homepage" is back in To Do.</p>
+        <div class="mc-toast__actions">
+          <button class="mc-button mc-button--sm" type="button" data-goto-state="pending"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Retry</button>
+        </div>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </div>
+</body>
+</html>

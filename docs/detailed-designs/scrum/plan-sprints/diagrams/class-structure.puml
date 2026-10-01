@@ -1,0 +1,125 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Plan sprints and allocate stories
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class SprintPlanningPage {
+  +routeContext: Signal<RouteContext>
+  +openDialog(): void
+}
+class SprintView {
+  +state: Signal<FeatureState>
+  +submit(): void
+}
+interface ISprintService {
+  +create(request: CreateSprintCommand): Promise<FeatureResult>
+  +save_plan(request: SaveSprintPlanCommand): Promise<FeatureResult>
+  +read(request: GetSprintPlanQuery): Promise<FeatureResult>
+}
+class SprintService {
+  -http: HttpClient
+}
+class SprintsController {
+  -sender: ISender
+}
+class Sprint {
+  +id: Guid
+  +workspaceId: Guid
+  +name: string
+  +goal: string
+  +startDate: DateOnly
+  +endDate: DateOnly
+  +status: SprintStatus
+  +startedAtUtc: DateTimeOffset?
+  +closedAtUtc: DateTimeOffset?
+  +version: long
+  +editPlan(name: string, goal: string, dates: DateRange): void
+  +setScope(storyIds: Guid[]): void
+}
+interface IMissionControlDataSession {
+  +query(specification): Task<ReadResult>
+  +commit(expectedVersion: long): Task<void>
+}
+class MissionControlDataSession {
+  -connection: DbConnection
+}
+SprintPlanningPage --> SprintView : composes
+SprintView ..> ISprintService : inject token
+ISprintService <|.. SprintService
+IMissionControlDataSession <|.. MissionControlDataSession
+class CreateSprintCommand {
+  +workspaceId: Guid
+  +name: string
+  +goal: string
+  +startDate: DateOnly
+  +endDate: DateOnly
+}
+class CreateSprintCommandHandler {
+  +handle(request: CreateSprintCommand): Task<FeatureResult>
+}
+SprintsController ..> CreateSprintCommand : dispatches
+CreateSprintCommandHandler ..> CreateSprintCommand : handles
+CreateSprintCommandHandler --> Sprint : loads / applies
+CreateSprintCommandHandler ..> IMissionControlDataSession : uses
+class SaveSprintPlanCommand {
+  +workspaceId: Guid
+  +sprintId: Guid
+  +name: string
+  +goal: string
+  +startDate: DateOnly
+  +endDate: DateOnly
+  +storyIds: Guid[]
+  +expectedVersion: long
+}
+class SaveSprintPlanCommandHandler {
+  +handle(request: SaveSprintPlanCommand): Task<FeatureResult>
+}
+SprintsController ..> SaveSprintPlanCommand : dispatches
+SaveSprintPlanCommandHandler ..> SaveSprintPlanCommand : handles
+SaveSprintPlanCommandHandler --> Sprint : loads / applies
+SaveSprintPlanCommandHandler ..> IMissionControlDataSession : uses
+class GetSprintPlanQuery {
+  +workspaceId: Guid
+  +sprintId: Guid?
+  +page: int
+  +pageSize: int
+}
+class GetSprintPlanQueryHandler {
+  +handle(request: GetSprintPlanQuery): Task<FeatureResult>
+}
+SprintsController ..> GetSprintPlanQuery : dispatches
+GetSprintPlanQueryHandler ..> GetSprintPlanQuery : handles
+GetSprintPlanQueryHandler --> Sprint : loads / applies
+GetSprintPlanQueryHandler ..> IMissionControlDataSession : uses
+
+class OpenSprintMembership {
+  +workspaceId: Guid
+  +storyId: Guid
+  +sprintId: Guid
+}
+class SprintStoryOutcome {
+  +recordedStoryId: Guid
+  +recordedTitle: string
+  +statusAtClosure: WorkStatus
+  +recordedDestinationId: Guid?
+  +recordedDestinationName: string?
+}
+Sprint "1" *-- "*" SprintStoryOutcome : immutable outcomes at closure
+Sprint ..> OpenSprintMembership : live allocation / historical source
+@enduml

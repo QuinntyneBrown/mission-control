@@ -1,0 +1,77 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Review security and mutation audit events
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class AuditLogPage {
+  +routeContext: Signal<RouteContext>
+  +openDialog(): void
+}
+class AuditEventView {
+  +state: Signal<FeatureState>
+  +submit(): void
+}
+interface IAuditEventService {
+  +read(request: ListAuditEventsQuery): Promise<FeatureResult>
+}
+class AuditEventService {
+  -http: HttpClient
+}
+class AuditEventsController {
+  -sender: ISender
+}
+class AuditEvent {
+  +id: Guid
+  +timestampUtc: DateTimeOffset
+  +actorId: Guid?
+  +operation: string
+  +entityType: string
+  +entityId: Guid?
+  +outcome: AuditOutcome
+  +correlationId: string
+}
+interface IMissionControlDataSession {
+  +query(specification): Task<ReadResult>
+  +commit(expectedVersion: long): Task<void>
+}
+class MissionControlDataSession {
+  -connection: DbConnection
+}
+AuditLogPage --> AuditEventView : composes
+AuditEventView ..> IAuditEventService : inject token
+IAuditEventService <|.. AuditEventService
+IMissionControlDataSession <|.. MissionControlDataSession
+class ListAuditEventsQuery {
+  +actorId: Guid?
+  +area: string?
+  +outcome: AuditOutcome?
+  +from: DateOnly?
+  +to: DateOnly?
+  +page: int
+  +pageSize: int
+}
+class ListAuditEventsQueryHandler {
+  +handle(request: ListAuditEventsQuery): Task<FeatureResult>
+}
+AuditEventsController ..> ListAuditEventsQuery : dispatches
+ListAuditEventsQueryHandler ..> ListAuditEventsQuery : handles
+ListAuditEventsQueryHandler --> AuditEvent : loads / applies
+ListAuditEventsQueryHandler ..> IMissionControlDataSession : uses
+
+@enduml

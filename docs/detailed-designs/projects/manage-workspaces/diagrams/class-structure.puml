@@ -1,0 +1,114 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Create and manage project workspaces
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class ProjectListPage {
+  +routeContext: Signal<RouteContext>
+  +openDialog(): void
+}
+class WorkspaceView {
+  +state: Signal<FeatureState>
+  +submit(): void
+}
+interface IWorkspaceService {
+  +read(request: GetWorkspaceQuery): Promise<FeatureResult>
+  +create(request: CreateWorkspaceCommand): Promise<FeatureResult>
+  +edit(request: UpdateWorkspaceCommand): Promise<FeatureResult>
+  +delete(request: DeleteWorkspaceCommand): Promise<FeatureResult>
+}
+class WorkspaceService {
+  -http: HttpClient
+}
+class WorkspacesController {
+  -sender: ISender
+}
+class Workspace {
+  +id: Guid
+  +name: string
+  +description: string?
+  +mode: DeliveryMode
+  +responsibleLeadId: Guid?
+  +version: long
+  +edit(name: string, description: string?, leadId: Guid?): void
+  +checkDeletion(hasWorkOrSprints: bool): void
+}
+interface IMissionControlDataSession {
+  +query(specification): Task<ReadResult>
+  +commit(expectedVersion: long): Task<void>
+}
+class MissionControlDataSession {
+  -connection: DbConnection
+}
+ProjectListPage --> WorkspaceView : composes
+WorkspaceView ..> IWorkspaceService : inject token
+IWorkspaceService <|.. WorkspaceService
+IMissionControlDataSession <|.. MissionControlDataSession
+class GetWorkspaceQuery {
+  +id: Guid?
+  +page: int
+  +pageSize: int
+}
+class GetWorkspaceQueryHandler {
+  +handle(request: GetWorkspaceQuery): Task<FeatureResult>
+}
+WorkspacesController ..> GetWorkspaceQuery : dispatches
+GetWorkspaceQueryHandler ..> GetWorkspaceQuery : handles
+GetWorkspaceQueryHandler --> Workspace : loads / applies
+GetWorkspaceQueryHandler ..> IMissionControlDataSession : uses
+class CreateWorkspaceCommand {
+  +name: string
+  +description: string?
+  +mode: DeliveryMode
+  +responsibleLeadId: Guid?
+}
+class CreateWorkspaceCommandHandler {
+  +handle(request: CreateWorkspaceCommand): Task<FeatureResult>
+}
+WorkspacesController ..> CreateWorkspaceCommand : dispatches
+CreateWorkspaceCommandHandler ..> CreateWorkspaceCommand : handles
+CreateWorkspaceCommandHandler --> Workspace : loads / applies
+CreateWorkspaceCommandHandler ..> IMissionControlDataSession : uses
+class UpdateWorkspaceCommand {
+  +id: Guid
+  +name: string
+  +description: string?
+  +responsibleLeadId: Guid?
+  +expectedVersion: long
+}
+class UpdateWorkspaceCommandHandler {
+  +handle(request: UpdateWorkspaceCommand): Task<FeatureResult>
+}
+WorkspacesController ..> UpdateWorkspaceCommand : dispatches
+UpdateWorkspaceCommandHandler ..> UpdateWorkspaceCommand : handles
+UpdateWorkspaceCommandHandler --> Workspace : loads / applies
+UpdateWorkspaceCommandHandler ..> IMissionControlDataSession : uses
+class DeleteWorkspaceCommand {
+  +id: Guid
+  +expectedVersion: long
+}
+class DeleteWorkspaceCommandHandler {
+  +handle(request: DeleteWorkspaceCommand): Task<FeatureResult>
+}
+WorkspacesController ..> DeleteWorkspaceCommand : dispatches
+DeleteWorkspaceCommandHandler ..> DeleteWorkspaceCommand : handles
+DeleteWorkspaceCommandHandler --> Workspace : loads / applies
+DeleteWorkspaceCommandHandler ..> IMissionControlDataSession : uses
+
+@enduml

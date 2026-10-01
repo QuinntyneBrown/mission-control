@@ -1,0 +1,8 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System context - Create and edit lead contacts
+Person(actor, "Administrator", "Create and edit lead contacts")
+System(mc, "Mission Control", "FaithTech Toronto contacts and project delivery")
+Rel(actor, mc, "Create and edit lead contacts")
+@enduml

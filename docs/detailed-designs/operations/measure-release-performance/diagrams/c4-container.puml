@@ -1,0 +1,17 @@
+@startuml
+!include <C4/C4_Container>
+LAYOUT_WITH_LEGEND()
+title Containers - Measure release workflow performance
+Person(actor, "Deployment operator", "Runs documented release procedure")
+System_Boundary(mc, "Mission Control operations") {
+  Container(runner, "Release procedure / harness", ".NET / Microsoft.Extensions", "Provider commands and acceptance workload")
+  Container(api, "MissionControl.Api", ".NET", "Health status and behavioral verification")
+  ContainerDb(db, "Mission Control SQL", "SQL - provider <TO SUPPLY>", "Durable accounts, work, and sprint snapshots")
+}
+Rel(actor, runner, "Starts / configures")
+Rel(runner, db, "Initializes / verifies", "SQL")
+Rel(actor, api, "Observes health or verifies behavior", "HTTPS")
+Rel(api, db, "Checks or reads restored data", "Parameterized SQL")
+ContainerDb(target, "Isolated SQL target", "Same selected SQL provider", "Recovered data or load fixture")
+Rel(runner, target, "Restores / prepares isolated fixture")
+@enduml

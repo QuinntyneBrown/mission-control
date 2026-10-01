@@ -1,0 +1,100 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Prioritize siblings and the story backlog
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class BacklogPage {
+  +routeContext: Signal<RouteContext>
+  +openDialog(): void
+}
+class WorkOrderView {
+  +state: Signal<FeatureState>
+  +submit(): void
+}
+interface IWorkOrderService {
+  +siblings(request: ReorderSiblingCommand): Promise<FeatureResult>
+  +backlog(request: PrioritizeStoryCommand): Promise<FeatureResult>
+  +read(request: ListBacklogQuery): Promise<FeatureResult>
+}
+class WorkOrderService {
+  -http: HttpClient
+}
+class WorkOrdersController {
+  -sender: ISender
+}
+class WorkOrder {
+  +workspaceId: Guid
+  +kind: OrderKind
+  +parentId: Guid?
+  +orderedItemIds: Guid[]
+  +version: long
+  +move(itemId: Guid, targetPosition: int): void
+}
+interface IMissionControlDataSession {
+  +query(specification): Task<ReadResult>
+  +commit(expectedVersion: long): Task<void>
+}
+class MissionControlDataSession {
+  -connection: DbConnection
+}
+BacklogPage --> WorkOrderView : composes
+WorkOrderView ..> IWorkOrderService : inject token
+IWorkOrderService <|.. WorkOrderService
+IMissionControlDataSession <|.. MissionControlDataSession
+class ReorderSiblingCommand {
+  +workspaceId: Guid
+  +parentId: Guid?
+  +itemId: Guid
+  +targetPosition: int
+  +expectedOrderVersion: long
+}
+class ReorderSiblingCommandHandler {
+  +handle(request: ReorderSiblingCommand): Task<FeatureResult>
+}
+WorkOrdersController ..> ReorderSiblingCommand : dispatches
+ReorderSiblingCommandHandler ..> ReorderSiblingCommand : handles
+ReorderSiblingCommandHandler --> WorkOrder : loads / applies
+ReorderSiblingCommandHandler ..> IMissionControlDataSession : uses
+class PrioritizeStoryCommand {
+  +workspaceId: Guid
+  +storyId: Guid
+  +targetPosition: int
+  +expectedOrderVersion: long
+}
+class PrioritizeStoryCommandHandler {
+  +handle(request: PrioritizeStoryCommand): Task<FeatureResult>
+}
+WorkOrdersController ..> PrioritizeStoryCommand : dispatches
+PrioritizeStoryCommandHandler ..> PrioritizeStoryCommand : handles
+PrioritizeStoryCommandHandler --> WorkOrder : loads / applies
+PrioritizeStoryCommandHandler ..> IMissionControlDataSession : uses
+class ListBacklogQuery {
+  +workspaceId: Guid
+  +page: int
+  +pageSize: int
+}
+class ListBacklogQueryHandler {
+  +handle(request: ListBacklogQuery): Task<FeatureResult>
+}
+WorkOrdersController ..> ListBacklogQuery : dispatches
+ListBacklogQueryHandler ..> ListBacklogQuery : handles
+ListBacklogQueryHandler --> WorkOrder : loads / applies
+ListBacklogQueryHandler ..> IMissionControlDataSession : uses
+
+@enduml

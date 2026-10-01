@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Projects · Mission Control mock</title>
+  <meta name="description" content="Project list with mode, responsible lead, story progress, and active sprint, plus collaborator, empty, loading, and error states.">
+  <meta name="mock-area" content="Projects">
+  <meta name="mock-requirements" content="L2-005.4, L2-014, L2-028, L2-032, L2-043.4, L2-045">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body data-attr-collaborator="data-role=collaborator" data-attr-empty-collaborator="data-role=collaborator">
+  <a class="mc-skip-link" href="#main">Skip to main content</a>
+
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Projects · List</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="default">Administrator</option>
+          <option value="collaborator">Collaborator</option>
+          <option value="empty-admin">Empty (administrator)</option>
+          <option value="empty-collaborator">Empty (collaborator)</option>
+          <option value="loading">Loading</option>
+          <option value="error">Load failed</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="default">Projects are sorted by name, 25 per page; three fit on one page. Each card links to the project overview. "New project" is administrator-only.</p>
+    <p class="mock-note" data-when="collaborator" hidden>Collaborators open projects and work in them (add and update work, run boards and sprints) but cannot add projects or change project settings.</p>
+    <p class="mock-note" data-when="empty-admin" hidden>First run: the empty state explains what a project holds and offers the next permitted action.</p>
+    <p class="mock-note" data-when="empty-collaborator" hidden>Collaborators are told who can add a project instead of being shown an action they can't take.</p>
+    <p class="mock-note" data-when="loading" hidden>Skeleton cards hold the layout while projects load. Screen readers hear "Loading projects".</p>
+  </div>
+
+  <div class="mc-app">
+    <header class="mc-topbar">
+      <button class="mc-button mc-button--quiet mc-button--icon" type="button" data-toggle aria-controls="mc-sidebar" aria-expanded="false" aria-label="Open navigation">
+        <span class="mc-icon mc-icon--menu" aria-hidden="true"></span>
+      </button>
+      <a class="mc-brand" href="../home/home.html">
+        <span class="mc-brand__mark" aria-hidden="true">MC</span>
+        <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span>
+      </a>
+    </header>
+
+    <nav class="mc-sidebar" id="mc-sidebar" aria-label="Primary">
+      <div class="mc-sidebar__head">
+        <a class="mc-brand" href="../home/home.html">
+          <span class="mc-brand__mark" aria-hidden="true">MC</span>
+          <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span>
+        </a>
+        <button class="mc-button mc-button--quiet mc-button--icon mc-sidebar__close" type="button" data-close="mc-sidebar" aria-label="Close navigation">
+          <span class="mc-icon mc-icon--close" aria-hidden="true"></span>
+        </button>
+      </div>
+      <ul class="mc-nav">
+        <li><a class="mc-nav__link" href="../home/home.html"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></a></li>
+        <li><a class="mc-nav__link" href="../leads/lead-directory.html"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></a></li>
+        <li><a class="mc-nav__link" href="../projects/project-list.html" aria-current="page"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></a></li>
+      </ul>
+      <div class="mc-nav-section mock-admin-only">
+        <p class="mc-nav__group" id="nav-admin">Administration</p>
+        <ul class="mc-nav" aria-labelledby="nav-admin">
+          <li><a class="mc-nav__link" href="../admin/accounts.html"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></a></li>
+          <li><a class="mc-nav__link" href="../admin/audit-log.html"><span class="mc-icon mc-icon--audit" aria-hidden="true"></span><span class="mc-nav__text">Audit log</span></a></li>
+        </ul>
+      </div>
+      <div class="mc-sidebar__foot">
+        <button class="mc-user-button" type="button" data-toggle aria-controls="user-menu" aria-expanded="false">
+          <span class="mc-avatar mock-admin-only" aria-hidden="true">QB</span>
+          <span class="mc-avatar mock-collaborator-only" aria-hidden="true">AO</span>
+          <span class="mc-user-button__text">
+            <span class="mc-user-button__name mock-admin-only">Quinntyne Brown</span>
+            <span class="mc-user-button__name mock-collaborator-only">Ada Okafor</span>
+            <span class="mc-user-button__role mock-admin-only">Administrator</span>
+            <span class="mc-user-button__role mock-collaborator-only">Collaborator</span>
+          </span>
+          <span class="mc-icon mc-icon--chevron-up mc-icon--sm" aria-hidden="true"></span>
+        </button>
+        <div class="mc-menu" id="user-menu">
+          <div class="mc-menu__header">
+            <div class="mc-stack mc-stack--xs mock-admin-only">
+              <strong>Quinntyne Brown</strong>
+              <span class="mc-muted mc-text-sm">quinntynebrown@gmail.com</span>
+              <span><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>Administrator</span></span>
+            </div>
+            <div class="mc-stack mc-stack--xs mock-collaborator-only">
+              <strong>Ada Okafor</strong>
+              <span class="mc-muted mc-text-sm">ada.okafor@example.org</span>
+              <span><span class="mc-pill"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span></span>
+            </div>
+          </div>
+          <div class="mc-menu__separator"></div>
+          <button class="mc-menu__item" type="button" data-nav="../auth/login.html#state=signed-out">
+            <span class="mc-icon mc-icon--log-out" aria-hidden="true"></span>Sign out
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="mc-main" id="main" tabindex="-1">
+      <div class="mc-page">
+        <header class="mc-page-header">
+          <div class="mc-page-header__main">
+            <h1 class="mc-page-header__title" tabindex="-1">Projects</h1>
+            <p class="mc-page-header__subtitle">Delivery work for FaithTech Toronto, organized by project. Each project runs as Kanban or Scrum.</p>
+          </div>
+          <div class="mc-page-header__actions mock-admin-only" data-unless="loading error">
+            <button class="mc-button mc-button--primary" type="button" data-nav="project-form-dialog.html">
+              <span class="mc-icon mc-icon--plus" aria-hidden="true"></span>New project
+            </button>
+          </div>
+        </header>
+
+        <div class="mc-alert mc-alert--neutral mc-alert--page mock-collaborator-only">
+          <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
+          <div class="mc-alert__body">
+            <p class="mc-alert__text">You can open any project and work in it. Only administrators can add projects or change their settings.</p>
+          </div>
+        </div>
+
+        <div class="mc-live" role="status" aria-live="polite">
+          <div class="mc-results-meta" data-when="default collaborator">
+            <span>Showing 3 of 3 projects</span><span>Sorted by name</span>
+          </div>
+          <p class="mc-visually-hidden" data-when="loading" hidden>Loading projects</p>
+        </div>
+
+        <div class="mc-grid mc-grid--fit" data-when="default collaborator">
+              <article class="mc-card mc-stack" aria-labelledby="kanban-title">
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
+                  
+                </div>
+                <div class="mc-stack mc-stack--sm">
+                  <h2 class="mc-h3" id="kanban-title"><a class="mc-link-quiet" href="project-overview.html#state=kanban">Church Website Refresh</a></h2>
+                  <p class="mc-muted mc-text-sm">Refresh partner church websites with accessible templates and a simple publishing guide.</p>
+                </div>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Lucia Alvarez</a></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">7 of 16 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-44"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">Continuous flow · no sprints</span><a href="../kanban/kanban-board.html">Open board</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="default-title">
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
+                  <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>Sprint 8 active</span>
+                </div>
+                <div class="mc-stack mc-stack--sm">
+                  <h2 class="mc-h3" id="default-title"><a class="mc-link-quiet" href="project-overview.html#state=default">Community Hackathon 2026</a></h2>
+                  <p class="mc-muted mc-text-sm">Plan and run Toronto's fall build weekend: teams, venues, volunteers, and demo day.</p>
+                </div>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Rafael Da Silva</a></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">11 of 24 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-46"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">Sprint 8 ends Oct 9, 2026</span><a href="../scrum/sprint-board.html">Open sprint board</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="kanban-preserved-title">
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
+                  <span class="mc-pill"><span class="mc-icon mc-icon--history" aria-hidden="true"></span>Sprints paused</span>
+                </div>
+                <div class="mc-stack mc-stack--sm">
+                  <h2 class="mc-h3" id="kanban-preserved-title"><a class="mc-link-quiet" href="project-overview.html#state=kanban-preserved">Prayer Wall App</a></h2>
+                  <p class="mc-muted mc-text-sm">A small app for sharing prayer needs within a community, built by volunteers.</p>
+                </div>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Grace Mensah</a></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">5 of 12 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-42"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">Sprint plans and history kept</span><a href="../kanban/kanban-board.html#state=preserved">Open board</a>
+                </div>
+              </article>
+        </div>
+
+        <div class="mc-empty" data-when="empty-admin empty-collaborator" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--folder mc-icon--lg" aria-hidden="true"></span></span>
+          <h2 class="mc-empty__title">No projects yet</h2>
+          <p class="mc-empty__text mock-admin-only">A project holds initiatives, epics, stories, and tasks, and runs as Kanban or Scrum. Add one to start planning.</p>
+          <p class="mc-empty__text mock-collaborator-only">An administrator can add a project. It will appear here once it's added.</p>
+          <div class="mc-empty__actions mock-admin-only">
+            <button class="mc-button mc-button--primary" type="button" data-nav="project-form-dialog.html">
+              <span class="mc-icon mc-icon--plus" aria-hidden="true"></span>New project
+            </button>
+          </div>
+        </div>
+
+        <div class="mc-grid mc-grid--fit" data-when="loading" hidden aria-hidden="true">
+            <div class="mc-card mc-stack">
+              <span class="mc-skeleton mc-skeleton--pill"></span>
+              <span class="mc-skeleton mc-skeleton--title mc-w-60"></span>
+              <span class="mc-skeleton mc-w-80"></span>
+              <span class="mc-skeleton mc-w-40"></span>
+              <span class="mc-skeleton"></span>
+            </div>
+            <div class="mc-card mc-stack">
+              <span class="mc-skeleton mc-skeleton--pill"></span>
+              <span class="mc-skeleton mc-skeleton--title mc-w-60"></span>
+              <span class="mc-skeleton mc-w-80"></span>
+              <span class="mc-skeleton mc-w-40"></span>
+              <span class="mc-skeleton"></span>
+            </div>
+            <div class="mc-card mc-stack">
+              <span class="mc-skeleton mc-skeleton--pill"></span>
+              <span class="mc-skeleton mc-skeleton--title mc-w-60"></span>
+              <span class="mc-skeleton mc-w-80"></span>
+              <span class="mc-skeleton mc-w-40"></span>
+              <span class="mc-skeleton"></span>
+            </div>
+        </div>
+
+        <div class="mc-empty mc-empty--error" role="alert" data-when="error" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--alert-circle mc-icon--lg" aria-hidden="true"></span></span>
+          <h2 class="mc-empty__title">We couldn't load projects</h2>
+          <p class="mc-empty__text">Check your connection and try again. If it keeps happening, share the reference ID with your administrator.</p>
+          <p class="mc-ref">Reference ID <code>4c97-b0e2-1fd8</code>
+                  <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="4c97-b0e2-1fd8"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                </p>
+          <div class="mc-empty__actions">
+            <button class="mc-button mc-button--primary" type="button" data-goto-state="loading">
+              <span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

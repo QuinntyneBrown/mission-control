@@ -1,0 +1,8 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System context - Provision and manage accounts
+Person(actor, "Administrator", "Provision and manage accounts")
+System(mc, "Mission Control", "FaithTech Toronto contacts and project delivery")
+Rel(actor, mc, "Provision and manage accounts")
+@enduml

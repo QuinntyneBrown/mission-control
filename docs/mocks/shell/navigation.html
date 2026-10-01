@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Navigation · Mission Control mock</title>
+  <meta name="description" content="Application shell and primary navigation: admin and collaborator destinations, the icon rail, the compact menu, the user menu, and keyboard focus.">
+  <meta name="mock-area" content="Shell">
+  <meta name="mock-requirements" content="L2-003, L2-029, L2-030, L2-033, L2-034, L2-035">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body>
+  <a class="mc-skip-link" href="#main" data-attr-focus="class=mc-skip-link mock-show-skip">Skip to main content</a>
+
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Shell · Navigation</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="default">Administrator navigation</option>
+          <option value="collaborator">Collaborator navigation</option>
+          <option value="compact-menu">Compact menu open</option>
+          <option value="user-menu">User menu open</option>
+          <option value="focus">Skip link and keyboard focus</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="default">At 992px and wider the sidebar shows labels. From 768–991px it becomes an icon rail; labels stay available to assistive technology. Below 768px a top bar with a menu button replaces it.</p>
+    <p class="mock-note" data-when="collaborator" hidden>Collaborators see Home, Leads, and Projects only. Administration destinations are absent, not disabled; their direct URLs show the access-denied page.</p>
+    <p class="mock-note" data-when="compact-menu" hidden>View below 768px. Choosing a destination closes the menu and moves focus to the new page's heading. Escape or the close button returns focus to the menu button.</p>
+    <p class="mock-note" data-when="user-menu" hidden>Sign out clears the in-memory session and opens the sign-in page with a "You've signed out" message. With unsaved changes, the unsaved-changes dialog appears first.</p>
+    <p class="mock-note" data-when="focus" hidden>The skip link is the first focusable element. Every focusable control shows a 2px focus ring with a 2px offset; here it is shown on the Projects link. After each route change, focus moves to the page heading.</p>
+  </div>
+
+  <div class="mc-app">
+    <header class="mc-topbar">
+      <button class="mc-button mc-button--quiet mc-button--icon" type="button" data-toggle aria-controls="mc-sidebar" aria-expanded="false" aria-label="Open navigation" data-open-when="compact-menu">
+        <span class="mc-icon mc-icon--menu" aria-hidden="true"></span>
+      </button>
+      <a class="mc-brand" href="../home/home.html">
+        <span class="mc-brand__mark" aria-hidden="true">MC</span>
+        <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span>
+      </a>
+    </header>
+
+    <nav class="mc-sidebar" id="mc-sidebar" aria-label="Primary">
+      <div class="mc-sidebar__head">
+        <a class="mc-brand" href="../home/home.html">
+          <span class="mc-brand__mark" aria-hidden="true">MC</span>
+          <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span>
+        </a>
+        <button class="mc-button mc-button--quiet mc-button--icon mc-sidebar__close" type="button" data-close="mc-sidebar" aria-label="Close navigation">
+          <span class="mc-icon mc-icon--close" aria-hidden="true"></span>
+        </button>
+      </div>
+
+      <ul class="mc-nav">
+        <li><a class="mc-nav__link" href="../home/home.html" aria-current="page"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></a></li>
+        <li><a class="mc-nav__link" href="../leads/lead-directory.html"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></a></li>
+        <li><a class="mc-nav__link" href="../projects/project-list.html" data-attr-focus="class=mc-nav__link mock-focus"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></a></li>
+      </ul>
+
+      <div class="mc-nav-section" data-unless="collaborator">
+        <p class="mc-nav__group" id="nav-admin">Administration</p>
+        <ul class="mc-nav" aria-labelledby="nav-admin">
+          <li><a class="mc-nav__link" href="../admin/accounts.html"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></a></li>
+          <li><a class="mc-nav__link" href="../admin/audit-log.html"><span class="mc-icon mc-icon--audit" aria-hidden="true"></span><span class="mc-nav__text">Audit log</span></a></li>
+        </ul>
+      </div>
+
+      <div class="mc-sidebar__foot">
+        <button class="mc-user-button" type="button" data-toggle aria-controls="user-menu" aria-expanded="false" data-open-when="user-menu">
+          <span class="mc-avatar" aria-hidden="true" data-unless="collaborator">QB</span>
+          <span class="mc-avatar" aria-hidden="true" data-when="collaborator" hidden>AO</span>
+          <span class="mc-user-button__text">
+            <span class="mc-user-button__name" data-unless="collaborator">Quinntyne Brown</span>
+            <span class="mc-user-button__name" data-when="collaborator" hidden>Ada Okafor</span>
+            <span class="mc-user-button__role" data-unless="collaborator">Administrator</span>
+            <span class="mc-user-button__role" data-when="collaborator" hidden>Collaborator</span>
+          </span>
+          <span class="mc-icon mc-icon--chevron-up mc-icon--sm" aria-hidden="true"></span>
+        </button>
+        <div class="mc-menu" id="user-menu">
+          <div class="mc-menu__header">
+            <div class="mc-stack mc-stack--xs" data-unless="collaborator">
+              <strong>Quinntyne Brown</strong>
+              <span class="mc-muted mc-text-sm">quinntynebrown@gmail.com</span>
+              <span><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>Administrator</span></span>
+            </div>
+            <div class="mc-stack mc-stack--xs" data-when="collaborator" hidden>
+              <strong>Ada Okafor</strong>
+              <span class="mc-muted mc-text-sm">ada.okafor@example.org</span>
+              <span><span class="mc-pill"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span></span>
+            </div>
+          </div>
+          <div class="mc-menu__separator"></div>
+          <button class="mc-menu__item" type="button" data-nav="../auth/login.html#state=signed-out">
+            <span class="mc-icon mc-icon--log-out" aria-hidden="true"></span>Sign out
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="mc-main" id="main" tabindex="-1">
+      <div class="mc-page">
+        <header class="mc-page-header">
+          <div class="mc-page-header__main">
+            <h1 class="mc-page-header__title" tabindex="-1">Home</h1>
+            <p class="mc-page-header__subtitle">Leads, projects, and sprints for FaithTech Toronto at a glance.</p>
+          </div>
+        </header>
+
+        <div class="mc-grid mc-grid--stats">
+          <a class="mc-stat" href="../leads/lead-directory.html">
+            <span class="mc-stat__label"><span class="mc-stat__icon"><span class="mc-icon mc-icon--users" aria-hidden="true"></span></span>Leads</span>
+            <span class="mc-stat__value">37</span>
+            <span class="mc-stat__hint">Across five categories</span>
+          </a>
+          <a class="mc-stat" href="../projects/project-list.html">
+            <span class="mc-stat__label"><span class="mc-stat__icon"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span></span>Projects</span>
+            <span class="mc-stat__value">3</span>
+            <span class="mc-stat__hint">1 Scrum · 2 Kanban</span>
+          </a>
+          <a class="mc-stat" href="../scrum/sprint-board.html">
+            <span class="mc-stat__label"><span class="mc-stat__icon"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span></span>Active sprints</span>
+            <span class="mc-stat__value">1</span>
+            <span class="mc-stat__hint">Sprint 8 · Community Hackathon 2026</span>
+          </a>
+        </div>
+
+        <p class="mc-muted mc-text-sm mc-mt-8">This mock shows the shell. The full home screen is in <a href="../home/home.html">Home</a>.</p>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

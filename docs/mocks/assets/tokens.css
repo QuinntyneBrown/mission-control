@@ -1,0 +1,177 @@
+/*
+ * Mission Control design tokens: provisional mock copy.
+ *
+ * These tokens set the visual language for the workflow mocks in docs/mocks.
+ * The standalone design system (design-system/) will adopt them under the
+ * same --mc- prefix and from then on its copy is authoritative; this file
+ * should then mirror it rather than diverge.
+ *
+ * Breakpoints (media queries cannot read custom properties, so they are
+ * documented here and used literally in mocks.css):
+ *   XS  < 576px   small 576-767px   medium 768-991px
+ *   large 992-1199px                XL >= 1200px
+ */
+:root {
+  /* Colour: neutrals */
+  --mc-color-bg: #ffffff;
+  --mc-color-surface: #f7f8fa;
+  --mc-color-surface-sunken: #eef0f4;
+  --mc-color-surface-raised: #ffffff;
+  --mc-color-text: #1b2333;
+  --mc-color-text-muted: #5a6478;
+  --mc-color-text-inverse: #ffffff;
+  --mc-color-border: #e3e6ec;
+  --mc-color-border-strong: #7c869a;
+  --mc-color-overlay: rgb(27 35 51 / 0.48);
+
+  /* Colour: brand and interaction */
+  --mc-color-primary: #3b4fd8;
+  --mc-color-primary-hover: #2f40b8;
+  --mc-color-primary-active: #27359a;
+  --mc-color-primary-subtle: #eef0fd;
+  --mc-color-on-primary: #ffffff;
+  --mc-color-focus: #3b4fd8;
+
+  /* Colour: feedback */
+  --mc-color-success: #1f7a4d;
+  --mc-color-success-subtle: #e8f4ee;
+  --mc-color-warning: #9a5b00;
+  --mc-color-warning-subtle: #fdf3e1;
+  --mc-color-danger: #b42318;
+  --mc-color-danger-hover: #93190f;
+  --mc-color-danger-subtle: #fdecea;
+  --mc-color-info: #3b4fd8;
+  --mc-color-info-subtle: #eef0fd;
+
+  /* Colour: work status (always paired with an icon and text) */
+  --mc-color-status-todo: #5a6478;
+  --mc-color-status-todo-subtle: #eef0f4;
+  --mc-color-status-progress: #3b4fd8;
+  --mc-color-status-progress-subtle: #eef0fd;
+  --mc-color-status-done: #1f7a4d;
+  --mc-color-status-done-subtle: #e8f4ee;
+
+  /* Colour: lead categories (always paired with an icon and text) */
+  --mc-color-category-create: #7a3eb8;
+  --mc-color-category-create-subtle: #f4edfb;
+  --mc-color-category-communication: #0e6f86;
+  --mc-color-category-communication-subtle: #e6f4f7;
+  --mc-color-category-city: #24508f;
+  --mc-color-category-city-subtle: #e8eff8;
+  --mc-color-category-prayer: #a23e63;
+  --mc-color-category-prayer-subtle: #fbedf2;
+  --mc-color-category-event: #9a4a0b;
+  --mc-color-category-event-subtle: #fcefe4;
+
+  /* Colour: loading placeholders */
+  --mc-color-skeleton: #e9ecf1;
+  --mc-color-skeleton-shine: #f4f6f9;
+
+  /* Spacing: 4px grid */
+  --mc-space-0: 0;
+  --mc-space-1: 4px;
+  --mc-space-2: 8px;
+  --mc-space-3: 12px;
+  --mc-space-4: 16px;
+  --mc-space-5: 20px;
+  --mc-space-6: 24px;
+  --mc-space-7: 28px;
+  --mc-space-8: 32px;
+  --mc-space-10: 40px;
+  --mc-space-12: 48px;
+  --mc-space-14: 56px;
+  --mc-space-16: 64px;
+
+  /* Typography */
+  --mc-font-sans: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system,
+    BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+  --mc-font-mono: ui-monospace, "Cascadia Mono", "SFMono-Regular", Consolas,
+    "Liberation Mono", monospace;
+  --mc-font-size-xs: 0.75rem;
+  --mc-font-size-sm: 0.875rem;
+  --mc-font-size-md: 1rem;
+  --mc-font-size-lg: 1.125rem;
+  --mc-font-size-xl: 1.25rem;
+  --mc-font-size-2xl: 1.5rem;
+  --mc-font-size-3xl: 1.875rem;
+  --mc-font-size-4xl: 2.25rem;
+  --mc-font-weight-regular: 400;
+  --mc-font-weight-medium: 500;
+  --mc-font-weight-semibold: 600;
+  --mc-font-weight-bold: 700;
+  --mc-line-height-tight: 1.25;
+  --mc-line-height-snug: 1.4;
+  --mc-line-height-normal: 1.5;
+  --mc-line-height-relaxed: 1.65;
+  --mc-letter-spacing-caps: 0.06em;
+
+  /* Radius and borders */
+  --mc-radius-sm: 6px;
+  --mc-radius-md: 8px;
+  --mc-radius-lg: 12px;
+  --mc-radius-pill: 999px;
+  --mc-border-width: 1px;
+  --mc-border-width-strong: 2px;
+  --mc-focus-width: 2px;
+  --mc-focus-offset: 2px;
+
+  /* Elevation */
+  --mc-shadow-sm: 0 1px 2px rgb(27 35 51 / 0.06);
+  --mc-shadow-md: 0 4px 14px rgb(27 35 51 / 0.08);
+  --mc-shadow-lg: 0 18px 44px rgb(27 35 51 / 0.18);
+
+  /* Sizes */
+  --mc-size-touch: 44px;
+  --mc-size-control: 44px;
+  --mc-size-control-sm: 36px;
+  --mc-size-icon: 20px;
+  --mc-size-icon-sm: 16px;
+  --mc-size-icon-lg: 28px;
+  --mc-size-avatar: 32px;
+  --mc-size-sidebar: 248px;
+  --mc-size-rail: 76px;
+  --mc-size-content: 1200px;
+  --mc-size-prose: 680px;
+  --mc-size-dialog-sm: 440px;
+  --mc-size-dialog-md: 560px;
+  --mc-size-dialog-lg: 760px;
+  --mc-size-toast: 380px;
+  --mc-size-menu: 240px;
+  --mc-size-board-column: 300px;
+  --mc-size-board-drop: 72px;
+  --mc-size-auth-card: 420px;
+  --mc-size-avatar-sm: 24px;
+  --mc-size-type-icon: 28px;
+  --mc-size-empty-icon: 56px;
+  --mc-size-status-dot: 10px;
+  --mc-size-progress: 6px;
+  --mc-size-pill: 24px;
+  --mc-size-tree-row: 52px;
+  --mc-size-card-min: 260px;
+  --mc-size-stat-min: 176px;
+  --mc-size-choice-min: 150px;
+  --mc-size-search-min: 240px;
+  --mc-size-field-min: 180px;
+  --mc-size-stack-label: 96px;
+  --mc-size-dl-term: 140px;
+  --mc-size-crumb: 24ch;
+  --mc-size-textarea: 128px;
+  --mc-size-listbox: 280px;
+  --mc-size-catalog-card: 320px;
+  --mc-size-viewer-height: 800px;
+  --mc-size-text-measure: 48ch;
+
+  /* Layering */
+  --mc-z-sticky: 10;
+  --mc-z-drawer: 30;
+  --mc-z-menu: 40;
+  --mc-z-dialog: 50;
+  --mc-z-toast: 60;
+  --mc-z-mock: 100;
+
+  /* Motion */
+  --mc-duration-fast: 120ms;
+  --mc-duration-base: 200ms;
+  --mc-duration-slow: 1400ms;
+  --mc-ease: cubic-bezier(0.2, 0, 0, 1);
+}

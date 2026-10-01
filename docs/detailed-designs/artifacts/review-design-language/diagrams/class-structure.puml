@@ -1,0 +1,35 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Artifact structure - Review the standalone design language
+class DesignToken {
+  +name: string
+  +family: string
+  +value: string
+  +exampleIds: string[]
+}
+class ArtifactCatalog {
+  +title: string
+  +paths: string[]
+  +open(path: string): void
+}
+class ReviewProfile {
+  +viewportWidth: int
+  +textZoomPercent: int
+}
+ArtifactCatalog "1" o-- "*" DesignToken : lists
+ArtifactCatalog ..> ReviewProfile : reviews at
+
+@enduml

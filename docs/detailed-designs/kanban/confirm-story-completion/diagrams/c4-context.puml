@@ -1,0 +1,8 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System context - Confirm story completion with unfinished tasks
+Person(actor, "Authorized user", "Confirm story completion with unfinished tasks")
+System(mc, "Mission Control", "FaithTech Toronto contacts and project delivery")
+Rel(actor, mc, "Confirm story completion with unfinished tasks")
+@enduml

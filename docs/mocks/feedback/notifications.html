@@ -1,0 +1,1520 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Notifications and pop-ups · Mission Control mock</title>
+  <meta name="description" content="Catalog of every toast, banner, inline alert, confirmation dialog, menu, page state, pill, focus treatment, and screen-reader announcement.">
+  <meta name="mock-area" content="Feedback">
+  <meta name="mock-requirements" content="L2-005.4, L2-021, L2-027.3, L2-031, L2-032, L2-033, L2-034, L2-035, L2-041.3, L2-043.4">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body>
+  <a class="mc-skip-link" href="#main">Skip to main content</a>
+
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Feedback · Notifications and pop-ups</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="default">Catalog</option>
+          <option value="toast-stack">Toast stack</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="default">The toasts, alerts, and menus on this page are static specimens and are not announced. "Show" pushes a live copy into the toast region at the bottom of the screen.</p>
+    <p class="mock-note" data-when="toast-stack" hidden>Up to three toasts stack bottom-right, newest last; below 576px they span the bottom of the screen. The error stays until dismissed or retried; focus never moves to a toast.</p>
+  </div>
+
+  <main class="mock-index" id="main" tabindex="-1">
+    <header class="mock-index__hero">
+      <p class="mc-eyebrow">Feedback catalog</p>
+      <h1 tabindex="-1">Notifications and pop-ups</h1>
+      <p class="mc-muted">Every message, confirmation, and pop-up the application uses, with when it appears and how assistive technology hears it.</p>
+    </header>
+
+    <div class="mc-card mc-mt-8">
+      <h2 class="mc-card__title mc-mb-4">How feedback behaves</h2>
+      <ul class="mc-stack mc-stack--sm mc-text-sm">
+        <li>A toast confirms an outcome the page already shows. It never holds the only copy of something important.</li>
+        <li>Success and info toasts dismiss after 8 seconds, waiting while hovered or focused. Errors, warnings, and toasts with an action stay until dismissed.</li>
+        <li>Outcomes are announced through a polite status region; failures use an assertive alert. Focus stays where the person was working.</li>
+        <li>Status is never colour alone: every tone has an icon and words.</li>
+        <li>Destructive confirmations name the affected item and offer a clear way back.</li>
+      </ul>
+    </div>
+
+    <nav class="mc-mt-8" aria-label="On this page">
+      <ul class="mc-tabs">
+        <li><a class="mc-tabs__link" href="#toasts">Toasts</a></li>
+        <li><a class="mc-tabs__link" href="#alerts">Banners and alerts</a></li>
+        <li><a class="mc-tabs__link" href="#forms">Forms</a></li>
+        <li><a class="mc-tabs__link" href="#dialogs">Dialogs</a></li>
+        <li><a class="mc-tabs__link" href="#states">Page states</a></li>
+        <li><a class="mc-tabs__link" href="#pills">Pills</a></li>
+        <li><a class="mc-tabs__link" href="#menus">Menus and selectors</a></li>
+        <li><a class="mc-tabs__link" href="#focus">Focus</a></li>
+        <li><a class="mc-tabs__link" href="#announcements">Announcements</a></li>
+      </ul>
+    </nav>
+
+    <!-- Toasts -->
+    <section class="mock-index__group mc-stack mc-stack--xl" id="toasts" aria-labelledby="toasts-title">
+      <div class="mc-stack mc-stack--sm">
+        <h2 id="toasts-title">Toasts</h2>
+        <p class="mc-muted">Short confirmations after an action, grouped by area.</p>
+      </div>
+        <section class="mc-stack" aria-labelledby="toasts-leads">
+          <h3 id="toasts-leads">Leads</h3>
+          <ul class="mock-index__list">
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Lead added</p>
+        <p class="mc-toast__text">Oliver Hughes was added to Event.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>A new lead is saved from the Add lead form.</dd>
+              <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-lead-added"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Lead added” toast</span></button></div>
+          </li>
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Changes saved</p>
+        <p class="mc-toast__text">Grace Mensah&#x27;s details were updated.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>An edited lead is saved.</dd>
+              <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-lead-saved"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Changes saved” toast</span></button></div>
+          </li>
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Lead deleted</p>
+        <p class="mc-toast__text">Hana Kim was removed. No accounts or project work changed.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>A lead deletion is confirmed.</dd>
+              <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-lead-deleted"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Lead deleted” toast</span></button></div>
+          </li>
+          </ul>
+        </section>
+        <section class="mc-stack" aria-labelledby="toasts-projects">
+          <h3 id="toasts-projects">Projects</h3>
+          <ul class="mock-index__list">
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Project created</p>
+        <p class="mc-toast__text">Youth Coding Night is ready. Add an initiative to get started.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>A new project is saved.</dd>
+              <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-project-created"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Project created” toast</span></button></div>
+          </li>
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Changes saved</p>
+        <p class="mc-toast__text">Community Hackathon 2026 was updated.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>Project details are edited and saved.</dd>
+              <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-project-saved"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Changes saved” toast</span></button></div>
+          </li>
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Project deleted</p>
+        <p class="mc-toast__text">Youth Coding Night was removed.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>Deleting an empty project is confirmed.</dd>
+              <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-project-deleted"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Project deleted” toast</span></button></div>
+          </li>
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--info">
+      <span class="mc-icon mc-icon--board" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Now using Kanban</p>
+        <p class="mc-toast__text">Sprint plans and history are kept.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>An administrator switches a project from Scrum to Kanban.</dd>
+              <dt>Tone and announcement</dt><dd>Info · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-mode-kanban"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Now using Kanban” toast</span></button></div>
+          </li>
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--info">
+      <span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Now using Scrum</p>
+        <p class="mc-toast__text">Your sprint plans and history are available again.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>An administrator switches a project from Kanban to Scrum.</dd>
+              <dt>Tone and announcement</dt><dd>Info · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-mode-scrum"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Now using Scrum” toast</span></button></div>
+          </li>
+          </ul>
+        </section>
+        <section class="mc-stack" aria-labelledby="toasts-work">
+          <h3 id="toasts-work">Work</h3>
+          <ul class="mock-index__list">
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Story added</p>
+        <p class="mc-toast__text">“Volunteer check-in list” was added to Hackathon team formation.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>A new initiative, epic, story, or task is saved.</dd>
+              <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-story-added"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Story added” toast</span></button></div>
+          </li>
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Changes saved</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>A work item edit is saved.</dd>
+              <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-work-saved"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Changes saved” toast</span></button></div>
+          </li>
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Moved</p>
+        <p class="mc-toast__text">“Confirm venue accessibility checklist” is now under Hackathon team formation.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>A work item is moved to another parent.</dd>
+              <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-work-moved"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Moved” toast</span></button></div>
+          </li>
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Reordered</p>
+        <p class="mc-toast__text">“Book AV for demo day” moved to position 2 of 6.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>Sibling order or backlog priority changes with move controls.</dd>
+              <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-work-reordered"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Reordered” toast</span></button></div>
+          </li>
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Task deleted</p>
+        <p class="mc-toast__text">“Publish team list for mentors” was removed. Counts are updated.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>An administrator confirms deleting a work item.</dd>
+              <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-task-deleted"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Task deleted” toast</span></button></div>
+          </li>
+          </ul>
+        </section>
+        <section class="mc-stack" aria-labelledby="toasts-board">
+          <h3 id="toasts-board">Board</h3>
+          <ul class="mock-index__list">
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Moved to In Progress</p>
+        <p class="mc-toast__text">“Mentors can see team needs” is position 2 of 3.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>A story card is moved by dragging or with the Move dialog.</dd>
+              <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-card-moved"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Moved to In Progress” toast</span></button></div>
+          </li>
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--danger">
+      <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Couldn&#x27;t move story</p>
+        <p class="mc-toast__text">“Mentors can see team needs” is back in To Do.</p>
+        <div class="mc-toast__actions"><button class="mc-button mc-button--sm" type="button">Retry</button></div>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>The API rejects a move or can&#x27;t be reached; the card returns to its last saved place.</dd>
+              <dt>Tone and announcement</dt><dd>Error · Alert (assertive) · Stays until dismissed</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-card-move-failed"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Couldn&#x27;t move story” toast</span></button></div>
+          </li>
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--warning">
+      <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">The board changed</p>
+        <p class="mc-toast__text">Someone else moved stories.</p>
+        <div class="mc-toast__actions"><button class="mc-button mc-button--sm" type="button">Reload</button></div>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>A move conflicts with a newer change (409).</dd>
+              <dt>Tone and announcement</dt><dd>Warning · Alert (assertive) · Stays until dismissed</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-board-changed"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “The board changed” toast</span></button></div>
+          </li>
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Story marked Done</p>
+        <p class="mc-toast__text">“Volunteers can join a build team” still has 3 open tasks.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>A story is marked Done after confirming its unfinished tasks.</dd>
+              <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-story-done"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Story marked Done” toast</span></button></div>
+          </li>
+          </ul>
+        </section>
+        <section class="mc-stack" aria-labelledby="toasts-sprints">
+          <h3 id="toasts-sprints">Sprints</h3>
+          <ul class="mock-index__list">
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Sprint planned</p>
+        <p class="mc-toast__text">Sprint 9 has 3 stories.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>A sprint plan is saved.</dd>
+              <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-sprint-planned"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Sprint planned” toast</span></button></div>
+          </li>
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--play" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Sprint 9 started</p>
+        <p class="mc-toast__text">Its board is open.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>Starting a planned sprint is confirmed.</dd>
+              <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-sprint-started"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Sprint 9 started” toast</span></button></div>
+          </li>
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Scope updated</p>
+        <p class="mc-toast__text">“Volunteer check-in list” was added to Sprint 8 and recorded in its history.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>Active sprint scope changes.</dd>
+              <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-scope-updated"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Scope updated” toast</span></button></div>
+          </li>
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Sprint 8 closed</p>
+        <p class="mc-toast__text">4 done, 1 returned to the backlog, 1 moved to Sprint 9.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>Closing a sprint is confirmed with a destination for every unfinished story.</dd>
+              <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-sprint-closed"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Sprint 8 closed” toast</span></button></div>
+          </li>
+          </ul>
+        </section>
+        <section class="mc-stack" aria-labelledby="toasts-accounts">
+          <h3 id="toasts-accounts">Accounts</h3>
+          <ul class="mock-index__list">
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Account added</p>
+        <p class="mc-toast__text">Share the initial password with Lena Fischer directly. Mission Control doesn&#x27;t send email.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>An administrator provisions an account.</dd>
+              <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-account-added"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Account added” toast</span></button></div>
+          </li>
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Changes saved</p>
+        <p class="mc-toast__text">Ada Okafor&#x27;s role changes on their next request.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>An account&#x27;s names or role are saved.</dd>
+              <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-account-saved"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Changes saved” toast</span></button></div>
+          </li>
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--key" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Password replaced</p>
+        <p class="mc-toast__text">Ada Okafor&#x27;s current sessions will end.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>An administrator sets a replacement password.</dd>
+              <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-password-replaced"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Password replaced” toast</span></button></div>
+          </li>
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--user-x" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Account deactivated</p>
+        <p class="mc-toast__text">Jordan Reyes can&#x27;t sign in. Their assignments are kept.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>Deactivating an account is confirmed.</dd>
+              <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-account-deactivated"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Account deactivated” toast</span></button></div>
+          </li>
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--user-check" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Account reactivated</p>
+        <p class="mc-toast__text">Jordan Reyes can sign in again.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>Reactivating an account is confirmed.</dd>
+              <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-account-reactivated"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Account reactivated” toast</span></button></div>
+          </li>
+          </ul>
+        </section>
+        <section class="mc-stack" aria-labelledby="toasts-system">
+          <h3 id="toasts-system">System</h3>
+          <ul class="mock-index__list">
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--warning">
+      <span class="mc-icon mc-icon--wifi-off" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">You&#x27;re offline</p>
+        <p class="mc-toast__text">Changes can&#x27;t be saved until you reconnect.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>The browser loses its connection to the API.</dd>
+              <dt>Tone and announcement</dt><dd>Warning · Alert (assertive) · Stays until dismissed</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-offline"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “You&#x27;re offline” toast</span></button></div>
+          </li>
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--danger">
+      <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Your access changed</p>
+        <p class="mc-toast__text">You no longer have permission to do that.</p>
+        <div class="mc-toast__actions"><button class="mc-button mc-button--sm" type="button" data-nav="../home/home.html">Go to Home</button></div>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>The API returns 403 because a role or status changed after sign-in.</dd>
+              <dt>Tone and announcement</dt><dd>Error · Alert (assertive) · Stays until dismissed</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-access-changed"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Your access changed” toast</span></button></div>
+          </li>
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--danger">
+      <span class="mc-icon mc-icon--alert-octagon" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Something went wrong</p>
+        <p class="mc-toast__text">Nothing was changed. Try again. Reference ID 3a9c-51e0-d7b2.</p>
+        <div class="mc-toast__actions"><button class="mc-button mc-button--sm" type="button">Try again</button></div>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>An unexpected server error (500) occurs during an action.</dd>
+              <dt>Tone and announcement</dt><dd>Error · Alert (assertive) · Stays until dismissed</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-server-error"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Something went wrong” toast</span></button></div>
+          </li>
+          </ul>
+        </section>
+    </section>
+
+    <!-- Banners and inline alerts -->
+    <section class="mock-index__group" id="alerts" aria-labelledby="alerts-title">
+      <div class="mc-stack mc-stack--sm mc-mb-6">
+        <h2 id="alerts-title">Banners and inline alerts</h2>
+        <p class="mc-muted">Persistent messages inside a page or dialog. Page banners sit under the page header.</p>
+      </div>
+      <ul class="mock-index__list">
+        <li class="mock-index__item">
+          <h3 class="mc-h4">Info</h3>
+          <div class="mc-alert">
+            <span class="mc-icon mc-icon--clock" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">Your session ended</p>
+              <p class="mc-alert__text">For your security, sessions end after 30 minutes or when the page reloads. Sign in to continue.</p>
+            </div>
+          </div>
+        </li>
+        <li class="mock-index__item">
+          <h3 class="mc-h4">Success</h3>
+          <div class="mc-alert mc-alert--success">
+            <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">You've signed out</p>
+              <p class="mc-alert__text">Sign in again whenever you're ready.</p>
+            </div>
+          </div>
+        </li>
+        <li class="mock-index__item">
+          <h3 class="mc-h4">Warning: edit conflict</h3>
+          <div class="mc-alert mc-alert--warning">
+            <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">This lead changed while you were editing</p>
+              <p class="mc-alert__text">Priya Raman saved changes at 10:42 a.m. Your edits haven't been saved. Compare them, then reload the latest version.</p>
+              <div class="mc-alert__actions"><a class="mc-button mc-button--sm" href="../leads/lead-form-dialog.html#state=conflict">See it in the form</a></div>
+            </div>
+          </div>
+        </li>
+        <li class="mock-index__item">
+          <h3 class="mc-h4">Error with reference ID</h3>
+          <div class="mc-alert mc-alert--danger">
+            <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">We couldn't save this lead</p>
+              <p class="mc-alert__text">Nothing was saved, and your entries are still here. Try again.</p>
+              <p class="mc-ref">Reference ID <code>b84d-2f61-0c9e</code>
+                <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="b84d-2f61-0c9e"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+              </p>
+            </div>
+          </div>
+        </li>
+        <li class="mock-index__item">
+          <h3 class="mc-h4">Neutral: read-only</h3>
+          <div class="mc-alert mc-alert--neutral">
+            <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__text">You can view leads. Only administrators can add, edit, or delete them.</p>
+            </div>
+          </div>
+        </li>
+        <li class="mock-index__item">
+          <h3 class="mc-h4">Offline banner</h3>
+          <div class="mc-alert mc-alert--warning">
+            <span class="mc-icon mc-icon--wifi-off" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">You're offline</p>
+              <p class="mc-alert__text">What's on screen stays, but changes can't be saved until you reconnect.</p>
+              <div class="mc-alert__actions"><button class="mc-button mc-button--sm" type="button"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again</button></div>
+            </div>
+          </div>
+        </li>
+        <li class="mock-index__item">
+          <h3 class="mc-h4">Access changed</h3>
+          <div class="mc-alert mc-alert--danger">
+            <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">Your access changed</p>
+              <p class="mc-alert__text">You no longer have permission to do that. An administrator may have changed your role. Nothing was changed.</p>
+              <div class="mc-alert__actions"><a class="mc-button mc-button--sm" href="../home/home.html">Go to Home</a></div>
+            </div>
+          </div>
+        </li>
+        <li class="mock-index__item">
+          <h3 class="mc-h4">Sprints paused in Kanban</h3>
+          <div class="mc-alert">
+            <span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">Sprints are paused while this project uses Kanban</p>
+              <p class="mc-alert__text">Sprint 3 (planned) and the history of Sprints 1 and 2 are kept. An administrator can switch Prayer Wall App back to Scrum to use them.</p>
+            </div>
+          </div>
+        </li>
+        <li class="mock-index__item">
+          <h3 class="mc-h4">Sign-in paused</h3>
+          <div class="mc-alert mc-alert--warning">
+            <span class="mc-icon mc-icon--clock" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">Too many sign-in attempts</p>
+              <p class="mc-alert__text">For your security, sign-in for this email is paused. Try again in 15 minutes, after 3:42 p.m.</p>
+            </div>
+          </div>
+        </li>
+        <li class="mock-index__item">
+          <h3 class="mc-h4">Blocked action</h3>
+          <div class="mc-alert mc-alert--danger">
+            <span class="mc-icon mc-icon--ban" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">Grace Mensah can't be deleted yet</p>
+              <p class="mc-alert__text">Grace is the responsible lead for Prayer Wall App. Choose another responsible lead for that project first.</p>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <!-- Forms -->
+    <section class="mock-index__group" id="forms" aria-labelledby="forms-title">
+      <div class="mc-stack mc-stack--sm mc-mb-6">
+        <h2 id="forms-title">Forms</h2>
+        <p class="mc-muted">Validation, pending saves, and explained restrictions. Input is never cleared by a failed save.</p>
+      </div>
+      <ul class="mock-index__list">
+        <li class="mock-index__item mc-card">
+          <h3 class="mc-h4">Error summary</h3>
+          <div class="mc-error-summary" tabindex="-1" aria-labelledby="sample-errors-title">
+            <p class="mc-error-summary__title" id="sample-errors-title"><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Fix 2 problems to save this lead</p>
+            <ul>
+              <li><a href="#sample-email">Enter an email address like name@example.org</a></li>
+              <li><a href="#sample-first">Enter a first name</a></li>
+            </ul>
+          </div>
+          <p class="mc-hint">Focus moves here on submit; each link jumps to its field.</p>
+        </li>
+        <li class="mock-index__item mc-card">
+          <h3 class="mc-h4">Field error</h3>
+          <div class="mc-field">
+            <label class="mc-label" for="sample-first">First name</label>
+            <input class="mc-input" id="sample-first" type="text" value="" aria-invalid="true" aria-describedby="sample-first-error" required>
+            <p class="mc-field-error" id="sample-first-error"><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Enter a first name</p>
+          </div>
+          <div class="mc-field">
+            <label class="mc-label" for="sample-email">Email</label>
+            <input class="mc-input" id="sample-email" type="email" value="oliver.hughes@" aria-invalid="true" aria-describedby="sample-email-error" required>
+            <p class="mc-field-error" id="sample-email-error"><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Enter an email address like name@example.org</p>
+          </div>
+          <div class="mc-field">
+            <label class="mc-label" for="sample-phone">Phone <span class="mc-label__optional">(optional)</span></label>
+            <input class="mc-input" id="sample-phone" type="tel" value="+44 (20) 7946-0321">
+          </div>
+        </li>
+        <li class="mock-index__item mc-card">
+          <h3 class="mc-h4">Pending save</h3>
+          <div class="mc-cluster">
+            <button class="mc-button" type="button" disabled>Cancel</button>
+            <button class="mc-button mc-button--primary" type="button" aria-busy="true" aria-disabled="true"><span class="mc-spinner" aria-hidden="true"></span>Saving…</button>
+          </div>
+          <p class="mc-hint">The request is sent once; repeat clicks do nothing until it finishes.</p>
+        </li>
+        <li class="mock-index__item mc-card">
+          <h3 class="mc-h4">Restricted control with its reason</h3>
+          <div class="mc-stack mc-stack--sm">
+            <div><button class="mc-button" type="button" disabled><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete story</button></div>
+            <p class="mc-reason"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span>Only administrators can delete work.</p>
+          </div>
+          <p class="mc-hint">Reasons are visible text, never a hover-only tooltip.</p>
+        </li>
+        <li class="mock-index__item mc-card">
+          <h3 class="mc-h4">Unsaved changes</h3>
+          <p class="mc-text-sm">Leaving a page, cancelling a form, or signing out with unsaved input asks first, naming what would be lost.</p>
+          <div><a class="mc-button mc-button--sm" href="../shell/unsaved-changes-dialog.html">Open the confirmation</a></div>
+        </li>
+      </ul>
+    </section>
+
+    <!-- Dialogs -->
+    <section class="mock-index__group" id="dialogs" aria-labelledby="dialogs-title">
+      <div class="mc-stack mc-stack--sm mc-mb-6">
+        <h2 id="dialogs-title">Dialogs and confirmations</h2>
+        <p class="mc-muted">Every dialog moves focus inside, keeps Tab within it, closes with Cancel or Escape, and returns focus to what opened it. Form dialogs fill the screen below 576px; confirmations stay compact and name the item.</p>
+      </div>
+      <ul class="mc-list">
+            <li class="mc-list__item">
+              <div class="mc-list__main">
+                <a class="mc-list__title" href="../shell/unsaved-changes-dialog.html">Unsaved changes</a>
+                <span class="mc-list__meta">Confirmation before input is lost: leaving, cancelling, or signing out.</span>
+              </div>
+              <span class="mc-icon mc-icon--chevron-right mc-muted" aria-hidden="true"></span>
+            </li>
+            <li class="mc-list__item">
+              <div class="mc-list__main">
+                <a class="mc-list__title" href="../leads/lead-form-dialog.html">Add or edit lead</a>
+                <span class="mc-list__meta">Form dialog · full screen below 576px.</span>
+              </div>
+              <span class="mc-icon mc-icon--chevron-right mc-muted" aria-hidden="true"></span>
+            </li>
+            <li class="mc-list__item">
+              <div class="mc-list__main">
+                <a class="mc-list__title" href="../leads/lead-delete-dialog.html">Delete lead</a>
+                <span class="mc-list__meta">Confirmation naming the contact, or a blocked explanation.</span>
+              </div>
+              <span class="mc-icon mc-icon--chevron-right mc-muted" aria-hidden="true"></span>
+            </li>
+            <li class="mc-list__item">
+              <div class="mc-list__main">
+                <a class="mc-list__title" href="../projects/project-form-dialog.html">New or edit project</a>
+                <span class="mc-list__meta">Form dialog with the responsible-lead picker.</span>
+              </div>
+              <span class="mc-icon mc-icon--chevron-right mc-muted" aria-hidden="true"></span>
+            </li>
+            <li class="mc-list__item">
+              <div class="mc-list__main">
+                <a class="mc-list__title" href="../projects/mode-change-dialog.html">Change delivery mode</a>
+                <span class="mc-list__meta">Confirmation, or blocked while a sprint is active.</span>
+              </div>
+              <span class="mc-icon mc-icon--chevron-right mc-muted" aria-hidden="true"></span>
+            </li>
+            <li class="mc-list__item">
+              <div class="mc-list__main">
+                <a class="mc-list__title" href="../projects/project-delete-dialog.html">Delete project</a>
+                <span class="mc-list__meta">Confirmation, or blocked while work or history exists.</span>
+              </div>
+              <span class="mc-icon mc-icon--chevron-right mc-muted" aria-hidden="true"></span>
+            </li>
+            <li class="mc-list__item">
+              <div class="mc-list__main">
+                <a class="mc-list__title" href="../work/work-item-form-dialog.html">Add or edit work item</a>
+                <span class="mc-list__meta">Form dialog for initiatives, epics, stories, and tasks.</span>
+              </div>
+              <span class="mc-icon mc-icon--chevron-right mc-muted" aria-hidden="true"></span>
+            </li>
+            <li class="mc-list__item">
+              <div class="mc-list__main">
+                <a class="mc-list__title" href="../work/reparent-dialog.html">Move to another parent</a>
+                <span class="mc-list__meta">Form dialog that previews the new path.</span>
+              </div>
+              <span class="mc-icon mc-icon--chevron-right mc-muted" aria-hidden="true"></span>
+            </li>
+            <li class="mc-list__item">
+              <div class="mc-list__main">
+                <a class="mc-list__title" href="../work/move-position-dialog.html">Move to position</a>
+                <span class="mc-list__meta">Keyboard-friendly reordering across pages.</span>
+              </div>
+              <span class="mc-icon mc-icon--chevron-right mc-muted" aria-hidden="true"></span>
+            </li>
+            <li class="mc-list__item">
+              <div class="mc-list__main">
+                <a class="mc-list__title" href="../work/work-item-delete-dialog.html">Delete work item</a>
+                <span class="mc-list__meta">Confirmation, or blocked by children or an open sprint.</span>
+              </div>
+              <span class="mc-icon mc-icon--chevron-right mc-muted" aria-hidden="true"></span>
+            </li>
+            <li class="mc-list__item">
+              <div class="mc-list__main">
+                <a class="mc-list__title" href="../kanban/move-story-dialog.html">Move story</a>
+                <span class="mc-list__meta">Accessible alternative to dragging a card.</span>
+              </div>
+              <span class="mc-icon mc-icon--chevron-right mc-muted" aria-hidden="true"></span>
+            </li>
+            <li class="mc-list__item">
+              <div class="mc-list__main">
+                <a class="mc-list__title" href="../kanban/unfinished-tasks-dialog.html">Mark story Done with open tasks</a>
+                <span class="mc-list__meta">Confirmation showing the unfinished task count.</span>
+              </div>
+              <span class="mc-icon mc-icon--chevron-right mc-muted" aria-hidden="true"></span>
+            </li>
+            <li class="mc-list__item">
+              <div class="mc-list__main">
+                <a class="mc-list__title" href="../scrum/sprint-form-dialog.html">Plan or edit sprint</a>
+                <span class="mc-list__meta">Form dialog for name, goal, and Toronto dates.</span>
+              </div>
+              <span class="mc-icon mc-icon--chevron-right mc-muted" aria-hidden="true"></span>
+            </li>
+            <li class="mc-list__item">
+              <div class="mc-list__main">
+                <a class="mc-list__title" href="../scrum/start-sprint-dialog.html">Start sprint</a>
+                <span class="mc-list__meta">Confirmation, or blocked by another active sprint.</span>
+              </div>
+              <span class="mc-icon mc-icon--chevron-right mc-muted" aria-hidden="true"></span>
+            </li>
+            <li class="mc-list__item">
+              <div class="mc-list__main">
+                <a class="mc-list__title" href="../scrum/sprint-scope-dialog.html">Change sprint scope</a>
+                <span class="mc-list__meta">Adds or removes stories from the active sprint.</span>
+              </div>
+              <span class="mc-icon mc-icon--chevron-right mc-muted" aria-hidden="true"></span>
+            </li>
+            <li class="mc-list__item">
+              <div class="mc-list__main">
+                <a class="mc-list__title" href="../scrum/close-sprint-dialog.html">Close sprint</a>
+                <span class="mc-list__meta">A destination for every unfinished story.</span>
+              </div>
+              <span class="mc-icon mc-icon--chevron-right mc-muted" aria-hidden="true"></span>
+            </li>
+            <li class="mc-list__item">
+              <div class="mc-list__main">
+                <a class="mc-list__title" href="../admin/account-form-dialog.html">Add or edit account</a>
+                <span class="mc-list__meta">Form dialog; the designated administrator is protected.</span>
+              </div>
+              <span class="mc-icon mc-icon--chevron-right mc-muted" aria-hidden="true"></span>
+            </li>
+            <li class="mc-list__item">
+              <div class="mc-list__main">
+                <a class="mc-list__title" href="../admin/replace-password-dialog.html">Replace password</a>
+                <span class="mc-list__meta">Ends the account&#x27;s current sessions.</span>
+              </div>
+              <span class="mc-icon mc-icon--chevron-right mc-muted" aria-hidden="true"></span>
+            </li>
+            <li class="mc-list__item">
+              <div class="mc-list__main">
+                <a class="mc-list__title" href="../admin/account-status-dialog.html">Deactivate or reactivate account</a>
+                <span class="mc-list__meta">Confirmation naming the person.</span>
+              </div>
+              <span class="mc-icon mc-icon--chevron-right mc-muted" aria-hidden="true"></span>
+            </li>
+      </ul>
+    </section>
+
+    <!-- Page states -->
+    <section class="mock-index__group" id="states" aria-labelledby="states-title">
+      <div class="mc-stack mc-stack--sm mc-mb-6">
+        <h2 id="states-title">Page states</h2>
+        <p class="mc-muted">Loading, empty, zero-result, and error states look different from each other, and each offers the next permitted action.</p>
+      </div>
+      <ul class="mock-index__list">
+        <li class="mock-index__item">
+          <h3 class="mc-h4">Empty</h3>
+          <div class="mc-empty mc-empty--compact">
+            <span class="mc-empty__icon"><span class="mc-icon mc-icon--hierarchy mc-icon--lg" aria-hidden="true"></span></span>
+            <p class="mc-empty__title">No work yet</p>
+            <p class="mc-empty__text">Start with an initiative, then break it into epics, stories, and tasks.</p>
+            <div class="mc-empty__actions"><button class="mc-button mc-button--primary" type="button"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add initiative</button></div>
+          </div>
+        </li>
+        <li class="mock-index__item">
+          <h3 class="mc-h4">Zero results</h3>
+          <div class="mc-empty mc-empty--compact mc-empty--neutral">
+            <span class="mc-empty__icon"><span class="mc-icon mc-icon--search mc-icon--lg" aria-hidden="true"></span></span>
+            <p class="mc-empty__title">No Event leads</p>
+            <p class="mc-empty__text">No leads match the Event category. Clear the filter to see all 37 leads.</p>
+            <div class="mc-empty__actions"><button class="mc-button" type="button">Clear filter</button></div>
+          </div>
+        </li>
+        <li class="mock-index__item">
+          <h3 class="mc-h4">Error with retry</h3>
+          <div class="mc-empty mc-empty--compact mc-empty--error">
+            <span class="mc-empty__icon"><span class="mc-icon mc-icon--alert-circle mc-icon--lg" aria-hidden="true"></span></span>
+            <p class="mc-empty__title">We couldn't load leads</p>
+            <p class="mc-empty__text">Check your connection and try again.</p>
+            <p class="mc-ref">Reference ID <code>7d41-a2c9-0be3</code></p>
+            <div class="mc-empty__actions"><button class="mc-button mc-button--primary" type="button"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again</button></div>
+          </div>
+        </li>
+        <li class="mock-index__item">
+          <h3 class="mc-h4">Loading skeleton</h3>
+          <div class="mc-table-wrap" aria-hidden="true">
+            <div class="mc-loading-row"><span class="mc-skeleton mc-skeleton--avatar"></span><span class="mc-skeleton mc-w-40"></span><span class="mc-skeleton mc-skeleton--pill"></span></div>
+            <div class="mc-loading-row"><span class="mc-skeleton mc-skeleton--avatar"></span><span class="mc-skeleton mc-w-60"></span><span class="mc-skeleton mc-skeleton--pill"></span></div>
+            <div class="mc-loading-row"><span class="mc-skeleton mc-skeleton--avatar"></span><span class="mc-skeleton mc-w-40"></span><span class="mc-skeleton mc-skeleton--pill"></span></div>
+          </div>
+          <p class="mc-hint">Screen readers hear "Loading leads" instead of the shapes.</p>
+        </li>
+        <li class="mock-index__item mc-card">
+          <h3 class="mc-h4">Load more</h3>
+          <div class="mc-board__more">
+            <span>Showing 100 of 340 stories</span>
+            <button class="mc-button mc-button--sm" type="button">Load 100 more</button>
+          </div>
+          <div class="mc-loading-inline"><span class="mc-spinner" aria-hidden="true"></span>Loading more stories…</div>
+          <p class="mc-hint">Totals always count every matching record, not just the loaded batch.</p>
+        </li>
+        <li class="mock-index__item mc-card">
+          <h3 class="mc-h4">Full-page states</h3>
+          <p class="mc-text-sm">Not found, access denied, unexpected error, and offline pages keep the navigation so a permitted destination is one step away.</p>
+          <div class="mc-cluster mc-cluster--sm">
+            <a class="mc-button mc-button--sm" href="../shell/status-pages.html">Not found</a>
+            <a class="mc-button mc-button--sm" href="../shell/status-pages.html#state=access-denied">Access denied</a>
+            <a class="mc-button mc-button--sm" href="../shell/status-pages.html#state=error">Error</a>
+            <a class="mc-button mc-button--sm" href="../shell/status-pages.html#state=offline">Offline</a>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <!-- Pills -->
+    <section class="mock-index__group" id="pills" aria-labelledby="pills-title">
+      <div class="mc-stack mc-stack--sm mc-mb-6">
+        <h2 id="pills-title">Pills</h2>
+        <p class="mc-muted">Every pill pairs an icon with words, so meaning never depends on colour.</p>
+      </div>
+      <div class="mc-card mc-stack mc-stack--lg">
+        <div class="mc-stack mc-stack--sm">
+          <h3 class="mc-h4">Work status</h3>
+          <div class="mc-cluster mc-cluster--sm">
+            <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
+            <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span>
+            <span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span>
+          </div>
+        </div>
+        <div class="mc-stack mc-stack--sm">
+          <h3 class="mc-h4">Lead categories</h3>
+          <div class="mc-cluster mc-cluster--sm">
+            <span class="mc-pill mc-pill--create"><span class="mc-icon mc-icon--category-create" aria-hidden="true"></span>Create</span>
+            <span class="mc-pill mc-pill--communication"><span class="mc-icon mc-icon--category-communication" aria-hidden="true"></span>Communication</span>
+            <span class="mc-pill mc-pill--city"><span class="mc-icon mc-icon--category-city" aria-hidden="true"></span>City</span>
+            <span class="mc-pill mc-pill--prayer"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer</span>
+            <span class="mc-pill mc-pill--event"><span class="mc-icon mc-icon--category-event" aria-hidden="true"></span>Event</span>
+          </div>
+        </div>
+        <div class="mc-stack mc-stack--sm">
+          <h3 class="mc-h4">Roles and account status</h3>
+          <div class="mc-cluster mc-cluster--sm">
+            <span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>Administrator</span>
+            <span class="mc-pill"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span>
+            <span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Active</span>
+            <span class="mc-pill"><span class="mc-icon mc-icon--user-x" aria-hidden="true"></span>Inactive</span>
+            <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span>Protected</span>
+          </div>
+        </div>
+        <div class="mc-stack mc-stack--sm">
+          <h3 class="mc-h4">Delivery mode and sprint state</h3>
+          <div class="mc-cluster mc-cluster--sm">
+            <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
+            <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
+            <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--calendar" aria-hidden="true"></span>Planned</span>
+            <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--play" aria-hidden="true"></span>Active</span>
+            <span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--history" aria-hidden="true"></span>Closed</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Menus and selectors -->
+    <section class="mock-index__group" id="menus" aria-labelledby="menus-title">
+      <div class="mc-stack mc-stack--sm mc-mb-6">
+        <h2 id="menus-title">Menus and selectors</h2>
+        <p class="mc-muted">Menus open on click or Enter, never on hover. Escape closes them and returns focus to their button.</p>
+      </div>
+      <ul class="mock-index__list">
+        <li class="mock-index__item mc-card mock-specimen">
+          <h3 class="mc-h4">User menu</h3>
+          <div class="mc-menu" data-open>
+            <div class="mc-menu__header">
+              <div class="mc-stack mc-stack--xs">
+                <strong>Quinntyne Brown</strong>
+                <span class="mc-muted mc-text-sm">quinntynebrown@gmail.com</span>
+                <span><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>Administrator</span></span>
+              </div>
+            </div>
+            <div class="mc-menu__separator"></div>
+            <button class="mc-menu__item" type="button" data-nav="../auth/login.html#state=signed-out"><span class="mc-icon mc-icon--log-out" aria-hidden="true"></span>Sign out</button>
+          </div>
+        </li>
+        <li class="mock-index__item mc-card mock-specimen">
+          <h3 class="mc-h4">Work item actions</h3>
+          <div class="mc-menu" data-open>
+            <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--external" aria-hidden="true"></span>Open</button>
+            <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
+            <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+            <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+            <div class="mc-menu__separator"></div>
+            <button class="mc-menu__item mc-menu__item--danger" type="button"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
+          </div>
+        </li>
+        <li class="mock-index__item mc-card mock-specimen">
+          <h3 class="mc-h4">Add to sprint</h3>
+          <div class="mc-menu" data-open>
+            <p class="mc-menu__label">Add to sprint</p>
+            <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--calendar" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9<span class="mc-menu__hint">Planned · Oct 13 – Oct 23</span></span></button>
+            <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--play" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8<span class="mc-menu__hint">Active · records a scope change</span></span></button>
+            <div class="mc-menu__separator"></div>
+            <span class="mc-menu__item" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Done stories can't be added</span></span>
+          </div>
+        </li>
+        <li class="mock-index__item mc-card mock-specimen">
+          <h3 class="mc-h4">Responsible lead picker</h3>
+          <div class="mc-field mc-combobox">
+            <label class="mc-label" for="sample-lead">Responsible lead <span class="mc-label__optional">(optional)</span></label>
+            <input class="mc-input" id="sample-lead" type="text" value="gra" role="combobox" aria-expanded="true" aria-controls="sample-lead-list" aria-autocomplete="list">
+            <ul class="mc-listbox" id="sample-lead-list" role="listbox" aria-label="Matching leads">
+              <li class="mc-listbox__option" role="option" aria-selected="true">Grace Mensah<span class="mc-listbox__hint">Prayer · grace.mensah@example.org</span></li>
+            </ul>
+          </div>
+        </li>
+        <li class="mock-index__item mc-card">
+          <h3 class="mc-h4">Board column selector</h3>
+          <div class="mc-segmented" role="group" aria-label="Show column">
+            <button class="mc-segmented__button" type="button" data-board-column="todo" aria-pressed="true">To Do<span>6</span></button>
+            <button class="mc-segmented__button" type="button" data-board-column="progress" aria-pressed="false">In Progress<span>3</span></button>
+            <button class="mc-segmented__button" type="button" data-board-column="done" aria-pressed="false">Done<span>7</span></button>
+          </div>
+          <p class="mc-hint">Below 576px, boards show one column at a time with this selector. Wider screens scroll the board inside its own region.</p>
+        </li>
+      </ul>
+    </section>
+
+    <!-- Focus -->
+    <section class="mock-index__group" id="focus" aria-labelledby="focus-title">
+      <div class="mc-stack mc-stack--sm mc-mb-6">
+        <h2 id="focus-title">Focus</h2>
+        <p class="mc-muted">A 2px ring with a 2px offset on every focusable control, at 3:1 contrast or better against its surroundings. Fixed bars never cover the focused element.</p>
+      </div>
+      <div class="mc-card">
+        <div class="mc-cluster">
+          <span class="mc-button mc-button--primary mock-focus">Save lead</span>
+          <span class="mc-button mock-focus">Cancel</span>
+          <a class="mc-link mock-focus" href="#focus">View all leads</a>
+          <span class="mc-chip mock-focus">Prayer <span class="mc-chip__count">14</span></span>
+          <span class="mc-pill mc-pill--outline mock-focus"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
+        </div>
+        <div class="mc-field mc-mt-6">
+          <label class="mc-label" for="focus-sample">Search</label>
+          <input class="mc-input mock-focus" id="focus-sample" type="search" value="Grace">
+        </div>
+      </div>
+    </section>
+
+    <!-- Announcements -->
+    <section class="mock-index__group" id="announcements" aria-labelledby="announcements-title">
+      <div class="mc-stack mc-stack--sm mc-mb-6">
+        <h2 id="announcements-title">Screen-reader announcements</h2>
+        <p class="mc-muted">Outcomes are announced without moving focus, except validation, which moves focus to the error summary.</p>
+      </div>
+      <div class="mc-table-wrap">
+        <table class="mc-table mc-table--stack">
+          <caption class="mc-visually-hidden">Announcements, the region that carries them, and when they happen</caption>
+          <thead>
+            <tr><th scope="col">Message</th><th scope="col">Region</th><th scope="col">When</th></tr>
+          </thead>
+          <tbody>
+                <tr>
+                  <td class="mc-table__primary">“4 leads found”</td>
+                  <td data-label="Region">Status (polite)</td>
+                  <td data-label="When">Search text or category filter changes.</td>
+                </tr>
+                <tr>
+                  <td class="mc-table__primary">“No leads match”</td>
+                  <td data-label="Region">Status (polite)</td>
+                  <td data-label="When">A search or filter returns nothing.</td>
+                </tr>
+                <tr>
+                  <td class="mc-table__primary">“Loading leads”</td>
+                  <td data-label="Region">Status (polite)</td>
+                  <td data-label="When">A slow request starts; the skeleton is shown.</td>
+                </tr>
+                <tr>
+                  <td class="mc-table__primary">“Fix 3 problems to save this lead”</td>
+                  <td data-label="Region">Focus moves to the error summary</td>
+                  <td data-label="When">A form is submitted with invalid fields.</td>
+                </tr>
+                <tr>
+                  <td class="mc-table__primary">“Saving…”</td>
+                  <td data-label="Region">Button state (aria-busy)</td>
+                  <td data-label="When">A save is pending; repeat clicks are ignored.</td>
+                </tr>
+                <tr>
+                  <td class="mc-table__primary">“Moved ‘Mentors can see team needs’ to In Progress, position 2 of 3”</td>
+                  <td data-label="Region">Status (polite)</td>
+                  <td data-label="When">A board card moves by keyboard, touch, or pointer.</td>
+                </tr>
+                <tr>
+                  <td class="mc-table__primary">“Couldn&#x27;t move story. It&#x27;s back in To Do.”</td>
+                  <td data-label="Region">Alert (assertive)</td>
+                  <td data-label="When">A board move fails or conflicts.</td>
+                </tr>
+                <tr>
+                  <td class="mc-table__primary">“Reordered: ‘Book AV for demo day’ is now 2 of 6”</td>
+                  <td data-label="Region">Status (polite)</td>
+                  <td data-label="When">Move up or move down is used in a list.</td>
+                </tr>
+                <tr>
+                  <td class="mc-table__primary">“Loaded 25 more Done stories”</td>
+                  <td data-label="Region">Status (polite)</td>
+                  <td data-label="When">Load more adds a batch to a column or list.</td>
+                </tr>
+                <tr>
+                  <td class="mc-table__primary">“Your session ended”</td>
+                  <td data-label="Region">Status (polite) on the sign-in page</td>
+                  <td data-label="When">The session expires or the page reloads.</td>
+                </tr>
+                <tr>
+                  <td class="mc-table__primary">Toast titles and text</td>
+                  <td data-label="Region">Status (polite) or alert (assertive)</td>
+                  <td data-label="When">Any outcome listed under Toasts.</td>
+                </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <div class="mc-toast-region" role="status" aria-live="polite">
+    <div class="mc-toast mc-toast--success" data-when="toast-stack" hidden>
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Lead added</p>
+        <p class="mc-toast__text">Oliver Hughes was added to Event.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+    <div class="mc-toast mc-toast--success" data-when="toast-stack" hidden>
+      <span class="mc-icon mc-icon--play" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Sprint 9 started</p>
+        <p class="mc-toast__text">Its board is open.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+    <div class="mc-toast mc-toast--danger" role="alert" data-when="toast-stack" hidden>
+      <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Couldn't move story</p>
+        <p class="mc-toast__text">“Mentors can see team needs” is back in To Do.</p>
+        <div class="mc-toast__actions"><button class="mc-button mc-button--sm" type="button">Retry</button></div>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </div>
+
+  <template id="tpl-lead-added">
+    <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Lead added</p>
+        <p class="mc-toast__text">Oliver Hughes was added to Event.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-lead-saved">
+    <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Changes saved</p>
+        <p class="mc-toast__text">Grace Mensah&#x27;s details were updated.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-lead-deleted">
+    <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Lead deleted</p>
+        <p class="mc-toast__text">Hana Kim was removed. No accounts or project work changed.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-project-created">
+    <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Project created</p>
+        <p class="mc-toast__text">Youth Coding Night is ready. Add an initiative to get started.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-project-saved">
+    <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Changes saved</p>
+        <p class="mc-toast__text">Community Hackathon 2026 was updated.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-project-deleted">
+    <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Project deleted</p>
+        <p class="mc-toast__text">Youth Coding Night was removed.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-mode-kanban">
+    <div class="mc-toast mc-toast--info">
+      <span class="mc-icon mc-icon--board" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Now using Kanban</p>
+        <p class="mc-toast__text">Sprint plans and history are kept.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-mode-scrum">
+    <div class="mc-toast mc-toast--info">
+      <span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Now using Scrum</p>
+        <p class="mc-toast__text">Your sprint plans and history are available again.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-story-added">
+    <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Story added</p>
+        <p class="mc-toast__text">“Volunteer check-in list” was added to Hackathon team formation.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-work-saved">
+    <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Changes saved</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-work-moved">
+    <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Moved</p>
+        <p class="mc-toast__text">“Confirm venue accessibility checklist” is now under Hackathon team formation.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-work-reordered">
+    <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Reordered</p>
+        <p class="mc-toast__text">“Book AV for demo day” moved to position 2 of 6.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-task-deleted">
+    <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Task deleted</p>
+        <p class="mc-toast__text">“Publish team list for mentors” was removed. Counts are updated.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-card-moved">
+    <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Moved to In Progress</p>
+        <p class="mc-toast__text">“Mentors can see team needs” is position 2 of 3.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-card-move-failed">
+    <div class="mc-toast mc-toast--danger" role="alert">
+      <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Couldn&#x27;t move story</p>
+        <p class="mc-toast__text">“Mentors can see team needs” is back in To Do.</p>
+        <div class="mc-toast__actions"><button class="mc-button mc-button--sm" type="button">Retry</button></div>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-board-changed">
+    <div class="mc-toast mc-toast--warning" role="alert">
+      <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">The board changed</p>
+        <p class="mc-toast__text">Someone else moved stories.</p>
+        <div class="mc-toast__actions"><button class="mc-button mc-button--sm" type="button">Reload</button></div>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-story-done">
+    <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Story marked Done</p>
+        <p class="mc-toast__text">“Volunteers can join a build team” still has 3 open tasks.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-sprint-planned">
+    <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Sprint planned</p>
+        <p class="mc-toast__text">Sprint 9 has 3 stories.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-sprint-started">
+    <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--play" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Sprint 9 started</p>
+        <p class="mc-toast__text">Its board is open.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-scope-updated">
+    <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Scope updated</p>
+        <p class="mc-toast__text">“Volunteer check-in list” was added to Sprint 8 and recorded in its history.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-sprint-closed">
+    <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Sprint 8 closed</p>
+        <p class="mc-toast__text">4 done, 1 returned to the backlog, 1 moved to Sprint 9.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-account-added">
+    <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Account added</p>
+        <p class="mc-toast__text">Share the initial password with Lena Fischer directly. Mission Control doesn&#x27;t send email.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-account-saved">
+    <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Changes saved</p>
+        <p class="mc-toast__text">Ada Okafor&#x27;s role changes on their next request.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-password-replaced">
+    <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--key" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Password replaced</p>
+        <p class="mc-toast__text">Ada Okafor&#x27;s current sessions will end.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-account-deactivated">
+    <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--user-x" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Account deactivated</p>
+        <p class="mc-toast__text">Jordan Reyes can&#x27;t sign in. Their assignments are kept.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-account-reactivated">
+    <div class="mc-toast mc-toast--success">
+      <span class="mc-icon mc-icon--user-check" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Account reactivated</p>
+        <p class="mc-toast__text">Jordan Reyes can sign in again.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-offline">
+    <div class="mc-toast mc-toast--warning" role="alert">
+      <span class="mc-icon mc-icon--wifi-off" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">You&#x27;re offline</p>
+        <p class="mc-toast__text">Changes can&#x27;t be saved until you reconnect.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-access-changed">
+    <div class="mc-toast mc-toast--danger" role="alert">
+      <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Your access changed</p>
+        <p class="mc-toast__text">You no longer have permission to do that.</p>
+        <div class="mc-toast__actions"><button class="mc-button mc-button--sm" type="button" data-nav="../home/home.html">Go to Home</button></div>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+  <template id="tpl-server-error">
+    <div class="mc-toast mc-toast--danger" role="alert">
+      <span class="mc-icon mc-icon--alert-octagon" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Something went wrong</p>
+        <p class="mc-toast__text">Nothing was changed. Try again. Reference ID 3a9c-51e0-d7b2.</p>
+        <div class="mc-toast__actions"><button class="mc-button mc-button--sm" type="button">Try again</button></div>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
+</body>
+</html>

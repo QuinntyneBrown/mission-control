@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sprint history · Mission Control mock</title>
+  <meta name="description" content="Read-only history of closed Sprint 7: goal, planned and actual dates, scope changes with actors, and recorded story outcomes including carryover and a deleted story.">
+  <meta name="mock-area" content="Scrum sprints">
+  <meta name="mock-requirements" content="L2-023.3, L2-025, L2-026, L2-029.4, L2-032, L2-045">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body>
+  <a class="mc-skip-link" href="#main">Skip to main content</a>
+
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Scrum · Sprint history</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="default">Closed sprint</option>
+          <option value="renamed">Story renamed since</option>
+          <option value="not-found">Sprint not found</option>
+          <option value="loading">Loading</option>
+          <option value="error">Load failed</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="default">History is a snapshot taken at closure: goal, planned dates, actual start and close, initial and final scope, scope changes, and each story's title, status, and destination as recorded. It can't be edited (the API returns 409). Deleted stories keep their recorded row without a link.</p>
+    <p class="mock-note" data-when="renamed" hidden>A story renamed after closure keeps its recorded title here; the current title is shown as a note so the link still makes sense.</p>
+    <p class="mock-note" data-when="not-found" hidden>Missing or mistyped sprint links show a readable message and a way back to the project's sprints.</p>
+    <p class="mock-note" data-when="loading" hidden>Placeholders keep the layout while history loads. Screen readers hear "Loading Sprint 7".</p>
+  </div>
+
+  <div class="mc-app">
+    <header class="mc-topbar">
+      <button class="mc-button mc-button--quiet mc-button--icon" type="button" data-toggle aria-controls="mc-sidebar" aria-expanded="false" aria-label="Open navigation">
+        <span class="mc-icon mc-icon--menu" aria-hidden="true"></span>
+      </button>
+      <a class="mc-brand" href="../home/home.html">
+        <span class="mc-brand__mark" aria-hidden="true">MC</span>
+        <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span>
+      </a>
+    </header>
+
+    <nav class="mc-sidebar" id="mc-sidebar" aria-label="Primary">
+      <div class="mc-sidebar__head">
+        <a class="mc-brand" href="../home/home.html">
+          <span class="mc-brand__mark" aria-hidden="true">MC</span>
+          <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span>
+        </a>
+        <button class="mc-button mc-button--quiet mc-button--icon mc-sidebar__close" type="button" data-close="mc-sidebar" aria-label="Close navigation">
+          <span class="mc-icon mc-icon--close" aria-hidden="true"></span>
+        </button>
+      </div>
+      <ul class="mc-nav">
+        <li><a class="mc-nav__link" href="../home/home.html"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></a></li>
+        <li><a class="mc-nav__link" href="../leads/lead-directory.html"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></a></li>
+        <li><a class="mc-nav__link" href="../projects/project-list.html" aria-current="page"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></a></li>
+      </ul>
+      <div class="mc-nav-section mock-admin-only">
+        <p class="mc-nav__group" id="nav-admin">Administration</p>
+        <ul class="mc-nav" aria-labelledby="nav-admin">
+          <li><a class="mc-nav__link" href="../admin/accounts.html"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></a></li>
+          <li><a class="mc-nav__link" href="../admin/audit-log.html"><span class="mc-icon mc-icon--audit" aria-hidden="true"></span><span class="mc-nav__text">Audit log</span></a></li>
+        </ul>
+      </div>
+      <div class="mc-sidebar__foot">
+        <button class="mc-user-button" type="button" data-toggle aria-controls="user-menu" aria-expanded="false">
+          <span class="mc-avatar mock-admin-only" aria-hidden="true">QB</span>
+          <span class="mc-avatar mock-collaborator-only" aria-hidden="true">AO</span>
+          <span class="mc-user-button__text">
+            <span class="mc-user-button__name mock-admin-only">Quinntyne Brown</span>
+            <span class="mc-user-button__name mock-collaborator-only">Ada Okafor</span>
+            <span class="mc-user-button__role mock-admin-only">Administrator</span>
+            <span class="mc-user-button__role mock-collaborator-only">Collaborator</span>
+          </span>
+          <span class="mc-icon mc-icon--chevron-up mc-icon--sm" aria-hidden="true"></span>
+        </button>
+        <div class="mc-menu" id="user-menu">
+          <div class="mc-menu__header">
+            <div class="mc-stack mc-stack--xs mock-admin-only">
+              <strong>Quinntyne Brown</strong>
+              <span class="mc-muted mc-text-sm">quinntynebrown@gmail.com</span>
+              <span><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>Administrator</span></span>
+            </div>
+            <div class="mc-stack mc-stack--xs mock-collaborator-only">
+              <strong>Ada Okafor</strong>
+              <span class="mc-muted mc-text-sm">ada.okafor@example.org</span>
+              <span><span class="mc-pill"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span></span>
+            </div>
+          </div>
+          <div class="mc-menu__separator"></div>
+          <button class="mc-menu__item" type="button" data-nav="../auth/login.html#state=signed-out">
+            <span class="mc-icon mc-icon--log-out" aria-hidden="true"></span>Sign out
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="mc-main" id="main" tabindex="-1">
+      <div class="mc-page">
+        <nav class="mc-breadcrumbs" aria-label="Breadcrumb">
+          <ol>
+            <li><a href="../projects/project-list.html">Projects</a></li>
+            <li class="mc-breadcrumbs__overflow">
+              <div class="mc-menu-anchor">
+                <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="crumb-menu" aria-expanded="false" aria-label="Show the rest of the path">
+                  <span class="mc-icon mc-icon--more-horizontal" aria-hidden="true"></span>
+                </button>
+                <div class="mc-menu mc-menu--start" id="crumb-menu">
+                  <button class="mc-menu__item" type="button" data-nav="../projects/project-overview.html">Community Hackathon 2026</button>
+                  <button class="mc-menu__item" type="button" data-nav="sprints.html">Sprints</button>
+                </div>
+              </div>
+            </li>
+            <li class="mc-breadcrumbs__collapsible"><a href="../projects/project-overview.html">Community Hackathon 2026</a></li>
+            <li class="mc-breadcrumbs__collapsible"><a href="sprints.html">Sprints</a></li>
+            <li><span aria-current="page"><span data-unless="not-found">Sprint 7</span><span data-when="not-found" hidden>Sprint</span></span></li>
+          </ol>
+        </nav>
+
+        <div data-unless="not-found loading error">
+          <header class="mc-page-header">
+            <div class="mc-page-header__main">
+              <h1 class="mc-page-header__title" tabindex="-1">Sprint 7</h1>
+              <div class="mc-page-header__meta">
+                <span class="mc-pill"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Closed</span>
+                <span>Sep 14 – Sep 25, 2026</span>
+                <span>Community Hackathon 2026</span>
+              </div>
+            </div>
+          </header>
+
+          <div class="mc-alert mc-alert--neutral mc-alert--page">
+            <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__text">Closed sprints can't be edited. This page shows what was recorded when Sprint 7 closed.</p>
+            </div>
+          </div>
+
+          <div class="mc-stack mc-stack--2xl">
+            <div class="mc-grid mc-grid--stats">
+              <div class="mc-stat">
+                <span class="mc-stat__label"><span class="mc-stat__icon"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span></span>Completed</span>
+                <span class="mc-stat__value">6</span>
+                <span class="mc-stat__hint">of 8 stories</span>
+              </div>
+              <div class="mc-stat">
+                <span class="mc-stat__label"><span class="mc-stat__icon"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span></span>Moved to Sprint 8</span>
+                <span class="mc-stat__value">1</span>
+                <span class="mc-stat__hint">Unfinished at closure</span>
+              </div>
+              <div class="mc-stat">
+                <span class="mc-stat__label"><span class="mc-stat__icon"><span class="mc-icon mc-icon--undo" aria-hidden="true"></span></span>Returned to backlog</span>
+                <span class="mc-stat__value">1</span>
+                <span class="mc-stat__hint">Unfinished at closure</span>
+              </div>
+            </div>
+
+            <div class="mc-split">
+              <section class="mc-card" aria-labelledby="details-heading">
+                <div class="mc-card__header"><h2 class="mc-card__title" id="details-heading">Details</h2></div>
+                <dl class="mc-dl">
+                  <dt>Goal</dt><dd>Mentor matching ready for review</dd>
+                  <dt>Planned dates</dt><dd>Sep 14 – Sep 25, 2026 (Toronto)</dd>
+                  <dt>Started</dt><dd>Sep 14, 2026, 9:02 a.m. by Quinntyne Brown</dd>
+                  <dt>Closed</dt><dd>Sep 25, 2026, 4:47 p.m. by Priya Raman</dd>
+                  <dt>Scope</dt><dd>7 stories at start · 8 at close</dd>
+                </dl>
+              </section>
+
+              <section class="mc-card" aria-labelledby="changes-heading">
+                <div class="mc-card__header"><h2 class="mc-card__title" id="changes-heading">Scope changes</h2></div>
+                <ol class="mc-timeline">
+                  <li class="mc-timeline__item"><span class="mc-timeline__time">Sep 25, 2026, 4:47 p.m.</span>Priya Raman closed the sprint. 1 story moved to Sprint 8, 1 returned to the backlog.</li>
+                  <li class="mc-timeline__item"><span class="mc-timeline__time">Sep 18, 2026, 11:30 a.m.</span>Priya Raman added HCK-134 "Sponsor thank-you page".</li>
+                  <li class="mc-timeline__item"><span class="mc-timeline__time">Sep 14, 2026, 9:02 a.m.</span>Quinntyne Brown started the sprint with 7 stories.</li>
+                </ol>
+              </section>
+            </div>
+
+            <section aria-labelledby="outcomes-heading">
+              <div class="mc-section__header">
+                <h2 class="mc-section__title" id="outcomes-heading">Story outcomes</h2>
+                <span class="mc-section__hint">Titles and statuses as recorded at closure</span>
+              </div>
+              <div class="mc-table-wrap">
+                <table class="mc-table mc-table--stack">
+                  <caption class="mc-visually-hidden">Sprint 7 story outcomes at closure</caption>
+                  <thead>
+                    <tr><th scope="col">Story</th><th scope="col">At closure</th><th scope="col">Outcome</th></tr>
+                  </thead>
+                  <tbody>
+                <tr>
+                  <td class="mc-table__primary"><span class="mc-table__secondary">HCK-131</span><a href="../work/work-item-detail.html">Mentor sign-up page</a></td>
+                  <td data-label="At closure"><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span></td>
+                  <td data-label="Outcome">Completed in Sprint 7</td>
+                </tr>
+                <tr>
+                  <td class="mc-table__primary"><span class="mc-table__secondary">HCK-134</span><a href="../work/work-item-detail.html">Sponsor thank-you page</a><span class="mc-table__secondary">Added Sep 18 by Priya Raman</span></td>
+                  <td data-label="At closure"><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span></td>
+                  <td data-label="Outcome">Completed in Sprint 7</td>
+                </tr>
+                <tr data-attr-renamed="class=mc-table__row--highlight">
+                  <td class="mc-table__primary"><span class="mc-table__secondary">HCK-132</span><a href="../work/work-item-detail.html">Mentor matching rules</a><span class="mc-table__secondary" data-when="renamed" hidden>Now titled "Mentor matching rules and tie-breaks"</span></td>
+                  <td data-label="At closure"><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span></td>
+                  <td data-label="Outcome">Completed in Sprint 7</td>
+                </tr>
+                <tr>
+                  <td class="mc-table__primary"><span class="mc-table__secondary">HCK-109</span>Draft volunteer code of conduct <span class="mc-pill"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Deleted</span><span class="mc-table__secondary">Story deleted Sep 27, 2026</span></td>
+                  <td data-label="At closure"><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span></td>
+                  <td data-label="Outcome">Completed in Sprint 7</td>
+                </tr>
+                <tr>
+                  <td class="mc-table__primary"><span class="mc-table__secondary">HCK-133</span><a href="../work/work-item-detail.html">Venue shortlist</a></td>
+                  <td data-label="At closure"><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span></td>
+                  <td data-label="Outcome">Completed in Sprint 7</td>
+                </tr>
+                <tr>
+                  <td class="mc-table__primary"><span class="mc-table__secondary">HCK-135</span><a href="../work/work-item-detail.html">Volunteer roles guide</a></td>
+                  <td data-label="At closure"><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span></td>
+                  <td data-label="Outcome">Completed in Sprint 7</td>
+                </tr>
+                <tr>
+                  <td class="mc-table__primary"><span class="mc-table__secondary">HCK-112</span><a href="../work/work-item-detail.html">Volunteers can join a build team</a></td>
+                  <td data-label="At closure"><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></td>
+                  <td data-label="Outcome"><a href="sprints.html"><span class="mc-icon mc-icon--arrow-right mc-icon--sm" aria-hidden="true"></span>Moved to Sprint 8</a></td>
+                </tr>
+                <tr>
+                  <td class="mc-table__primary"><span class="mc-table__secondary">HCK-120</span><a href="../work/work-item-detail.html">Confirm venue accessibility checklist</a></td>
+                  <td data-label="At closure"><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span></td>
+                  <td data-label="Outcome"><span class="mc-cluster mc-cluster--sm"><span class="mc-icon mc-icon--undo mc-icon--sm" aria-hidden="true"></span>Returned to backlog</span></td>
+                </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="mc-text-sm mc-muted mc-mt-4">Showing all 8 stories</p>
+            </section>
+          </div>
+        </div>
+
+        <div class="mc-empty mc-empty--page" data-when="not-found" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--compass mc-icon--lg" aria-hidden="true"></span></span>
+          <h1 class="mc-empty__title" tabindex="-1">Sprint not found</h1>
+          <p class="mc-empty__text">This sprint doesn't exist in Community Hackathon 2026, or the link is incomplete.</p>
+          <div class="mc-empty__actions">
+            <button class="mc-button mc-button--primary" type="button" data-nav="sprints.html">
+              <span class="mc-icon mc-icon--arrow-left" aria-hidden="true"></span>Back to sprints
+            </button>
+          </div>
+        </div>
+
+        <h1 class="mc-visually-hidden" data-when="loading" hidden>Sprint 7</h1>
+        <p class="mc-visually-hidden" role="status" data-when="loading" hidden>Loading Sprint 7</p>
+        <div class="mc-stack mc-stack--lg" data-when="loading" hidden aria-hidden="true">
+          <span class="mc-skeleton mc-skeleton--title"></span>
+          <div class="mc-grid mc-grid--stats">
+            <span class="mc-skeleton mc-skeleton--block"></span>
+            <span class="mc-skeleton mc-skeleton--block"></span>
+            <span class="mc-skeleton mc-skeleton--block"></span>
+          </div>
+          <span class="mc-skeleton mc-skeleton--tall"></span>
+          <div class="mc-table-wrap">
+            <div class="mc-loading-row"><span class="mc-skeleton mc-w-40"></span><span class="mc-skeleton mc-skeleton--pill"></span><span class="mc-skeleton mc-w-25"></span></div>
+            <div class="mc-loading-row"><span class="mc-skeleton mc-w-40"></span><span class="mc-skeleton mc-skeleton--pill"></span><span class="mc-skeleton mc-w-25"></span></div>
+            <div class="mc-loading-row"><span class="mc-skeleton mc-w-40"></span><span class="mc-skeleton mc-skeleton--pill"></span><span class="mc-skeleton mc-w-25"></span></div>
+          </div>
+        </div>
+
+        <div class="mc-empty mc-empty--error" role="alert" data-when="error" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--alert-circle mc-icon--lg" aria-hidden="true"></span></span>
+          <h1 class="mc-empty__title" tabindex="-1">We couldn't load this sprint's history</h1>
+          <p class="mc-empty__text">The history is safe; it just didn't load. Try again, and if it keeps happening share the reference ID with your administrator.</p>
+          <p class="mc-ref">Reference ID <code>4c07-e95b-a318</code>
+            <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="4c07-e95b-a318"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+          </p>
+          <div class="mc-empty__actions">
+            <button class="mc-button mc-button--primary" type="button" data-goto-state="loading">
+              <span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,55 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Behavior - Migrate and seed
+actor "Deployment operator" as actor
+box "Frontend - Operations health client" #E0F2FE
+  participant "Initialization / health client" as page
+end box
+box "Backend - MissionControl.Api" #D1FADF
+  participant "Host / health endpoints" as ctrl
+end box
+box "Backend - MissionControl.Application and Domain" #ECFDF3
+  participant "EnsureAdministrator / EnsureCityLead handlers" as handler
+  participant "Account / contact / readiness state" as entity
+end box
+box "Backend - MissionControl.Infrastructure" #FFF4E5
+  participant "DatabaseInitializer" as init
+  database "Mission Control SQL" as db
+end box
+actor -> page : Run initialization / request health
+page -> ctrl : Deployment startup / health probe
+ctrl -> init : Initialize before readiness
+init -> db : Acquire cross-instance lock; apply missing migrations (L2-042)
+db --> init : Compatible schema or failure
+init -> handler : Send required ensure commands with external Options
+handler -> db : Read designated account and City seed marker
+db --> handler : Existing state
+handler -> entity : L2-006 / L2-007 create only if absent; repair active Administrator
+entity --> handler : Existing password/ID preserved
+handler -> entity : L2-013 adopt/create independent City contact without phone
+entity --> handler : City seed result / retained prior marker
+alt Missing bootstrap/signing configuration or SQL/migration/seed failure
+  handler --> init : Failure; seed transaction rolls back
+  init --> ctrl : Readiness false; redacted diagnostic correlation ID
+  ctrl --> page : 503 readiness; no initialized-success claim
+else Initialization succeeds
+  handler -> db : Commit seeds and marker atomically
+  db --> handler : Committed state
+  handler --> init : Required seeds complete
+  init --> ctrl : Required schema and administrator ready
+  ctrl --> page : Readiness 200
+end
+@enduml

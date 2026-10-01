@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Delete project · Mission Control mock</title>
+  <meta name="description" content="Delete-project confirmation naming the project, with the block for projects that have work or sprint history, progress, and failure.">
+  <meta name="mock-area" content="Projects">
+  <meta name="mock-requirements" content="L2-005, L2-014.3, L2-031.5, L2-033.2, L2-040.3, L2-043.4">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body>
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Projects · Delete project</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="default">Confirm (empty project)</option>
+          <option value="blocked">Blocked by work and history</option>
+          <option value="deleting">Deleting</option>
+          <option value="failed">Delete failed</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="default">Administrator-only. Only a project with no work and no sprint history can be deleted. Focus starts on Cancel; Escape closes without changes. Success returns to Projects with "Project deleted — Youth Coding Night was removed."</p>
+    <p class="mock-note" data-when="blocked" hidden>The API answers 409 and nothing is deleted or cascaded. There is no destructive button, only Close.</p>
+    <p class="mock-note" data-when="deleting" hidden>The delete button shows progress and ignores repeat clicks; Cancel waits.</p>
+    <p class="mock-note" data-when="failed" hidden>Nothing was deleted. "Delete project" tries again; the reference ID matches the server's diagnostic record.</p>
+  </div>
+
+  <div class="mock-screen">
+    <div class="mock-screen__page" inert>
+      <div class="mc-app">
+        <header class="mc-topbar">
+          <span class="mc-button mc-button--quiet mc-button--icon"><span class="mc-icon mc-icon--menu" aria-hidden="true"></span></span>
+          <span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span>
+        </header>
+        <div class="mc-sidebar">
+          <div class="mc-sidebar__head"><span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span></div>
+          <ul class="mc-nav">
+        <li><span class="mc-nav__link"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></span></li>
+        <li><span class="mc-nav__link"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></span></li>
+        <li><span class="mc-nav__link" aria-current="page"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></span></li>
+          </ul>
+          <div class="mc-nav-section">
+            <p class="mc-nav__group">Administration</p>
+            <ul class="mc-nav">
+          <li><span class="mc-nav__link"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></span></li>
+          <li><span class="mc-nav__link"><span class="mc-icon mc-icon--audit" aria-hidden="true"></span><span class="mc-nav__text">Audit log</span></span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="mc-main">
+          <div class="mc-page">
+            <div data-unless="blocked">
+            <div class="mc-breadcrumbs"><ol><li><span>Projects</span></li><li><span aria-current="page">Youth Coding Night</span></li></ol></div>
+            <div class="mc-page-header">
+              <div class="mc-page-header__main">
+                <p class="mc-h1">Youth Coding Night</p>
+                <div class="mc-page-header__meta"><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span><span>Responsible lead: Not set</span></div>
+              </div>
+              <div class="mc-page-header__actions"><span class="mc-button">Project actions<span class="mc-icon mc-icon--chevron-down mc-icon--sm" aria-hidden="true"></span></span></div>
+            </div>
+            <ul class="mc-tabs">
+              <li><span class="mc-tabs__link" aria-current="page"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</span></li>
+            </ul>
+            <div class="mc-split">
+              <div class="mc-card mc-stack mc-stack--sm"><p class="mc-h3">About this project</p><span class="mc-skeleton mc-w-80"></span><span class="mc-skeleton mc-w-60"></span></div>
+              <div class="mc-card mc-stack mc-stack--sm"><p class="mc-h3">Delivery</p><span class="mc-skeleton mc-w-60"></span><span class="mc-skeleton mc-w-40"></span></div>
+            </div>
+            </div>
+            <div data-when="blocked" hidden>
+            <div class="mc-breadcrumbs"><ol><li><span>Projects</span></li><li><span aria-current="page">Community Hackathon 2026</span></li></ol></div>
+            <div class="mc-page-header">
+              <div class="mc-page-header__main">
+                <p class="mc-h1">Community Hackathon 2026</p>
+                <div class="mc-page-header__meta"><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span><span>Responsible lead: Rafael Da Silva</span></div>
+              </div>
+              <div class="mc-page-header__actions"><span class="mc-button">Project actions<span class="mc-icon mc-icon--chevron-down mc-icon--sm" aria-hidden="true"></span></span></div>
+            </div>
+            <ul class="mc-tabs">
+              <li><span class="mc-tabs__link" aria-current="page"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</span></li>
+            </ul>
+            <div class="mc-split">
+              <div class="mc-card mc-stack mc-stack--sm"><p class="mc-h3">About this project</p><span class="mc-skeleton mc-w-80"></span><span class="mc-skeleton mc-w-60"></span></div>
+              <div class="mc-card mc-stack mc-stack--sm"><p class="mc-h3">Delivery</p><span class="mc-skeleton mc-w-60"></span><span class="mc-skeleton mc-w-40"></span></div>
+            </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mc-backdrop">
+      <section class="mc-dialog mc-dialog--sm" role="alertdialog" aria-modal="true" aria-labelledby="delete-title" aria-describedby="delete-text">
+        <header class="mc-dialog__header">
+          <span class="mc-dialog__icon mc-dialog__icon--danger" data-unless="blocked"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></span>
+          <span class="mc-dialog__icon mc-dialog__icon--warning" data-when="blocked" hidden><span class="mc-icon mc-icon--lock" aria-hidden="true"></span></span>
+          <div class="mc-dialog__heading">
+            <h2 class="mc-dialog__title" id="delete-title">
+              <span data-unless="blocked">Delete Youth Coding Night?</span>
+              <span data-when="blocked" hidden>Community Hackathon 2026 can't be deleted</span>
+            </h2>
+          </div>
+        </header>
+
+        <div class="mc-dialog__body">
+          <div class="mc-live" role="alert">
+            <div class="mc-alert mc-alert--danger" data-when="failed" hidden>
+              <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+              <div class="mc-alert__body">
+                <p class="mc-alert__title">We couldn't delete this project</p>
+                <p class="mc-alert__text">Nothing was deleted. Try again.</p>
+                <p class="mc-ref">Reference ID <code>51ad-8e37-c20b</code>
+                  <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="51ad-8e37-c20b"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div id="delete-text" class="mc-stack mc-stack--sm">
+            <p data-unless="blocked">Youth Coding Night has no work or sprint history. It will be removed from Projects. This can't be undone.</p>
+            <p data-when="blocked" hidden>It has 84 work items and 2 closed sprints. Projects with work or sprint history are kept, so nothing is lost.</p>
+          </div>
+
+          <dl class="mc-dl mc-text-sm" data-when="blocked" hidden>
+            <dt>Work items</dt><dd>84 (2 initiatives, 3 epics, 24 stories, 55 tasks)</dd>
+            <dt>Sprint history</dt><dd>Sprint 6 and Sprint 7 (closed)</dd>
+          </dl>
+        </div>
+
+        <footer class="mc-dialog__footer">
+          <button class="mc-button" type="button" data-unless="blocked" data-nav="project-overview.html#state=new-empty" data-attr-deleting="disabled">Cancel</button>
+          <button class="mc-button mc-button--danger" type="button" data-unless="blocked" data-goto-state="deleting"
+            data-attr-deleting="aria-busy=true|aria-disabled=true">
+            <span class="mc-spinner" aria-hidden="true" data-when="deleting" hidden></span>
+            <span data-unless="deleting">Delete project</span>
+            <span data-when="deleting" hidden>Deleting…</span>
+          </button>
+          <button class="mc-button mc-button--primary" type="button" data-when="blocked" hidden data-nav="project-overview.html">Close</button>
+        </footer>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,85 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Behavior - Move by drag or labeled controls
+actor "Authorized user" as actor
+box "Frontend - Mission Control application" #E0F2FE
+  participant "KanbanBoardPage / BoardView" as page
+  participant "IBoardService / BoardService" as client
+end box
+box "Backend - MissionControl.Api" #D1FADF
+  participant "CurrentAccountAuthorization" as access
+  participant "BoardsController" as ctrl
+end box
+box "Backend - MissionControl.Application and Domain" #ECFDF3
+  participant "ValidationBehavior" as validation
+  participant "MoveStoryCommandHandler" as handler
+  participant "BoardPlacement" as entity
+end box
+box "Backend - MissionControl.Infrastructure" #FFF4E5
+  database "Mission Control SQL" as db
+end box
+actor -> page : Move by drag or labeled controls
+page -> client : Build typed MoveStoryCommand
+client -> access : PUT /api/workspaces/{id}/board/stories/{storyId}/placement
+access -> access : L2-002 validate signature, issuer, audience, subject, expiry
+access -> db : Read current status, role and credential version
+db --> access : Current account access
+alt Missing / invalid account or JWT; forbidden capability
+  access --> client : 401 / 403; audit denial without payloads
+  client --> page : Clear session on 401 / show denied state on 403
+else Authorized
+  access -> ctrl : Authorized request
+ctrl -> validation : Send MoveStoryCommand through MediatR 12.5.0
+validation -> validation : Validate request fields and bounds
+alt Invalid request
+  validation --> ctrl : 400 field errors; no business mutation
+  ctrl --> client : Validation ProblemDetails
+  client --> page : Keep valid input; focus linked error summary
+else Valid request
+  validation -> handler : Handle MoveStoryCommand
+  handler -> db : Lock workspace/board; load story, live placements, task condition
+  db --> handler : Persisted status/order/version
+  handler -> entity : L2-020 move within valid board; L2-021 Done guard
+  entity --> handler : Requested placement and synchronized status
+  handler -> db : Atomically update story plus every affected live placement/order
+  db --> handler : SQL result / current records
+
+  alt Stale version, invalid board/destination, or unfinished tasks unconfirmed
+    handler --> ctrl : Typed failure for stated category; no partial mutation
+    ctrl --> client : ProblemDetails with readable category
+    client --> page : Preserve input / saved view; offer reload or retry
+  else Behavior succeeds
+    handler -> db : L2-039 / L2-040 commit business state and success audit together
+    alt Commit fails
+      db --> handler : Roll back business state and success audit
+      handler --> ctrl : Generic 500 with correlation ID
+      ctrl --> client : Failure; no successful-save claim
+      client --> page : Keep draft / restore saved placement
+    else Commit succeeds
+      db --> handler : New committed version
+    handler --> ctrl : Typed result
+    ctrl --> client : Success response
+    client --> page : Update signal state and announce outcome
+    page --> actor : Present persisted result / operational status
+    end
+  end
+end
+end
+note over ctrl, db
+Unexpected failures return generic 500 plus correlation ID (L2-043).
+Diagnostics exclude secrets and contact payloads.
+end note
+@enduml

@@ -1,0 +1,72 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Confirm story completion with unfinished tasks
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class WorkItemDetailPage {
+  +routeContext: Signal<RouteContext>
+  +openDialog(): void
+}
+class WorkItemView {
+  +state: Signal<FeatureState>
+  +submit(): void
+}
+interface IWorkItemService {
+  +complete(request: CompleteStoryCommand): Promise<FeatureResult>
+}
+class WorkItemService {
+  -http: HttpClient
+}
+class WorkItemsController {
+  -sender: ISender
+}
+class StoryCompletionCondition {
+  +storyId: Guid
+  +storyVersion: long
+  +taskRevision: long
+  +unfinishedCount: int
+  +matches(current: StoryCompletionCondition): bool
+}
+interface IMissionControlDataSession {
+  +query(specification): Task<ReadResult>
+  +commit(expectedVersion: long): Task<void>
+}
+class MissionControlDataSession {
+  -connection: DbConnection
+}
+WorkItemDetailPage --> WorkItemView : composes
+WorkItemView ..> IWorkItemService : inject token
+IWorkItemService <|.. WorkItemService
+IMissionControlDataSession <|.. MissionControlDataSession
+class CompleteStoryCommand {
+  +workspaceId: Guid
+  +storyId: Guid
+  +confirmed: bool
+  +expectedStoryVersion: long
+  +expectedTaskRevision: long
+}
+class CompleteStoryCommandHandler {
+  +handle(request: CompleteStoryCommand): Task<FeatureResult>
+}
+WorkItemsController ..> CompleteStoryCommand : dispatches
+CompleteStoryCommandHandler ..> CompleteStoryCommand : handles
+CompleteStoryCommandHandler --> StoryCompletionCondition : loads / applies
+CompleteStoryCommandHandler ..> IMissionControlDataSession : uses
+
+@enduml

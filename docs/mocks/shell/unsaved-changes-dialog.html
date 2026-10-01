@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Unsaved changes · Mission Control mock</title>
+  <meta name="description" content="Confirmation shown before unsaved input would be lost: leaving a page, cancelling a dirty form, or signing out.">
+  <meta name="mock-area" content="Shell">
+  <meta name="mock-requirements" content="L2-003.2, L2-031.4, L2-031.5, L2-033.2, L2-035.4">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body>
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Shell · Unsaved changes</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="navigate">Leaving a page</option>
+          <option value="cancel-form">Cancelling a dirty form</option>
+          <option value="sign-out">Signing out</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="navigate">Appears when an in-app link (here, Leads) is chosen while a page has unsaved changes. Focus starts on "Stay on this page"; Escape also stays and returns focus to the link. Reloading or closing the tab shows the browser's own prompt instead, which can't be styled or mocked.</p>
+    <p class="mock-note" data-when="cancel-form" hidden>Appears when Cancel, Close, or Escape is used on a form dialog with changes. "Keep editing" returns focus to the form with every value intact; "Discard changes" closes the form and keeps the saved lead as it was.</p>
+    <p class="mock-note" data-when="sign-out" hidden>Appears when Sign out is chosen with unsaved changes. Staying keeps the session and the input; signing out clears the in-memory session and opens the sign-in page.</p>
+  </div>
+
+  <div class="mock-screen">
+    <div class="mock-screen__page" inert>
+
+      <!-- Background A: Sprint 9 plan with unsaved changes (navigate, sign-out) -->
+      <div class="mc-app" data-unless="cancel-form">
+        <header class="mc-topbar">
+          <span class="mc-button mc-button--quiet mc-button--icon"><span class="mc-icon mc-icon--menu" aria-hidden="true"></span></span>
+          <span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span>
+        </header>
+        <div class="mc-sidebar">
+          <div class="mc-sidebar__head"><span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span></div>
+          <ul class="mc-nav">
+            <li><span class="mc-nav__link"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></span></li>
+            <li><span class="mc-nav__link" data-attr-navigate="class=mc-nav__link mock-focus"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></span></li>
+            <li><span class="mc-nav__link" aria-current="page"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></span></li>
+          </ul>
+          <div class="mc-nav-section">
+            <p class="mc-nav__group">Administration</p>
+            <ul class="mc-nav">
+              <li><span class="mc-nav__link"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></span></li>
+              <li><span class="mc-nav__link"><span class="mc-icon mc-icon--audit" aria-hidden="true"></span><span class="mc-nav__text">Audit log</span></span></li>
+            </ul>
+          </div>
+          <div class="mc-sidebar__foot">
+            <span class="mc-user-button">
+              <span class="mc-avatar" aria-hidden="true">QB</span>
+              <span class="mc-user-button__text"><span class="mc-user-button__name">Quinntyne Brown</span><span class="mc-user-button__role">Administrator</span></span>
+              <span class="mc-icon mc-icon--chevron-up mc-icon--sm" aria-hidden="true"></span>
+            </span>
+            <div class="mc-menu" data-open data-when="sign-out" hidden>
+              <div class="mc-menu__header">
+                <div class="mc-stack mc-stack--xs">
+                  <strong>Quinntyne Brown</strong>
+                  <span class="mc-muted mc-text-sm">quinntynebrown@gmail.com</span>
+                </div>
+              </div>
+              <div class="mc-menu__separator"></div>
+              <span class="mc-menu__item mock-focus"><span class="mc-icon mc-icon--log-out" aria-hidden="true"></span>Sign out</span>
+            </div>
+          </div>
+        </div>
+        <div class="mc-main">
+          <div class="mc-page">
+            <div class="mc-breadcrumbs">
+              <ol>
+                <li><span>Projects</span></li>
+                <li class="mc-breadcrumbs__collapsible"><span>Community Hackathon 2026</span></li>
+                <li class="mc-breadcrumbs__collapsible"><span>Sprints</span></li>
+                <li><span aria-current="page">Sprint 9</span></li>
+              </ol>
+            </div>
+            <div class="mc-page-header">
+              <div class="mc-page-header__main">
+                <p class="mc-h1">Plan Sprint 9</p>
+                <div class="mc-page-header__meta">
+                  <span>Oct 13 – Oct 23, 2026</span>
+                  <span>Goal: Demo day judging flow ready</span>
+                  <span class="mc-pill mc-pill--warning"><span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>Unsaved changes</span>
+                </div>
+              </div>
+              <div class="mc-page-header__actions"><span class="mc-button mc-button--primary">Save plan</span></div>
+            </div>
+            <div class="mc-split mc-split--even">
+              <div class="mc-card mc-card--flush">
+                <div class="mc-card__header"><p class="mc-card__title">Backlog</p><span class="mc-muted mc-text-sm">Unallocated stories</span></div>
+                <ul class="mc-list mc-list--plain">
+                  <li class="mc-list__item"><div class="mc-list__main"><span class="mc-list__title">Volunteer thank-you notes</span><span class="mc-list__meta">HCK-130 · Hackathon team formation</span></div></li>
+                  <li class="mc-list__item"><div class="mc-list__main"><span class="mc-list__title">Mentor matching survey</span><span class="mc-list__meta">HCK-110 · Hackathon team formation</span></div></li>
+                </ul>
+              </div>
+              <div class="mc-card mc-card--flush">
+                <div class="mc-card__header"><p class="mc-card__title">Sprint 9</p><span class="mc-muted mc-text-sm">5 stories · 2 not saved</span></div>
+                <ul class="mc-list mc-list--plain">
+                  <li class="mc-list__item"><div class="mc-list__main"><span class="mc-list__title">Judges can score demos</span><span class="mc-list__meta">HCK-122 · Judging and feedback</span></div></li>
+                  <li class="mc-list__item mc-list__item--selected"><div class="mc-list__main"><span class="mc-list__title">Confirm venue accessibility checklist</span><span class="mc-list__meta">HCK-120 · Added, not saved</span></div></li>
+                  <li class="mc-list__item mc-list__item--selected"><div class="mc-list__main"><span class="mc-list__title">Dietary needs survey for attendees</span><span class="mc-list__meta">HCK-128 · Added, not saved</span></div></li>
+                  <li class="mc-list__item"><span class="mc-muted mc-text-sm">2 more saved stories</span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Background B: lead edit form with unsaved changes (cancel-form) -->
+      <div class="mock-screen" data-when="cancel-form" hidden>
+        <div class="mock-screen__page">
+          <div class="mc-app">
+            <header class="mc-topbar">
+              <span class="mc-button mc-button--quiet mc-button--icon"><span class="mc-icon mc-icon--menu" aria-hidden="true"></span></span>
+              <span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span>
+            </header>
+            <div class="mc-sidebar">
+              <div class="mc-sidebar__head"><span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span></div>
+              <ul class="mc-nav">
+                <li><span class="mc-nav__link"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></span></li>
+                <li><span class="mc-nav__link" aria-current="page"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></span></li>
+                <li><span class="mc-nav__link"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></span></li>
+              </ul>
+            </div>
+            <div class="mc-main">
+              <div class="mc-page">
+                <div class="mc-page-header">
+                  <div class="mc-page-header__main">
+                    <p class="mc-h1">Leads</p>
+                    <p class="mc-page-header__subtitle">Contact details for Create, Communication, City, Prayer, and Event leads.</p>
+                  </div>
+                </div>
+                <span class="mc-skeleton mc-skeleton--tall"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="mc-backdrop">
+          <div class="mc-dialog mc-dialog--sheet">
+            <div class="mc-dialog__header">
+              <div class="mc-dialog__heading">
+                <p class="mc-dialog__title">Edit lead</p>
+                <p class="mc-dialog__subtitle">Grace Mensah · All fields are required unless marked optional.</p>
+              </div>
+              <span class="mc-button mc-button--quiet mc-button--icon"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></span>
+            </div>
+            <div class="mc-dialog__body">
+              <div class="mc-form-grid">
+                <div class="mc-field"><span class="mc-label">First name</span><input class="mc-input" value="Grace" tabindex="-1" aria-label="First name"></div>
+                <div class="mc-field"><span class="mc-label">Last name</span><input class="mc-input" value="Mensah" tabindex="-1" aria-label="Last name"></div>
+                <div class="mc-field mc-field--full"><span class="mc-label">Email</span><input class="mc-input" value="grace.mensah@example.org" tabindex="-1" aria-label="Email"></div>
+                <div class="mc-field mc-field--full"><span class="mc-label">Phone <span class="mc-label__optional">(optional)</span></span><input class="mc-input" value="+1 416 555 0199" tabindex="-1" aria-label="Phone"></div>
+              </div>
+            </div>
+            <div class="mc-dialog__footer">
+              <span class="mc-button">Cancel</span>
+              <span class="mc-button mc-button--primary">Save changes</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- The confirmation -->
+    <div class="mc-backdrop">
+      <section class="mc-dialog mc-dialog--sm" role="alertdialog" aria-modal="true" aria-labelledby="unsaved-title" aria-describedby="unsaved-text">
+        <header class="mc-dialog__header">
+          <span class="mc-dialog__icon mc-dialog__icon--warning"><span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span></span>
+          <div class="mc-dialog__heading">
+            <h2 class="mc-dialog__title" id="unsaved-title">
+              <span data-when="navigate">Leave without saving?</span>
+              <span data-when="cancel-form" hidden>Discard your changes?</span>
+              <span data-when="sign-out" hidden>Sign out without saving?</span>
+            </h2>
+          </div>
+        </header>
+
+        <div class="mc-dialog__body" id="unsaved-text">
+          <p data-when="navigate">Your changes to the Sprint 9 plan haven't been saved. If you leave now, the 2 stories you added will not be in the sprint.</p>
+          <p data-when="cancel-form" hidden>Your edits to Grace Mensah haven't been saved. If you discard them, the saved details stay as they were.</p>
+          <p data-when="sign-out" hidden>Your changes to the Sprint 9 plan haven't been saved. Signing out ends your session, and the 2 stories you added will not be in the sprint.</p>
+        </div>
+
+        <footer class="mc-dialog__footer">
+          <button class="mc-button" type="button" data-when="navigate" data-nav="../leads/lead-directory.html">Leave without saving</button>
+          <button class="mc-button mc-button--primary" type="button" data-when="navigate" data-nav="../scrum/sprint-planning.html">Stay on this page</button>
+
+          <button class="mc-button" type="button" data-when="cancel-form" hidden data-nav="../leads/lead-directory.html">Discard changes</button>
+          <button class="mc-button mc-button--primary" type="button" data-when="cancel-form" hidden data-nav="../leads/lead-form-dialog.html#state=edit">Keep editing</button>
+
+          <button class="mc-button" type="button" data-when="sign-out" hidden data-nav="../auth/login.html#state=signed-out">Sign out without saving</button>
+          <button class="mc-button mc-button--primary" type="button" data-when="sign-out" hidden data-nav="../scrum/sprint-planning.html">Stay signed in</button>
+        </footer>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

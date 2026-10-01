@@ -1,0 +1,69 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Change workspace delivery mode
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class ProjectOverviewPage {
+  +routeContext: Signal<RouteContext>
+  +openDialog(): void
+}
+class WorkspaceView {
+  +state: Signal<FeatureState>
+  +submit(): void
+}
+interface IWorkspaceService {
+  +change_mode(request: ChangeDeliveryModeCommand): Promise<FeatureResult>
+}
+class WorkspaceService {
+  -http: HttpClient
+}
+class WorkspacesController {
+  -sender: ISender
+}
+class Workspace {
+  +id: Guid
+  +mode: DeliveryMode
+  +version: long
+  +changeMode(mode: DeliveryMode, activeSprint: bool): void
+}
+interface IMissionControlDataSession {
+  +query(specification): Task<ReadResult>
+  +commit(expectedVersion: long): Task<void>
+}
+class MissionControlDataSession {
+  -connection: DbConnection
+}
+ProjectOverviewPage --> WorkspaceView : composes
+WorkspaceView ..> IWorkspaceService : inject token
+IWorkspaceService <|.. WorkspaceService
+IMissionControlDataSession <|.. MissionControlDataSession
+class ChangeDeliveryModeCommand {
+  +id: Guid
+  +mode: DeliveryMode
+  +expectedVersion: long
+}
+class ChangeDeliveryModeCommandHandler {
+  +handle(request: ChangeDeliveryModeCommand): Task<FeatureResult>
+}
+WorkspacesController ..> ChangeDeliveryModeCommand : dispatches
+ChangeDeliveryModeCommandHandler ..> ChangeDeliveryModeCommand : handles
+ChangeDeliveryModeCommandHandler --> Workspace : loads / applies
+ChangeDeliveryModeCommandHandler ..> IMissionControlDataSession : uses
+
+@enduml

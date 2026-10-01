@@ -1,0 +1,12 @@
+@startuml
+!include <C4/C4_Component>
+LAYOUT_WITH_LEGEND()
+title Components - Review workflow mock artifacts
+Container_Boundary(site, "docs/mocks/ static artifact") {
+  Component(catalog, "Catalog / viewer", "HTML / JavaScript", "Names available specimens or workflow states")
+  Component(examples, "Controls and responsive examples", "HTML / CSS", "Renders compact through expanded layouts")
+  Component(tokens, "--mc- token stylesheet", "CSS custom properties", "Authoritative in design-system; provisional in current mocks")
+}
+Rel(catalog, examples, "Opens named example or state")
+Rel(examples, tokens, "Consumes visual roles")
+@enduml

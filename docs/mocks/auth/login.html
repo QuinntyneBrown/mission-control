@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · Mission Control mock</title>
+  <meta name="description" content="Sign-in page with validation, submission, generic failure, throttling, sign-out, session-ended, deep-link, and service-error states.">
+  <meta name="mock-area" content="Sign in and session">
+  <meta name="mock-requirements" content="L2-001, L2-003, L2-005.3, L2-029.3, L2-031, L2-036, L2-037.5, L2-038, L2-043.4">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body>
+  <a class="mc-skip-link" href="#main">Skip to main content</a>
+
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Sign in</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="default">Default</option>
+          <option value="validation">Validation errors</option>
+          <option value="submitting">Signing in</option>
+          <option value="invalid">Invalid credentials</option>
+          <option value="throttled">Too many attempts</option>
+          <option value="signed-out">Signed out</option>
+          <option value="session-ended">Session ended</option>
+          <option value="session-unsaved">Session ended with unsaved changes</option>
+          <option value="deep-link">Sign in to continue</option>
+          <option value="error">Service error</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="default">There is no registration, password reset, or "remember me": accounts are provisioned by an administrator and the session lives in memory only. Success opens Home (or the requested page).</p>
+    <p class="mock-note" data-when="validation" hidden>Client-side checks run on submit. Focus moves to the error summary; each item links to its field. The email is kept; the password is never trimmed.</p>
+    <p class="mock-note" data-when="submitting" hidden>The button shows progress and ignores repeat clicks, so only one request is sent.</p>
+    <p class="mock-note" data-when="invalid" hidden>Unknown email, wrong password, inactive account, and a lead contact without an account all show this same message. The password field is cleared; the email is kept.</p>
+    <p class="mock-note" data-when="throttled" hidden>After five failed attempts for an email within 15 minutes, sign-in pauses for 15 minutes. Unknown emails are throttled the same way, so the message never confirms that an account exists.</p>
+    <p class="mock-note" data-when="session-ended" hidden>Shown after the 30-minute token expires, after a reload, or when the account's access changed. No contact or work data is shown until sign-in succeeds.</p>
+    <p class="mock-note" data-when="session-unsaved" hidden>Shown when the session ended while a form had unsaved input. Nothing is reported as saved.</p>
+    <p class="mock-note" data-when="deep-link" hidden>Opened from a protected link while signed out. The message does not name the record; after sign-in the requested page opens if the account can see it.</p>
+    <p class="mock-note" data-when="error" hidden>Unexpected server failure. The reference ID matches the server's diagnostic record and can be copied for support.</p>
+  </div>
+
+  <main class="mc-auth" id="main" tabindex="-1">
+    <div class="mc-auth__card">
+      <div class="mc-auth__brand">
+        <span class="mc-brand__mark" aria-hidden="true">MC</span>
+        <div class="mc-stack mc-stack--xs">
+          <h1 class="mc-h2">Sign in to Mission Control</h1>
+          <p class="mc-muted mc-text-sm">FaithTech Toronto</p>
+        </div>
+      </div>
+
+      <div class="mc-stack mc-stack--lg">
+        <div class="mc-live" role="status" aria-live="polite">
+          <div class="mc-alert mc-alert--success" data-when="signed-out" hidden>
+            <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">You've signed out</p>
+              <p class="mc-alert__text">Sign in again whenever you're ready.</p>
+            </div>
+          </div>
+          <div class="mc-alert" data-when="session-ended" hidden>
+            <span class="mc-icon mc-icon--clock" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">Your session ended</p>
+              <p class="mc-alert__text">For your security, sessions end after 30 minutes or when the page reloads. Sign in to continue.</p>
+            </div>
+          </div>
+          <div class="mc-alert mc-alert--warning" data-when="session-unsaved" hidden>
+            <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">Your session ended before your changes were saved</p>
+              <p class="mc-alert__text">Sign in again, then re-enter anything you hadn't saved.</p>
+            </div>
+          </div>
+          <div class="mc-alert" data-when="deep-link" hidden>
+            <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">Sign in to continue</p>
+              <p class="mc-alert__text">You'll go to the page you requested after you sign in.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mc-live" role="alert">
+          <div class="mc-alert mc-alert--danger" data-when="invalid" hidden>
+            <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">We couldn't sign you in</p>
+              <p class="mc-alert__text">Check your email and password and try again.</p>
+            </div>
+          </div>
+          <div class="mc-alert mc-alert--warning" data-when="throttled" hidden>
+            <span class="mc-icon mc-icon--clock" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">Too many sign-in attempts</p>
+              <p class="mc-alert__text">For your security, sign-in for this email is paused. Try again in 15 minutes, after 3:42 p.m.</p>
+            </div>
+          </div>
+          <div class="mc-alert mc-alert--danger" data-when="error" hidden>
+            <span class="mc-icon mc-icon--alert-octagon" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">Something went wrong on our side</p>
+              <p class="mc-alert__text">Nothing was changed. Try again in a moment.</p>
+              <p class="mc-ref">Reference ID <code>c0a8-4f1e-91d2</code>
+                <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="c0a8-4f1e-91d2"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+              </p>
+            </div>
+          </div>
+
+          <div class="mc-error-summary" tabindex="-1" data-when="validation" hidden aria-labelledby="login-errors-title">
+            <p class="mc-error-summary__title" id="login-errors-title"><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Fix 2 problems to sign in</p>
+            <ul>
+              <li><a href="#login-email">Enter an email address like name@example.org</a></li>
+              <li><a href="#login-password">Enter your password</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <form class="mc-form" novalidate aria-label="Sign in" data-goto-state="submitting">
+          <div class="mc-field">
+            <label class="mc-label" for="login-email">Email</label>
+            <input class="mc-input" id="login-email" name="email" type="email" autocomplete="username" spellcheck="false"
+              data-attr-validation="value=quinntyne@|aria-invalid=true|aria-describedby=login-email-error"
+              data-attr-submitting="value=quinntynebrown@gmail.com|readonly"
+              data-attr-invalid="value=quinntynebrown@gmail.com"
+              data-attr-throttled="value=quinntynebrown@gmail.com"
+              data-attr-error="value=quinntynebrown@gmail.com">
+            <p class="mc-field-error" id="login-email-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Enter an email address like name@example.org</p>
+          </div>
+
+          <div class="mc-field">
+            <label class="mc-label" for="login-password">Password</label>
+            <div class="mc-input-group">
+              <input class="mc-input" id="login-password" name="password" type="password" autocomplete="current-password"
+                data-attr-validation="aria-invalid=true|aria-describedby=login-password-error"
+                data-attr-submitting="value=MockPassword!|readonly"
+                data-attr-error="value=MockPassword!">
+              <button class="mc-button" type="button" data-toggle-password aria-controls="login-password" aria-pressed="false" aria-label="Show password">
+                <span class="mc-icon mc-icon--eye" aria-hidden="true"></span>
+              </button>
+            </div>
+            <p class="mc-field-error" id="login-password-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Enter your password</p>
+          </div>
+
+          <button class="mc-button mc-button--primary mc-button--block" type="submit"
+            data-attr-submitting="aria-busy=true|aria-disabled=true">
+            <span data-unless="submitting">Sign in</span>
+            <span class="mc-spinner" aria-hidden="true" data-when="submitting" hidden></span>
+            <span data-when="submitting" hidden>Signing in…</span>
+          </button>
+        </form>
+      </div>
+
+      <p class="mc-auth__footer">Accounts are created by your Mission Control administrator.</p>
+    </div>
+  </main>
+</body>
+</html>

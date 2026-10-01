@@ -1,0 +1,64 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Initialize and protect the administrator
+class InitializationState {
+  +schemaCompatible: bool
+  +administratorReady: bool
+  +sqlAvailable: bool
+  +ready(): bool
+}
+class InitializationClient {
+  +run(configuration: OperationConfiguration): InitializationState
+}
+class OperationConfiguration {
+  +environment: string
+  +sqlProvider: string
+  +externalSecretsAvailable: bool
+}
+InitializationClient ..> OperationConfiguration : consumes
+InitializationClient --> InitializationState : records outcome
+class DatabaseInitializer {
+  +initialize(): Task<InitializationState>
+}
+interface IMigrationRunner {
+  +migrate(): Task<void>
+}
+class EnsureAdministratorCommandHandler {
+  +handle(): Task<UserAccount>
+}
+class EnsureCityLeadCommandHandler {
+  +handle(): Task<LeadContact>
+}
+class UserAccount {
+  +id: Guid
+  +passwordHash: string
+  +credentialVersion: long
+  +active: bool
+  +role: AccountRole
+}
+class LeadContact {
+  +id: Guid
+  +email: string
+  +category: LeadCategory
+  +phone: string?
+}
+DatabaseInitializer ..> IMigrationRunner : migration
+DatabaseInitializer ..> EnsureAdministratorCommandHandler : dispatch
+DatabaseInitializer ..> EnsureCityLeadCommandHandler : dispatch
+EnsureAdministratorCommandHandler --> UserAccount : creates / repairs
+EnsureCityLeadCommandHandler --> LeadContact : creates / adopts once
+DatabaseInitializer --> InitializationState : readiness result
+@enduml

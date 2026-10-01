@@ -1,0 +1,8 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System context - Review home coverage and progress
+Person(actor, "Authorized user", "Review home coverage and progress")
+System(mc, "Mission Control", "FaithTech Toronto contacts and project delivery")
+Rel(actor, mc, "Review home coverage and progress")
+@enduml

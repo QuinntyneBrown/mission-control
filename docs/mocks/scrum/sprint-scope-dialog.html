@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Change sprint scope · Mission Control mock</title>
+  <meta name="description" content="Active sprint scope dialog for adding or removing stories, with a closed-meanwhile conflict, saving, and failure.">
+  <meta name="mock-area" content="Scrum sprints">
+  <meta name="mock-requirements" content="L2-022.3, L2-023.3, L2-023.4, L2-031, L2-033.2, L2-043.4">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body>
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Scrum · Change sprint scope</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="add">Add stories</option>
+          <option value="remove">Remove a story</option>
+          <option value="closed">Sprint closed meanwhile</option>
+          <option value="saving">Saving</option>
+          <option value="failed">Save failed</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="add">Lists unfinished stories that aren't in another open sprint. Each addition is recorded in the sprint's history with the person and time; the initial scope stays recorded. Collaborators can change scope too.</p>
+    <p class="mock-note" data-when="remove" hidden>Opens from a story's Remove from sprint action on the board. The story returns to the backlog with its status and tasks unchanged.</p>
+    <p class="mock-note" data-when="closed" hidden>A closed sprint's scope can't change, so the API returns 409 and history is untouched.</p>
+    <p class="mock-note" data-when="saving" hidden>The button shows progress and ignores repeat clicks.</p>
+    <p class="mock-note" data-when="failed" hidden>Nothing changed and the selection is kept. Add retries.</p>
+  </div>
+
+  <div class="mock-screen">
+    <div class="mock-screen__page" inert>
+      <div class="mc-app">
+        <header class="mc-topbar">
+          <span class="mc-button mc-button--quiet mc-button--icon"><span class="mc-icon mc-icon--menu" aria-hidden="true"></span></span>
+          <span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span>
+        </header>
+        <div class="mc-sidebar">
+          <div class="mc-sidebar__head"><span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span></div>
+          <ul class="mc-nav">
+            <li><span class="mc-nav__link"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></span></li>
+            <li><span class="mc-nav__link"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></span></li>
+            <li><span class="mc-nav__link" aria-current="page"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></span></li>
+          </ul>
+          <div class="mc-nav-section">
+            <p class="mc-nav__group">Administration</p>
+            <ul class="mc-nav">
+              <li><span class="mc-nav__link"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></span></li>
+              <li><span class="mc-nav__link"><span class="mc-icon mc-icon--audit" aria-hidden="true"></span><span class="mc-nav__text">Audit log</span></span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="mc-main">
+          <div class="mc-page">
+            <div class="mc-page-header">
+              <div class="mc-page-header__main">
+                <p class="mc-h1">Community Hackathon 2026</p>
+                <div class="mc-page-header__meta"><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span></div>
+              </div>
+            </div>
+            <ul class="mc-tabs"><li><span class="mc-tabs__link"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</span></li><li><span class="mc-tabs__link"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</span></li><li><span class="mc-tabs__link"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</span></li><li><span class="mc-tabs__link" aria-current="page"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</span></li><li><span class="mc-tabs__link"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</span></li></ul>
+            <div class="mc-card mc-mb-6">
+              <div class="mc-card__header"><div class="mc-stack mc-stack--xs"><p class="mc-card__title">Sprint 8</p><p class="mc-text-sm mc-muted">Sep 28 – Oct 9, 2026 · 9 days left</p></div><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--play" aria-hidden="true"></span>Active</span></div>
+              <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-33"></span></span><span>2 of 6 stories done</span></div>
+            </div>
+            <div class="mc-board-scroll">
+              <div class="mc-board">
+                <div class="mc-board__column"><div class="mc-board__column-header"><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-board__count">2 stories</span></div><ul class="mc-board__list"><li class="mc-story-card"><div class="mc-story-card__titles"><span class="mc-story-card__title">Mentors can see team needs</span><span class="mc-story-card__path">HCK-118</span></div><div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span></span><span>No tasks</span></div></li><li class="mc-story-card"><div class="mc-story-card__titles"><span class="mc-story-card__title">Volunteer check-in list</span><span class="mc-story-card__path">HCK-125</span></div><div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span></span><span>0/3 tasks</span></div></li></ul></div>
+                <div class="mc-board__column"><div class="mc-board__column-header"><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-board__count">2 stories</span></div><ul class="mc-board__list"><li class="mc-story-card"><div class="mc-story-card__titles"><span class="mc-story-card__title">Volunteers can join a build team</span><span class="mc-story-card__path">HCK-112</span></div><div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span></span><span>2/5 tasks</span></div></li><li class="mc-story-card"><div class="mc-story-card__titles"><span class="mc-story-card__title">Book AV for demo day</span><span class="mc-story-card__path">HCK-121</span></div><div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span></span><span>1/2 tasks</span></div></li></ul></div>
+                <div class="mc-board__column"><div class="mc-board__column-header"><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span><span class="mc-board__count">2 stories</span></div><ul class="mc-board__list"><li class="mc-story-card"><div class="mc-story-card__titles"><span class="mc-story-card__title">Teams can register a project idea</span><span class="mc-story-card__path">HCK-119</span></div><div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span></span><span>2/2 tasks</span></div></li><li class="mc-story-card"><div class="mc-story-card__titles"><span class="mc-story-card__title">Publish the kickoff agenda</span><span class="mc-story-card__path">HCK-124</span></div><div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span></span><span>2/2 tasks</span></div></li></ul></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mc-backdrop">
+      <section class="mc-dialog mc-dialog--sheet" role="dialog" aria-modal="true" aria-labelledby="scope-title" aria-describedby="scope-note">
+        <header class="mc-dialog__header">
+          <div class="mc-dialog__heading">
+            <h2 class="mc-dialog__title" id="scope-title">
+              <span data-unless="remove">Add stories to Sprint 8</span>
+              <span data-when="remove" hidden>Remove a story from Sprint 8</span>
+            </h2>
+            <p class="mc-dialog__subtitle" id="scope-note">Active · Sep 28 – Oct 9, 2026</p>
+          </div>
+          <button class="mc-button mc-button--quiet mc-button--icon" type="button" aria-label="Close" data-nav="sprint-board.html" data-attr-saving="disabled">
+            <span class="mc-icon mc-icon--close" aria-hidden="true"></span>
+          </button>
+        </header>
+
+        <form class="mc-dialog__form" novalidate data-goto-state="saving">
+          <div class="mc-dialog__body">
+            <div class="mc-live" role="alert">
+              <div class="mc-alert mc-alert--danger" data-when="closed" hidden>
+                <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">Sprint 8 is closed</p>
+                  <p class="mc-alert__text">Priya Raman closed Sprint 8 at 11:05 a.m. A closed sprint's scope can't change, so nothing was changed.</p>
+                  <div class="mc-alert__actions">
+                    <a class="mc-button mc-button--sm" href="sprint-history.html">View sprint history</a>
+                  </div>
+                </div>
+              </div>
+              <div class="mc-alert mc-alert--danger" data-when="failed" hidden>
+                <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">We couldn't add the story</p>
+                  <p class="mc-alert__text">Nothing changed in Sprint 8, and your selection is still here. Try again.</p>
+                  <p class="mc-ref">Reference ID <code>62bd-f3a0-1c47</code>
+            <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="62bd-f3a0-1c47"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+          </p>
+                </div>
+              </div>
+            </div>
+
+            <div class="mc-alert mc-alert--neutral" data-unless="remove closed">
+              <span class="mc-icon mc-icon--history" aria-hidden="true"></span>
+              <div class="mc-alert__body">
+                <p class="mc-alert__text">Recorded in Sprint 8's history with your name and the time.</p>
+              </div>
+            </div>
+
+            <fieldset class="mc-choice-group" data-unless="remove closed">
+              <legend>Eligible stories</legend>
+              <p class="mc-hint">Unfinished stories that aren't in another open sprint. Their tasks come with them.</p>
+              <ul class="mc-list">
+                  <li class="mc-list__item">
+                    <label class="mc-check mc-w-full">
+                      <input type="checkbox" name="stories" value="HCK-120" data-attr-saving="disabled">
+                      <span class="mc-list__main">
+                        <span class="mc-list__title">Confirm venue accessibility checklist</span>
+                        <span class="mc-list__meta"><span>HCK-120</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true"><span class="mc-icon mc-icon--user mc-icon--sm"></span></span>Unassigned</span><span><span class="mc-unset">Not estimated</span></span></span>
+                      </span>
+                    </label>
+                  </li>
+                  <li class="mc-list__item">
+                    <label class="mc-check mc-w-full">
+                      <input type="checkbox" name="stories" value="HCK-123" data-attr-saving="disabled">
+                      <span class="mc-list__main">
+                        <span class="mc-list__title">&lt;script&gt;alert(1)&lt;/script&gt; feedback form</span>
+                        <span class="mc-list__meta"><span>HCK-123</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true">JR</span>Jordan Reyes (inactive)</span><span>1 pt</span></span>
+                      </span>
+                    </label>
+                  </li>
+                  <li class="mc-list__item">
+                    <label class="mc-check mc-w-full">
+                      <input type="checkbox" name="stories" value="HCK-128" data-attr-saving="disabled">
+                      <span class="mc-list__main">
+                        <span class="mc-list__title">Dietary needs survey for attendees</span>
+                        <span class="mc-list__meta"><span>HCK-128</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span><span>1 pt</span></span>
+                      </span>
+                    </label>
+                  </li>
+                  <li class="mc-list__item">
+                    <label class="mc-check mc-w-full">
+                      <input type="checkbox" name="stories" value="HCK-130" data-attr-add="checked" data-attr-saving="checked" data-attr-failed="checked" data-attr-saving="disabled">
+                      <span class="mc-list__main">
+                        <span class="mc-list__title">Volunteer thank-you notes</span>
+                        <span class="mc-list__meta"><span>HCK-130</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true">?</span>Unassigned</span><span>1 pt</span></span>
+                      </span>
+                    </label>
+                  </li>
+                  <li class="mc-list__item">
+                    <label class="mc-check mc-w-full">
+                      <input type="checkbox" name="stories" value="HCK-131" data-attr-saving="disabled">
+                      <span class="mc-list__main">
+                        <span class="mc-list__title">Mentor matching survey</span>
+                        <span class="mc-list__meta"><span>HCK-131</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span><span>3 pts</span></span>
+                      </span>
+                    </label>
+                  </li>
+                  <li class="mc-list__item">
+                    <label class="mc-check mc-w-full">
+                      <input type="checkbox" name="stories" value="HCK-132" data-attr-saving="disabled">
+                      <span class="mc-list__main">
+                        <span class="mc-list__title">Venue floor plan with accessible routes</span>
+                        <span class="mc-list__meta"><span>HCK-132</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span><span>3 pts</span></span>
+                      </span>
+                    </label>
+                  </li>
+              </ul>
+            </fieldset>
+
+            <div class="mc-stack" data-when="remove" hidden>
+              <p>"Book AV for demo day" (HCK-121) goes back to the backlog. It stays In Progress, and its tasks go with it.</p>
+              <dl class="mc-dl">
+                <dt>Status</dt><dd><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></dd>
+                <dt>Assignee</dt><dd><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span></dd>
+                <dt>Tasks</dt><dd>1 of 3 done</dd>
+              </dl>
+              <div class="mc-alert mc-alert--neutral">
+                <span class="mc-icon mc-icon--history" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__text">Recorded in Sprint 8's history with your name and the time.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <footer class="mc-dialog__footer">
+            <button class="mc-button" type="button" data-nav="sprint-board.html" data-unless="closed" data-attr-saving="disabled">Cancel</button>
+            <button class="mc-button mc-button--primary" type="button" data-nav="sprint-board.html" data-when="closed" hidden>Close</button>
+            <button class="mc-button mc-button--primary" type="button" data-nav="sprint-board.html" data-when="remove" hidden>
+              <span class="mc-icon mc-icon--undo" aria-hidden="true"></span>Return to backlog
+            </button>
+            <button class="mc-button mc-button--primary" type="submit" data-unless="remove closed"
+              data-attr-saving="aria-busy=true|aria-disabled=true">
+              <span class="mc-spinner" aria-hidden="true" data-when="saving" hidden></span>
+              <span data-when="saving" hidden>Adding…</span>
+              <span data-unless="saving">Add 1 story</span>
+            </button>
+          </footer>
+        </form>
+      </section>
+    </div>
+    </div>
+  </div>
+</body>
+</html>

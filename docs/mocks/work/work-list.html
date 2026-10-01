@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Work list · Mission Control mock</title>
+  <meta name="description" content="Filtered list of a project's work items by type and status, opened from the home summary counts.">
+  <meta name="mock-area" content="Work hierarchy">
+  <meta name="mock-requirements" content="L2-028.2, L2-029, L2-032, L2-034.2, L2-045">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body>
+  <a class="mc-skip-link" href="#main">Skip to main content</a>
+
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Work · Filtered list</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="default">Stories in progress</option>
+          <option value="zero-results">Zero results</option>
+          <option value="loading">Loading</option>
+          <option value="error">Load failed</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="default">Opened from a Home count ("Stories · In Progress"). Type and status filters apply on change, reset to page 1, and announce the result count. Totals come from all records, 25 per page. The project header and tabs stay pinned while the tab content scrolls; on phones only the tabs stay pinned.</p>
+    <p class="mock-note" data-when="zero-results" hidden>No initiatives are Done in this project. Clear filters shows all work.</p>
+    <p class="mock-note" data-when="loading" hidden>The list keeps its filters while results load. Screen readers hear "Loading work".</p>
+  </div>
+
+  <div class="mc-app">
+    <header class="mc-topbar">
+      <button class="mc-button mc-button--quiet mc-button--icon" type="button" data-toggle aria-controls="mc-sidebar" aria-expanded="false" aria-label="Open navigation">
+        <span class="mc-icon mc-icon--menu" aria-hidden="true"></span>
+      </button>
+      <a class="mc-brand" href="../home/home.html">
+        <span class="mc-brand__mark" aria-hidden="true">MC</span>
+        <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span>
+      </a>
+    </header>
+
+    <nav class="mc-sidebar" id="mc-sidebar" aria-label="Primary">
+      <div class="mc-sidebar__head">
+        <a class="mc-brand" href="../home/home.html">
+          <span class="mc-brand__mark" aria-hidden="true">MC</span>
+          <span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span>
+        </a>
+        <button class="mc-button mc-button--quiet mc-button--icon mc-sidebar__close" type="button" data-close="mc-sidebar" aria-label="Close navigation">
+          <span class="mc-icon mc-icon--close" aria-hidden="true"></span>
+        </button>
+      </div>
+      <ul class="mc-nav">
+        <li><a class="mc-nav__link" href="../home/home.html"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></a></li>
+        <li><a class="mc-nav__link" href="../leads/lead-directory.html"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></a></li>
+        <li><a class="mc-nav__link" href="../projects/project-list.html" aria-current="page"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></a></li>
+      </ul>
+      <div class="mc-nav-section mock-admin-only">
+        <p class="mc-nav__group" id="nav-admin">Administration</p>
+        <ul class="mc-nav" aria-labelledby="nav-admin">
+          <li><a class="mc-nav__link" href="../admin/accounts.html"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></a></li>
+          <li><a class="mc-nav__link" href="../admin/audit-log.html"><span class="mc-icon mc-icon--audit" aria-hidden="true"></span><span class="mc-nav__text">Audit log</span></a></li>
+        </ul>
+      </div>
+      <div class="mc-sidebar__foot">
+        <button class="mc-user-button" type="button" data-toggle aria-controls="user-menu" aria-expanded="false">
+          <span class="mc-avatar mock-admin-only" aria-hidden="true">QB</span>
+          <span class="mc-avatar mock-collaborator-only" aria-hidden="true">AO</span>
+          <span class="mc-user-button__text">
+            <span class="mc-user-button__name mock-admin-only">Quinntyne Brown</span>
+            <span class="mc-user-button__name mock-collaborator-only">Ada Okafor</span>
+            <span class="mc-user-button__role mock-admin-only">Administrator</span>
+            <span class="mc-user-button__role mock-collaborator-only">Collaborator</span>
+          </span>
+          <span class="mc-icon mc-icon--chevron-up mc-icon--sm" aria-hidden="true"></span>
+        </button>
+        <div class="mc-menu" id="user-menu">
+          <div class="mc-menu__header">
+            <div class="mc-stack mc-stack--xs mock-admin-only">
+              <strong>Quinntyne Brown</strong>
+              <span class="mc-muted mc-text-sm">quinntynebrown@gmail.com</span>
+              <span><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>Administrator</span></span>
+            </div>
+            <div class="mc-stack mc-stack--xs mock-collaborator-only">
+              <strong>Ada Okafor</strong>
+              <span class="mc-muted mc-text-sm">ada.okafor@example.org</span>
+              <span><span class="mc-pill"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span></span>
+            </div>
+          </div>
+          <div class="mc-menu__separator"></div>
+          <button class="mc-menu__item" type="button" data-nav="../auth/login.html#state=signed-out">
+            <span class="mc-icon mc-icon--log-out" aria-hidden="true"></span>Sign out
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main class="mc-main" id="main" tabindex="-1">
+      <div class="mc-page">
+        <div class="mc-project-header">
+          <nav class="mc-breadcrumbs" aria-label="Breadcrumb">
+            <ol>
+              <li><a href="../projects/project-list.html">Projects</a></li>
+              <li><span aria-current="page">Community Hackathon 2026</span></li>
+            </ol>
+          </nav>
+          <header class="mc-page-header">
+            <div class="mc-page-header__main">
+              <h1 class="mc-page-header__title" tabindex="-1">Community Hackathon 2026</h1>
+              <div class="mc-page-header__meta">
+                <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
+                <span>Responsible lead: <a href="../leads/lead-detail.html#state=lead">Rafael Da Silva</a></span>
+              </div>
+            </div>
+            <div class="mc-page-header__actions">
+              <button class="mc-button mc-button--primary" type="button" data-nav="work-item-form-dialog.html#state=create-initiative">
+                <span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add initiative
+              </button>
+              <div class="mc-menu-anchor mock-admin-only">
+                <button class="mc-button" type="button" data-toggle aria-controls="project-actions" aria-expanded="false">
+                  Project actions<span class="mc-icon mc-icon--chevron-down mc-icon--sm" aria-hidden="true"></span>
+                </button>
+                <div class="mc-menu" id="project-actions">
+                  <button class="mc-menu__item" type="button" data-nav="../projects/project-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit project</button>
+                  <button class="mc-menu__item" type="button" data-nav="../projects/mode-change-dialog.html#state=blocked"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
+                  <div class="mc-menu__separator"></div>
+                  <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="../projects/project-delete-dialog.html#state=blocked"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
+                </div>
+              </div>
+            </div>
+          </header>
+          <nav class="mc-project-tabs" aria-label="Project sections">
+            <ul class="mc-tabs">
+              <li><a class="mc-tabs__link" href="../projects/project-overview.html"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</a></li>
+              <li><a class="mc-tabs__link" href="work-hierarchy.html" aria-current="page"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</a></li>
+              <li><a class="mc-tabs__link" href="../backlog/backlog.html"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</a></li>
+              <li><a class="mc-tabs__link" href="../scrum/sprint-board.html"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</a></li>
+              <li><a class="mc-tabs__link" href="../scrum/sprints.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</a></li>
+            </ul>
+          </nav>
+        </div>
+
+        <form class="mc-toolbar" aria-label="Filter work">
+          <div class="mc-field mc-toolbar__field">
+            <label class="mc-label" for="work-type">Type</label>
+            <span class="mc-select-wrap">
+              <select class="mc-select" id="work-type">
+                <option>All types</option>
+                <option data-attr-zero-results="selected">Initiative</option>
+                <option>Epic</option>
+                <option selected data-attr-zero-results="!selected">Story</option>
+                <option>Task</option>
+              </select>
+            </span>
+          </div>
+          <div class="mc-field mc-toolbar__field">
+            <label class="mc-label" for="work-status">Status</label>
+            <span class="mc-select-wrap">
+              <select class="mc-select" id="work-status">
+                <option>All statuses</option>
+                <option>To Do</option>
+                <option selected data-attr-zero-results="!selected">In Progress</option>
+                <option data-attr-zero-results="selected">Done</option>
+              </select>
+            </span>
+          </div>
+        </form>
+
+        <div class="mc-live" role="status" aria-live="polite">
+          <div class="mc-results-meta" data-when="default">
+            <span><strong>4 stories in progress</strong> in Community Hackathon 2026</span>
+            <a class="mc-link" href="work-hierarchy.html">Back to the outline</a>
+          </div>
+          <p class="mc-visually-hidden" data-when="loading" hidden>Loading work</p>
+        </div>
+
+        <section aria-label="Matching work" data-when="default">
+          <ul class="mc-list">
+              <li class="mc-list__item">
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="work-item-detail.html">Volunteers can join a build team</a>
+                  <div class="mc-list__meta"><span>HCK-112</span><span>Grow Toronto's builder community › Hackathon team formation</span></div>
+                </div>
+                <div class="mc-list__aside">
+                  <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span>
+                  <span class="mc-text-xs mc-muted"><span class="mc-icon mc-icon--sprint mc-icon--sm" aria-hidden="true"></span> Sprint 8</span>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="work-item-detail.html">Mentor matching survey</a>
+                  <div class="mc-list__meta"><span>HCK-110</span><span>Grow Toronto's builder community › Hackathon team formation</span></div>
+                </div>
+                <div class="mc-list__aside">
+                  <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span>
+                  <span class="mc-text-xs mc-muted">Not in a sprint</span>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="work-item-detail.html">Venue floor plan with accessible routes</a>
+                  <div class="mc-list__meta"><span>HCK-129</span><span>Grow Toronto's builder community › Venue and logistics</span></div>
+                </div>
+                <div class="mc-list__aside">
+                  <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span>
+                  <span class="mc-text-xs mc-muted">Not in a sprint</span>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="work-item-detail.html">Book AV for demo day</a>
+                  <div class="mc-list__meta"><span>HCK-121</span><span>Grow Toronto's builder community › Venue and logistics</span></div>
+                </div>
+                <div class="mc-list__aside">
+                  <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span>
+                  <span class="mc-text-xs mc-muted"><span class="mc-icon mc-icon--sprint mc-icon--sm" aria-hidden="true"></span> Sprint 8</span>
+                </div>
+              </li>
+          </ul>
+          <div class="mc-pagination">
+            <span>Showing 1–4 of 4 · 25 per page</span>
+          </div>
+        </section>
+
+        <div class="mc-empty mc-empty--neutral mc-empty--compact" data-when="zero-results" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--search mc-icon--lg" aria-hidden="true"></span></span>
+          <h2 class="mc-empty__title">No initiatives are Done yet</h2>
+          <p class="mc-empty__text">Community Hackathon 2026 has 2 initiatives: 1 To Do and 1 In Progress.</p>
+          <div class="mc-empty__actions">
+            <button class="mc-button" type="button" data-goto-state="default">Clear filters</button>
+          </div>
+        </div>
+
+        <div class="mc-card mc-card--flush" data-when="loading" hidden aria-hidden="true">
+          <div class="mc-loading-row"><span class="mc-skeleton mc-w-40"></span><span class="mc-skeleton mc-skeleton--pill"></span><span class="mc-skeleton mc-skeleton--avatar"></span></div>
+          <div class="mc-loading-row"><span class="mc-skeleton mc-w-40"></span><span class="mc-skeleton mc-skeleton--pill"></span><span class="mc-skeleton mc-skeleton--avatar"></span></div>
+          <div class="mc-loading-row"><span class="mc-skeleton mc-w-40"></span><span class="mc-skeleton mc-skeleton--pill"></span><span class="mc-skeleton mc-skeleton--avatar"></span></div>
+          <div class="mc-loading-row"><span class="mc-skeleton mc-w-40"></span><span class="mc-skeleton mc-skeleton--pill"></span><span class="mc-skeleton mc-skeleton--avatar"></span></div>
+        </div>
+
+        <div class="mc-empty mc-empty--error" role="alert" data-when="error" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--alert-circle mc-icon--lg" aria-hidden="true"></span></span>
+          <h2 class="mc-empty__title">We couldn't load this list</h2>
+          <p class="mc-empty__text">Your filters are kept. Try again, or share the reference ID with your administrator.</p>
+          <p class="mc-ref">Reference ID <code>92d0-6e4b-1c38</code>
+              <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="92d0-6e4b-1c38"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+            </p>
+          <div class="mc-empty__actions">
+            <button class="mc-button mc-button--primary" type="button" data-goto-state="loading"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

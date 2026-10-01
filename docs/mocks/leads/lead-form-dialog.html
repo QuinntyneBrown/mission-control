@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Add or edit lead · Mission Control mock</title>
+  <meta name="description" content="Lead form dialog for adding and editing contacts: validation, saving, failure, duplicate email and category, edit conflict, and a lead deleted while editing.">
+  <meta name="mock-area" content="Leads">
+  <meta name="mock-requirements" content="L2-009, L2-011, L2-013, L2-031, L2-033.2, L2-034.1, L2-041.3, L2-043.4">
+  <link rel="stylesheet" href="../assets/tokens.css">
+  <link rel="stylesheet" href="../assets/mocks.css">
+  <script src="../assets/mocks.js" defer></script>
+</head>
+<body>
+  <div class="mock-bar" role="region" aria-label="Mock controls">
+    <span class="mock-bar__badge">MOCK</span>
+    <span class="mock-bar__text"><span class="mock-bar__long">Design artifact · </span>Fictitious data · Nothing is saved</span>
+    <div class="mock-bar__controls">
+      <span class="mock-bar__title">Leads · Add or edit lead</span>
+      <label class="mock-bar__state">State
+        <select data-mock-state>
+          <option value="add">Add (empty)</option>
+          <option value="add-international">Add with international phone</option>
+          <option value="validation">Validation errors</option>
+          <option value="saving">Saving</option>
+          <option value="failed">Save failed</option>
+          <option value="duplicate">Duplicate email and category</option>
+          <option value="edit">Edit</option>
+          <option value="conflict">Edit conflict</option>
+          <option value="deleted">Lead deleted meanwhile</option>
+        </select>
+      </label>
+      <a href="../index.html">All mocks</a>
+    </div>
+  </div>
+
+  <div class="mock-notes">
+    <p class="mock-note" data-when="add">Opens from "Add lead". Focus moves to First name; Escape or Cancel closes and returns focus to the trigger. Below 576px the dialog fills the screen with the actions pinned to the bottom.</p>
+    <p class="mock-note" data-when="add-international" hidden>Phone accepts international prefixes, spaces, parentheses, and hyphens, and is saved exactly as typed. Closing a dirty form asks before discarding.</p>
+    <p class="mock-note" data-when="validation" hidden>Whitespace-only names are invalid. Focus moves to the error summary, whose links jump to each field. Valid input (last name, phone) is kept.</p>
+    <p class="mock-note" data-when="saving" hidden>The save button shows progress and ignores repeat clicks; Cancel waits until the request finishes.</p>
+    <p class="mock-note" data-when="failed" hidden>Nothing was saved and every value is kept. "Save lead" retries the same request.</p>
+    <p class="mock-note" data-when="duplicate" hidden>Email/category pairs are unique after trimming and case folding. The same email is allowed in a different category, so choosing another category resolves the conflict.</p>
+    <p class="mock-note" data-when="edit" hidden>Opens from a lead's Edit action with saved values. Cancel leaves the saved lead unchanged.</p>
+    <p class="mock-note" data-when="conflict" hidden>The lead changed after this form opened. The user's edits are kept, never resubmitted automatically; "Reload latest" loads the saved version and keeps this comparison visible so edits can be re-applied.</p>
+    <p class="mock-note" data-when="deleted" hidden>The lead was deleted by someone else while the form was open.</p>
+  </div>
+
+  <div class="mock-screen">
+    <div class="mock-screen__page" inert>
+      <div class="mc-app">
+        <header class="mc-topbar">
+          <span class="mc-button mc-button--quiet mc-button--icon"><span class="mc-icon mc-icon--menu" aria-hidden="true"></span></span>
+          <span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span>
+        </header>
+        <div class="mc-sidebar">
+          <div class="mc-sidebar__head"><span class="mc-brand"><span class="mc-brand__mark" aria-hidden="true">MC</span><span class="mc-brand__text"><span class="mc-brand__name">Mission Control</span><span class="mc-brand__org">FaithTech Toronto</span></span></span></div>
+          <ul class="mc-nav">
+            <li><span class="mc-nav__link"><span class="mc-icon mc-icon--home" aria-hidden="true"></span><span class="mc-nav__text">Home</span></span></li>
+            <li><span class="mc-nav__link" aria-current="page"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></span></li>
+            <li><span class="mc-nav__link"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></span></li>
+          </ul>
+          <div class="mc-nav-section">
+            <p class="mc-nav__group">Administration</p>
+            <ul class="mc-nav">
+              <li><span class="mc-nav__link"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></span></li>
+              <li><span class="mc-nav__link"><span class="mc-icon mc-icon--audit" aria-hidden="true"></span><span class="mc-nav__text">Audit log</span></span></li>
+            </ul>
+          </div>
+        </div>
+        <div class="mc-main">
+          <div class="mc-page">
+            <div class="mc-page-header">
+              <div class="mc-page-header__main">
+                <p class="mc-h1">Leads</p>
+                <p class="mc-page-header__subtitle">Contact details for Create, Communication, City, Prayer, and Event leads.</p>
+              </div>
+              <div class="mc-page-header__actions"><span class="mc-button mc-button--primary"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add lead</span></div>
+            </div>
+            <div class="mc-table-wrap">
+              <table class="mc-table mc-table--stack">
+                <thead><tr><th>Name</th><th>Category</th><th>Email</th><th>Phone</th></tr></thead>
+                <tbody>
+                  <tr><td class="mc-table__primary">Samuel Adeyemi</td><td data-label="Category"><span class="mc-pill mc-pill--prayer"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer</span></td><td data-label="Email">samuel.adeyemi<wbr>@example.org</td><td data-label="Phone">+1 416 555 0101</td></tr>
+                  <tr><td class="mc-table__primary">Lucia Alvarez</td><td data-label="Category"><span class="mc-pill mc-pill--communication"><span class="mc-icon mc-icon--category-communication" aria-hidden="true"></span>Communication</span></td><td data-label="Email">lucia.alvarez<wbr>@example.org</td><td data-label="Phone">+1 416 555 0102</td></tr>
+                  <tr><td class="mc-table__primary">Nils Bergström</td><td data-label="Category"><span class="mc-pill mc-pill--create"><span class="mc-icon mc-icon--category-create" aria-hidden="true"></span>Create</span></td><td data-label="Email">nils.bergstrom<wbr>@example.org</td><td data-label="Phone"><span class="mc-unset">Not provided</span></td></tr>
+                  <tr><td class="mc-table__primary">Quinntyne Brown</td><td data-label="Category"><span class="mc-pill mc-pill--city"><span class="mc-icon mc-icon--category-city" aria-hidden="true"></span>City</span></td><td data-label="Email">quinntynebrown<wbr>@gmail.com</td><td data-label="Phone"><span class="mc-unset">Not provided</span></td></tr>
+                  <tr><td class="mc-table__primary">Wei Chen</td><td data-label="Category"><span class="mc-pill mc-pill--create"><span class="mc-icon mc-icon--category-create" aria-hidden="true"></span>Create</span></td><td data-label="Email">wei.chen<wbr>@example.org</td><td data-label="Phone">+1 416 555 0104</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mc-backdrop">
+      <section class="mc-dialog mc-dialog--sheet" role="dialog" aria-modal="true" aria-labelledby="lead-dialog-title" aria-describedby="lead-dialog-note">
+        <header class="mc-dialog__header">
+          <div class="mc-dialog__heading">
+            <h2 class="mc-dialog__title" id="lead-dialog-title">
+              <span data-unless="edit conflict deleted">Add lead</span>
+              <span data-when="edit conflict deleted" hidden>Edit lead</span>
+            </h2>
+            <p class="mc-dialog__subtitle" id="lead-dialog-note">
+              <span data-when="edit conflict deleted" hidden>Grace Mensah · </span>All fields are required unless marked optional.
+            </p>
+          </div>
+          <button class="mc-button mc-button--quiet mc-button--icon" type="button" aria-label="Close" data-nav="lead-directory.html"
+            data-attr-add-international="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-validation="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-duplicate="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-saving="disabled">
+            <span class="mc-icon mc-icon--close" aria-hidden="true"></span>
+          </button>
+        </header>
+
+        <form class="mc-dialog__form" novalidate data-goto-state="saving">
+          <div class="mc-dialog__body">
+            <!-- Outcome messages -->
+            <div class="mc-live" role="alert">
+              <div class="mc-error-summary" tabindex="-1" aria-labelledby="lead-errors-title" data-when="validation" hidden>
+                <p class="mc-error-summary__title" id="lead-errors-title"><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Fix 3 problems to save this lead</p>
+                <ul>
+                  <li><a href="#lead-first">Enter a first name</a></li>
+                  <li><a href="#lead-email">Enter an email address like name@example.org</a></li>
+                  <li><a href="#lead-category-create">Choose a category</a></li>
+                </ul>
+              </div>
+
+              <div class="mc-alert mc-alert--danger" data-when="failed" hidden>
+                <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">We couldn't save this lead</p>
+                  <p class="mc-alert__text">Nothing was saved, and your entries are still here. Try again.</p>
+                  <p class="mc-ref">Reference ID <code>5b2e-90fa-c417</code>
+                    <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="5b2e-90fa-c417"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                  </p>
+                </div>
+              </div>
+
+              <div class="mc-alert mc-alert--danger" data-when="duplicate" hidden>
+                <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">This email is already a Communication lead</p>
+                  <p class="mc-alert__text">Camille Dubois already uses camille.dubois@example.org in Communication. The same email can be added under a different category.</p>
+                  <div class="mc-alert__actions">
+                    <a class="mc-button mc-button--sm" href="lead-detail.html#state=lead">View existing lead</a>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mc-alert mc-alert--warning" data-when="conflict" hidden>
+                <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">This lead changed while you were editing</p>
+                  <p class="mc-alert__text">Priya Raman saved changes at 10:42 a.m. Your edits haven't been saved. Compare them, then reload the latest version and re-apply what you need.</p>
+                </div>
+              </div>
+
+              <div class="mc-alert mc-alert--danger" data-when="deleted" hidden>
+                <span class="mc-icon mc-icon--x-circle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">This lead no longer exists</p>
+                  <p class="mc-alert__text">Someone deleted Grace Mensah while you were editing. Your edits weren't saved.</p>
+                  <div class="mc-alert__actions">
+                    <a class="mc-button mc-button--sm" href="lead-directory.html">Back to leads</a>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="mc-table-wrap" data-when="conflict" hidden>
+              <table class="mc-table mc-table--stack">
+                <caption class="mc-visually-hidden">Your edits compared with the latest saved version</caption>
+                <thead>
+                  <tr><th scope="col">Field</th><th scope="col">Your edit</th><th scope="col">Latest saved</th></tr>
+                </thead>
+                <tbody>
+                  <tr class="mc-table__row--highlight"><td class="mc-table__primary">Phone</td><td data-label="Your edit">+1 416 555 0199</td><td data-label="Latest saved">+1 416 555 0117</td></tr>
+                  <tr class="mc-table__row--highlight"><td class="mc-table__primary">Email</td><td data-label="Your edit">grace.mensah<wbr>@example.org</td><td data-label="Latest saved">g.mensah<wbr>@example.org</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Fields -->
+            <div class="mc-form-grid">
+              <div class="mc-field">
+                <label class="mc-label" for="lead-first">First name</label>
+                <input class="mc-input" id="lead-first" name="firstName" type="text" autocomplete="off" maxlength="100" required
+                  data-attr-add-international="value=Oliver"
+                  data-attr-validation="value=   |aria-invalid=true|aria-describedby=lead-first-error"
+                  data-attr-saving="value=Oliver|readonly"
+                  data-attr-failed="value=Oliver"
+                  data-attr-duplicate="value=Camille"
+                  data-attr-edit="value=Grace"
+                  data-attr-conflict="value=Grace"
+                  data-attr-deleted="value=Grace|disabled">
+                <p class="mc-field-error" id="lead-first-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Enter a first name</p>
+              </div>
+
+              <div class="mc-field">
+                <label class="mc-label" for="lead-last">Last name</label>
+                <input class="mc-input" id="lead-last" name="lastName" type="text" autocomplete="off" maxlength="100" required
+                  data-attr-add-international="value=Hughes"
+                  data-attr-validation="value=Hughes"
+                  data-attr-saving="value=Hughes|readonly"
+                  data-attr-failed="value=Hughes"
+                  data-attr-duplicate="value=Dubois"
+                  data-attr-edit="value=Mensah"
+                  data-attr-conflict="value=Mensah"
+                  data-attr-deleted="value=Mensah|disabled">
+              </div>
+
+              <div class="mc-field mc-field--full">
+                <label class="mc-label" for="lead-email">Email</label>
+                <input class="mc-input" id="lead-email" name="email" type="email" autocomplete="off" spellcheck="false" maxlength="254" required
+                  data-attr-add-international="value=oliver.hughes@example.org"
+                  data-attr-validation="value=oliver.hughes@|aria-invalid=true|aria-describedby=lead-email-error"
+                  data-attr-saving="value=oliver.hughes@example.org|readonly"
+                  data-attr-failed="value=oliver.hughes@example.org"
+                  data-attr-duplicate="value=Camille.Dubois@example.org |aria-invalid=true|aria-describedby=lead-email-duplicate"
+                  data-attr-edit="value=grace.mensah@example.org"
+                  data-attr-conflict="value=grace.mensah@example.org"
+                  data-attr-deleted="value=grace.mensah@example.org|disabled">
+                <p class="mc-field-error" id="lead-email-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Enter an email address like name@example.org</p>
+                <p class="mc-field-error" id="lead-email-duplicate" data-when="duplicate" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Already used by a Communication lead. Choose another category or email.</p>
+              </div>
+
+              <div class="mc-field mc-field--full">
+                <label class="mc-label" for="lead-phone">Phone <span class="mc-label__optional">(optional)</span></label>
+                <p class="mc-hint" id="lead-phone-hint">Include the country code for numbers outside Canada and the U.S.</p>
+                <input class="mc-input" id="lead-phone" name="phone" type="tel" autocomplete="off" maxlength="32" aria-describedby="lead-phone-hint"
+                  data-attr-add-international="value=+44 (20) 7946-0321"
+                  data-attr-validation="value=+44 (20) 7946-0321"
+                  data-attr-saving="value=+44 (20) 7946-0321|readonly"
+                  data-attr-failed="value=+44 (20) 7946-0321"
+                  data-attr-duplicate="value=+44 20 7946 0958"
+                  data-attr-edit="value=+1 416 555 0117"
+                  data-attr-conflict="value=+1 416 555 0199"
+                  data-attr-deleted="value=+1 416 555 0117|disabled">
+              </div>
+
+              <fieldset class="mc-choice-group mc-choice-group--row" aria-describedby="lead-category-error"
+                data-attr-validation="aria-invalid=true"
+                data-attr-duplicate="aria-invalid=true"
+                data-attr-deleted="disabled">
+                <legend>Category</legend>
+                <p class="mc-field-error" id="lead-category-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Choose a category</p>
+                <div class="mc-choice-group__options">
+                  <label class="mc-choice">
+                    <input type="radio" name="category" id="lead-category-create" value="create">
+                    <span class="mc-choice__title"><span class="mc-icon mc-icon--category-create" aria-hidden="true"></span>Create</span>
+                  </label>
+                  <label class="mc-choice">
+                    <input type="radio" name="category" value="communication" data-attr-duplicate="checked">
+                    <span class="mc-choice__title"><span class="mc-icon mc-icon--category-communication" aria-hidden="true"></span>Communication</span>
+                  </label>
+                  <label class="mc-choice">
+                    <input type="radio" name="category" value="city">
+                    <span class="mc-choice__title"><span class="mc-icon mc-icon--category-city" aria-hidden="true"></span>City</span>
+                  </label>
+                  <label class="mc-choice">
+                    <input type="radio" name="category" value="prayer" data-attr-edit="checked" data-attr-conflict="checked" data-attr-deleted="checked">
+                    <span class="mc-choice__title"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer</span>
+                  </label>
+                  <label class="mc-choice">
+                    <input type="radio" name="category" value="event" data-attr-add-international="checked" data-attr-saving="checked" data-attr-failed="checked">
+                    <span class="mc-choice__title"><span class="mc-icon mc-icon--category-event" aria-hidden="true"></span>Event</span>
+                  </label>
+                </div>
+              </fieldset>
+
+              <p class="mc-hint mc-field--full">Adding a lead doesn't create a sign-in account or change anyone's access.</p>
+            </div>
+          </div>
+
+          <footer class="mc-dialog__footer">
+            <button class="mc-button" type="button" data-nav="lead-directory.html"
+              data-attr-add-international="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+              data-attr-validation="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+              data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+              data-attr-duplicate="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+              data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+              data-attr-saving="disabled">Cancel</button>
+            <button class="mc-button mc-button--primary" type="button" data-when="conflict" hidden data-goto-state="edit">
+              <span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Reload latest
+            </button>
+            <button class="mc-button mc-button--primary" type="submit" data-unless="conflict"
+              data-attr-saving="aria-busy=true|aria-disabled=true"
+              data-attr-deleted="disabled">
+              <span class="mc-spinner" aria-hidden="true" data-when="saving" hidden></span>
+              <span data-when="saving" hidden>Saving…</span>
+              <span data-unless="saving edit deleted">Save lead</span>
+              <span data-when="edit deleted" hidden>Save changes</span>
+            </button>
+          </footer>
+        </form>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

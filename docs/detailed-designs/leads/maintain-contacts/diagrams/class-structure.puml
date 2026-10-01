@@ -1,0 +1,97 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Create and edit lead contacts
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class LeadDirectoryPage {
+  +routeContext: Signal<RouteContext>
+  +openDialog(): void
+}
+class LeadView {
+  +state: Signal<FeatureState>
+  +submit(): void
+}
+interface ILeadService {
+  +create(request: CreateLeadCommand): Promise<FeatureResult>
+  +edit(request: UpdateLeadCommand): Promise<FeatureResult>
+}
+class LeadService {
+  -http: HttpClient
+}
+class LeadsController {
+  -sender: ISender
+}
+class LeadContact {
+  +id: Guid
+  +firstName: string
+  +lastName: string
+  +email: string
+  +normalizedEmail: string
+  +phone: string?
+  +category: LeadCategory
+  +version: long
+  +edit(details: LeadDetails): void
+}
+interface IMissionControlDataSession {
+  +query(specification): Task<ReadResult>
+  +commit(expectedVersion: long): Task<void>
+}
+class MissionControlDataSession {
+  -connection: DbConnection
+}
+LeadDirectoryPage --> LeadView : composes
+LeadView ..> ILeadService : inject token
+ILeadService <|.. LeadService
+IMissionControlDataSession <|.. MissionControlDataSession
+class CreateLeadCommand {
+  +firstName: string
+  +lastName: string
+  +email: string
+  +phone: string?
+  +category: LeadCategory
+}
+class CreateLeadCommandHandler {
+  +handle(request: CreateLeadCommand): Task<FeatureResult>
+}
+LeadsController ..> CreateLeadCommand : dispatches
+CreateLeadCommandHandler ..> CreateLeadCommand : handles
+CreateLeadCommandHandler --> LeadContact : loads / applies
+CreateLeadCommandHandler ..> IMissionControlDataSession : uses
+class UpdateLeadCommand {
+  +id: Guid
+  +details: LeadDetails
+  +expectedVersion: long
+}
+class UpdateLeadCommandHandler {
+  +handle(request: UpdateLeadCommand): Task<FeatureResult>
+}
+LeadsController ..> UpdateLeadCommand : dispatches
+UpdateLeadCommandHandler ..> UpdateLeadCommand : handles
+UpdateLeadCommandHandler --> LeadContact : loads / applies
+UpdateLeadCommandHandler ..> IMissionControlDataSession : uses
+
+enum LeadCategory {
+  Create
+  Communication
+  City
+  Prayer
+  Event
+}
+LeadContact --> LeadCategory : one responsibility
+@enduml

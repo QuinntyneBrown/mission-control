@@ -1,0 +1,8 @@
+@startuml
+!include <C4/C4_Context>
+LAYOUT_WITH_LEGEND()
+title System context - Create and manage project workspaces
+Person(actor, "Authorized user", "Create and manage project workspaces")
+System(mc, "Mission Control", "FaithTech Toronto contacts and project delivery")
+Rel(actor, mc, "Create and manage project workspaces")
+@enduml

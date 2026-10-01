@@ -1,0 +1,90 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Read immutable sprint history
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class SprintHistoryPage {
+  +routeContext: Signal<RouteContext>
+  +openDialog(): void
+}
+class SprintView {
+  +state: Signal<FeatureState>
+  +submit(): void
+}
+interface ISprintService {
+  +read(request: GetSprintHistoryQuery): Promise<FeatureResult>
+}
+class SprintService {
+  -http: HttpClient
+}
+class SprintsController {
+  -sender: ISender
+}
+class SprintSnapshot {
+  +sprintId: Guid
+  +name: string
+  +goal: string
+  +plannedStart: DateOnly
+  +plannedEnd: DateOnly
+  +startedAtUtc: DateTimeOffset
+  +closedAtUtc: DateTimeOffset
+  +initialScopeIds: Guid[]
+  +finalScopeIds: Guid[]
+  +outcomes: SprintStoryOutcome[]
+}
+interface IMissionControlDataSession {
+  +query(specification): Task<ReadResult>
+  +commit(expectedVersion: long): Task<void>
+}
+class MissionControlDataSession {
+  -connection: DbConnection
+}
+SprintHistoryPage --> SprintView : composes
+SprintView ..> ISprintService : inject token
+ISprintService <|.. SprintService
+IMissionControlDataSession <|.. MissionControlDataSession
+class GetSprintHistoryQuery {
+  +workspaceId: Guid
+  +sprintId: Guid
+  +page: int
+  +pageSize: int
+}
+class GetSprintHistoryQueryHandler {
+  +handle(request: GetSprintHistoryQuery): Task<FeatureResult>
+}
+SprintsController ..> GetSprintHistoryQuery : dispatches
+GetSprintHistoryQueryHandler ..> GetSprintHistoryQuery : handles
+GetSprintHistoryQueryHandler --> SprintSnapshot : loads / applies
+GetSprintHistoryQueryHandler ..> IMissionControlDataSession : uses
+
+class OpenSprintMembership {
+  +workspaceId: Guid
+  +storyId: Guid
+  +sprintId: Guid
+}
+class SprintStoryOutcome {
+  +recordedStoryId: Guid
+  +recordedTitle: string
+  +statusAtClosure: WorkStatus
+  +recordedDestinationId: Guid?
+  +recordedDestinationName: string?
+}
+SprintSnapshot "1" *-- "*" SprintStoryOutcome : immutable outcomes at closure
+SprintSnapshot ..> OpenSprintMembership : live allocation / historical source
+@enduml

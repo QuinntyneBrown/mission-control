@@ -1,0 +1,77 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Delete an unreferenced lead contact
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class LeadDetailPage {
+  +routeContext: Signal<RouteContext>
+  +openDialog(): void
+}
+class LeadView {
+  +state: Signal<FeatureState>
+  +submit(): void
+}
+interface ILeadService {
+  +delete(request: DeleteLeadCommand): Promise<FeatureResult>
+}
+class LeadService {
+  -http: HttpClient
+}
+class LeadsController {
+  -sender: ISender
+}
+class LeadContact {
+  +id: Guid
+  +firstName: string
+  +lastName: string
+  +version: long
+  +checkDeletion(referenced: bool): void
+}
+interface IMissionControlDataSession {
+  +query(specification): Task<ReadResult>
+  +commit(expectedVersion: long): Task<void>
+}
+class MissionControlDataSession {
+  -connection: DbConnection
+}
+LeadDetailPage --> LeadView : composes
+LeadView ..> ILeadService : inject token
+ILeadService <|.. LeadService
+IMissionControlDataSession <|.. MissionControlDataSession
+class DeleteLeadCommand {
+  +id: Guid
+  +expectedVersion: long
+}
+class DeleteLeadCommandHandler {
+  +handle(request: DeleteLeadCommand): Task<FeatureResult>
+}
+LeadsController ..> DeleteLeadCommand : dispatches
+DeleteLeadCommandHandler ..> DeleteLeadCommand : handles
+DeleteLeadCommandHandler --> LeadContact : loads / applies
+DeleteLeadCommandHandler ..> IMissionControlDataSession : uses
+
+enum LeadCategory {
+  Create
+  Communication
+  City
+  Prayer
+  Event
+}
+LeadContact --> LeadCategory : one responsibility
+@enduml
