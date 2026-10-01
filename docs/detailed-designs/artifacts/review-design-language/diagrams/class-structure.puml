@@ -20,6 +20,10 @@ class DesignToken {
   +value: string
   +exampleIds: string[]
 }
+class NamedBreakpoint {
+  +name: string
+  +condition: string
+}
 class ArtifactCatalog {
   +title: string
   +paths: string[]
@@ -27,9 +31,14 @@ class ArtifactCatalog {
 }
 class ReviewProfile {
   +viewportWidth: int
+  +viewportHeight: int
   +textZoomPercent: int
 }
 ArtifactCatalog "1" o-- "*" DesignToken : lists
-ArtifactCatalog ..> ReviewProfile : reviews at
-
+ArtifactCatalog "1" o-- "*" NamedBreakpoint : documents
+ArtifactCatalog ..> ReviewProfile : reviews at profile R widths
+note right of NamedBreakpoint
+Literal widths live only here;
+component styles use the names.
+end note
 @enduml

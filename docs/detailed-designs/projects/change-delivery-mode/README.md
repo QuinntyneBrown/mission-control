@@ -17,6 +17,7 @@ All named production types are proposed; the repository currently contains requi
 | Part | Responsibility and architectural home |
 | --- | --- |
 | `ProjectOverviewPage` | Routed page or dialog owned by `frontend/projects/mission-control`; composes the domain library and presentational components. |
+| `ModeChangeDialog` | Application dialog in `frontend/projects/mission-control`; names the destination mode and what is kept, or explains the active-sprint block. |
 | `WorkspaceView` | Domain component in `frontend/projects/domain`; injects `WORKSPACE_SERVICE` and holds feature state in signals. |
 | `IWorkspaceService`, `WORKSPACE_SERVICE` | Interface and token in `frontend/projects/api/workspace.service.contract.ts`; the consumer imports the contract only. |
 | `WorkspaceService` | Production HTTP adapter in `api`; owns HTTP calls and observable-to-signal conversion. Composition binds a mock adapter for Chromium Playwright. |
@@ -31,12 +32,17 @@ MediatR remains pinned to `12.5.0`. Microsoft.Extensions supplies dependency inj
 `ChangeDeliveryModeCommandHandler` locks the workspace aggregate before checking active sprint state.
 Sprint start, allocation, and mode change share the workspace lock/version boundary, preventing a racing start after the check.
 The command updates only `Workspace.Mode`; IDs, statuses, assignments, sibling/backlog/column order, and sprint membership remain intact.
+No board backfill is needed because every story receives its Kanban `BoardPlacement` (bottom of To Do) when it is created, in either mode.
 
 Kanban displays the continuous board and disables sprint planning, allocation, scope mutation, start, and execution.
 Preserved sprint plans/history remain readable under Sprints, matching `kanban-preserved` and `kanban-paused` mocks.
 Returning to Scrum restores the planned-sprint controls. A workspace with no preserved sprints has no Kanban Sprints tab.
 The preserved tab is a design interpretation from the mocks; the underlying retention and disabled execution follow L2-027.
-Active-sprint conflict returns `409`, explains closure, and keeps the previous mode.
+A workspace with no sprints switches the same way. The dialog says there is no sprint history to restore (`to-scrum-empty`) or nothing to move (`to-kanban-empty`).
+The handler checks existence, version, and active sprint, in that order, before it writes.
+A missing workspace returns `404`; the dialog closes and the overview shows its not-found state.
+A stale `expectedVersion` returns `409`; the dialog closes, the overview reloads the current mode, and an announcement says the project changed.
+Active-sprint conflict returns `409` and keeps the previous mode. The dialog explains closure, links to closing the sprint, and offers no retry.
 
 The authenticated API evaluates current SQL permissions before feature dispatch. Validation V maps invalid fields to `400`, absent authentication to `401`, forbidden access to `403`, missing records to `404`, and conflicts to `409`.
 Unexpected errors return a generic `500` with a correlation ID. Structured diagnostics exclude secrets and contact payloads.
@@ -53,10 +59,10 @@ Field errors connect to inputs; asynchronous results use status or alert announc
 
 Mock input and review references:
 
-- [Change delivery mode · Mission Control mock](../../../mocks/projects/mode-change-dialog.html); review states: `to-kanban`, `to-scrum`, `blocked`, `saving`, `failed`.
+- [Change delivery mode · Mission Control mock](../../../mocks/projects/mode-change-dialog.html); review states: `to-kanban`, `to-scrum`, `to-scrum-empty`, `to-kanban-empty`, `blocked`, `saving`, `failed`.
 - [Project overview · Mission Control mock](../../../mocks/projects/project-overview.html); review states: `default`, `kanban`, `new-empty`, `new-empty-collaborator`, `kanban-preserved`, `collaborator`, `not-found`, `loading`, `error`.
-- [Sprints · Mission Control mock](../../../mocks/scrum/sprints.html); review states: `default`, `no-sprints`, `kanban-paused`, `loading`, `error`.
-- [Backlog · Mission Control mock](../../../mocks/backlog/backlog.html); review states: `default`, `add-to-sprint`, `kanban`, `kanban-preserved`, `collaborator`, `empty`, `reorder-failed`, `loading`, `error`.
+- [Sprints · Mission Control mock](../../../mocks/scrum/sprints.html); review states: `default`, `empty`, `kanban-paused`, `loading`, `error`.
+- [Backlog · Mission Control mock](../../../mocks/backlog/backlog.html); review states: `default`, `add-to-sprint`, `kanban`, `kanban-preserved`, `collaborator`, `paged`, `empty`, `reorder-failed`, `reorder-conflict`, `loading`, `error`.
 
 Implementation proceeds one behavior at a time using the linked Given-When-Then criteria. An API integration acceptance check first fails for the expected missing behavior.
 A Chromium Playwright check uses one page object per screen and a mock service bound through the same token. Tests express intent; page objects own selectors.

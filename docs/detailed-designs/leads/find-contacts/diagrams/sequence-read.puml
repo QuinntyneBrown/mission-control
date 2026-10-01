@@ -16,7 +16,7 @@ skinparam package {
 title Behavior - Read lead details
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "LeadDirectoryPage / LeadView" as page
+  participant "LeadDetailPage / LeadView" as page
   participant "ILeadService / LeadService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,44 +31,43 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Read lead details
+actor -> page : Open /leads/:id
+page -> page : Show loading skeleton; announce "Loading lead"
 page -> client : Build typed GetLeadQuery
 client -> access : GET /api/leads/{id}
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
-else Authorized
+alt Missing, invalid, or expired JWT; inactive account
+  access --> client : 401; audit denial without payloads
+  client --> page : Clear in-memory session; require login; restore /leads/:id after login (L2-029.3)
+else Authenticated (every role reads contacts in profile P)
   access -> ctrl : Authorized request
-ctrl -> validation : Send GetLeadQuery through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
-alt Invalid request
-  validation --> ctrl : 400 field errors; no business mutation
-  ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
-else Valid request
+alt Route ID is not a GUID
+  ctrl --> client : 404 ProblemDetails; no handler runs
+  client --> page : Show "Lead not found" with Back to leads; focus its heading
+else Well-formed ID
+  ctrl -> validation : Send GetLeadQuery through MediatR 12.5.0
   validation -> handler : Handle GetLeadQuery
-  handler -> db : Read lead by stable ID
-  db --> handler : SQL result / current records
-  handler -> entity : Show saved fields; absent phone is Not provided
-  entity --> handler : Contact detail view
+  handler -> db : Read lead by ID and workspaces naming it responsible (ID, name, mode)
+  db --> handler : Contact or none; responsible workspaces
   alt Lead does not exist
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    db --> handler : Bounded persisted projection; full matching count
+    handler --> ctrl : 404 lead not found
+    ctrl --> client : NotFound ProblemDetails
+    client --> page : Show "Lead not found" with Back to leads; focus its heading (L2-010.4)
+  else Lead exists
+    handler -> entity : Project LeadDetailResult; isCityLead from City category and designated email
+    entity --> handler : Saved values, isCityLead, responsibleWorkspaces
     handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+    ctrl --> client : 200 LeadDetailResult
+    client --> page : Render details; absent phone reads Not provided; City Lead label from isCityLead; Responsible for card
+    page --> actor : Lead details; focus moves to the lead name heading
   end
 end
 end
 note over ctrl, db
-Unexpected failures return generic 500 plus correlation ID (L2-043).
+Unexpected failures return generic 500 plus correlation ID (L2-043);
+the page shows "We couldn't load this lead" with the reference ID, Try again, and Back to leads.
 Diagnostics exclude secrets and contact payloads.
 end note
 @enduml

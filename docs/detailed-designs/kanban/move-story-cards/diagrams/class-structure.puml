@@ -23,6 +23,17 @@ class KanbanBoardPage {
   +routeContext: Signal<RouteContext>
   +openDialog(): void
 }
+class MoveStoryDialog {
+  +destination: Signal<WorkStatus>
+  +position: Signal<int>
+  +move(): void
+}
+class UnfinishedTasksDialog {
+  +storyTitle: string
+  +unfinishedCount: int
+  +keep(): void
+  +markDone(): void
+}
 class BoardView {
   +state: Signal<FeatureState>
   +submit(): void
@@ -52,18 +63,20 @@ class MissionControlDataSession {
   -connection: DbConnection
 }
 KanbanBoardPage --> BoardView : composes
+KanbanBoardPage --> MoveStoryDialog : opens from Move
+KanbanBoardPage --> UnfinishedTasksDialog : opens on 409 unfinished-tasks
 BoardView ..> IBoardService : inject token
 IBoardService <|.. BoardService
 IMissionControlDataSession <|.. MissionControlDataSession
 class MoveStoryCommand {
   +workspaceId: Guid
   +storyId: Guid
-  +boardId: Guid
+  +sprintBoardId: Guid?
   +destination: WorkStatus
   +targetPosition: int
   +expectedStoryVersion: long
   +expectedBoardVersion: long
-  +completionCondition: CompletionCondition?
+  +completionCondition: StoryCompletionCondition?
 }
 class MoveStoryCommandHandler {
   +handle(request: MoveStoryCommand): Task<FeatureResult>

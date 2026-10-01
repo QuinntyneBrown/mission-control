@@ -2,20 +2,25 @@
 !include <C4/C4_Component>
 LAYOUT_WITH_LEGEND()
 title Components - Initialize and protect the administrator
-Container_Boundary(runtime, "Mission Control initialization / API runtime") {
-  Component(init, "DatabaseInitializer", "Infrastructure coordinator", "Runs migrations and required Application seeds")
-  Component(migrations, "IMigrationRunner / SQL adapter", "Infrastructure", "Applies schema under initialization lock")
-  Component(admin, "EnsureAdministratorCommandHandler", "Application / MediatR 12.5.0", "Creates or repairs protected account")
-  Component(city, "EnsureCityLeadCommandHandler", "Application / MediatR 12.5.0", "Seeds independent contact once")
-  Component(health, "Health endpoints / GetReadinessQueryHandler", "API and Application", "Separates liveness from readiness")
+Container_Boundary(runtime, "MissionControl.Api host") {
+  Component(init, "DatabaseInitializer", "Infrastructure / hosted service", "Runs at startup; migrations then required seeds; records InitializationState")
+  Component(lock, "IInitializationLock / SQL adapter", "Infrastructure", "Database-wide lock held for the whole run (L2-007.2)")
+  Component(migrations, "IMigrationRunner / SQL adapter", "Infrastructure", "Applies only missing versioned migrations")
+  Component(admin, "EnsureAdministratorCommandHandler", "Application / MediatR 12.5.0", "Creates or repairs the protected account; preserves its password")
+  Component(city, "EnsureCityLeadCommandHandler", "Application / MediatR 12.5.0", "Seeds the independent City contact once")
+  Component(status, "InitializationStatus", "Application", "Holds the latest InitializationState")
+  Component(health, "HealthController / GetReadinessQueryHandler", "API and Application", "Liveness answers directly; readiness checks status, SQL and schema")
 }
-ContainerDb(db, "Mission Control SQL", "SQL", "Schema, accounts, contacts, and seed marker")
+ContainerDb(db, "Mission Control SQL", "SQL", "Schema, accounts, contacts, seed marker")
+Rel(init, lock, "Acquires before migrating; releases after the seeds commit or fail")
 Rel(init, migrations, "Migrates under lock")
-Rel(init, admin, "Dispatches ensure command")
-Rel(init, city, "Dispatches City contact command")
+Rel(init, admin, "Sends EnsureAdministratorCommand")
+Rel(init, city, "Sends EnsureCityLeadCommand")
+Rel(init, status, "Records Initializing, Ready or Failed")
+Rel(lock, db, "Takes the database-wide lock")
 Rel(migrations, db, "Applies versioned schema")
-Rel(admin, db, "Preserves password / repairs capabilities")
+Rel(admin, db, "Preserves password / repairs name, status and role")
 Rel(city, db, "Creates or adopts independent contact")
+Rel(health, status, "Reads initialization result")
 Rel(health, db, "Checks access and compatible schema")
-Rel(health, init, "Checks required initialization result")
 @enduml

@@ -31,43 +31,49 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Read recorded closure outcomes
-page -> client : Build typed GetSprintHistoryQuery
+actor -> page : Open a closed sprint from the Sprints tab history list
+page -> client : Build typed GetSprintHistoryQuery with outcome page and page size
 client -> access : GET /api/workspaces/{id}/sprints/{sprintId}/history
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
+alt Missing, invalid or expired JWT; deactivated account
+  access --> client : 401; audit denial without payloads
+  client --> page : Clear session; sign in with this history route as return route
+else Authenticated without the required permission
+  access --> client : 403; audit denial without payloads
+  client --> page : Access-denied state; nothing loaded
 else Authorized
   access -> ctrl : Authorized request
-ctrl -> validation : Send GetSprintHistoryQuery through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
-alt Invalid request
-  validation --> ctrl : 400 field errors; no business mutation
-  ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
-else Valid request
-  validation -> handler : Handle GetSprintHistoryQuery
-  handler -> db : L2-026 read snapshot and bounded immutable outcomes
-  db --> handler : SQL result / current records
-  handler -> entity : Preserve recorded title/status; annotate missing live links only
-  entity --> handler : Read-only history view and full counts
-  alt Missing closed sprint / invalid page
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    db --> handler : Bounded persisted projection; full matching count
-    handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+  ctrl -> validation : Send GetSprintHistoryQuery through MediatR 12.5.0
+  validation -> validation : L2-045 page size 1-100, default 25
+  alt Invalid page or page size
+    validation --> ctrl : 400 field errors; nothing read
+    ctrl --> client : Validation ProblemDetails
+    client --> page : Load-failed state; Try again uses the default page size
+  else Valid request
+    validation -> handler : Handle GetSprintHistoryQuery
+    handler -> db : L2-026 read closure snapshot, scope log, and one bounded page of recorded outcomes
+    db --> handler : Snapshot and full outcome counts
+    alt No closure snapshot (sprint missing, in another workspace, or not closed)
+      handler --> ctrl : 404
+      ctrl --> client : ProblemDetails (not found)
+      client --> page : Sprint not found state with Back to sprints
+    else Snapshot found
+      handler -> db : Look up which recorded story IDs still exist and their current titles
+      db --> handler : Live story IDs and titles (links and renamed notes only)
+      handler -> entity : Keep recorded titles, statuses, destinations, actors; mark stories deleted after closure
+      entity --> handler : Read-only history view
+      handler --> ctrl : History with full completed and unfinished counts
+      ctrl --> client : 200 with history
+      client --> page : Deleted stories show recorded ID, title, status and a Deleted label, without a link
+      page --> actor : Present recorded fields, start and close actors, scope changes, outcomes
+    end
   end
 end
-end
 note over ctrl, db
+History stays readable in Kanban mode. No snapshot edit endpoint exists;
+closed-sprint mutations return 409 (L2-026.3).
 Unexpected failures return generic 500 plus correlation ID (L2-043).
 Diagnostics exclude secrets and contact payloads.
 end note

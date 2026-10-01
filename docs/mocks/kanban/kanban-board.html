@@ -43,12 +43,12 @@
   <div class="mock-notes">
     <p class="mock-note" data-when="default">Stories are cards; tasks stay inside their story. Each story appears once, in its status column, in saved column order (separate from backlog priority). 992px and wider shows all columns; 576–991px scrolls inside the board region; below 576px a column selector shows one column at a time. Every card has a visible Move button and menu, so nothing needs dragging or hover. The project header and tabs stay pinned while the tab content scrolls; on phones only the tabs stay pinned.</p>
     <p class="mock-note" data-when="dragging" hidden>Pointer drag: the card lifts and a placeholder shows where it will land. Counts change only after the move is saved.</p>
-    <p class="mock-note" data-when="pending" hidden>The card moves at once and shows "Saving…" until the server confirms; screen readers hear "Moving Template for partner church homepage to In Progress". On success a toast says "Moved to In Progress — "Template for partner church homepage" is position 2 of 4."</p>
+    <p class="mock-note" data-when="pending" hidden>The card moves at once and shows "Saving…" until the server confirms; screen readers hear "Moving Template for partner church homepage to In Progress". Column totals keep their saved counts (To Do 6, In Progress 3) until the move is saved. On success a toast says "Moved to In Progress — "Template for partner church homepage" is position 2 of 4."</p>
     <p class="mock-note" data-when="move-failed" hidden>The save failed, so the card returns to its last saved place (To Do, position 1) with an error outline. The toast explains and offers Retry; screen readers hear it as an alert.</p>
     <p class="mock-note" data-when="conflict" hidden>Someone else changed the board while this move was saving. Nothing was applied; Reload board shows the latest saved columns without resubmitting.</p>
     <p class="mock-note" data-when="empty" hidden>A new project with no stories yet. All three columns stay visible, and both roles can add work.</p>
     <p class="mock-note" data-when="empty-column" hidden>An empty column keeps its place and says so.</p>
-    <p class="mock-note" data-when="load-more" hidden>Shown with a larger dataset (140 Done stories); the card list is abbreviated. Columns load in batches and counts always reflect the full total. Screen readers hear "Loaded 25 more Done stories".</p>
+    <p class="mock-note" data-when="load-more" hidden>Shown with a larger dataset (140 Done stories); the card list is abbreviated. Columns load in batches and counts always reflect the full total. Screen readers hear "Loaded 25 more Done stories. Showing 50 of 140."</p>
     <p class="mock-note" data-when="card-menu" hidden>The card menu offers the same moves as dragging. Move up is unavailable at the top of a column, and the reason is shown.</p>
     <p class="mock-note" data-when="collaborator" hidden>Collaborators can move cards and add stories. Project settings are administrator-only, so Project actions is absent.</p>
     <p class="mock-note" data-when="preserved" hidden>Prayer Wall App switched to Kanban with its sprints kept. The board works as usual; sprint planning and starting are paused until it returns to Scrum.</p>
@@ -128,12 +128,12 @@
           <nav class="mc-breadcrumbs" aria-label="Breadcrumb">
             <ol>
               <li><a href="../projects/project-list.html">Projects</a></li>
-              <li><span aria-current="page" data-unless="empty preserved">Church Website Refresh</span><span aria-current="page" data-when="empty" hidden>Youth Coding Night</span><span aria-current="page" data-when="preserved" hidden>Prayer Wall App</span></li>
+              <li><span aria-current="page" data-unless="empty preserved">Church Website Refresh</span><span aria-current="page" data-when="empty" hidden>Neighbourhood Tech Clinic</span><span aria-current="page" data-when="preserved" hidden>Prayer Wall App</span></li>
             </ol>
           </nav>
           <header class="mc-page-header">
             <div class="mc-page-header__main">
-              <h1 class="mc-page-header__title" tabindex="-1"><span data-unless="empty preserved">Church Website Refresh</span><span data-when="empty" hidden>Youth Coding Night</span><span data-when="preserved" hidden>Prayer Wall App</span></h1>
+              <h1 class="mc-page-header__title" tabindex="-1"><span data-unless="empty preserved">Church Website Refresh</span><span data-when="empty" hidden>Neighbourhood Tech Clinic</span><span data-when="preserved" hidden>Prayer Wall App</span></h1>
               <div class="mc-page-header__meta" data-unless="empty preserved">
                 <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
                 <span>Responsible lead: <a href="../leads/lead-detail.html#state=lead">Lucia Alvarez</a></span>
@@ -162,7 +162,7 @@
                   <button class="mc-menu__item" type="button" data-nav="../projects/project-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit project</button>
                   <button class="mc-menu__item" type="button" data-nav="../projects/mode-change-dialog.html#state=to-scrum"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
                   <div class="mc-menu__separator"></div>
-                  <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="../projects/project-delete-dialog.html#state=blocked" data-attr-empty="data-nav=../projects/project-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
+                  <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="../projects/project-delete-dialog.html#state=blocked-work" data-attr-preserved="data-nav=../projects/project-delete-dialog.html#state=blocked" data-attr-empty="data-nav=../projects/project-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
                 </div>
               </div>
             </div>
@@ -208,7 +208,7 @@
 
         <div class="mc-live" role="status" aria-live="polite">
           <p class="mc-visually-hidden" data-when="pending" hidden>Moving Template for partner church homepage to In Progress, position 2 of 4.</p>
-          <p class="mc-visually-hidden" data-when="load-more" hidden>Loaded 25 more Done stories.</p>
+          <p class="mc-visually-hidden" data-when="load-more" hidden>Loaded 25 more Done stories. Showing 50 of 140.</p>
           <p class="mc-visually-hidden" data-when="loading" hidden>Loading board</p>
         </div>
 
@@ -225,8 +225,8 @@
         <div data-unless="empty preserved loading error">
           <div class="mc-column-select">
             <div class="mc-segmented mc-w-full" role="group" aria-label="Choose a column">
-            <button class="mc-segmented__button" type="button" data-board-column="todo" aria-controls="board-web" aria-pressed="true"><span>To Do</span><span><span data-unless="pending">6</span><span data-when="pending" hidden>5</span><span class="mc-visually-hidden"> stories</span></span></button>
-            <button class="mc-segmented__button" type="button" data-board-column="progress" aria-controls="board-web" aria-pressed="false"><span>In Progress</span><span><span data-unless="pending empty-column">3</span><span data-when="pending" hidden>4</span><span data-when="empty-column" hidden>0</span><span class="mc-visually-hidden"> stories</span></span></button>
+            <button class="mc-segmented__button" type="button" data-board-column="todo" aria-controls="board-web" aria-pressed="true"><span>To Do</span><span><span>6</span><span class="mc-visually-hidden"> stories</span></span></button>
+            <button class="mc-segmented__button" type="button" data-board-column="progress" aria-controls="board-web" aria-pressed="false"><span>In Progress</span><span><span data-unless="empty-column">3</span><span data-when="empty-column" hidden>0</span><span class="mc-visually-hidden"> stories</span></span></button>
             <button class="mc-segmented__button" type="button" data-board-column="done" aria-controls="board-web" aria-pressed="false"><span>Done</span><span><span data-unless="empty-column load-more">7</span><span data-when="empty-column" hidden>10</span><span data-when="load-more" hidden>140</span><span class="mc-visually-hidden"> stories</span></span></button>
             </div>
           </div>
@@ -235,7 +235,7 @@
             <section class="mc-board__column" data-column="todo" aria-labelledby="board-web-todo-title">
               <div class="mc-board__column-header">
                 <h3 class="mc-board__column-title" id="board-web-todo-title"><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span></h3>
-                <span class="mc-board__count"><span data-unless="pending">6</span><span data-when="pending" hidden>5</span><span class="mc-visually-hidden"> stories</span></span>
+                <span class="mc-board__count"><span>6</span><span class="mc-visually-hidden"> stories</span></span>
               </div>
               <ol class="mc-board__list" aria-labelledby="board-web-todo-title">
                 <li class="mc-story-card" data-unless="dragging pending" data-attr-move-failed="class=mc-story-card mc-story-card--error">
@@ -394,7 +394,7 @@
             <section class="mc-board__column" data-column="progress" aria-labelledby="board-web-progress-title">
               <div class="mc-board__column-header">
                 <h3 class="mc-board__column-title" id="board-web-progress-title"><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></h3>
-                <span class="mc-board__count"><span data-unless="pending empty-column">3</span><span data-when="pending" hidden>4</span><span data-when="empty-column" hidden>0</span><span class="mc-visually-hidden"> stories</span></span>
+                <span class="mc-board__count"><span data-unless="empty-column">3</span><span data-when="empty-column" hidden>0</span><span class="mc-visually-hidden"> stories</span></span>
               </div>
               <ol class="mc-board__list" aria-labelledby="board-web-progress-title">
                 <li class="mc-story-card" data-unless="empty-column">
@@ -784,7 +784,7 @@
                   </div>
                 </li>
                 <li class="mc-board__more" data-when="load-more" hidden>
-                  <span>Showing 25 of 140</span>
+                  <span>Showing 50 of 140</span>
                   <button class="mc-button mc-button--sm mc-button--block" type="button"><span class="mc-icon mc-icon--chevron-down" aria-hidden="true"></span>Load 25 more</button>
                 </li>
               </ol>
@@ -796,37 +796,37 @@
         <div data-when="empty" hidden>
           <div class="mc-column-select">
             <div class="mc-segmented mc-w-full" role="group" aria-label="Choose a column">
-            <button class="mc-segmented__button" type="button" data-board-column="todo" aria-controls="board-ycn" aria-pressed="true"><span>To Do</span><span><span>0</span><span class="mc-visually-hidden"> stories</span></span></button>
-            <button class="mc-segmented__button" type="button" data-board-column="progress" aria-controls="board-ycn" aria-pressed="false"><span>In Progress</span><span><span>0</span><span class="mc-visually-hidden"> stories</span></span></button>
-            <button class="mc-segmented__button" type="button" data-board-column="done" aria-controls="board-ycn" aria-pressed="false"><span>Done</span><span><span>0</span><span class="mc-visually-hidden"> stories</span></span></button>
+            <button class="mc-segmented__button" type="button" data-board-column="todo" aria-controls="board-ntc" aria-pressed="true"><span>To Do</span><span><span>0</span><span class="mc-visually-hidden"> stories</span></span></button>
+            <button class="mc-segmented__button" type="button" data-board-column="progress" aria-controls="board-ntc" aria-pressed="false"><span>In Progress</span><span><span>0</span><span class="mc-visually-hidden"> stories</span></span></button>
+            <button class="mc-segmented__button" type="button" data-board-column="done" aria-controls="board-ntc" aria-pressed="false"><span>Done</span><span><span>0</span><span class="mc-visually-hidden"> stories</span></span></button>
             </div>
           </div>
-          <div class="mc-board-scroll" role="region" aria-label="Youth Coding Night board" tabindex="0">
-          <div class="mc-board" id="board-ycn" data-column="todo">
-            <section class="mc-board__column" data-column="todo" aria-labelledby="board-ycn-todo-title">
+          <div class="mc-board-scroll" role="region" aria-label="Neighbourhood Tech Clinic board" tabindex="0">
+          <div class="mc-board" id="board-ntc" data-column="todo">
+            <section class="mc-board__column" data-column="todo" aria-labelledby="board-ntc-todo-title">
               <div class="mc-board__column-header">
-                <h3 class="mc-board__column-title" id="board-ycn-todo-title"><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span></h3>
+                <h3 class="mc-board__column-title" id="board-ntc-todo-title"><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span></h3>
                 <span class="mc-board__count"><span>0</span><span class="mc-visually-hidden"> stories</span></span>
               </div>
-              <ol class="mc-board__list" aria-labelledby="board-ycn-todo-title">
+              <ol class="mc-board__list" aria-labelledby="board-ntc-todo-title">
                 <li class="mc-board__empty">No stories to do</li>
               </ol>
             </section>
-            <section class="mc-board__column" data-column="progress" aria-labelledby="board-ycn-progress-title">
+            <section class="mc-board__column" data-column="progress" aria-labelledby="board-ntc-progress-title">
               <div class="mc-board__column-header">
-                <h3 class="mc-board__column-title" id="board-ycn-progress-title"><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></h3>
+                <h3 class="mc-board__column-title" id="board-ntc-progress-title"><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></h3>
                 <span class="mc-board__count"><span>0</span><span class="mc-visually-hidden"> stories</span></span>
               </div>
-              <ol class="mc-board__list" aria-labelledby="board-ycn-progress-title">
+              <ol class="mc-board__list" aria-labelledby="board-ntc-progress-title">
                 <li class="mc-board__empty">Nothing in progress</li>
               </ol>
             </section>
-            <section class="mc-board__column" data-column="done" aria-labelledby="board-ycn-done-title">
+            <section class="mc-board__column" data-column="done" aria-labelledby="board-ntc-done-title">
               <div class="mc-board__column-header">
-                <h3 class="mc-board__column-title" id="board-ycn-done-title"><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span></h3>
+                <h3 class="mc-board__column-title" id="board-ntc-done-title"><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span></h3>
                 <span class="mc-board__count"><span>0</span><span class="mc-visually-hidden"> stories</span></span>
               </div>
-              <ol class="mc-board__list" aria-labelledby="board-ycn-done-title">
+              <ol class="mc-board__list" aria-labelledby="board-ntc-done-title">
                 <li class="mc-board__empty">Nothing done yet</li>
               </ol>
             </section>

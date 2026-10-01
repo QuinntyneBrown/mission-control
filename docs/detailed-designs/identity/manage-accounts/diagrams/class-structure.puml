@@ -30,8 +30,9 @@ class AccountView {
 interface IAccountService {
   +read(request: GetAccountQuery): Promise<FeatureResult>
   +provision(request: ProvisionAccountCommand): Promise<FeatureResult>
-  +change_access(request: UpdateAccountCommand): Promise<FeatureResult>
-  +replace_password(request: ReplacePasswordCommand): Promise<FeatureResult>
+  +update(request: UpdateAccountCommand): Promise<FeatureResult>
+  +changeStatus(request: ChangeAccountStatusCommand): Promise<FeatureResult>
+  +replacePassword(request: ReplacePasswordCommand): Promise<FeatureResult>
 }
 class AccountService {
   -http: HttpClient
@@ -49,9 +50,21 @@ class UserAccount {
   +passwordHash: string
   +credentialVersion: long
   +version: long
-  +changeAccess(role: AccountRole, active: bool): void
+  +rename(firstName: string, lastName: string): void
+  +changeRole(role: AccountRole): void
+  +changeStatus(active: bool): void
   +replacePassword(hash: string): void
 }
+class DesignatedAdministratorPolicy {
+  +rejectsEdit(account: UserAccount, firstName: string, lastName: string, role: AccountRole, normalizedEmail: string?): bool
+  +rejectsStatus(account: UserAccount, active: bool): bool
+}
+note right of DesignatedAdministratorPolicy
+  L2-008: designated email, names, role and
+  active status are protected; any account's
+  email is immutable (proposed). Rejections
+  return 409 before any mutation.
+end note
 interface IMissionControlDataSession {
   +query(specification): Task<ReadResult>
   +commit(expectedVersion: long): Task<void>
@@ -59,10 +72,22 @@ interface IMissionControlDataSession {
 class MissionControlDataSession {
   -connection: DbConnection
 }
+interface IAuditEventWriter {
+  +addToTransaction(event: AuditEvent): void
+  +appendRestricted(event: AuditEvent): Task<void>
+}
+note bottom of IAuditEventWriter
+  appendRestricted runs outside the business
+  transaction: Rejected and Denied outcomes only.
+end note
+class AuditEventWriter {
+  -connection: DbConnection
+}
 AccountsPage --> AccountView : composes
 AccountView ..> IAccountService : inject token
 IAccountService <|.. AccountService
 IMissionControlDataSession <|.. MissionControlDataSession
+IAuditEventWriter <|.. AuditEventWriter
 class GetAccountQuery {
   +id: Guid?
   +page: int
@@ -89,12 +114,13 @@ AccountsController ..> ProvisionAccountCommand : dispatches
 ProvisionAccountCommandHandler ..> ProvisionAccountCommand : handles
 ProvisionAccountCommandHandler --> UserAccount : loads / applies
 ProvisionAccountCommandHandler ..> IMissionControlDataSession : uses
+ProvisionAccountCommandHandler ..> IAuditEventWriter : success audit
 class UpdateAccountCommand {
   +id: Guid
   +firstName: string
   +lastName: string
   +role: AccountRole
-  +active: bool
+  +email: string?
   +expectedVersion: long
 }
 class UpdateAccountCommandHandler {
@@ -103,7 +129,23 @@ class UpdateAccountCommandHandler {
 AccountsController ..> UpdateAccountCommand : dispatches
 UpdateAccountCommandHandler ..> UpdateAccountCommand : handles
 UpdateAccountCommandHandler --> UserAccount : loads / applies
+UpdateAccountCommandHandler ..> DesignatedAdministratorPolicy : checks first
 UpdateAccountCommandHandler ..> IMissionControlDataSession : uses
+UpdateAccountCommandHandler ..> IAuditEventWriter : success / Rejected audit
+class ChangeAccountStatusCommand {
+  +id: Guid
+  +active: bool
+  +expectedVersion: long
+}
+class ChangeAccountStatusCommandHandler {
+  +handle(request: ChangeAccountStatusCommand): Task<FeatureResult>
+}
+AccountsController ..> ChangeAccountStatusCommand : dispatches
+ChangeAccountStatusCommandHandler ..> ChangeAccountStatusCommand : handles
+ChangeAccountStatusCommandHandler --> UserAccount : loads / applies
+ChangeAccountStatusCommandHandler ..> DesignatedAdministratorPolicy : checks first
+ChangeAccountStatusCommandHandler ..> IMissionControlDataSession : uses
+ChangeAccountStatusCommandHandler ..> IAuditEventWriter : success / Rejected audit
 class ReplacePasswordCommand {
   +id: Guid
   +password: string
@@ -116,6 +158,7 @@ AccountsController ..> ReplacePasswordCommand : dispatches
 ReplacePasswordCommandHandler ..> ReplacePasswordCommand : handles
 ReplacePasswordCommandHandler --> UserAccount : loads / applies
 ReplacePasswordCommandHandler ..> IMissionControlDataSession : uses
+ReplacePasswordCommandHandler ..> IAuditEventWriter : success audit
 
 enum AccountRole {
   Administrator

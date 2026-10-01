@@ -43,10 +43,11 @@
     <p class="mock-note" data-when="epic" hidden>Each epic belongs to one initiative in the same project. Its stories keep their own sprint membership.</p>
     <p class="mock-note" data-when="task" hidden>Tasks follow their story's sprint and have no estimate of their own.</p>
     <p class="mock-note" data-when="unset" hidden>Optional values that are empty are labelled, never left blank.</p>
-    <p class="mock-note" data-when="inactive-assignee" hidden>The title was saved as typed. It shows as plain text and never runs as code. Inactive people keep existing assignments but don't appear in assignee pickers.</p>
+    <p class="mock-note" data-when="inactive-assignee" hidden>The title was saved as typed. It shows as plain text and never runs as code. Inactive people keep existing assignments but aren't offered for new assignments; an item's current inactive assignee stays selected in the edit form until changed.</p>
     <p class="mock-note" data-when="collaborator" hidden>Collaborators can edit, change status, and move work. Delete is disabled with its reason.</p>
     <p class="mock-note" data-when="not-found" hidden>The ID in the link doesn't exist or the item was deleted. Navigation offers the project and the project list.</p>
     <p class="mock-note" data-when="loading" hidden>A skeleton holds the layout while the item loads. Screen readers hear "Loading work item".</p>
+    <p class="mock-note" data-when="error" hidden>The item couldn't load, which is different from an item that doesn't exist. The reference ID matches the server's diagnostic record; Try again reloads the item.</p>
   </div>
 
   <div class="mc-app">
@@ -603,7 +604,7 @@ A volunteer can be on one team at a time. Full teams show as full.</p>
                 <h1 class="mc-page-header__title" tabindex="-1">&lt;script&gt;alert(1)&lt;/script&gt; feedback form</h1>
               </div>
               <div class="mc-page-header__actions">
-                <button class="mc-button mc-button--primary" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
+                <button class="mc-button mc-button--primary" type="button" data-nav="work-item-form-dialog.html#state=edit-inactive-assignee"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                 <div class="mc-menu-anchor">
                   <button class="mc-button" type="button" data-toggle aria-controls="more-inactive-assignee" aria-expanded="false">More actions<span class="mc-icon mc-icon--chevron-down mc-icon--sm" aria-hidden="true"></span></button>
                   <div class="mc-menu" id="more-inactive-assignee">

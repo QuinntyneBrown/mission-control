@@ -13,17 +13,19 @@ This design refines the [L2 baseline](../../../specs/L2.md) and its linked L1 sc
 
 ## Description
 
-The proposed `design-system/` contains its own `package.json`, build command, static catalog, token stylesheet, and control/layout specimens.
+The proposed `design-system/` contains its own `package.json`, build command, static catalog, token stylesheet, breakpoint source, and control/layout specimens.
 `--mc-` is the shared prefix already used by `docs/mocks/assets/tokens.css`.
-The initial catalog adopts color, spacing, typography, radius, focus, elevation, and touch-size roles from that provisional stylesheet.
+The initial catalog adopts color, spacing, typography, radius, focus, elevation, size, and motion roles from that provisional stylesheet.
 Its copy becomes authoritative; frontend and mocks mirror it through a documented copy step and manual review.
 Missing roles are added to the authoritative stylesheet before component styles use them.
 
 The static build bundles the token reference and examples without depending on the API or Angular application's runtime.
 The hosting destination, build tooling, deployment command, and maintainer are `<TO SUPPLY>`.
-Literal breakpoint values appear in stylesheet-level media queries because CSS custom properties cannot supply media-query conditions.
-Their names and values remain documented centrally; component rules consume tokens for dimensions, fonts, spacing, and colors.
-Manual review opens the built site independently and resizes through profile R, including control focus and compact/expanded specimens.
+CSS custom properties cannot supply media-query conditions, so the design system publishes named breakpoints from its package as Sass mixins.
+Its breakpoint source follows profile R: `sm`, `md`, `lg`, and `xl` start at 576, 768, 992, and 1200 pixels, `xs` lies below 576, and `short` covers viewports under 560 pixels tall.
+Component stylesheets reference only those names, for example `@include mc-bp.up(md)`. Literal widths exist once, in the design system's breakpoint source, which the front end mirrors with the tokens.
+Component rules read tokens for every dimension, font, spacing, and color.
+Manual review opens the built site independently and resizes through each profile R width from 320 to 1920 pixels, including control focus and compact/expanded specimens.
 Contrast, status text, touch size, and zoom examples communicate the proposed accessibility baseline.
 This artifact has no ATDD or automated tests; production workflows receive their own behavioral acceptance checks.
 
@@ -56,7 +58,7 @@ The container view separates editable static sources and their independent revie
 
 ![Review the standalone design language: c4 container](diagrams/c4-container.png)
 
-The component view shows the static catalog, examples, and token source.
+The component view shows the static catalog, examples, token source, and named breakpoint source.
 
 ![Review the standalone design language: c4 component](diagrams/c4-component.png)
 

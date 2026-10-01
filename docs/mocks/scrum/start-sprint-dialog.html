@@ -31,8 +31,8 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">Opens from Start sprint on a planned sprint. Starting records the start time and the current stories as the initial scope, then opens the sprint board. Focus starts on Cancel; Escape closes.</p>
-    <p class="mock-note" data-when="blocked-active" hidden>A project can have one active sprint. The API returns 409 and neither sprint changes; the dialog explains the next step instead of offering Start.</p>
+    <p class="mock-note" data-when="default">Opens from Start sprint on a planned sprint once no sprint is active (Sprint 8 has closed). Starting records the start time, the person who started it, and the current stories as the initial scope, then opens the sprint board. Focus starts on Cancel; Escape closes.</p>
+    <p class="mock-note" data-when="blocked-active" hidden>Sprint 8 is still active behind the dialog. A project can have one active sprint, so the API returns 409 and neither sprint changes; the dialog explains the next step instead of offering Start.</p>
     <p class="mock-note" data-when="blocked-kanban" hidden>Sprint plans are kept in Kanban mode but can't start (409). Only an administrator can change the delivery mode.</p>
     <p class="mock-note" data-when="starting" hidden>Start shows progress and ignores repeat clicks, so concurrent starts can't create two active sprints from this screen.</p>
     <p class="mock-note" data-when="failed" hidden>Nothing changed: Sprint 9 is still planned. Start sprint retries.</p>
@@ -65,17 +65,22 @@
             <div class="mc-page-header">
               <div class="mc-page-header__main">
                 <p class="mc-h1"><span data-unless="blocked-kanban">Community Hackathon 2026</span><span data-when="blocked-kanban" hidden>Prayer Wall App</span></p>
-                <div class="mc-page-header__meta"><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span></div>
+                <div class="mc-page-header__meta"><span class="mc-pill mc-pill--outline" data-unless="blocked-kanban"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span><span class="mc-pill mc-pill--outline" data-when="blocked-kanban" hidden><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span></div>
               </div>
             </div>
             <ul class="mc-tabs"><li><span class="mc-tabs__link"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</span></li><li><span class="mc-tabs__link"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</span></li><li><span class="mc-tabs__link"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</span></li><li><span class="mc-tabs__link"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</span></li><li><span class="mc-tabs__link" aria-current="page"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</span></li></ul>
             <div class="mc-stack mc-stack--lg">
-              <div class="mc-card">
+              <div class="mc-card" data-when="blocked-active" hidden>
                 <div class="mc-card__header"><div class="mc-stack mc-stack--xs"><p class="mc-card__title">Sprint 8</p><p class="mc-text-sm mc-muted">Sep 28 – Oct 9, 2026 · 9 days left</p></div><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--play" aria-hidden="true"></span>Active</span></div>
                 <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-33"></span></span><span>2 of 6 stories done</span></div>
               </div>
-              <div class="mc-card">
+              <p class="mc-muted" data-unless="blocked-active blocked-kanban">No active sprint</p>
+              <div class="mc-card" data-unless="blocked-kanban">
                 <div class="mc-card__header"><div class="mc-stack mc-stack--xs"><p class="mc-card__title">Sprint 9</p><p class="mc-text-sm mc-muted">Oct 13 – Oct 23, 2026 · 3 stories</p></div><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--calendar" aria-hidden="true"></span>Planned</span></div>
+              </div>
+              <div class="mc-card" data-when="blocked-kanban" hidden>
+                <div class="mc-card__header"><div class="mc-stack mc-stack--xs"><p class="mc-card__title">Sprint 3</p><p class="mc-text-sm mc-muted">Jun 1 – Jun 12, 2026 · 4 stories</p></div><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--calendar" aria-hidden="true"></span>Planned</span></div>
+                <p class="mc-reason"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span>Paused while the project uses Kanban.</p>
               </div>
             </div>
           </div>
@@ -132,7 +137,6 @@
           <button class="mc-button mc-button--primary" type="button" data-nav="sprints.html" data-when="blocked-active blocked-kanban" hidden>Close</button>
         </footer>
       </section>
-    </div>
     </div>
   </div>
 </body>

@@ -2,7 +2,7 @@
 !include <C4/C4_Component>
 LAYOUT_WITH_LEGEND()
 title Components - Confirm story completion with unfinished tasks
-Container(web, "Mission Control web client", "Angular", "WorkItemDetailPage / WorkItemView")
+Container(web, "Mission Control web client", "Angular", "WorkItemDetailPage, UnfinishedTasksDialog / WorkItemView")
 ContainerDb(db, "Mission Control database", "SQL", "Versioned feature records and audit events")
 Container_Boundary(api, "MissionControl.Api runtime") {
   Component(ctrl, "WorkItemsController", "API boundary", "Binds request and dispatches through MediatR 12.5.0")

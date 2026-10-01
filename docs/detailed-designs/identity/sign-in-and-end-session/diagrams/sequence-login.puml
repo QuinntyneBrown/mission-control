@@ -38,17 +38,17 @@ validator -> validator : Validate email; do not trim password
 alt Invalid fields
   validator --> ctrl : 400 field messages
   ctrl --> client : Validation ProblemDetails
-  client --> page : Keep email; focus linked errors
+  client --> page : validation state: keep email; focus linked error summary
 else Valid request
   validator -> handler : Handle LoginCommand
   handler -> db : L2-038 lock normalized-email attempt state; check rolling window
   db --> handler : Failure count and blocked-until instant
   alt Within throttle interval
-    handler -> db : Append throttled audit; no account status change
+    handler -> db : L2-039 append Throttled audit (restricted append); no account status change
     db --> handler : Recorded outcome
-    handler --> ctrl : 429 with retry timing; no token
-    ctrl --> client : Generic throttle result
-    client --> page : Keep email and show retry guidance
+    handler --> ctrl : 429 with Retry-After and blocked-until UTC instant; no token
+    ctrl --> client : Generic throttle result; same for unknown emails
+    client --> page : throttled state: keep email; "Try again after 3:42 p.m. (in about 12 minutes)" from the 429 timing
   else Attempt permitted
     handler -> db : L2-001 read account identity/hash/status
     db --> handler : Account or absent identity
@@ -57,11 +57,11 @@ else Valid request
     alt Unknown / wrong password / inactive account
       handler -> db : Increment failure window; fifth sets 15-minute throttle
       db --> handler : Failure state saved
-      handler -> db : L2-039 append denied audit without credentials/contact payload
+      handler -> db : L2-039 append Denied audit (restricted append) without credentials or contact payload
       db --> handler : Audit recorded
       handler --> ctrl : Same generic 401; no token
       ctrl --> client : Credential denial
-      client --> page : Clear password; retain email
+      client --> page : invalid state: same generic message; clear password; retain email
     else Active valid account
       handler -> security : L2-036 sign subject/credential version; expiry now plus 30 minutes
       security --> handler : JWT and expiry
@@ -70,7 +70,7 @@ else Valid request
         db --> handler : Rollback; no successful-login audit
         handler --> ctrl : Generic 500 plus diagnostic correlation ID; no token response
         ctrl --> client : Failed authentication operation
-        client --> page : Service error; preserve retry context
+        client --> page : error state: reference ID; keep email; Sign in retries
       else Commit succeeds
         db --> handler : Successful-login outcome committed
         handler --> ctrl : Intended JWT response and expiry

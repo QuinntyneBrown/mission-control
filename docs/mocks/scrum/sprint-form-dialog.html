@@ -25,6 +25,7 @@
           <option value="failed">Save failed</option>
           <option value="edit">Edit planned sprint</option>
           <option value="conflict">Edit conflict</option>
+          <option value="conflict-reloaded">Conflict · latest loaded</option>
         </select>
       </label>
       <a href="../index.html">All mocks</a>
@@ -37,7 +38,8 @@
     <p class="mock-note" data-when="saving" hidden>The save button shows progress and ignores repeat clicks. After saving, sprint planning opens so stories can be chosen.</p>
     <p class="mock-note" data-when="failed" hidden>Nothing was saved and every value is kept. Save retries.</p>
     <p class="mock-note" data-when="edit" hidden>Only planned sprints can be edited. Stories are changed from Plan stories.</p>
-    <p class="mock-note" data-when="conflict" hidden>The sprint changed after this form opened. Your edits are kept, never resubmitted automatically; Reload latest loads the saved version so edits can be re-applied.</p>
+    <p class="mock-note" data-when="conflict" hidden>Sprint 9 was saved by someone else after this form opened, so the API returns 409 and nothing is saved. The form keeps your edits and reads the latest version once to show them side by side; nothing is resubmitted automatically. Focus moves to the message.</p>
+    <p class="mock-note" data-when="conflict-reloaded" hidden>Reload latest puts the latest saved values and version in the form. The comparison stays visible so your edits can be re-applied by hand; nothing is saved until Save changes. Cancel still asks before discarding your unsaved edits.</p>
   </div>
 
   <div class="mock-screen">
@@ -90,12 +92,12 @@
         <header class="mc-dialog__header">
           <div class="mc-dialog__heading">
             <h2 class="mc-dialog__title" id="sprint-title">
-              <span data-unless="edit conflict">Plan sprint</span>
-              <span data-when="edit conflict" hidden>Edit Sprint 9</span>
+              <span data-unless="edit conflict conflict-reloaded">Plan sprint</span>
+              <span data-when="edit conflict conflict-reloaded" hidden>Edit Sprint 9</span>
             </h2>
             <p class="mc-dialog__subtitle" id="sprint-note">Community Hackathon 2026 · All fields are required.</p>
           </div>
-          <button class="mc-button mc-button--quiet mc-button--icon" type="button" aria-label="Close" data-nav="sprints.html" data-attr-validation="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-saving="disabled">
+          <button class="mc-button mc-button--quiet mc-button--icon" type="button" aria-label="Close" data-nav="sprints.html" data-attr-validation="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-conflict-reloaded="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-saving="disabled">
             <span class="mc-icon mc-icon--close" aria-hidden="true"></span>
           </button>
         </header>
@@ -123,15 +125,23 @@
               <div class="mc-alert mc-alert--warning" data-when="conflict" hidden>
                 <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
                 <div class="mc-alert__body">
-                  <p class="mc-alert__title">Sprint 9 changed while you were editing</p>
-                  <p class="mc-alert__text">Priya Raman saved changes at 10:42 a.m. Your edits haven't been saved. Compare them, then reload the latest version and re-apply what you need.</p>
+                  <p class="mc-alert__title">This sprint changed after you opened it.</p>
+                  <p class="mc-alert__text">Your edits haven't been saved. Compare them with the latest saved version, then reload it and re-apply what you need.</p>
+                </div>
+              </div>
+              <div class="mc-alert" data-when="conflict-reloaded" hidden>
+                <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__text">Latest version loaded. Re-apply your edits from the comparison, then save.</p>
                 </div>
               </div>
             </div>
 
-            <div class="mc-table-wrap" data-when="conflict" hidden>
+            <div class="mc-stack mc-stack--sm" data-when="conflict conflict-reloaded" hidden>
+              <h3 class="mc-h4" data-when="conflict-reloaded" hidden>Your unsaved edits to re-apply</h3>
+              <div class="mc-table-wrap">
               <table class="mc-table mc-table--stack">
-                <caption class="mc-visually-hidden">Your edits compared with the latest saved version</caption>
+                <caption class="mc-visually-hidden"><span data-unless="conflict-reloaded">Your edits compared with the latest saved version</span><span data-when="conflict-reloaded" hidden>Your unsaved edits to re-apply</span></caption>
                 <thead>
                   <tr><th scope="col">Field</th><th scope="col">Your edit</th><th scope="col">Latest saved</th></tr>
                 </thead>
@@ -140,6 +150,7 @@
                   <tr class="mc-table__row--highlight"><td class="mc-table__primary">End date</td><td data-label="Your edit">Oct 23, 2026</td><td data-label="Latest saved">Oct 27, 2026</td></tr>
                 </tbody>
               </table>
+              </div>
             </div>
 
             <div class="mc-form-grid">
@@ -148,7 +159,8 @@
                 <input class="mc-input" id="sprint-name" name="name" type="text" maxlength="200" required value="Sprint 10"
                   data-attr-saving="readonly"
                   data-attr-edit="value=Sprint 9"
-                  data-attr-conflict="value=Sprint 9">
+                  data-attr-conflict="value=Sprint 9"
+                  data-attr-conflict-reloaded="value=Sprint 9">
               </div>
 
               <div class="mc-field mc-field--full">
@@ -159,10 +171,11 @@
                   data-attr-saving="value=Venue walkthrough and volunteer briefing done|readonly"
                   data-attr-failed="value=Venue walkthrough and volunteer briefing done"
                   data-attr-edit="value=Demo day judging flow ready"
-                  data-attr-conflict="value=Demo day judging flow ready and tested"></textarea>
+                  data-attr-conflict="value=Demo day judging flow ready and tested"
+                  data-attr-conflict-reloaded="value=Demo day judging flow ready"></textarea>
                 <div class="mc-field__footer">
                   <p class="mc-field-error" id="sprint-goal-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Enter a sprint goal</p>
-                  <span class="mc-counter" id="sprint-goal-count"><span data-unless="saving failed edit conflict">0 / 2,000</span><span data-when="saving failed" hidden>45 / 2,000</span><span data-when="edit" hidden>27 / 2,000</span><span data-when="conflict" hidden>38 / 2,000</span></span>
+                  <span class="mc-counter" id="sprint-goal-count"><span data-unless="saving failed edit conflict conflict-reloaded">0 / 2,000</span><span data-when="saving failed" hidden>45 / 2,000</span><span data-when="edit conflict-reloaded" hidden>27 / 2,000</span><span data-when="conflict" hidden>38 / 2,000</span></span>
                 </div>
               </div>
 
@@ -175,7 +188,8 @@
                   data-attr-saving="value=2026-10-26|readonly"
                   data-attr-failed="value=2026-10-26"
                   data-attr-edit="value=2026-10-13"
-                  data-attr-conflict="value=2026-10-13">
+                  data-attr-conflict="value=2026-10-13"
+                  data-attr-conflict-reloaded="value=2026-10-13">
               </div>
 
               <div class="mc-field">
@@ -185,31 +199,31 @@
                   data-attr-saving="value=2026-11-06|readonly"
                   data-attr-failed="value=2026-11-06"
                   data-attr-edit="value=2026-10-23"
-                  data-attr-conflict="value=2026-10-23">
+                  data-attr-conflict="value=2026-10-23"
+                  data-attr-conflict-reloaded="value=2026-10-27">
                 <p class="mc-field-error" id="sprint-end-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Choose an end date on or after Oct 26, 2026</p>
               </div>
 
-              <p class="mc-hint mc-field--full" data-unless="edit conflict">Next, you'll choose stories from the backlog.</p>
-              <p class="mc-hint mc-field--full" data-when="edit conflict" hidden>To change this sprint's stories, use Plan stories.</p>
+              <p class="mc-hint mc-field--full" data-unless="edit conflict conflict-reloaded">Next, you'll choose stories from the backlog.</p>
+              <p class="mc-hint mc-field--full" data-when="edit conflict conflict-reloaded" hidden>To change this sprint's stories, use Plan stories.</p>
             </div>
           </div>
 
           <footer class="mc-dialog__footer">
-            <button class="mc-button" type="button" data-nav="sprints.html" data-attr-validation="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-saving="disabled">Cancel</button>
-            <button class="mc-button mc-button--primary" type="button" data-when="conflict" hidden data-goto-state="edit">
+            <button class="mc-button" type="button" data-nav="sprints.html" data-attr-validation="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-conflict-reloaded="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-saving="disabled">Cancel</button>
+            <button class="mc-button mc-button--primary" type="button" data-when="conflict" hidden data-goto-state="conflict-reloaded">
               <span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Reload latest
             </button>
             <button class="mc-button mc-button--primary" type="submit" data-unless="conflict"
               data-attr-saving="aria-busy=true|aria-disabled=true">
               <span class="mc-spinner" aria-hidden="true" data-when="saving" hidden></span>
               <span data-when="saving" hidden>Saving…</span>
-              <span data-unless="saving edit">Save and choose stories</span>
-              <span data-when="edit" hidden>Save changes</span>
+              <span data-unless="saving edit conflict-reloaded">Save and choose stories</span>
+              <span data-when="edit conflict-reloaded" hidden>Save changes</span>
             </button>
           </footer>
         </form>
       </section>
-    </div>
     </div>
   </div>
 </body>

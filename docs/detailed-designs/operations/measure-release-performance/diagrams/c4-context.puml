@@ -2,7 +2,9 @@
 !include <C4/C4_Context>
 LAYOUT_WITH_LEGEND()
 title System context - Measure release workflow performance
-Person(actor, "Deployment operator", "Measure release workflow performance")
-System(ops, "Mission Control release operations", "Repeatable operations against isolated or deployed SQL")
-Rel(actor, ops, "Measure release workflow performance")
+Person(actor, "Release operator", "Completes the environment manifest and starts each run")
+System(tooling, "Mission Control release tooling", "API load runner and cold-view runner")
+System(env, "Isolated measurement environment", "Production web build, API, and SQL at the L2-046 profile")
+Rel(actor, tooling, "Runs fixture, load, and cold views")
+Rel(tooling, env, "Measures through existing endpoints and routes", "HTTPS")
 @enduml

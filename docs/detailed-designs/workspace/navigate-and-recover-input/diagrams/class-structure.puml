@@ -19,52 +19,91 @@ skinparam class {
   FontColor #101828
   BackgroundColor #F9FAFB
 }
-class ApplicationShell {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
+package "frontend/projects/mission-control" {
+  class ApplicationShell {
+    +routeContext: Signal<RouteContext>
+    +menuOpen: Signal<bool>
+    +focusHeading(): void
+  }
+  class RouteContext {
+    +requestedPath: string
+    +workspaceId: Guid?
+    +ancestorIds: Guid[]
+  }
+  class AuthenticationGuard {
+    +canActivate(path: string): Promise<bool | UrlTree>
+  }
+  class PermissionGuard {
+    +canActivate(path: string): Promise<bool | UrlTree>
+  }
+  class UnsavedChangesGuard {
+    +canDeactivate(form: FormDraft): Promise<bool>
+  }
+  interface FormDraft {
+    +dirty: Signal<bool>
+    +pending: Signal<bool>
+    +canLeave(): bool
+  }
+  class UnsavedChangesDialog {
+    +confirm(itemName: string): Promise<LeaveChoice>
+  }
+  enum LeaveChoice {
+    Stay
+    Discard
+  }
 }
-class SessionView {
-  +state: Signal<FeatureState>
-  +submit(): void
+package "frontend/projects/domain" {
+  class UserMenuView {
+    +account: Signal<CurrentSession>
+    +signOut: Output<void>
+  }
 }
-interface ISessionService {
-  +restore_route(request: GetCurrentSessionQuery): Promise<FeatureResult>
+package "frontend/projects/api" {
+  interface ISessionService {
+    +check_access(request: GetCurrentSessionQuery): Promise<FeatureResult>
+  }
+  class SessionService {
+    -http: HttpClient
+    -sessionGeneration: long
+  }
 }
-class SessionService {
-  -http: HttpClient
+package "backend" {
+  class SessionsController {
+    -sender: ISender
+  }
+  class GetCurrentSessionQuery {
+    +subject: Guid
+  }
+  class GetCurrentSessionQueryHandler {
+    +handle(request: GetCurrentSessionQuery): Task<FeatureResult>
+  }
+  class CurrentSession {
+    +accountId: Guid
+    +displayName: string
+    +role: AccountRole
+    +capabilities: string[]
+  }
+  interface IMissionControlDataSession {
+    +query(specification): Task<ReadResult>
+    +commit(expectedVersion: long): Task<void>
+  }
+  class MissionControlDataSession {
+    -connection: DbConnection
+  }
 }
-class SessionsController {
-  -sender: ISender
-}
-class RouteContext {
-  +requestedPath: string
-  +workspaceId: Guid?
-  +ancestorIds: Guid[]
-  +dirty: bool
-  +pending: bool
-  +sessionGeneration: long
-  +canLeave(): bool
-}
-interface IMissionControlDataSession {
-  +query(specification): Task<ReadResult>
-  +commit(expectedVersion: long): Task<void>
-}
-class MissionControlDataSession {
-  -connection: DbConnection
-}
-ApplicationShell --> SessionView : composes
-SessionView ..> ISessionService : inject token
+ApplicationShell --> RouteContext : holds signal
+ApplicationShell --> UserMenuView : composes
+AuthenticationGuard --> RouteContext : stores requestedPath
+AuthenticationGuard ..> ISessionService : inject SESSION_SERVICE
+PermissionGuard ..> ISessionService : inject SESSION_SERVICE
+UserMenuView ..> ISessionService : inject SESSION_SERVICE
+UnsavedChangesGuard ..> FormDraft : checks canLeave()
+UnsavedChangesGuard ..> UnsavedChangesDialog : opens when dirty
+UnsavedChangesDialog --> LeaveChoice
 ISessionService <|.. SessionService
 IMissionControlDataSession <|.. MissionControlDataSession
-class GetCurrentSessionQuery {
-  +subject: Guid
-}
-class GetCurrentSessionQueryHandler {
-  +handle(request: GetCurrentSessionQuery): Task<FeatureResult>
-}
 SessionsController ..> GetCurrentSessionQuery : dispatches
 GetCurrentSessionQueryHandler ..> GetCurrentSessionQuery : handles
-GetCurrentSessionQueryHandler --> RouteContext : loads / applies
+GetCurrentSessionQueryHandler --> CurrentSession : projects
 GetCurrentSessionQueryHandler ..> IMissionControlDataSession : uses
-
 @enduml

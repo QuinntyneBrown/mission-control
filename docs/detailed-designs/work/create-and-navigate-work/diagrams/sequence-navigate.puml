@@ -16,7 +16,7 @@ skinparam package {
 title Behavior - Read hierarchy, filtered list, or detail
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "WorkHierarchyPage / WorkItemView" as page
+  participant "WorkHierarchyPage / WorkListPage / WorkItemDetailPage / WorkItemView" as page
   participant "IWorkItemService / WorkItemService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,44 +31,48 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Read hierarchy, filtered list, or detail
-page -> client : Build typed GetWorkItemsQuery
+actor -> page : Open the outline, expand a parent, load more, filter the list, or open an item
+page -> page : Show skeleton (loading state); keep already loaded rows when expanding or loading more
+page -> client : Build typed GetWorkItemsQuery (parent or item, type/status filters, page, page size)
 client -> access : GET /api/workspaces/{id}/work-items[/{itemId}]
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
-else Authorized
+alt Missing, invalid or expired JWT; deactivated account
+  access --> client : 401; audit denial without payloads
+  client --> page : Clear session; sign in with the requested route as return route
+else Authenticated (every role may read work)
   access -> ctrl : Authorized request
-ctrl -> validation : Send GetWorkItemsQuery through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
-alt Invalid request
-  validation --> ctrl : 400 field errors; no business mutation
-  ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
-else Valid request
-  validation -> handler : Handle GetWorkItemsQuery
-  handler -> db : L2-045 read bounded siblings/list; count full matches; order by sibling position/ID
-  db --> handler : SQL result / current records
-  handler -> entity : L2-029 resolve ancestor path and unset optional fields
-  entity --> handler : Hierarchy or detail projection
-  alt Missing workspace/item or invalid filter
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    db --> handler : Bounded persisted projection; full matching count
-    handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+  ctrl -> validation : Send GetWorkItemsQuery through MediatR 12.5.0
+  validation -> validation : L2-045 page size 1-100 (default 25); known type and status filters
+  alt Invalid page size or filter
+    validation --> ctrl : 400 field errors; nothing read
+    ctrl --> client : Validation ProblemDetails
+    client --> page : Keep filters; show the page-size or filter message
+  else Valid request
+    validation -> handler : Handle GetWorkItemsQuery
+    handler -> db : L2-045 read one bounded batch ordered by sibling position then ID; count all matches
+    db --> handler : Bounded rows and full matching count
+    alt Workspace or item not found
+      handler --> ctrl : 404
+      ctrl --> client : ProblemDetails (not found)
+      client --> page : Item: not-found state offering the project and the project list; workspace: not-found state linking to Projects
+    else Rows read
+      handler -> entity : L2-029 resolve ancestor path and label unset optional fields
+      entity --> handler : Hierarchy batch, filtered page, or detail projection
+      handler --> ctrl : Typed result with items, total count, page, and page size
+      ctrl --> client : 200
+      client --> page : Update signal state; render titles as text
+      page --> actor : Present results; announce "N more loaded" after Load more and move focus to the heading after navigation
+    end
   end
 end
+opt Read fails unexpectedly (500 with correlation ID or no response)
+  client --> page : First load: error state with reference ID and Try again; next batch: keep loaded rows, alert with Retry (batch-error state); list: keep filters
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).
+Counts come from persisted records, never from loaded rows.
 Diagnostics exclude secrets and contact payloads.
 end note
 @enduml

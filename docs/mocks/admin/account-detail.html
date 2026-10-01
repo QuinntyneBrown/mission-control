@@ -34,7 +34,7 @@
 
   <div class="mock-notes">
     <p class="mock-note" data-when="default">Administrator-only; collaborators who open this URL get the <a href="../shell/status-pages.html#state=access-denied">access-denied page</a>. The account and Ada's Prayer lead contact are separate records: changing one never changes the other.</p>
-    <p class="mock-note" data-when="designated" hidden>The designated administrator can't be deleted, deactivated, demoted, or have its email changed; the API answers 409 if anyone tries. Deactivate stays visible but disabled, and the reason is written out rather than hidden in a tooltip. Replacing the password is allowed.</p>
+    <p class="mock-note" data-when="designated" hidden>The designated administrator can't be deleted, deactivated, demoted, renamed, or have its email changed; the API answers 409 and records a Rejected audit event if anyone tries. Deactivate stays visible but disabled, and the reason is written out rather than hidden in a tooltip. Edit opens the account dialog with every field locked. Replacing the password is allowed.</p>
     <p class="mock-note" data-when="inactive" hidden>Deactivation keeps the account, its assignments, and its audit history. Jordan's existing token stops working on the next request. Reactivate restores sign-in with the existing password.</p>
     <p class="mock-note" data-when="not-found" hidden>Shown for an unknown account ID. Accounts are never deleted, so this usually means a mistyped or outdated link.</p>
     <p class="mock-note" data-when="loading" hidden>Screen readers hear "Loading account". The skeleton keeps the header and details layout so nothing jumps when data arrives.</p>
@@ -160,7 +160,7 @@
           <span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>
           <div class="mc-alert__body">
             <p class="mc-alert__title">This is the designated administrator</p>
-            <p class="mc-alert__text" id="protected-reason">So that Mission Control always has an administrator, this account can't be deleted, deactivated, or demoted, and its email can't be changed. Its password can be replaced, and setup never resets it.</p>
+            <p class="mc-alert__text" id="protected-reason">So that Mission Control always has an administrator, this account can't be deleted, deactivated, or demoted, and its name and email can't be changed. Its password can be replaced, and setup never resets it.</p>
           </div>
         </div>
 

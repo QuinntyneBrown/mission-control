@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Move to position · Mission Control mock</title>
-  <meta name="description" content="Keyboard and pagination-safe reordering dialog for sibling order and backlog priority, with range validation and failure.">
+  <meta name="description" content="Keyboard and pagination-safe reordering dialog for sibling order and backlog priority, with range validation, a stale-order conflict, and failure.">
   <meta name="mock-area" content="Work hierarchy">
   <meta name="mock-requirements" content="L2-017, L2-020.2, L2-031, L2-033, L2-034.2">
   <link rel="stylesheet" href="../assets/tokens.css">
@@ -22,6 +22,7 @@
           <option value="default">Sibling order</option>
           <option value="backlog">Backlog priority</option>
           <option value="out-of-range">Position out of range</option>
+          <option value="conflict">Order changed meanwhile</option>
           <option value="failed">Move failed</option>
         </select>
       </label>
@@ -33,6 +34,7 @@
     <p class="mock-note" data-when="default">The keyboard and touch alternative to dragging. It also works when the target is on another page. The result is announced: "Book AV for demo day moved to position 2 of 6".</p>
     <p class="mock-note" data-when="backlog" hidden>Backlog priority is separate from the order inside an epic, so this move doesn't change the parent or the sibling order.</p>
     <p class="mock-note" data-when="out-of-range" hidden>The position is checked before sending. Focus stays on the field and the error is announced.</p>
+    <p class="mock-note" data-when="conflict" hidden>The sibling order changed after this dialog opened, so the order version no longer matched and the API answered 409. Nothing was applied and the move is never resent: positions chosen from the old order could land somewhere unintended. "Reload order" closes the dialog and reloads the outline with the latest order; focus returns to the item's actions button so the move can be chosen again.</p>
     <p class="mock-note" data-when="failed" hidden>The saved order is unchanged and shown again. "Try again" resends the same move.</p>
   </div>
 
@@ -128,6 +130,13 @@
         <form class="mc-dialog__form" novalidate>
           <div class="mc-dialog__body">
             <div class="mc-live" role="alert">
+              <div class="mc-alert mc-alert--warning" data-when="conflict" hidden>
+                <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">The order changed</p>
+                  <p class="mc-alert__text">The order under Venue and logistics changed while you were moving “Book AV for demo day”. Nothing was applied. Reload to see the latest order.</p>
+                </div>
+              </div>
               <div class="mc-alert mc-alert--danger" data-when="failed" hidden>
                 <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
                 <div class="mc-alert__body">
@@ -140,7 +149,7 @@
               </div>
             </div>
 
-            <div class="mc-field" data-unless="backlog out-of-range">
+            <div class="mc-field" data-unless="backlog out-of-range conflict">
               <label class="mc-label" for="pos-sibling">New position</label>
               <span class="mc-select-wrap">
                 <select class="mc-select" id="pos-sibling">
@@ -155,7 +164,7 @@
               <p class="mc-hint">Changes the order under Venue and logistics only.</p>
             </div>
 
-            <div data-unless="backlog out-of-range">
+            <div data-unless="backlog out-of-range conflict">
               <p class="mc-label mc-mb-4" id="pos-preview-label">Result</p>
               <ol class="mc-list" aria-labelledby="pos-preview-label">
                 <li class="mc-list__item"><span class="mc-list__rank">1</span><span class="mc-list__main"><span class="mc-list__title">Confirm venue accessibility checklist</span></span></li>
@@ -177,7 +186,8 @@
           </div>
           <footer class="mc-dialog__footer">
             <button class="mc-button" type="button" data-nav="work-hierarchy.html">Cancel</button>
-            <button class="mc-button mc-button--primary" type="submit" data-nav="work-hierarchy.html" data-attr-out-of-range="!data-nav">
+            <button class="mc-button mc-button--primary" type="button" data-when="conflict" hidden data-nav="work-hierarchy.html"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Reload order</button>
+            <button class="mc-button mc-button--primary" type="submit" data-unless="conflict" data-nav="work-hierarchy.html" data-attr-out-of-range="!data-nav">
               <span data-unless="failed">Move</span>
               <span data-when="failed" hidden>Try again</span>
             </button>

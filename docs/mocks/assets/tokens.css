@@ -10,6 +10,10 @@
  * documented here and used literally in mocks.css):
  *   XS  < 576px   small 576-767px   medium 768-991px
  *   large 992-1199px                XL >= 1200px
+ *   short height < 560px (for example, a phone in landscape): the project
+ *   header pins only its tabs, as on XS and small widths.
+ * The standalone design system publishes these as named Sass breakpoints;
+ * component stylesheets there use the names, never the widths.
  */
 :root {
   /* Colour: neutrals */
@@ -87,6 +91,7 @@
     BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
   --mc-font-mono: ui-monospace, "Cascadia Mono", "SFMono-Regular", Consolas,
     "Liberation Mono", monospace;
+  --mc-font-size-2xs: 0.6375rem;
   --mc-font-size-xs: 0.75rem;
   --mc-font-size-sm: 0.875rem;
   --mc-font-size-md: 1rem;
@@ -104,6 +109,7 @@
   --mc-line-height-normal: 1.5;
   --mc-line-height-relaxed: 1.65;
   --mc-letter-spacing-caps: 0.06em;
+  --mc-underline-offset: 0.2em;
 
   /* Radius and borders */
   --mc-radius-sm: 6px;
@@ -119,6 +125,7 @@
   --mc-shadow-sm: 0 1px 2px rgb(27 35 51 / 0.06);
   --mc-shadow-md: 0 4px 14px rgb(27 35 51 / 0.08);
   --mc-shadow-lg: 0 18px 44px rgb(27 35 51 / 0.18);
+  --mc-opacity-secondary: 0.8;
 
   /* Sizes */
   --mc-size-touch: 44px;
@@ -160,6 +167,9 @@
   --mc-size-catalog-card: 320px;
   --mc-size-viewer-height: 800px;
   --mc-size-text-measure: 48ch;
+  --mc-size-drawer-max: 86vw;
+  /* Shadow spread wide enough to dim the whole viewport behind a drawer. */
+  --mc-size-overlay-spread: 100vmax;
 
   /* Layering */
   --mc-z-sticky: 10;
@@ -173,5 +183,7 @@
   --mc-duration-fast: 120ms;
   --mc-duration-base: 200ms;
   --mc-duration-slow: 1400ms;
+  --mc-duration-spin: 800ms;
   --mc-ease: cubic-bezier(0.2, 0, 0, 1);
+  --mc-drag-tilt: 1.5deg;
 }

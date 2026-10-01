@@ -16,7 +16,7 @@ skinparam package {
 title Behavior - Start a planned sprint
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "SprintsPage / SprintView" as page
+  participant "SprintsPage / StartSprintDialog / SprintView" as page
   participant "ISprintService / SprintService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,52 +31,73 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Start a planned sprint
-page -> client : Build typed StartSprintCommand
+actor -> page : Confirm Start sprint in StartSprintDialog
+page -> client : Build typed StartSprintCommand with expected sprint version
 client -> access : POST /api/workspaces/{id}/sprints/{sprintId}/start
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
+alt Missing, invalid or expired JWT; deactivated account
+  access --> client : 401; audit denial without payloads
+  client --> page : Clear session; sign in with the Sprints tab as return route
+else Authenticated without the required permission
+  access --> client : 403; audit denial without payloads
+  client --> page : Keep the dialog open; explain that starting sprints is not permitted
 else Authorized
   access -> ctrl : Authorized request
-ctrl -> validation : Send StartSprintCommand through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
-alt Invalid request
-  validation --> ctrl : 400 field errors; no business mutation
-  ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
-else Valid request
-  validation -> handler : Handle StartSprintCommand
-  handler -> db : Lock workspace; load sprint/version, active slot, and current scope
-  db --> handler : No active sprint and Planned state
-  handler -> entity : L2-023 transition Active; record start instant and initial scope
-  entity --> handler : Active sprint
-  handler -> db : Acquire unique active slot and persist initial scope/board
-  db --> handler : SQL result / current records
-
-  alt Concurrent active sprint, Kanban mode, closed state, or stale version
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    handler -> db : L2-039 / L2-040 commit business state and success audit together
-    alt Commit fails
-      db --> handler : Roll back business state and success audit
-      handler --> ctrl : Generic 500 with correlation ID
-      ctrl --> client : Failure; no successful-save claim
-      client --> page : Keep draft / restore saved placement
-    else Commit succeeds
-      db --> handler : New committed version
-    handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+  ctrl -> validation : Send StartSprintCommand through MediatR 12.5.0
+  validation -> validation : Validate identifiers and expected version
+  alt Malformed identifiers or version
+    validation --> ctrl : 400 field errors; nothing read or changed
+    ctrl --> client : Validation ProblemDetails
+    client --> page : Failed state with reference ID; sprint stays planned
+  else Valid request
+    validation -> handler : Handle StartSprintCommand
+    handler -> db : Lock workspace; read mode, sprint state and version, active slot, current scope
+    db --> handler : Current start conditions
+    alt Sprint not found (or in another workspace)
+      handler --> ctrl : 404; nothing changed
+      ctrl --> client : ProblemDetails (not found)
+      client --> page : Close dialog; reload the sprint list; announce that the sprint no longer exists
+    else Workspace in Kanban mode (L2-027.3)
+      handler --> ctrl : 409 sprints paused; nothing changed
+      ctrl --> client : ProblemDetails (sprints paused)
+      client --> page : Blocked explanation; administrators can change mode; Close only, no retry
+    else Another sprint is Active (L2-023.2)
+      handler --> ctrl : 409 naming the active sprint; neither sprint changes
+      ctrl --> client : ProblemDetails (active sprint exists)
+      client --> page : Blocked explanation with a link to review and close it; Close only, no retry
+    else Sprint already Active or Closed (L2-023.4)
+      handler --> ctrl : 409 not planned; history unchanged
+      ctrl --> client : ProblemDetails (not planned)
+      client --> page : Explain the current state; reload the sprint list
+    else Stale sprint version
+      handler --> ctrl : 409 changed since reviewed; nothing changed
+      ctrl --> client : ProblemDetails (stale version)
+      client --> page : Reload the sprint and its scope; ask for a fresh confirmation; no resubmission
+    else Startable Planned sprint
+      handler -> entity : L2-023 start(at, actorId): Active; record start instant, start actor, initial scope
+      entity --> handler : Active sprint with immutable initial scope
+      handler -> db : L2-039 / L2-040 claim unique active slot; insert initial scope, board placements, success audit in one transaction
+      alt Active-slot unique violation (concurrent start, L2-041.2)
+        db --> handler : Roll back everything
+        handler --> ctrl : 409 naming the active sprint; neither sprint changes
+        ctrl --> client : ProblemDetails (active sprint exists)
+        client --> page : Blocked explanation; Close only, no retry
+      else Commit fails
+        db --> handler : Roll back business state and success audit
+        handler --> ctrl : Generic 500 with correlation ID
+        ctrl --> client : Failure; no successful-start claim
+        client --> page : Failed state with reference ID; sprint still planned; Start sprint retries
+      else Commit succeeds
+        db --> handler : Active sprint version
+        handler --> ctrl : Started sprint
+        ctrl --> client : 200 with sprint and version
+        client --> page : Open the sprint board; focus its heading
+        page --> actor : Announce that the sprint started
+      end
     end
   end
-end
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).

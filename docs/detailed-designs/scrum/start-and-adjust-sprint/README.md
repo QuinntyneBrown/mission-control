@@ -29,18 +29,31 @@ Commands, queries, handlers, and request validators live in Application feature 
 MediatR remains pinned to `12.5.0`. Microsoft.Extensions supplies dependency injection, Options, and Configuration.
 
 `StartSprintDialog` names the planned sprint, goal, dates, and scope; focus starts on Cancel.
-`StartSprintCommandHandler` locks the workspace and checks Scrum mode, Planned state, expected sprint version, and no active sprint.
+`StartSprintCommandHandler` locks the workspace, then reads its mode, the sprint state and version, and the active slot before any write.
+A missing sprint returns `404`; the dialog closes and the sprint list reloads.
+Kanban mode returns `409` (L2-027.3), and another active sprint returns `409` naming it (L2-023.2); both dialogs explain the next step and offer no retry.
+An already Active or Closed sprint returns `409` (L2-023.4). A stale version returns `409`, and the dialog reloads the sprint for a fresh confirmation.
 A SQL unique active-workspace key protects exclusivity; an `ActiveSprintSlot` row keyed by workspace can provide the invariant independent of filtered-index support.
-The selected provider determines the final constraint syntax before implementation.
-Start records `StartedAtUtc`, inserts immutable initial-scope IDs, and creates the sprint board's stable story placements in the same transaction.
+The selected provider determines the final constraint syntax before implementation. A concurrent start that loses on the key rolls back and receives the same `409`.
+Start records `StartedAtUtc` and the start actor (`StartedByUserId`, `StartedByName`).
+It inserts immutable initial-scope IDs and creates the sprint board's stable story placements in the same transaction.
 An empty sprint may start, matching the sprint-board mock; no minimum-story rule exists.
 
 `SprintScopeDialog` handles explicit active additions/removals. Additions use the planned-sprint eligibility and unique-membership rules.
-Removal preserves work status/tasks and returns the story to unallocated backlog.
-Each change records actor ID, UTC instant, affected story IDs, and Add/Remove in `SprintScopeChange`.
+Change scope on the sprint board and the Sprints tab opens it for additions.
+Remove on each unfinished sprint-board card opens it for that story; the work-item delete dialog's Remove from sprint action opens the same view.
+Only unfinished stories are added or removed (L2-023.3); Done stories stay in scope and their cards offer no Remove.
+Removal preserves work status, estimate, and tasks and returns the story to the unallocated backlog.
+Each change records actor ID, actor name, UTC instant, affected story ID and title, and Add/Remove in `SprintScopeChange`.
 Initial scope remains immutable, including stories removed later.
 The sprint version increments for scope and relevant story/task changes; closure checks it to detect stale decisions.
-Closed sprint or paused Kanban execution returns `409`; the interface explains the required mode or closure action.
+
+`ChangeSprintScopeCommandHandler` locks the workspace and reads the sprint state and version and every named story before any write.
+A missing sprint returns `404`. A Closed sprint returns `409` with its recorded closing actor and instant, so the dialog can explain who closed it; history stays unchanged.
+A sprint that is still Planned returns `409`; planned stories change through Plan stories.
+Done or foreign-workspace stories return `400` identifying each story. A story already in another open sprint returns `409` naming it.
+A stale version returns `409`; the dialog keeps the selection and reloads the current scope without resubmitting.
+An active sprint blocks a mode change (L2-027.2), so an active sprint's scope never meets Kanban mode.
 
 The authenticated API evaluates current SQL permissions before feature dispatch. Validation V maps invalid fields to `400`, absent authentication to `401`, forbidden access to `403`, missing records to `404`, and conflicts to `409`.
 Unexpected errors return a generic `500` with a correlation ID. Structured diagnostics exclude secrets and contact payloads.
@@ -60,7 +73,7 @@ Mock input and review references:
 
 - [Start sprint · Mission Control mock](../../../mocks/scrum/start-sprint-dialog.html); review states: `default`, `blocked-active`, `blocked-kanban`, `starting`, `failed`.
 - [Change sprint scope · Mission Control mock](../../../mocks/scrum/sprint-scope-dialog.html); review states: `add`, `remove`, `closed`, `saving`, `failed`.
-- [Sprint board · Mission Control mock](../../../mocks/scrum/sprint-board.html); review states: `default`, `scope-log`, `no-stories`, `no-active`, `move-failed`, `collaborator`, `loading`, `error`.
+- [Sprint board · Mission Control mock](../../../mocks/scrum/sprint-board.html); review states: `default`, `scope-log`, `no-stories`, `no-active`, `no-sprints`, `move-failed`, `collaborator`, `loading`, `error`.
 
 Implementation proceeds one behavior at a time using the linked Given-When-Then criteria. An API integration acceptance check first fails for the expected missing behavior.
 A Chromium Playwright check uses one page object per screen and a mock service bound through the same token. Tests express intent; page objects own selectors.

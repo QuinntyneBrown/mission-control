@@ -18,6 +18,7 @@ All named production types are proposed; the repository currently contains requi
 | Part | Responsibility and architectural home |
 | --- | --- |
 | `WorkItemDetailPage` | Routed page or dialog owned by `frontend/projects/mission-control`; composes the domain library and presentational components. |
+| `WorkItemDeleteDialog` | Application confirmation dialog in `frontend/projects/mission-control`, opened from the hierarchy and the detail page; composes `WorkItemView`. |
 | `WorkItemView` | Domain component in `frontend/projects/domain`; injects `WORK_ITEM_SERVICE` and holds feature state in signals. |
 | `IWorkItemService`, `WORK_ITEM_SERVICE` | Interface and token in `frontend/projects/api/work-item.service.contract.ts`; the consumer imports the contract only. |
 | `WorkItemService` | Production HTTP adapter in `api`; owns HTTP calls and observable-to-signal conversion. Composition binds a mock adapter for Chromium Playwright. |
@@ -29,9 +30,13 @@ Commands, queries, handlers, and request validators live in Application feature 
 MediatR remains pinned to `12.5.0`. Microsoft.Extensions supplies dependency injection, Options, and Configuration.
 
 `WorkItemDeleteDialog` names the item and initially focuses Cancel. It explains child and open-sprint blockers.
-`DeleteWorkItemCommandHandler` checks expected item version, children, and current open membership inside the workspace transaction.
+`DeleteWorkItemCommand` carries only the workspace and item IDs; a deletion carries no expected version.
+`DeleteWorkItemCommandHandler` checks children and current open sprint membership inside the workspace transaction, before deleting anything.
+An item with children returns `409` (`has-children` mock state). A story in a planned or active sprint returns `409` naming that sprint (`in-sprint` mock state).
+Both explain the next step and offer no retry. A missing item returns `404`; the dialog closes, the list reloads without the item, and an announcement says it was already deleted.
 Restrictive self-references and open-membership FKs protect races with child creation and sprint allocation.
-Only a leaf outside open membership is deleted; related live ordering rows are removed and affected positions/order versions updated atomically.
+Only a leaf outside open membership is deleted. Its sibling position is removed and the remaining siblings are compacted in the same transaction.
+Deleting a story also removes its board placements and story backlog position and compacts both orders in that transaction; every affected order version increments.
 Live views and totals refresh after commit. Closed `SprintStoryOutcome` rows keep independent recorded IDs/titles/statuses without a cascading FK to live work.
 Later live deletion leaves snapshots intact; the history view suppresses missing destination/story links.
 Collaborators see Delete unavailable with a written reason; direct requests receive `403`. Cancellation sends no deletion.

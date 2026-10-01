@@ -16,22 +16,34 @@ skinparam package {
 title Manual review - Review the standalone design language
 actor "Design reviewer" as reviewer
 box "Frontend - Standalone static artifact" #E0F2FE
-  participant "TokenCatalog" as catalog
-  participant "Static specimen / state" as example
-  participant "--mc- token stylesheet" as tokens
+  participant "ArtifactCatalog" as catalog
+  participant "Static specimen" as example
+  participant "--mc- token stylesheet\nand named breakpoints" as tokens
 end box
 box "Backend - Application runtime excluded" #D1FADF
   participant "No API or SQL dependency" as excluded
 end box
-reviewer -> catalog : Open independent catalog / offline file
-catalog -> example : Select named specimen or workflow state
-example -> tokens : Read visual roles
+reviewer -> catalog : ReviewDesignLanguage: open the built site independently
+catalog -> example : Select token family or control specimen
+example -> tokens : Read visual roles and breakpoint names
 tokens --> example : Token values
-example --> catalog : Static rendering; visible artifact label for mocks
-catalog --> reviewer : L2-047 review at required compact/medium/expanded widths
-alt Missing coverage / feedback or unreadable layout
-  reviewer -> catalog : Record review issue; revise artifact sources
-  catalog --> reviewer : Revised specimen for manual review
+example --> catalog : Static rendering
+catalog --> reviewer : L2-047 review across profile R widths (320-1920)
+alt Site needs the API, the Angular app, or a network call to render
+  reviewer -> catalog : Record L2-047.1 issue; remove the runtime dependency
+  catalog --> reviewer : Rebuilt standalone site for re-review
+else Token family, shared prefix, value, or example missing
+  reviewer -> catalog : Record L2-047.2 issue; add the role to the authoritative stylesheet
+  catalog --> reviewer : Frontend and mocks mirror the added token
+else Specimen unreadable or overlapping at a profile R width
+  reviewer -> catalog : Record L2-047.3 issue with the failing width
+  catalog --> reviewer : Specimen revised with named breakpoints and tokens
+else Contrast, status cue, or touch size below L2-035
+  reviewer -> catalog : Record issue; revise the token value
+  catalog --> reviewer : Mirrors updated; recheck contrast and size
+else Tests or ATDD introduced for the artifact
+  reviewer -> catalog : Record L2-047.4 issue; remove them
+  catalog --> reviewer : Artifact remains manual-review only
 else Review criteria satisfied
   reviewer -> catalog : Record manual review outcome
   catalog --> reviewer : Artifact remains static; no ATDD or tests

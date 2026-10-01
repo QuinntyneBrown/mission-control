@@ -20,6 +20,8 @@ All named production types are proposed; the repository currently contains requi
 | Part | Responsibility and architectural home |
 | --- | --- |
 | `WorkHierarchyPage` | Routed page or dialog owned by `frontend/projects/mission-control`; composes the domain library and presentational components. |
+| `WorkListPage`, `WorkItemDetailPage` | Routed pages in `frontend/projects/mission-control` for the filtered list and item detail; compose `WorkItemView`. |
+| `WorkItemFormDialog` | Application dialog in `frontend/projects/mission-control` for adding and editing work; composes `WorkItemView`. |
 | `WorkItemView` | Domain component in `frontend/projects/domain`; injects `WORK_ITEM_SERVICE` and holds feature state in signals. |
 | `IWorkItemService`, `WORK_ITEM_SERVICE` | Interface and token in `frontend/projects/api/work-item.service.contract.ts`; the consumer imports the contract only. |
 | `WorkItemService` | Production HTTP adapter in `api`; owns HTTP calls and observable-to-signal conversion. Composition binds a mock adapter for Chromium Playwright. |
@@ -33,13 +35,18 @@ MediatR remains pinned to `12.5.0`. Microsoft.Extensions supplies dependency inj
 `WorkHierarchyPage`, `WorkListPage`, and `WorkItemDetailPage` own `/projects/:id/work`, `/projects/:id/work-list`, and `/projects/:id/work/:itemId`.
 `WorkItemFormDialog` preselects the launching parent and offers only valid same-workspace candidates.
 `CreateWorkItemCommand` includes type, workspace, parent, required 1–200-character title, and optional description up to 10,000 characters.
-New items have To Do status. Optional assignee/date/story-estimate fields use the edit-work validation rules.
+New items have To Do status and are appended after their parent's existing children; initiatives are appended after the workspace's initiatives.
+Creating a story also appends it to the story backlog and inserts its Kanban `BoardPlacement` at the bottom of To Do in the same transaction, in either delivery mode.
+Optional assignee/date/story-estimate fields use the edit-work validation rules. An inactive or unknown chosen assignee returns `400` with an assignee field error (`rejected` mock state).
 Initiatives have no parent; epics reference initiatives, stories reference epics, and tasks reference stories.
 
 A self-referencing SQL foreign key `(WorkspaceId, ParentId, RequiredParentType)` targets `(WorkspaceId, Id, Type)`.
 A row check derives the required parent type from item type and restricts null parent to initiatives.
 The combined constraints enforce parent type and same-workspace links under races; no cycle is possible through the fixed level progression.
-Parent deletion uses restrictive foreign keys. A competing child create or parent delete returns a readable reference/conflict error rather than an orphan.
+Child creation and parent deletion take the same workspace transaction lock, so they are serialized.
+A parent deleted first makes the create return `400` with a parent field error; the form keeps every value and drops that parent from its choices (`parent-deleted` mock state).
+A child created first makes the parent deletion return `409` because children exist. Restrictive foreign keys back both checks, so no orphan can exist.
+A missing workspace returns `404`, and the page shows a not-found state linking to Projects.
 Details project ancestor links, status, assignee, optional unset labels, and bounded children. Parent paths are computed from stored links rather than duplicated in descendants.
 
 Hierarchy children load on expansion in batches of at most 100, defaulting to 25. Full child counts come from persisted records.
@@ -68,7 +75,7 @@ Mock input and review references:
 - [Work hierarchy · Mission Control mock](../../../mocks/work/work-hierarchy.html); review states: `default`, `move-menu`, `collaborator`, `empty`, `large`, `batch-error`, `loading`, `error`.
 - [Work list · Mission Control mock](../../../mocks/work/work-list.html); review states: `default`, `zero-results`, `loading`, `error`.
 - [Work item detail · Mission Control mock](../../../mocks/work/work-item-detail.html); review states: `default`, `initiative`, `epic`, `task`, `unset`, `inactive-assignee`, `collaborator`, `not-found`, `loading`, `error`.
-- [Add or edit work item · Mission Control mock](../../../mocks/work/work-item-form-dialog.html); review states: `create-initiative`, `create-epic`, `create-story`, `create-task`, `edit`, `validation`, `rejected`, `parent-deleted`, `saving`, `failed`, `conflict`.
+- [Add or edit work item · Mission Control mock](../../../mocks/work/work-item-form-dialog.html); review states: `create-initiative`, `create-epic`, `create-story`, `create-task`, `edit`, `edit-inactive-assignee`, `validation`, `rejected`, `parent-deleted`, `saving`, `failed`, `conflict`, `conflict-reloaded`.
 
 Implementation proceeds one behavior at a time using the linked Given-When-Then criteria. An API integration acceptance check first fails for the expected missing behavior.
 A Chromium Playwright check uses one page object per screen and a mock service bound through the same token. Tests express intent; page objects own selectors.

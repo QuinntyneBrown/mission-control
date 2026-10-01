@@ -14,34 +14,39 @@ skinparam package {
   BackgroundColor #F9FAFB
 }
 title Behavior - Observe liveness and readiness
-actor "Deployment operator" as actor
-box "Frontend - Operations health client" #E0F2FE
-  participant "Initialization / health client" as page
-end box
-box "Backend - MissionControl.Api" #D1FADF
-  participant "Host / health endpoints" as ctrl
+actor "Deployment operator or orchestrator" as actor
+box "Backend - MissionControl.Api host" #D1FADF
+  participant "HealthController" as ctrl
 end box
 box "Backend - MissionControl.Application and Domain" #ECFDF3
-  participant "EnsureAdministrator / EnsureCityLead handlers" as handler
-  participant "Account / contact / readiness state" as entity
+  participant "GetReadinessQueryHandler" as handler
+  participant "InitializationStatus" as status
 end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
-  participant "DatabaseInitializer" as init
   database "Mission Control SQL" as db
 end box
-actor -> page : Run initialization / request health
-page -> ctrl : Deployment startup / health probe
-alt Liveness probe
-  ctrl --> page : L2-042 process alive: 200; independent of SQL
-else Readiness probe
-  ctrl -> init : Read required initialization status
-  init --> ctrl : Required seed result
-  ctrl -> db : Check SQL access and schema compatibility
-  db --> ctrl : Available / unavailable
-  alt All readiness checks succeed
-    ctrl --> page : 200 ready
-  else Required initialization, schema, or SQL unavailable
-    ctrl --> page : 503 unavailable; no secret details
+alt GET /health/live
+  actor -> ctrl : Liveness probe
+  ctrl --> actor : L2-042.4 200 while the process runs; no SQL dependency
+else GET /health/ready
+  actor -> ctrl : Readiness probe
+  ctrl -> handler : Send GetReadinessQuery through MediatR 12.5.0
+  handler -> status : Read InitializationState
+  status --> handler : Initializing, Ready or Failed
+  alt Initializing or Failed
+    handler --> ctrl : Not ready
+    ctrl --> actor : 503; no secret, connection string or exception detail
+  else Ready
+    handler -> db : Check SQL access and compatible schema version
+    alt SQL unavailable or schema incompatible
+      db --> handler : Failure
+      handler --> ctrl : Not ready; diagnostic with correlation ID
+      ctrl --> actor : 503; no secret, connection string or exception detail
+    else Available and compatible
+      db --> handler : OK
+      handler --> ctrl : Ready
+      ctrl --> actor : 200 ready
+    end
   end
 end
 @enduml

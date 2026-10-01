@@ -23,13 +23,17 @@ class LeadDirectoryPage {
   +routeContext: Signal<RouteContext>
   +openDialog(): void
 }
+class LeadDetailPage {
+  +routeContext: Signal<RouteContext>
+  +openDialog(): void
+}
 class LeadView {
   +state: Signal<FeatureState>
   +submit(): void
 }
 interface ILeadService {
-  +search(request: ListLeadsQuery): Promise<FeatureResult>
-  +read(request: GetLeadQuery): Promise<FeatureResult>
+  +search(request: ListLeadsQuery): Promise<LeadDirectoryResult>
+  +read(request: GetLeadQuery): Promise<LeadDetailResult>
 }
 class LeadService {
   -http: HttpClient
@@ -42,9 +46,13 @@ class LeadContact {
   +firstName: string
   +lastName: string
   +email: string
+  +normalizedEmail: string
   +phone: string?
   +category: LeadCategory
   +version: long
+}
+class InitializationOptions {
+  +designatedEmail: string
 }
 interface IMissionControlDataSession {
   +query(specification): Task<ReadResult>
@@ -54,6 +62,7 @@ class MissionControlDataSession {
   -connection: DbConnection
 }
 LeadDirectoryPage --> LeadView : composes
+LeadDetailPage --> LeadView : composes
 LeadView ..> ILeadService : inject token
 ILeadService <|.. LeadService
 IMissionControlDataSession <|.. MissionControlDataSession
@@ -64,22 +73,74 @@ class ListLeadsQuery {
   +pageSize: int
 }
 class ListLeadsQueryHandler {
-  +handle(request: ListLeadsQuery): Task<FeatureResult>
+  +handle(request: ListLeadsQuery): Task<LeadDirectoryResult>
 }
+class LeadSummary {
+  +id: Guid
+  +firstName: string
+  +lastName: string
+  +email: string
+  +phone: string?
+  +category: LeadCategory
+  +isCityLead: bool
+}
+class CategoryTotal {
+  +category: LeadCategory
+  +count: int
+}
+class LeadDirectoryResult {
+  +items: LeadSummary[]
+  +totalCount: int
+  +page: int
+  +pageSize: int
+  +categoryTotals: CategoryTotal[5]
+}
+note bottom of LeadDirectoryResult
+  categoryTotals: all five categories, zero-filled,
+  over all persisted leads; search and category
+  do not change them.
+end note
+LeadDirectoryResult *-- LeadSummary
+LeadDirectoryResult *-- CategoryTotal
 LeadsController ..> ListLeadsQuery : dispatches
 ListLeadsQueryHandler ..> ListLeadsQuery : handles
-ListLeadsQueryHandler --> LeadContact : loads / applies
+ListLeadsQueryHandler --> LeadContact : reads
+ListLeadsQueryHandler ..> LeadDirectoryResult : returns
 ListLeadsQueryHandler ..> IMissionControlDataSession : uses
+ListLeadsQueryHandler ..> InitializationOptions : IOptions; City Lead email
 class GetLeadQuery {
   +id: Guid
 }
 class GetLeadQueryHandler {
-  +handle(request: GetLeadQuery): Task<FeatureResult>
+  +handle(request: GetLeadQuery): Task<LeadDetailResult>
 }
+class ResponsibleWorkspace {
+  +id: Guid
+  +name: string
+  +mode: DeliveryMode
+}
+class LeadDetailResult {
+  +id: Guid
+  +firstName: string
+  +lastName: string
+  +email: string
+  +phone: string?
+  +category: LeadCategory
+  +version: long
+  +isCityLead: bool
+  +responsibleWorkspaces: ResponsibleWorkspace[]
+}
+note bottom of LeadDetailResult
+  isCityLead: category is City and normalized email
+  equals the designated email; never an account role.
+end note
+LeadDetailResult *-- ResponsibleWorkspace
 LeadsController ..> GetLeadQuery : dispatches
 GetLeadQueryHandler ..> GetLeadQuery : handles
-GetLeadQueryHandler --> LeadContact : loads / applies
+GetLeadQueryHandler --> LeadContact : reads
+GetLeadQueryHandler ..> LeadDetailResult : returns; 404 when missing
 GetLeadQueryHandler ..> IMissionControlDataSession : uses
+GetLeadQueryHandler ..> InitializationOptions : IOptions; City Lead email
 
 enum LeadCategory {
   Create

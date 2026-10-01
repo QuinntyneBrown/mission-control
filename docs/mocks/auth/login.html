@@ -42,8 +42,8 @@
     <p class="mock-note" data-when="validation" hidden>Client-side checks run on submit. Focus moves to the error summary; each item links to its field. The email is kept; the password is never trimmed.</p>
     <p class="mock-note" data-when="submitting" hidden>The button shows progress and ignores repeat clicks, so only one request is sent.</p>
     <p class="mock-note" data-when="invalid" hidden>Unknown email, wrong password, inactive account, and a lead contact without an account all show this same message. The password field is cleared; the email is kept.</p>
-    <p class="mock-note" data-when="throttled" hidden>After five failed attempts for an email within 15 minutes, sign-in pauses for 15 minutes. Unknown emails are throttled the same way, so the message never confirms that an account exists.</p>
-    <p class="mock-note" data-when="session-ended" hidden>Shown after the 30-minute token expires, after a reload, or when the account's access changed. No contact or work data is shown until sign-in succeeds.</p>
+    <p class="mock-note" data-when="throttled" hidden>After five failed attempts for an email within 15 minutes, sign-in pauses for 15 minutes. The time shown comes from the 429 response's retry timing, the remaining pause, so a later attempt shows less time left. Unknown emails are throttled the same way, so the message never confirms that an account exists.</p>
+    <p class="mock-note" data-when="session-ended" hidden>Shown after the 30-minute token expires, after a reload, or when the API answers 401 because the account was deactivated or its password was replaced (credential version changed). A role change instead answers 403 and shows the "Your access changed" toast. No contact or work data is shown until sign-in succeeds.</p>
     <p class="mock-note" data-when="session-unsaved" hidden>Shown when the session ended while a form had unsaved input. Nothing is reported as saved.</p>
     <p class="mock-note" data-when="deep-link" hidden>Opened from a protected link while signed out. The message does not name the record; after sign-in the requested page opens if the account can see it.</p>
     <p class="mock-note" data-when="error" hidden>Unexpected server failure. The reference ID matches the server's diagnostic record and can be copied for support.</p>
@@ -103,7 +103,7 @@
             <span class="mc-icon mc-icon--clock" aria-hidden="true"></span>
             <div class="mc-alert__body">
               <p class="mc-alert__title">Too many sign-in attempts</p>
-              <p class="mc-alert__text">For your security, sign-in for this email is paused. Try again in 15 minutes, after 3:42 p.m.</p>
+              <p class="mc-alert__text">For your security, sign-in for this email is paused. Try again after 3:42 p.m. (in about 12 minutes).</p>
             </div>
           </div>
           <div class="mc-alert mc-alert--danger" data-when="error" hidden>

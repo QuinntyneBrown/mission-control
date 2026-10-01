@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Projects · Mission Control mock</title>
-  <meta name="description" content="Project list with mode, responsible lead, story progress, and active sprint, plus collaborator, empty, loading, and error states.">
+  <meta name="description" content="Project list with mode, responsible lead, story progress, and active sprint, plus collaborator, paged, empty, loading, and error states.">
   <meta name="mock-area" content="Projects">
   <meta name="mock-requirements" content="L2-005.4, L2-014, L2-028, L2-032, L2-043.4, L2-045">
   <link rel="stylesheet" href="../assets/tokens.css">
@@ -23,6 +23,7 @@
         <select data-mock-state>
           <option value="default">Administrator</option>
           <option value="collaborator">Collaborator</option>
+          <option value="many">Many projects (page 1 of 3)</option>
           <option value="empty-admin">Empty (administrator)</option>
           <option value="empty-collaborator">Empty (collaborator)</option>
           <option value="loading">Loading</option>
@@ -36,6 +37,7 @@
   <div class="mock-notes">
     <p class="mock-note" data-when="default">Projects are sorted by name, 25 per page; three fit on one page. Each card links to the project overview. "New project" is administrator-only.</p>
     <p class="mock-note" data-when="collaborator" hidden>Collaborators open projects and work in them (add and update work, run boards and sprints) but cannot add projects or change project settings.</p>
+    <p class="mock-note" data-when="many" hidden>52 projects: the first 25 by name (then ID) fill page 1, so Prayer Wall App and Youth Coding Night fall on page 2. The total, story counts, and sprint summaries come from persisted records, not this page. Previous is disabled on page 1; on phones the pager reads "Page 1 of 3".</p>
     <p class="mock-note" data-when="empty-admin" hidden>First run: the empty state explains what a project holds and offers the next permitted action.</p>
     <p class="mock-note" data-when="empty-collaborator" hidden>Collaborators are told who can add a project instead of being shown an action they can't take.</p>
     <p class="mock-note" data-when="loading" hidden>Skeleton cards hold the layout while projects load. Screen readers hear "Loading projects".</p>
@@ -132,10 +134,85 @@
           <div class="mc-results-meta" data-when="default collaborator">
             <span>Showing 3 of 3 projects</span><span>Sorted by name</span>
           </div>
+          <div class="mc-results-meta" data-when="many" hidden>
+            <span>Showing 1–25 of 52 projects</span><span>Sorted by name</span>
+          </div>
           <p class="mc-visually-hidden" data-when="loading" hidden>Loading projects</p>
         </div>
 
-        <div class="mc-grid mc-grid--fit" data-when="default collaborator">
+        <div class="mc-grid mc-grid--fit" data-when="default collaborator many">
+              <article class="mc-card mc-stack" aria-labelledby="many-accessible-forms-clinic-title" data-when="many" hidden>
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
+                </div>
+                <h2 class="mc-h3" id="many-accessible-forms-clinic-title"><a class="mc-link-quiet" href="project-overview.html#state=kanban">Accessible Forms Clinic</a></h2>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Amina Yusuf</a></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">6 of 10 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-60"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">Continuous flow · no sprints</span><a href="../kanban/kanban-board.html">Open board</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="many-advent-devotional-app-title" data-when="many" hidden>
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
+                  <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>Sprint 4 active</span>
+                </div>
+                <h2 class="mc-h3" id="many-advent-devotional-app-title"><a class="mc-link-quiet" href="project-overview.html#state=default">Advent Devotional App</a></h2>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Samuel Adeyemi</a></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">5 of 12 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-42"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">Sprint 4 ends Oct 14, 2026</span><a href="../scrum/sprint-board.html">Open sprint board</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="many-ai-ethics-reading-group-title" data-when="many" hidden>
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
+                </div>
+                <h2 class="mc-h3" id="many-ai-ethics-reading-group-title"><a class="mc-link-quiet" href="project-overview.html#state=kanban">AI Ethics Reading Group</a></h2>
+                <p class="mc-text-sm">Responsible lead: <span class="mc-unset">Not set</span></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">3 of 4 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-75"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">Continuous flow · no sprints</span><a href="../kanban/kanban-board.html">Open board</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="many-bible-reading-plan-tracker-title" data-when="many" hidden>
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
+                </div>
+                <h2 class="mc-h3" id="many-bible-reading-plan-tracker-title"><a class="mc-link-quiet" href="project-overview.html#state=default">Bible Reading Plan Tracker</a></h2>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Ruth Tan</a></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">8 of 10 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-80"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">No active sprint</span><a href="../scrum/sprints.html">Open sprints</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="many-campus-ministry-directory-title" data-when="many" hidden>
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
+                  <span class="mc-pill"><span class="mc-icon mc-icon--history" aria-hidden="true"></span>Sprints paused</span>
+                </div>
+                <h2 class="mc-h3" id="many-campus-ministry-directory-title"><a class="mc-link-quiet" href="project-overview.html#state=kanban-preserved">Campus Ministry Directory</a></h2>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Chidi Eze</a></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">4 of 10 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-40"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">Sprint plans and history kept</span><a href="../kanban/kanban-board.html#state=preserved">Open board</a>
+                </div>
+              </article>
               <article class="mc-card mc-stack" aria-labelledby="kanban-title">
                 <div class="mc-cluster mc-cluster--between">
                   <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
@@ -149,6 +226,20 @@
                 <div class="mc-stack mc-stack--xs">
                   <span class="mc-text-sm mc-strong">7 of 16 stories done</span>
                   <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-44"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">Continuous flow · no sprints</span><a href="../kanban/kanban-board.html">Open board</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="many-community-fridge-map-title" data-when="many" hidden>
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
+                </div>
+                <h2 class="mc-h3" id="many-community-fridge-map-title"><a class="mc-link-quiet" href="project-overview.html#state=kanban">Community Fridge Map</a></h2>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Linh Nguyen</a></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">2 of 8 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-25"></span></span></div>
                 </div>
                 <div class="mc-card__footer">
                   <span class="mc-muted">Continuous flow · no sprints</span><a href="../kanban/kanban-board.html">Open board</a>
@@ -172,7 +263,252 @@
                   <span class="mc-muted">Sprint 8 ends Oct 9, 2026</span><a href="../scrum/sprint-board.html">Open sprint board</a>
                 </div>
               </article>
-              <article class="mc-card mc-stack" aria-labelledby="kanban-preserved-title">
+              <article class="mc-card mc-stack" aria-labelledby="many-day-camp-registration-title" data-when="many" hidden>
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
+                  <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>Sprint 2 active</span>
+                </div>
+                <h2 class="mc-h3" id="many-day-camp-registration-title"><a class="mc-link-quiet" href="project-overview.html#state=default">Day Camp Registration</a></h2>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Imani Clarke</a></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">3 of 9 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-33"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">Sprint 2 ends Oct 16, 2026</span><a href="../scrum/sprint-board.html">Open sprint board</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="many-digital-literacy-for-seniors-title" data-when="many" hidden>
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
+                </div>
+                <h2 class="mc-h3" id="many-digital-literacy-for-seniors-title"><a class="mc-link-quiet" href="project-overview.html#state=kanban">Digital Literacy for Seniors</a></h2>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Wei Chen</a></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">9 of 12 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-75"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">Continuous flow · no sprints</span><a href="../kanban/kanban-board.html">Open board</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="many-donation-receipt-tool-title" data-when="many" hidden>
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
+                </div>
+                <h2 class="mc-h3" id="many-donation-receipt-tool-title"><a class="mc-link-quiet" href="project-overview.html#state=kanban">Donation Receipt Tool</a></h2>
+                <p class="mc-text-sm">Responsible lead: <span class="mc-unset">Not set</span></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">7 of 7 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-full"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">Continuous flow · no sprints</span><a href="../kanban/kanban-board.html">Open board</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="many-food-bank-volunteer-scheduler-title" data-when="many" hidden>
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
+                  <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>Sprint 6 active</span>
+                </div>
+                <h2 class="mc-h3" id="many-food-bank-volunteer-scheduler-title"><a class="mc-link-quiet" href="project-overview.html#state=default">Food Bank Volunteer Scheduler</a></h2>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Mateo Quispe</a></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">12 of 20 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-60"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">Sprint 6 ends Oct 2, 2026</span><a href="../scrum/sprint-board.html">Open sprint board</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="many-grant-application-tracker-title" data-when="many" hidden>
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
+                </div>
+                <h2 class="mc-h3" id="many-grant-application-tracker-title"><a class="mc-link-quiet" href="project-overview.html#state=kanban">Grant Application Tracker</a></h2>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Olivia Wright</a></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">4 of 9 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-44"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">Continuous flow · no sprints</span><a href="../kanban/kanban-board.html">Open board</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="many-hymn-lyrics-archive-title" data-when="many" hidden>
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
+                  <span class="mc-pill"><span class="mc-icon mc-icon--history" aria-hidden="true"></span>Sprints paused</span>
+                </div>
+                <h2 class="mc-h3" id="many-hymn-lyrics-archive-title"><a class="mc-link-quiet" href="project-overview.html#state=kanban-preserved">Hymn Lyrics Archive</a></h2>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Nils Bergström</a></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">6 of 13 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-46"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">Sprint plans and history kept</span><a href="../kanban/kanban-board.html#state=preserved">Open board</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="many-immigrant-welcome-guide-title" data-when="many" hidden>
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
+                  <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>Sprint 3 active</span>
+                </div>
+                <h2 class="mc-h3" id="many-immigrant-welcome-guide-title"><a class="mc-link-quiet" href="project-overview.html#state=default">Immigrant Welcome Guide</a></h2>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Farah Rahman</a></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">4 of 12 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-33"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">Sprint 3 ends Oct 7, 2026</span><a href="../scrum/sprint-board.html">Open sprint board</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="many-interfaith-calendar-title" data-when="many" hidden>
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
+                </div>
+                <h2 class="mc-h3" id="many-interfaith-calendar-title"><a class="mc-link-quiet" href="project-overview.html#state=kanban">Interfaith Calendar</a></h2>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Julien Moreau</a></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">2 of 5 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-40"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">Continuous flow · no sprints</span><a href="../kanban/kanban-board.html">Open board</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="many-job-board-for-newcomers-title" data-when="many" hidden>
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
+                </div>
+                <h2 class="mc-h3" id="many-job-board-for-newcomers-title"><a class="mc-link-quiet" href="project-overview.html#state=default">Job Board for Newcomers</a></h2>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Bilal Usman</a></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">3 of 12 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-25"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">No active sprint</span><a href="../scrum/sprints.html">Open sprints</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="many-kids-ministry-check-in-title" data-when="many" hidden>
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
+                  <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>Sprint 5 active</span>
+                </div>
+                <h2 class="mc-h3" id="many-kids-ministry-check-in-title"><a class="mc-link-quiet" href="project-overview.html#state=default">Kids Ministry Check-in</a></h2>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Yui Nakamura</a></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">8 of 18 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-44"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">Sprint 5 ends Oct 13, 2026</span><a href="../scrum/sprint-board.html">Open sprint board</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="many-lending-library-app-title" data-when="many" hidden>
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
+                </div>
+                <h2 class="mc-h3" id="many-lending-library-app-title"><a class="mc-link-quiet" href="project-overview.html#state=kanban">Lending Library App</a></h2>
+                <p class="mc-text-sm">Responsible lead: <span class="mc-unset">Not set</span></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">12 of 15 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-80"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">Continuous flow · no sprints</span><a href="../kanban/kanban-board.html">Open board</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="many-mentor-match-title" data-when="many" hidden>
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
+                  <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>Sprint 1 active</span>
+                </div>
+                <h2 class="mc-h3" id="many-mentor-match-title"><a class="mc-link-quiet" href="project-overview.html#state=default">Mentor Match</a></h2>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Gabriel Reyes</a></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">0 of 6 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">Sprint 1 ends Oct 9, 2026</span><a href="../scrum/sprint-board.html">Open sprint board</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="many-ministry-podcast-pipeline-title" data-when="many" hidden>
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
+                </div>
+                <h2 class="mc-h3" id="many-ministry-podcast-pipeline-title"><a class="mc-link-quiet" href="project-overview.html#state=kanban">Ministry Podcast Pipeline</a></h2>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Anika Ghosh</a></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">9 of 15 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-60"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">Continuous flow · no sprints</span><a href="../kanban/kanban-board.html">Open board</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="many-neighbourhood-needs-survey-title" data-when="many" hidden>
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
+                </div>
+                <h2 class="mc-h3" id="many-neighbourhood-needs-survey-title"><a class="mc-link-quiet" href="project-overview.html#state=kanban">Neighbourhood Needs Survey</a></h2>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Camille Dubois</a></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">6 of 8 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-75"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">Continuous flow · no sprints</span><a href="../kanban/kanban-board.html">Open board</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="many-newcomer-housing-board-title" data-when="many" hidden>
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
+                </div>
+                <h2 class="mc-h3" id="many-newcomer-housing-board-title"><a class="mc-link-quiet" href="project-overview.html#state=default">Newcomer Housing Board</a></h2>
+                <p class="mc-text-sm">Responsible lead: <span class="mc-unset">Not set</span></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">5 of 20 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-25"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">No active sprint</span><a href="../scrum/sprints.html">Open sprints</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="many-open-data-workshop-title" data-when="many" hidden>
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
+                </div>
+                <h2 class="mc-h3" id="many-open-data-workshop-title"><a class="mc-link-quiet" href="project-overview.html#state=kanban">Open Data Workshop</a></h2>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Piotr Kowalski</a></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">10 of 10 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-full"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">Continuous flow · no sprints</span><a href="../kanban/kanban-board.html">Open board</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="many-parish-newsletter-builder-title" data-when="many" hidden>
+                <div class="mc-cluster mc-cluster--between">
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
+                  <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>Sprint 2 active</span>
+                </div>
+                <h2 class="mc-h3" id="many-parish-newsletter-builder-title"><a class="mc-link-quiet" href="project-overview.html#state=default">Parish Newsletter Builder</a></h2>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Dmitri Petrov</a></p>
+                <div class="mc-stack mc-stack--xs">
+                  <span class="mc-text-sm mc-strong">6 of 18 stories done</span>
+                  <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-33"></span></span></div>
+                </div>
+                <div class="mc-card__footer">
+                  <span class="mc-muted">Sprint 2 ends Oct 15, 2026</span><a href="../scrum/sprint-board.html">Open sprint board</a>
+                </div>
+              </article>
+              <article class="mc-card mc-stack" aria-labelledby="kanban-preserved-title" data-unless="many">
                 <div class="mc-cluster mc-cluster--between">
                   <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
                   <span class="mc-pill"><span class="mc-icon mc-icon--history" aria-hidden="true"></span>Sprints paused</span>
@@ -191,6 +527,24 @@
                 </div>
               </article>
         </div>
+
+        <nav class="mc-pagination" aria-label="Project pages" data-when="many" hidden>
+          <span class="mc-show-compact">Page 1 of 3</span>
+          <span class="mc-hide-compact">25 per page</span>
+          <div class="mc-cluster mc-cluster--sm">
+            <button class="mc-button mc-button--sm" type="button" disabled>
+              <span class="mc-icon mc-icon--chevron-left" aria-hidden="true"></span>Previous
+            </button>
+            <ol class="mc-pagination__pages mc-hide-compact">
+              <li><a class="mc-pagination__page" href="#state=many" aria-current="page" aria-label="Page 1">1</a></li>
+              <li><a class="mc-pagination__page" href="#state=many" aria-label="Page 2">2</a></li>
+              <li><a class="mc-pagination__page" href="#state=many" aria-label="Page 3">3</a></li>
+            </ol>
+            <button class="mc-button mc-button--sm" type="button">
+              Next<span class="mc-icon mc-icon--chevron-right" aria-hidden="true"></span>
+            </button>
+          </div>
+        </nav>
 
         <div class="mc-empty" data-when="empty-admin empty-collaborator" hidden>
           <span class="mc-empty__icon"><span class="mc-icon mc-icon--folder mc-icon--lg" aria-hidden="true"></span></span>

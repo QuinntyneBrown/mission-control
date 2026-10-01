@@ -23,6 +23,11 @@ class WorkItemDetailPage {
   +routeContext: Signal<RouteContext>
   +openDialog(): void
 }
+class WorkItemDeleteDialog {
+  +itemName: string
+  +blocker: Signal<DeletionBlocker?>
+  +confirm(): void
+}
 class WorkItemView {
   +state: Signal<FeatureState>
   +submit(): void
@@ -60,14 +65,14 @@ class MissionControlDataSession {
   -connection: DbConnection
 }
 WorkItemDetailPage --> WorkItemView : composes
+WorkItemDetailPage ..> WorkItemDeleteDialog : opens
+WorkItemDeleteDialog --> WorkItemView : composes
 WorkItemView ..> IWorkItemService : inject token
 IWorkItemService <|.. WorkItemService
 IMissionControlDataSession <|.. MissionControlDataSession
 class DeleteWorkItemCommand {
   +workspaceId: Guid
   +itemId: Guid
-  +expectedVersion: long
-  +expectedOrderVersion: long
 }
 class DeleteWorkItemCommandHandler {
   +handle(request: DeleteWorkItemCommand): Task<FeatureResult>

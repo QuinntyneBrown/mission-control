@@ -17,6 +17,7 @@ title Behavior - Confirm current unfinished-task condition
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
   participant "WorkItemDetailPage / WorkItemView" as page
+  participant "UnfinishedTasksDialog" as dialog
   participant "IWorkItemService / WorkItemService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,52 +32,78 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Confirm current unfinished-task condition
-page -> client : Build typed CompleteStoryCommand
+actor -> page : Set story status to Done (detail status control)
+page -> client : Build typed CompleteStoryCommand (expected story version; no condition on first attempt)
 client -> access : PUT /api/workspaces/{id}/work-items/{storyId}/completion
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
+alt Missing, invalid or expired JWT; deactivated account
+  access --> client : 401; audit denial without payloads
+  client --> page : Keep saved status; clear session; sign in with the story as return route
+else Authenticated without permission to update work
+  access --> client : 403; audit denial without payloads
+  client --> page : Keep saved status; explain that the change is not permitted
 else Authorized
   access -> ctrl : Authorized request
-ctrl -> validation : Send CompleteStoryCommand through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
-alt Invalid request
-  validation --> ctrl : 400 field errors; no business mutation
-  ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
-else Valid request
-  validation -> handler : Handle CompleteStoryCommand
-  handler -> db : Lock workspace/story; read current unfinished task count/revision
-  db --> handler : Current completion condition
-  handler -> entity : L2-021 require explicit matching confirmation if count > 0
-  entity --> handler : Done permitted; child task statuses unchanged
-  handler -> db : Update story and live board placements only
-  db --> handler : SQL result / current records
-
-  alt Unconfirmed unfinished tasks or changed completion condition
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    handler -> db : L2-039 / L2-040 commit business state and success audit together
-    alt Commit fails
-      db --> handler : Roll back business state and success audit
-      handler --> ctrl : Generic 500 with correlation ID
-      ctrl --> client : Failure; no successful-save claim
-      client --> page : Keep draft / restore saved placement
-    else Commit succeeds
-      db --> handler : New committed version
-    handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+  ctrl -> validation : Send CompleteStoryCommand through MediatR 12.5.0
+  validation -> validation : Validate identifiers, version and condition shape
+  alt Malformed identifiers, version or condition
+    validation --> ctrl : 400 field errors; nothing read or changed
+    ctrl --> client : Validation ProblemDetails
+    client --> page : Keep saved status; show the message by the status control
+  else Valid request
+    validation -> handler : Handle CompleteStoryCommand
+    handler -> db : Lock workspace/story; read status, version, unfinished task count and task revision
+    db --> handler : Current story and completion condition
+    alt Workspace or story not found
+      handler --> ctrl : 404; nothing changed
+      ctrl --> client : ProblemDetails (not found)
+      client --> page : Close any dialog; not-found state with navigation back to Work
+    else Not a story
+      handler --> ctrl : 400 only stories take a completion; nothing changed
+      ctrl --> client : Validation ProblemDetails
+      client --> page : Keep saved status; show the message by the status control
+    else Stale story version
+      handler --> ctrl : 409 stale version; nothing changed
+      ctrl --> client : ProblemDetails (stale version)
+      client --> page : Close any dialog; keep the attempted status; read the latest story once for comparison
+    else Unfinished tasks; condition absent or no longer current
+      handler -> entity : L2-021 compare sent condition with current count and task revision
+      entity --> handler : Confirmation required
+      handler --> ctrl : 409 unfinished-tasks with count and StoryCompletionCondition; nothing changed
+      ctrl --> client : ProblemDetails (unfinished-tasks)
+      client --> page : Hold returned condition
+      page -> dialog : Open with the returned count (or show server-count if already open); focus Keep in progress
+      alt Mark story Done
+        dialog --> page : Confirmed
+        page -> client : Resubmit the same CompleteStoryCommand with the returned condition
+        note right of client : Re-enters this flow; a changed count returns a new 409 (server-count)
+      else Keep in progress
+        dialog --> page : Kept
+        page -> page : Send no request; status unchanged; focus returns to the status control
+      end
+    else No unfinished tasks, or condition still current
+      handler -> entity : L2-021 Done permitted; child task statuses unchanged
+      entity --> handler : Story Done
+      handler -> db : L2-039 / L2-040 update story, live board placements and success audit in one transaction
+      alt Commit fails
+        db --> handler : Roll back business state and success audit
+        handler --> ctrl : Generic 500 with correlation ID
+        ctrl --> client : Failure; no successful-save claim
+        client --> page : Status unchanged; reference ID with retry
+        opt Confirmation dialog open
+          page -> dialog : Show failed state; Mark story Done retries the same request
+        end
+      else Commit succeeds
+        db --> handler : New story version
+        handler --> ctrl : Completed story
+        ctrl --> client : 200 with status and version
+        client --> page : Update signal state; close any dialog
+        page --> actor : Announce "Story marked Done"; open-task count unchanged
+      end
     end
   end
-end
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).

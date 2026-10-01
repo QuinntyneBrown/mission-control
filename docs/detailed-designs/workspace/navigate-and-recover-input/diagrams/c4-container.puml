@@ -6,9 +6,9 @@ Person(actor, "Authorized user", "Navigate with context and preserve form input"
 System_Boundary(mc, "Mission Control") {
   Container(web, "Mission Control web client", "Angular", "Navigate with context and preserve form input")
   Container(api, "MissionControl.Api", ".NET", "Authorized application handlers")
-  ContainerDb(db, "Mission Control database", "SQL - provider <TO SUPPLY>", "RouteContext and related records")
+  ContainerDb(db, "Mission Control database", "SQL - provider <TO SUPPLY>", "Accounts, roles, and related records")
 }
 Rel(actor, web, "Uses")
 Rel(web, api, "Requests feature behavior", "HTTPS / JSON")
-Rel(api, db, "Reads or commits feature records", "Parameterized SQL")
+Rel(api, db, "Reads current access and route records", "Parameterized SQL")
 @enduml

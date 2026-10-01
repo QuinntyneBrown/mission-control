@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Deactivate or reactivate account · Mission Control mock</title>
-  <meta name="description" content="Confirmation dialog for deactivating or reactivating an account, the designated administrator conflict, and saving and failure states.">
+  <meta name="description" content="Confirmation dialog for deactivating or reactivating an account, the designated administrator conflict, a stale-version conflict, and saving and failure states.">
   <meta name="mock-area" content="Administration">
-  <meta name="mock-requirements" content="L2-002.3, L2-004, L2-008.1, L2-031.5, L2-033.2, L2-043.4">
+  <meta name="mock-requirements" content="L2-002.3, L2-004, L2-008.1, L2-031.5, L2-033.2, L2-039.2, L2-041.3, L2-043.4">
   <link rel="stylesheet" href="../assets/tokens.css">
   <link rel="stylesheet" href="../assets/mocks.css">
   <script src="../assets/mocks.js" defer></script>
@@ -24,6 +24,7 @@
           <option value="blocked">Designated administrator (409)</option>
           <option value="saving">Deactivating</option>
           <option value="failed">Deactivation failed</option>
+          <option value="stale">Account changed (409)</option>
         </select>
       </label>
       <a href="../index.html">All mocks</a>
@@ -33,9 +34,10 @@
   <div class="mock-notes">
     <p class="mock-note" data-when="deactivate">Administrator-only. Focus starts on Cancel, the safe choice. Deactivation keeps the account, its assignments, and its audit history; Mateo's existing token is refused on the next request. Success shows the toast "Account deactivated: Mateo Silva can't sign in. Their assignments are kept."</p>
     <p class="mock-note" data-when="reactivate" hidden>Reactivation restores sign-in with the existing password and the same role. Success shows the toast "Account reactivated: Jordan Reyes can sign in again."</p>
-    <p class="mock-note" data-when="blocked" hidden>The interface never offers Deactivate for the designated administrator. This is the API's 409 answer when the request is made anyway, for example from an outdated page. Nothing changed, so the only action is Close.</p>
+    <p class="mock-note" data-when="blocked" hidden>The interface never offers Deactivate for the designated administrator. This is the API's 409 answer when the request is made anyway, for example from an outdated page. The rejected attempt is recorded in the audit log with outcome Rejected. Nothing changed, so the only action is Close.</p>
     <p class="mock-note" data-when="saving" hidden>Both buttons wait while the request is in progress, so the action can't be sent twice.</p>
     <p class="mock-note" data-when="failed" hidden>Nothing changed: Mateo can still sign in. Try again repeats the same request.</p>
+    <p class="mock-note" data-when="stale" hidden>The account changed after the dialog opened, for example another administrator changed its role, so the API answered 409 and nothing changed. The request is never resubmitted automatically; Review account opens the latest details, where the action can be chosen again.</p>
   </div>
 
   <div class="mock-screen">
@@ -92,14 +94,16 @@
           <span class="mc-dialog__icon mc-dialog__icon--danger" data-when="deactivate saving failed"><span class="mc-icon mc-icon--user-x" aria-hidden="true"></span></span>
           <span class="mc-dialog__icon mc-dialog__icon--success" data-when="reactivate" hidden><span class="mc-icon mc-icon--user-check" aria-hidden="true"></span></span>
           <span class="mc-dialog__icon mc-dialog__icon--warning" data-when="blocked" hidden><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span></span>
+          <span class="mc-dialog__icon mc-dialog__icon--warning" data-when="stale" hidden><span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span></span>
           <div class="mc-dialog__heading">
             <h2 class="mc-dialog__title" id="status-dialog-title">
               <span data-when="deactivate saving failed">Deactivate Mateo Silva?</span>
               <span data-when="reactivate" hidden>Reactivate Jordan Reyes?</span>
               <span data-when="blocked" hidden>Quinntyne Brown can't be deactivated</span>
+              <span data-when="stale" hidden>Mateo Silva's account changed</span>
             </h2>
             <p class="mc-dialog__subtitle">
-              <span data-when="deactivate saving failed">mateo.silva<wbr>@example.org · Collaborator</span>
+              <span data-when="deactivate saving failed stale">mateo.silva<wbr>@example.org · Collaborator</span>
               <span data-when="reactivate" hidden>jordan.reyes<wbr>@example.org · Collaborator · Inactive since Sep 12, 2026</span>
               <span data-when="blocked" hidden>quinntynebrown<wbr>@gmail.com · Administrator</span>
             </p>
@@ -124,6 +128,7 @@
             <p data-when="deactivate saving failed">Mateo Silva won't be able to sign in. Access ends on their next request. Their assignments and history are kept, and you can reactivate the account later.</p>
             <p data-when="reactivate" hidden>Jordan Reyes will be able to sign in again with their existing password, as a Collaborator. Replace the password first if they no longer know it.</p>
             <p data-when="blocked" hidden>Quinntyne Brown is the designated administrator and must stay active. Nothing was changed.</p>
+            <p data-when="stale" hidden>This account changed after you opened it. Nothing was changed. Review the latest details, then deactivate it again if you still need to.</p>
           </div>
           <p class="mc-hint" data-when="blocked" hidden>This keeps at least one administrator able to manage Mission Control.</p>
         </div>
@@ -132,6 +137,9 @@
           <button class="mc-button" type="button" data-unless="blocked" data-nav="accounts.html"
             data-attr-saving="disabled">Cancel</button>
           <button class="mc-button mc-button--primary" type="button" data-when="blocked" hidden data-nav="account-detail.html#state=designated">Close</button>
+          <button class="mc-button mc-button--primary" type="button" data-when="stale" hidden data-nav="account-detail.html">
+            <span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Review account
+          </button>
           <button class="mc-button mc-button--danger" type="button" data-when="deactivate saving failed" data-goto-state="saving"
             data-attr-saving="aria-busy=true|aria-disabled=true">
             <span class="mc-spinner" aria-hidden="true" data-when="saving" hidden></span>

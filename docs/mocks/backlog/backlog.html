@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Backlog · Mission Control mock</title>
-  <meta name="description" content="Project story backlog in priority order with drag and move controls, Add to sprint, Kanban and paused-sprint variants, and empty, reorder-failed, loading, and error states.">
+  <meta name="description" content="Project story backlog in priority order with drag and move controls, Add to sprint, Kanban and paused-sprint variants, a second page of a large backlog, and empty, reorder-failed, reorder-conflict, loading, and error states.">
   <meta name="mock-area" content="Backlog">
   <meta name="mock-requirements" content="L2-005.4, L2-017, L2-022, L2-027.3, L2-032, L2-033, L2-034.2, L2-035.4, L2-045">
   <link rel="stylesheet" href="../assets/tokens.css">
@@ -26,8 +26,10 @@
           <option value="kanban">Kanban backlog</option>
           <option value="kanban-preserved">Kanban with paused sprints</option>
           <option value="collaborator">Collaborator</option>
+          <option value="paged">Large backlog, page 2</option>
           <option value="empty">Empty</option>
           <option value="reorder-failed">Reorder failed</option>
+          <option value="reorder-conflict">Order changed meanwhile</option>
           <option value="loading">Loading</option>
           <option value="error">Load failed</option>
         </select>
@@ -42,8 +44,10 @@
     <p class="mock-note" data-when="kanban" hidden>Kanban projects keep the same priority order but have no sprints, so rows show no sprint information and no Add to sprint.</p>
     <p class="mock-note" data-when="kanban-preserved" hidden>This project switched from Scrum to Kanban with its sprints kept. Sprint membership is read-only and adding to a sprint is disabled until the project returns to Scrum.</p>
     <p class="mock-note" data-when="collaborator" hidden>Collaborators can reorder the backlog and add stories to sprints. Project settings are administrator-only, so Project actions is absent.</p>
-    <p class="mock-note" data-when="empty" hidden>A new project with no stories. Both roles can add work, so the action is offered to collaborators too.</p>
+    <p class="mock-note" data-when="paged" hidden>Shown with a larger dataset: 350 stories, 25 per page, so this is page 2 of 14. Ranks are absolute across pages. Move up on rank 26 moves the story to rank 25 on page 1 and is announced, for example "Moved Team size limits shown at sign-up to position 25 of 350, on page 1"; Move down on rank 50 does the same toward page 3. Dragging stays within the visible page; Move to position… reaches any rank from 1 to 350. Totals count every story, not just this page. Only page 2 is drawn, so the other page links stay here.</p>
+    <p class="mock-note" data-when="empty" hidden>A new Scrum project with no stories and no sprints yet. Both roles can add work, so the action is offered to collaborators too. Once stories exist they can be prioritized here and added to a sprint from each row's menu.</p>
     <p class="mock-note" data-when="reorder-failed" hidden>The save failed, so the list returns to its last saved order and the story that was moved is highlighted. Screen readers hear "Couldn't move Confirm venue accessibility checklist. Order restored." Focus stays on the move control; Try again sends the same move.</p>
+    <p class="mock-note" data-when="reorder-conflict" hidden>The backlog order changed after it loaded, so the order version no longer matched and the API answered 409. Nothing was applied and the move is never resent, because a position chosen from an outdated order could land somewhere unintended. The list keeps the order it showed and highlights the story; any further move from it would be refused the same way. Focus moves to Reload backlog, which loads the latest order and returns focus to the story's row.</p>
     <p class="mock-note" data-when="loading" hidden>Skeleton rows hold the layout while the backlog loads, so it never looks empty. Screen readers hear "Loading backlog".</p>
     <p class="mock-note" data-when="error" hidden>The reference ID matches the server's diagnostic record.</p>
   </div>
@@ -139,8 +143,8 @@
                 <span>Responsible lead: <a href="../leads/lead-detail.html#state=lead">Grace Mensah</a></span>
               </div>
               <div class="mc-page-header__meta" data-when="empty" hidden>
-                <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
-                <span>Responsible lead: <span class="mc-unset">None</span></span>
+                <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
+                <span>Responsible lead: <span class="mc-unset">Not set</span></span>
               </div>
             </div>
             <div class="mc-page-header__actions">
@@ -156,7 +160,7 @@
                 </button>
                 <div class="mc-menu" id="project-actions">
                   <button class="mc-menu__item" type="button" data-nav="../projects/project-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit project</button>
-                  <button class="mc-menu__item" type="button" data-nav="../projects/mode-change-dialog.html#state=blocked" data-attr-kanban="data-nav=../projects/mode-change-dialog.html#state=to-scrum" data-attr-kanban-preserved="data-nav=../projects/mode-change-dialog.html#state=to-scrum" data-attr-empty="data-nav=../projects/mode-change-dialog.html#state=to-scrum"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
+                  <button class="mc-menu__item" type="button" data-nav="../projects/mode-change-dialog.html#state=blocked" data-attr-kanban="data-nav=../projects/mode-change-dialog.html#state=to-scrum" data-attr-kanban-preserved="data-nav=../projects/mode-change-dialog.html#state=to-scrum" data-attr-empty="data-nav=../projects/mode-change-dialog.html#state=to-kanban"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
                   <div class="mc-menu__separator"></div>
                   <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="../projects/project-delete-dialog.html#state=blocked" data-attr-empty="data-nav=../projects/project-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
                 </div>
@@ -165,11 +169,11 @@
           </header>
           <nav class="mc-project-tabs" aria-label="Project sections">
             <ul class="mc-tabs">
-              <li><a class="mc-tabs__link" href="../projects/project-overview.html"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</a></li>
-              <li><a class="mc-tabs__link" href="../work/work-hierarchy.html"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</a></li>
+              <li><a class="mc-tabs__link" href="../projects/project-overview.html" data-attr-empty="href=../projects/project-overview.html#state=new-empty"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</a></li>
+              <li><a class="mc-tabs__link" href="../work/work-hierarchy.html" data-attr-empty="href=../work/work-hierarchy.html#state=empty"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</a></li>
               <li><a class="mc-tabs__link" href="../backlog/backlog.html" aria-current="page"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</a></li>
-              <li><a class="mc-tabs__link" href="../scrum/sprint-board.html" data-attr-kanban="href=../kanban/kanban-board.html" data-attr-kanban-preserved="href=../kanban/kanban-board.html" data-attr-empty="href=../kanban/kanban-board.html"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</a></li>
-              <li data-unless="kanban empty"><a class="mc-tabs__link" href="../scrum/sprints.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</a></li>
+              <li><a class="mc-tabs__link" href="../scrum/sprint-board.html" data-attr-kanban="href=../kanban/kanban-board.html" data-attr-kanban-preserved="href=../kanban/kanban-board.html" data-attr-empty="href=../scrum/sprint-board.html#state=no-active"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</a></li>
+              <li data-unless="kanban"><a class="mc-tabs__link" href="../scrum/sprints.html" data-attr-empty="href=../scrum/sprints.html#state=no-sprints"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</a></li>
             </ul>
           </nav>
         </div>
@@ -202,11 +206,24 @@
               </div>
             </div>
           </div>
+          <div class="mc-alert mc-alert--warning mc-alert--page" data-when="reorder-conflict" hidden>
+            <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">Backlog order changed</p>
+              <p class="mc-alert__text">The backlog order changed while you were moving “Confirm venue accessibility checklist”. Nothing was applied. Reload to see the latest order.</p>
+              <div class="mc-alert__actions">
+                <button class="mc-button mc-button--sm" type="button" data-goto-state="default"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Reload backlog</button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="mc-live" role="status" aria-live="polite">
-          <div class="mc-results-meta" data-when="default add-to-sprint collaborator reorder-failed">
+          <div class="mc-results-meta" data-when="default add-to-sprint collaborator reorder-failed reorder-conflict">
             <span>24 stories in priority order</span><span>9 To Do · 4 In Progress · 11 Done</span>
+          </div>
+          <div class="mc-results-meta" data-when="paged" hidden>
+            <span>350 stories in priority order</span><span>212 To Do · 41 In Progress · 97 Done</span><span>Showing 26–50</span>
           </div>
           <div class="mc-results-meta" data-when="kanban" hidden>
             <span>16 stories in priority order</span><span>6 To Do · 3 In Progress · 7 Done</span>
@@ -217,7 +234,7 @@
           <p class="mc-visually-hidden" data-when="loading" hidden>Loading backlog</p>
         </div>
 
-        <ol class="mc-list" aria-label="Community Hackathon 2026 backlog in priority order" data-when="default add-to-sprint collaborator reorder-failed">
+        <ol class="mc-list" aria-label="Community Hackathon 2026 backlog in priority order" data-when="default add-to-sprint collaborator reorder-failed reorder-conflict">
               <li class="mc-list__item">
                 <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
                 <span class="mc-list__rank">1</span>
@@ -459,7 +476,7 @@
                   </div>
                 </div>
               </li>
-              <li class="mc-list__item" data-attr-reorder-failed="class=mc-list__item mc-list__item--selected">
+              <li class="mc-list__item" data-attr-reorder-failed="class=mc-list__item mc-list__item--selected" data-attr-reorder-conflict="class=mc-list__item mc-list__item--selected">
                 <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
                 <span class="mc-list__rank">9</span>
                 <div class="mc-list__main">
@@ -556,7 +573,7 @@
                 <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
                 <span class="mc-list__rank">12</span>
                 <div class="mc-list__main">
-                  <a class="mc-list__title" href="../work/work-item-detail.html">&lt;script&gt;alert(1)&lt;/script&gt; feedback form</a>
+                  <a class="mc-list__title" href="../work/work-item-detail.html#state=inactive-assignee">&lt;script&gt;alert(1)&lt;/script&gt; feedback form</a>
                   <p class="mc-list__meta"><span>HCK-123</span><span>Judging and feedback › Demo day showcase</span></p>
                   <p class="mc-list__meta">
                   <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
@@ -571,7 +588,7 @@
                   <div class="mc-menu-anchor">
                     <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-123" aria-expanded="false" aria-label="More actions for &lt;script&gt;alert(1)&lt;/script&gt; feedback form"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                     <div class="mc-menu" id="row-menu-HCK-123">
-                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html#state=inactive-assignee"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
                     <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
                     <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
@@ -945,6 +962,797 @@
                 </div>
               </li>
         </ol>
+
+        <p class="mc-visually-hidden" id="paged-up-hint" data-when="paged" hidden>Moves to position 25, the last story on page 1.</p>
+        <p class="mc-visually-hidden" id="paged-down-hint" data-when="paged" hidden>Moves to position 51, the first story on page 3.</p>
+        <ol class="mc-list" start="26" aria-label="Community Hackathon 2026 backlog in priority order, page 2 of 14" data-when="paged" hidden>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">26</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Team size limits shown at sign-up</a>
+                  <p class="mc-list__meta"><span>HCK-240</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span>
+                  <span>Estimate 2</span>
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprint 9 · Planned</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Team size limits shown at sign-up" aria-describedby="paged-up-hint"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Team size limits shown at sign-up"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-240" aria-expanded="false" aria-label="More actions for Team size limits shown at sign-up"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-240">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button" aria-describedby="paged-up-hint"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Sprint</p>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Edit Sprint 9 plan<span class="mc-menu__hint">Already in Sprint 9</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">27</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Waitlist for full teams</a>
+                  <p class="mc-list__meta"><span>HCK-241</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span>
+                  <span>Estimate 3</span>
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprint 9 · Planned</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Waitlist for full teams"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Waitlist for full teams"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-241" aria-expanded="false" aria-label="More actions for Waitlist for full teams"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-241">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Sprint</p>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Edit Sprint 9 plan<span class="mc-menu__hint">Already in Sprint 9</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">28</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Mentor office hours schedule</a>
+                  <p class="mc-list__meta"><span>HCK-242</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span>
+                  <span>Estimate 2</span>
+                  <span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprint 8 · Active</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Mentor office hours schedule"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Mentor office hours schedule"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-242" aria-expanded="false" aria-label="More actions for Mentor office hours schedule"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-242">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Sprint</p>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-board.html"><span class="mc-icon mc-icon--board" aria-hidden="true"></span><span class="mc-menu__item-text">Open Sprint 8 board<span class="mc-menu__hint">Already in Sprint 8. Change its scope there.</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">29</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Team channel invitations</a>
+                  <p class="mc-list__meta"><span>HCK-243</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true"><span class="mc-icon mc-icon--user mc-icon--sm" aria-hidden="true"></span></span>Unassigned</span>
+                  <span>Estimate 1</span>
+                  <span>Not in a sprint</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Team channel invitations"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Team channel invitations"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-243" aria-expanded="false" aria-label="More actions for Team channel invitations"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-243">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Add to sprint</p>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">30</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Skill tags on volunteer profiles</a>
+                  <p class="mc-list__meta"><span>HCK-244</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span>
+                  <span>Estimate 3</span>
+                  <span>Not in a sprint</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Skill tags on volunteer profiles"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Skill tags on volunteer profiles"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-244" aria-expanded="false" aria-label="More actions for Skill tags on volunteer profiles"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-244">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Add to sprint</p>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">31</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Team captain role</a>
+                  <p class="mc-list__meta"><span>HCK-245</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span>
+                  <span>Estimate 2</span>
+                  <span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprint 8 · Active</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Team captain role"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Team captain role"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-245" aria-expanded="false" aria-label="More actions for Team captain role"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-245">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Sprint</p>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-board.html"><span class="mc-icon mc-icon--board" aria-hidden="true"></span><span class="mc-menu__item-text">Open Sprint 8 board<span class="mc-menu__hint">Already in Sprint 8. Change its scope there.</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">32</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Starter kit download page</a>
+                  <p class="mc-list__meta"><span>HCK-246</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">QB</span>Quinntyne Brown</span>
+                  <span>Estimate 1</span>
+                  <span>Not in a sprint</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Starter kit download page"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Starter kit download page"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-246" aria-expanded="false" aria-label="More actions for Starter kit download page"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-246">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Add to sprint</p>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">33</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Team name approval</a>
+                  <p class="mc-list__meta"><span>HCK-247</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true"><span class="mc-icon mc-icon--user mc-icon--sm" aria-hidden="true"></span></span>Unassigned</span>
+                  <span>Not estimated</span>
+                  <span>Not in a sprint</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Team name approval"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Team name approval"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-247" aria-expanded="false" aria-label="More actions for Team name approval"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-247">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Add to sprint</p>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">34</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Remote participant check-in</a>
+                  <p class="mc-list__meta"><span>HCK-248</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span>
+                  <span>Estimate 5</span>
+                  <span>Not in a sprint</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Remote participant check-in"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Remote participant check-in"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-248" aria-expanded="false" aria-label="More actions for Remote participant check-in"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-248">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Add to sprint</p>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">35</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Mentor feedback on team ideas</a>
+                  <p class="mc-list__meta"><span>HCK-249</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span>
+                  <span>Estimate 3</span>
+                  <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprint 9 · Planned</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Mentor feedback on team ideas"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Mentor feedback on team ideas"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-249" aria-expanded="false" aria-label="More actions for Mentor feedback on team ideas"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-249">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Sprint</p>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Edit Sprint 9 plan<span class="mc-menu__hint">Already in Sprint 9</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">36</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Team photo consent form</a>
+                  <p class="mc-list__meta"><span>HCK-250</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span>
+                  <span>Estimate 1</span>
+                  <span>Completed in Sprint 7</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Team photo consent form"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Team photo consent form"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-250" aria-expanded="false" aria-label="More actions for Team photo consent form"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-250">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Add to sprint</p>
+                    <button class="mc-menu__item" type="button" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Add to sprint<span class="mc-menu__hint">Done stories can't be added to a sprint</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">37</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Daily stand-up reminder email</a>
+                  <p class="mc-list__meta"><span>HCK-251</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span>
+                  <span>Estimate 1</span>
+                  <span>Not in a sprint</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Daily stand-up reminder email"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Daily stand-up reminder email"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-251" aria-expanded="false" aria-label="More actions for Daily stand-up reminder email"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-251">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Add to sprint</p>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">38</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Team roster export for organizers</a>
+                  <p class="mc-list__meta"><span>HCK-252</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true"><span class="mc-icon mc-icon--user mc-icon--sm" aria-hidden="true"></span></span>Unassigned</span>
+                  <span>Estimate 2</span>
+                  <span>Not in a sprint</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Team roster export for organizers"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Team roster export for organizers"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-252" aria-expanded="false" aria-label="More actions for Team roster export for organizers"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-252">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Add to sprint</p>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">39</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Swap teams before kickoff</a>
+                  <p class="mc-list__meta"><span>HCK-253</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span>
+                  <span>Estimate 3</span>
+                  <span>Not in a sprint</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Swap teams before kickoff"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Swap teams before kickoff"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-253" aria-expanded="false" aria-label="More actions for Swap teams before kickoff"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-253">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Add to sprint</p>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">40</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Accessibility needs on sign-up</a>
+                  <p class="mc-list__meta"><span>HCK-254</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span>
+                  <span>Estimate 3</span>
+                  <span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprint 8 · Active</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Accessibility needs on sign-up"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Accessibility needs on sign-up"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-254" aria-expanded="false" aria-label="More actions for Accessibility needs on sign-up"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-254">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Sprint</p>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-board.html"><span class="mc-icon mc-icon--board" aria-hidden="true"></span><span class="mc-menu__item-text">Open Sprint 8 board<span class="mc-menu__hint">Already in Sprint 8. Change its scope there.</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">41</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">First-time builder guide</a>
+                  <p class="mc-list__meta"><span>HCK-255</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">QB</span>Quinntyne Brown</span>
+                  <span>Estimate 2</span>
+                  <span>Not in a sprint</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: First-time builder guide"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: First-time builder guide"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-255" aria-expanded="false" aria-label="More actions for First-time builder guide"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-255">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Add to sprint</p>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">42</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Team table assignments</a>
+                  <p class="mc-list__meta"><span>HCK-256</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true"><span class="mc-icon mc-icon--user mc-icon--sm" aria-hidden="true"></span></span>Unassigned</span>
+                  <span>Not estimated</span>
+                  <span>Not in a sprint</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Team table assignments"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Team table assignments"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-256" aria-expanded="false" aria-label="More actions for Team table assignments"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-256">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Add to sprint</p>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">43</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Mentor rotation plan</a>
+                  <p class="mc-list__meta"><span>HCK-257</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span>
+                  <span>Estimate 2</span>
+                  <span>Completed in Sprint 7</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Mentor rotation plan"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Mentor rotation plan"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-257" aria-expanded="false" aria-label="More actions for Mentor rotation plan"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-257">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Add to sprint</p>
+                    <button class="mc-menu__item" type="button" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Add to sprint<span class="mc-menu__hint">Done stories can't be added to a sprint</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">44</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Hardware lending sign-out</a>
+                  <p class="mc-list__meta"><span>HCK-258</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span>
+                  <span>Estimate 3</span>
+                  <span>Not in a sprint</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Hardware lending sign-out"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Hardware lending sign-out"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-258" aria-expanded="false" aria-label="More actions for Hardware lending sign-out"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-258">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Add to sprint</p>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">45</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Team progress check-ins</a>
+                  <p class="mc-list__meta"><span>HCK-259</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span>
+                  <span>Estimate 2</span>
+                  <span>Not in a sprint</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Team progress check-ins"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Team progress check-ins"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-259" aria-expanded="false" aria-label="More actions for Team progress check-ins"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-259">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Add to sprint</p>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">46</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Final submission checklist</a>
+                  <p class="mc-list__meta"><span>HCK-260</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true"><span class="mc-icon mc-icon--user mc-icon--sm" aria-hidden="true"></span></span>Unassigned</span>
+                  <span>Estimate 1</span>
+                  <span>Not in a sprint</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Final submission checklist"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Final submission checklist"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-260" aria-expanded="false" aria-label="More actions for Final submission checklist"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-260">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Add to sprint</p>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">47</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Team showcase blurbs</a>
+                  <p class="mc-list__meta"><span>HCK-261</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span>
+                  <span>Estimate 2</span>
+                  <span>Not in a sprint</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Team showcase blurbs"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Team showcase blurbs"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-261" aria-expanded="false" aria-label="More actions for Team showcase blurbs"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-261">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Add to sprint</p>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">48</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Post-event team survey</a>
+                  <p class="mc-list__meta"><span>HCK-262</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span>
+                  <span>Estimate 2</span>
+                  <span>Not in a sprint</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Post-event team survey"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Post-event team survey"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-262" aria-expanded="false" aria-label="More actions for Post-event team survey"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-262">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Add to sprint</p>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">49</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Alumni builder newsletter sign-up</a>
+                  <p class="mc-list__meta"><span>HCK-263</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true"><span class="mc-icon mc-icon--user mc-icon--sm" aria-hidden="true"></span></span>Unassigned</span>
+                  <span>Not estimated</span>
+                  <span>Not in a sprint</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Alumni builder newsletter sign-up"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Alumni builder newsletter sign-up"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-263" aria-expanded="false" aria-label="More actions for Alumni builder newsletter sign-up"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-263">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Add to sprint</p>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+              <li class="mc-list__item">
+                <span class="mc-muted mc-hide-compact" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
+                <span class="mc-list__rank">50</span>
+                <div class="mc-list__main">
+                  <a class="mc-list__title" href="../work/work-item-detail.html">Team certificate printing</a>
+                  <p class="mc-list__meta"><span>HCK-264</span><span>Hackathon team formation › Grow Toronto's builder community</span></p>
+                  <p class="mc-list__meta">
+                  <span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span>
+                  <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">QB</span>Quinntyne Brown</span>
+                  <span>Estimate 1</span>
+                  <span>Completed in Sprint 6</span>
+                  </p>
+                </div>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Team certificate printing"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Team certificate printing" aria-describedby="paged-down-hint"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <div class="mc-menu-anchor">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-264" aria-expanded="false" aria-label="More actions for Team certificate printing"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <div class="mc-menu" id="row-menu-HCK-264">
+                    <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
+                    <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                    <button class="mc-menu__item mc-show-compact" type="button" aria-describedby="paged-down-hint"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                    <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                    <div class="mc-menu__separator"></div>
+                    <p class="mc-menu__label">Add to sprint</p>
+                    <button class="mc-menu__item" type="button" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Add to sprint<span class="mc-menu__hint">Done stories can't be added to a sprint</span></span></button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+        </ol>
+
+        <nav class="mc-pagination" aria-label="Backlog pages" data-when="paged" hidden>
+          <span class="mc-show-compact">Page 2 of 14</span>
+          <span class="mc-hide-compact">25 per page · positions count across all pages</span>
+          <div class="mc-cluster mc-cluster--sm">
+            <button class="mc-button mc-button--sm" type="button" data-goto-state="paged">
+              <span class="mc-icon mc-icon--chevron-left" aria-hidden="true"></span>Previous
+            </button>
+            <ol class="mc-pagination__pages mc-hide-compact">
+              <li><a class="mc-pagination__page" href="#state=paged" aria-label="Page 1">1</a></li>
+              <li><a class="mc-pagination__page" href="#state=paged" aria-current="page" aria-label="Page 2">2</a></li>
+              <li><a class="mc-pagination__page" href="#state=paged" aria-label="Page 3">3</a></li>
+              <li class="mc-muted" aria-hidden="true">…</li>
+              <li><a class="mc-pagination__page" href="#state=paged" aria-label="Page 14">14</a></li>
+            </ol>
+            <button class="mc-button mc-button--sm" type="button" data-goto-state="paged">
+              Next<span class="mc-icon mc-icon--chevron-right" aria-hidden="true"></span>
+            </button>
+          </div>
+        </nav>
 
         <ol class="mc-list" aria-label="Church Website Refresh backlog in priority order" data-when="kanban" hidden>
               <li class="mc-list__item">
@@ -1728,12 +2536,12 @@
               </li>
         </ol>
 
-        <p class="mc-pagination" data-when="default add-to-sprint collaborator reorder-failed kanban kanban-preserved"><span>Priority is separate from the work hierarchy and board order.</span><span>All stories fit on one page</span></p>
+        <p class="mc-pagination" data-when="default add-to-sprint collaborator reorder-failed reorder-conflict kanban kanban-preserved"><span>Priority is separate from the work hierarchy and board order.</span><span>All stories fit on one page</span></p>
 
         <div class="mc-empty" data-when="empty" hidden>
           <span class="mc-empty__icon"><span class="mc-icon mc-icon--backlog mc-icon--lg" aria-hidden="true"></span></span>
           <h3 class="mc-empty__title">No stories yet</h3>
-          <p class="mc-empty__text">Stories live under epics: add an initiative and an epic first, then add stories to prioritise here.</p>
+          <p class="mc-empty__text">Stories live under epics: add an initiative and an epic first, then add stories to prioritize here and plan them into sprints.</p>
           <div class="mc-empty__actions">
             <button class="mc-button mc-button--primary" type="button" data-nav="../work/work-item-form-dialog.html#state=create-initiative"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add initiative</button>
             <a class="mc-button" href="../work/work-hierarchy.html#state=empty">Open Work</a>

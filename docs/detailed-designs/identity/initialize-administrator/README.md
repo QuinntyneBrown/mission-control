@@ -13,29 +13,35 @@ This design refines the [L2 baseline](../../../specs/L2.md) and its linked L1 sc
 
 ## Description
 
-`DatabaseInitializer` in Infrastructure coordinates versioned SQL migrations followed by `EnsureAdministratorCommandHandler` and `EnsureCityLeadCommandHandler` in Application.
+There is no separate initialization program. `DatabaseInitializer` in Infrastructure runs inside the `MissionControl.Api` host at startup as a hosted service.
+It holds readiness false until it completes, so no instance reports ready before its own initialization succeeds.
+It coordinates versioned SQL migrations followed by `EnsureAdministratorCommand` and `EnsureCityLeadCommand`, handled in Application through MediatR.
 `InitializationOptions` binds external bootstrap identity and initial password from the PRD. The designated normalized email is `quinntynebrown@gmail.com`.
 The exact initial password remains specified in L2-006 and the PRD; production code reads external configuration and stores only its salted hash.
 `IMigrationRunner`, `IInitializationLock`, and the SQL implementation provide repeatability and a database-wide initialization lock.
-The selected SQL provider and migration-lock implementation are `<TO SUPPLY>` before this slice is implemented.
+Each instance initializes under `IInitializationLock` (L2-007.2). A later instance waits for the lock, finds migrations applied and the account present, and reports ready.
+`InitializationStatus` records the outcome as `InitializationState` for readiness checks. The selected SQL provider and migration-lock implementation are `<TO SUPPLY>` before this slice is implemented.
 
 The administrator seed loads the existing normalized identity inside the initialization transaction.
 An absent account requires valid bootstrap configuration; failure rolls back seed changes and keeps readiness false.
-An existing account retains ID, credential version, and password hash, while its active flag and Administrator role are repaired.
+An existing account retains ID, credential version, and password hash. Its first name, last name, active flag, and Administrator role are restored to the bootstrap values.
+Application operations cannot rename the designated account, so this repair only reverses out-of-band database changes (L2-006).
 The unique email index and initialization lock prevent concurrent duplicates. Initialization retries read the winning account rather than replacing it.
 The City seed uses a durable `CityLeadSeedCompleted` marker in the same seed transaction.
 On its first successful run it adopts an existing matching City contact or creates Quinntyne Brown with no phone; later runs leave that contact untouched.
 The marker prevents a subsequent email/category edit or permitted contact deletion from creating a replacement contact on every startup.
 This marker is a proposed resolution of L2-013's contact-edit preservation rule, not a restriction on contact CRUD.
 
+`HealthController` is a thin controller in `MissionControl.Api.Controllers`. It answers `GET /health/live` directly and dispatches `GetReadinessQuery` for `GET /health/ready`.
 `GET /health/live` reports `200` while the process runs. `GET /health/ready` reports `200` only after schema, SQL access, and administrator initialization succeed.
-Loss of SQL or incompatible schema returns `503` for readiness without connection strings or secret values.
-Failed initialization remains visibly unready and records a correlation ID, operation, outcome, and UTC diagnostic time.
+Initialization still running, loss of SQL, or incompatible schema returns `503` for readiness without connection strings or secret values.
+Missing or invalid signing material also fails initialization (L2-036.2), so no token is ever issued with fallback material.
+Failed initialization remains visibly unready and records a correlation ID, operation, outcome, and UTC diagnostic time. The operator corrects the cause and restarts the instance.
 Concurrent initialization and restore checks run against the eventual chosen SQL provider; an in-memory substitute cannot prove locking or uniqueness behavior.
 
 | Behavior | Proposed boundary | Proposed operation |
 | --- | --- | --- |
-| Migrate and seed | `Deployment initialization entry point` | `EnsureAdministratorCommand` / `EnsureAdministratorCommandHandler` |
+| Migrate and seed | `MissionControl.Api` host startup (`DatabaseInitializer` hosted service) | `EnsureAdministratorCommand` / `EnsureAdministratorCommandHandler` |
 | Observe liveness and readiness | `GET /health/live; GET /health/ready` | `GetReadinessQuery` / `GetReadinessQueryHandler` |
 
 Mock input and review references:
@@ -66,15 +72,15 @@ The context view identifies the actor and the Mission Control capability.
 
 ![Initialize and protect the administrator: c4 context](diagrams/c4-context.png)
 
-The container view separates operational execution, API verification, and the durable SQL environment.
+The container view shows initialization running inside the `MissionControl.Api` host, its external configuration, and the durable SQL environment.
 
 ![Initialize and protect the administrator: c4 container](diagrams/c4-container.png)
 
-The component view locates the initialization or release procedure and its verification boundaries.
+The component view locates the startup hosted service, the initialization lock, the seed handlers, and the readiness check.
 
 ![Initialize and protect the administrator: c4 component](diagrams/c4-component.png)
 
-The class view identifies operational configuration, outcome records, and initialization relationships.
+The class view identifies the hosted service, its options and lock, the seed commands, and the readiness query.
 
 ![Initialize and protect the administrator: class structure](diagrams/class-structure.png)
 

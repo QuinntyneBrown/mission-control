@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sprint board · Mission Control mock</title>
-  <meta name="description" content="Active sprint board for Sprint 8 with the sprint goal, scope changes, compact column selector, empty, failed-move, loading, and error states.">
+  <meta name="description" content="Active sprint board for Sprint 8 with the sprint goal, scope changes, Remove from sprint, compact column selector, empty, no-active, no-sprints, failed-move, loading, and error states.">
   <meta name="mock-area" content="Scrum sprints">
   <meta name="mock-requirements" content="L2-019.4, L2-020, L2-021, L2-023, L2-024, L2-030.3, L2-032, L2-033, L2-045.4">
   <link rel="stylesheet" href="../assets/tokens.css">
@@ -25,6 +25,7 @@
           <option value="scope-log">Scope changes</option>
           <option value="no-stories">Active sprint with no stories</option>
           <option value="no-active">No active sprint</option>
+          <option value="no-sprints">New project, no sprints</option>
           <option value="move-failed">Move failed</option>
           <option value="collaborator">Collaborator</option>
           <option value="loading">Loading</option>
@@ -36,12 +37,13 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">Shows only Sprint 8's stories, in the same To Do, In Progress, and Done columns as Kanban. Drag a card or use Move; either saves its status and position. Moving a story with open tasks to Done asks first. Below 576px a column selector shows one column at a time; from 576 to 991px the board scrolls inside its own region. The project header and tabs stay pinned while the tab content scrolls; on phones only the tabs stay pinned.</p>
+    <p class="mock-note" data-when="default">Shows only Sprint 8's stories, in the same To Do, In Progress, and Done columns as Kanban. Drag a card or use Move; either saves its status and position. Moving a story with open tasks to Done asks first. Remove on an unfinished story opens the scope dialog to return it to the backlog; Done stories stay with the sprint, so their cards have no Remove. Below 576px a column selector shows one column at a time; from 576 to 991px the board scrolls inside its own region. The project header and tabs stay pinned while the tab content scrolls; on phones only the tabs stay pinned.</p>
     <p class="mock-note" data-when="scope-log" hidden>Every scope change after the start is recorded with who made it and when. The initial scope at the start stays in the sprint's history.</p>
     <p class="mock-note" data-when="no-stories" hidden>An active sprint can start empty or lose all its stories. The columns stay visible so the board keeps its shape, and Add stories opens the scope dialog.</p>
     <p class="mock-note" data-when="no-active" hidden>The Board tab of a Scrum project with no active sprint. Starting a sprint opens its board here.</p>
+    <p class="mock-note" data-when="no-sprints" hidden>The Board tab of Youth Coding Night, a new Scrum project with no work and no sprints. There's nothing to start, so the page offers Plan sprint and a way to add work. Administrators and collaborators can both plan sprints.</p>
     <p class="mock-note" data-when="move-failed" hidden>The save was rejected, so the card returns to its last saved column and position. The failure is announced, and Retry sends the move again.</p>
-    <p class="mock-note" data-when="collaborator" hidden>Collaborators can move cards, change scope, and close the sprint. Project settings are hidden.</p>
+    <p class="mock-note" data-when="collaborator" hidden>Collaborators can move cards, change scope (including Remove), and close the sprint. Project settings are hidden.</p>
     <p class="mock-note" data-when="loading" hidden>Columns keep their shape while stories load. Screen readers hear "Loading Sprint 8 board".</p>
   </div>
 
@@ -117,15 +119,16 @@
           <nav class="mc-breadcrumbs" aria-label="Breadcrumb">
             <ol>
               <li><a href="../projects/project-list.html">Projects</a></li>
-              <li><span aria-current="page">Community Hackathon 2026</span></li>
+              <li><span aria-current="page"><span data-unless="no-sprints">Community Hackathon 2026</span><span data-when="no-sprints" hidden>Youth Coding Night</span></span></li>
             </ol>
           </nav>
           <header class="mc-page-header">
             <div class="mc-page-header__main">
-              <h1 class="mc-page-header__title" tabindex="-1">Community Hackathon 2026</h1>
+              <h1 class="mc-page-header__title" tabindex="-1"><span data-unless="no-sprints">Community Hackathon 2026</span><span data-when="no-sprints" hidden>Youth Coding Night</span></h1>
               <div class="mc-page-header__meta">
                 <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
-                <span>Responsible lead: <a href="../leads/lead-detail.html#state=lead">Rafael Da Silva</a></span>
+                <span data-unless="no-sprints">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Rafael Da Silva</a></span>
+                <span data-when="no-sprints" hidden>Responsible lead: <span class="mc-unset">Not set</span></span>
               </div>
             </div>
             <div class="mc-page-header__actions">
@@ -135,25 +138,25 @@
                 </button>
                 <div class="mc-menu" id="project-actions">
                   <button class="mc-menu__item" type="button" data-nav="../projects/project-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit project</button>
-                  <button class="mc-menu__item" type="button" data-nav="../projects/mode-change-dialog.html#state=blocked"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
+                  <button class="mc-menu__item" type="button" data-nav="../projects/mode-change-dialog.html#state=blocked" data-attr-no-sprints="data-nav=../projects/mode-change-dialog.html#state=to-kanban"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
                   <div class="mc-menu__separator"></div>
-                  <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="../projects/project-delete-dialog.html#state=blocked"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
+                  <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="../projects/project-delete-dialog.html#state=blocked" data-attr-no-sprints="data-nav=../projects/project-delete-dialog.html#state=default"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
                 </div>
               </div>
             </div>
           </header>
           <nav class="mc-project-tabs" aria-label="Project sections">
             <ul class="mc-tabs">
-            <li><a class="mc-tabs__link" href="../projects/project-overview.html"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</a></li>
-            <li><a class="mc-tabs__link" href="../work/work-hierarchy.html"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</a></li>
-            <li><a class="mc-tabs__link" href="../backlog/backlog.html"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</a></li>
+            <li><a class="mc-tabs__link" href="../projects/project-overview.html" data-attr-no-sprints="href=../projects/project-overview.html#state=new-empty"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</a></li>
+            <li><a class="mc-tabs__link" href="../work/work-hierarchy.html" data-attr-no-sprints="href=../work/work-hierarchy.html#state=empty"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</a></li>
+            <li><a class="mc-tabs__link" href="../backlog/backlog.html" data-attr-no-sprints="href=../backlog/backlog.html#state=empty"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</a></li>
             <li><a class="mc-tabs__link" href="../scrum/sprint-board.html" aria-current="page"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</a></li>
-            <li><a class="mc-tabs__link" href="../scrum/sprints.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</a></li>
+            <li><a class="mc-tabs__link" href="../scrum/sprints.html" data-attr-no-sprints="href=../scrum/sprints.html#state=empty"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</a></li>
             </ul>
           </nav>
         </div>
 
-        <section class="mc-card mc-mb-6" aria-labelledby="sprint-heading" data-unless="no-active loading error">
+        <section class="mc-card mc-mb-6" aria-labelledby="sprint-heading" data-unless="no-active no-sprints loading error">
           <div class="mc-card__header">
             <div class="mc-stack mc-stack--xs">
               <div class="mc-cluster mc-cluster--sm">
@@ -205,7 +208,7 @@
           </div>
         </div>
 
-        <section aria-labelledby="board-heading" data-unless="no-active loading error">
+        <section aria-labelledby="board-heading" data-unless="no-active no-sprints loading error">
           <h2 class="mc-visually-hidden" id="board-heading">Sprint 8 board</h2>
           <div class="mc-column-select">
             <div class="mc-segmented mc-w-full" role="group" aria-label="Board column">
@@ -243,6 +246,7 @@
                     <p class="mc-field-error" data-when="move-failed" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Move didn't save. Back in To Do.</p>
                     <div class="mc-story-card__actions">
                       <button class="mc-button mc-button--sm" type="button" data-nav="../kanban/move-story-dialog.html" aria-label="Move Mentors can see team needs"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                      <button class="mc-button mc-button--sm" type="button" data-nav="sprint-scope-dialog.html#state=remove" aria-label="Remove Mentors can see team needs from Sprint 8"><span class="mc-icon mc-icon--undo" aria-hidden="true"></span>Remove</button>
                     </div>
                   </li>
                   <li class="mc-story-card">
@@ -259,6 +263,7 @@
                     </div>
                     <div class="mc-story-card__actions">
                       <button class="mc-button mc-button--sm" type="button" data-nav="../kanban/move-story-dialog.html" aria-label="Move Volunteer check-in list"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                      <button class="mc-button mc-button--sm" type="button" data-nav="sprint-scope-dialog.html#state=remove" aria-label="Remove Volunteer check-in list from Sprint 8"><span class="mc-icon mc-icon--undo" aria-hidden="true"></span>Remove</button>
                     </div>
                   </li>
               </ul>
@@ -284,6 +289,7 @@
                     </div>
                     <div class="mc-story-card__actions">
                       <button class="mc-button mc-button--sm" type="button" data-nav="../kanban/move-story-dialog.html" aria-label="Move Volunteers can join a build team"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                      <button class="mc-button mc-button--sm" type="button" data-nav="sprint-scope-dialog.html#state=remove" aria-label="Remove Volunteers can join a build team from Sprint 8"><span class="mc-icon mc-icon--undo" aria-hidden="true"></span>Remove</button>
                     </div>
                   </li>
                   <li class="mc-story-card">
@@ -300,6 +306,7 @@
                     </div>
                     <div class="mc-story-card__actions">
                       <button class="mc-button mc-button--sm" type="button" data-nav="../kanban/move-story-dialog.html" aria-label="Move Book AV for demo day"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                      <button class="mc-button mc-button--sm" type="button" data-nav="sprint-scope-dialog.html#state=remove" aria-label="Remove Book AV for demo day from Sprint 8"><span class="mc-icon mc-icon--undo" aria-hidden="true"></span>Remove</button>
                     </div>
                   </li>
               </ul>
@@ -360,6 +367,18 @@
             </button>
             <button class="mc-button mc-button--primary" type="button" data-nav="start-sprint-dialog.html">
               <span class="mc-icon mc-icon--play" aria-hidden="true"></span>Start Sprint 9
+            </button>
+          </div>
+        </div>
+
+        <div class="mc-empty" data-when="no-sprints" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--sprint mc-icon--lg" aria-hidden="true"></span></span>
+          <h2 class="mc-empty__title">No sprints yet</h2>
+          <p class="mc-empty__text">This board shows Youth Coding Night's active sprint. Plan a sprint with a goal and dates, choose its stories, then start it to work here. The project has no stories yet, so add work first or choose stories later.</p>
+          <div class="mc-empty__actions">
+            <a class="mc-button" href="../work/work-hierarchy.html#state=empty">Open Work</a>
+            <button class="mc-button mc-button--primary" type="button" data-nav="sprint-form-dialog.html">
+              <span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Plan sprint
             </button>
           </div>
         </div>

@@ -40,10 +40,10 @@
   <div class="mock-notes">
     <p class="mock-note" data-when="default">25 leads per page, ordered by last name, then first name. Wide screens show a table; below 768px each row becomes a labelled card. Edit and delete are administrator-only.</p>
     <p class="mock-note" data-when="collaborator" hidden>Collaborators can read every contact. Add, edit, and delete are absent, and the notice explains why. Direct API calls are still denied.</p>
-    <p class="mock-note" data-when="filtered" hidden>Search is a trimmed, case-insensitive substring of first, last, or full name, email, or phone. It combines with the category using AND across all pages. Changing either resets to page 1, and screen readers hear "4 leads found".</p>
-    <p class="mock-note" data-when="zero-results" hidden>Home's "Event 0" card opens this view. Clear filter restores the full directory.</p>
+    <p class="mock-note" data-when="filtered" hidden>Search is a trimmed, case-insensitive substring of first, last, or full name, email, or phone. It combines with the category using AND across all pages. Changing either resets to page 1, and screen readers hear "4 leads found". Chip counts are totals for each category across all leads, so they don't change with search or filter.</p>
+    <p class="mock-note" data-when="zero-results" hidden>Home's "Event 0" card opens this view. Screen readers hear "No Event leads found". Clear filter restores the full directory.</p>
     <p class="mock-note" data-when="deleted" hidden>After a confirmed delete the directory reloads without the lead, the total drops to 36, and a toast confirms what changed. Focus returns to the page heading.</p>
-    <p class="mock-note" data-when="loading" hidden>A skeleton holds the layout while leads load, so the page never looks empty. Screen readers hear "Loading leads".</p>
+    <p class="mock-note" data-when="loading" hidden>A skeleton holds the layout while leads load, so the page never looks empty. Category counts appear only with the loaded result. Screen readers hear "Loading leads".</p>
   </div>
 
   <div class="mc-app">
@@ -161,12 +161,12 @@
         <div class="mc-mb-6 mc-hide-compact" data-unless="empty-admin empty-collaborator">
           <p class="mc-label mc-mb-4" id="category-chips-label">Category</p>
           <ul class="mc-chips" aria-labelledby="category-chips-label">
-            <li><button class="mc-chip" type="button" aria-pressed="true" data-attr-filtered="aria-pressed=false" data-attr-zero-results="aria-pressed=false">All <span class="mc-chip__count"><span data-unless="deleted">37</span><span data-when="deleted" hidden>36</span></span></button></li>
-            <li><button class="mc-chip" type="button" aria-pressed="false"><span class="mc-icon mc-icon--category-create" aria-hidden="true"></span>Create <span class="mc-chip__count"><span data-unless="deleted">9</span><span data-when="deleted" hidden>8</span></span></button></li>
-            <li><button class="mc-chip" type="button" aria-pressed="false"><span class="mc-icon mc-icon--category-communication" aria-hidden="true"></span>Communication <span class="mc-chip__count">8</span></button></li>
-            <li><button class="mc-chip" type="button" aria-pressed="false"><span class="mc-icon mc-icon--category-city" aria-hidden="true"></span>City <span class="mc-chip__count">6</span></button></li>
-            <li><button class="mc-chip" type="button" aria-pressed="false" data-attr-filtered="aria-pressed=true"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer <span class="mc-chip__count">14</span></button></li>
-            <li><button class="mc-chip" type="button" aria-pressed="false" data-attr-zero-results="aria-pressed=true"><span class="mc-icon mc-icon--category-event" aria-hidden="true"></span>Event <span class="mc-chip__count">0</span></button></li>
+            <li><button class="mc-chip" type="button" aria-pressed="true" data-attr-filtered="aria-pressed=false" data-attr-zero-results="aria-pressed=false">All <span class="mc-chip__count" data-unless="loading error"><span data-unless="deleted">37</span><span data-when="deleted" hidden>36</span></span></button></li>
+            <li><button class="mc-chip" type="button" aria-pressed="false"><span class="mc-icon mc-icon--category-create" aria-hidden="true"></span>Create <span class="mc-chip__count" data-unless="loading error"><span data-unless="deleted">9</span><span data-when="deleted" hidden>8</span></span></button></li>
+            <li><button class="mc-chip" type="button" aria-pressed="false"><span class="mc-icon mc-icon--category-communication" aria-hidden="true"></span>Communication <span class="mc-chip__count" data-unless="loading error">8</span></button></li>
+            <li><button class="mc-chip" type="button" aria-pressed="false"><span class="mc-icon mc-icon--category-city" aria-hidden="true"></span>City <span class="mc-chip__count" data-unless="loading error">6</span></button></li>
+            <li><button class="mc-chip" type="button" aria-pressed="false" data-attr-filtered="aria-pressed=true"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer <span class="mc-chip__count" data-unless="loading error">14</span></button></li>
+            <li><button class="mc-chip" type="button" aria-pressed="false" data-attr-zero-results="aria-pressed=true"><span class="mc-icon mc-icon--category-event" aria-hidden="true"></span>Event <span class="mc-chip__count" data-unless="loading error">0</span></button></li>
           </ul>
         </div>
 
@@ -184,6 +184,7 @@
             <span><strong>4 leads found</strong> in Prayer matching “an”</span>
             <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-goto-state="default">Clear search and filter</button>
           </div>
+          <p class="mc-visually-hidden" data-when="zero-results" hidden>No Event leads found</p>
           <p class="mc-visually-hidden" data-when="loading" hidden>Loading leads</p>
         </div>
 

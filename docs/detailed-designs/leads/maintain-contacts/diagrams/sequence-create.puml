@@ -16,7 +16,7 @@ skinparam package {
 title Behavior - Create a lead
 actor "Administrator" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "LeadDirectoryPage / LeadView" as page
+  participant "LeadFormDialog / LeadView" as page
   participant "ILeadService / LeadService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,47 +31,55 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Create a lead
+actor -> page : Enter lead details and save
+page -> page : Disable repeat submission; show saving progress
 page -> client : Build typed CreateLeadCommand
 client -> access : POST /api/leads
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
-else Authorized
+alt Missing, invalid, or expired JWT; inactive account
+  access --> client : 401; audit denial without payloads
+  client --> page : Clear in-memory session; require login; explain the lead was not saved (L2-003.4)
+else Collaborator (no contact mutation in profile P)
+  access --> client : 403; audit denial without payloads
+  client --> page : Keep input; show that only administrators can add leads; nothing saved
+else Administrator
   access -> ctrl : Authorized request
 ctrl -> validation : Send CreateLeadCommand through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
+validation -> validation : L2-009 trim; names 1-100, email 1-254 and valid, phone <= 32, known category
 alt Invalid request
   validation --> ctrl : 400 field errors; no business mutation
   ctrl --> client : Validation ProblemDetails
   client --> page : Keep valid input; focus linked error summary
 else Valid request
   validation -> handler : Handle CreateLeadCommand
-  handler -> entity : L2-009 create independent contact; preserve phone text
-  entity --> handler : New lead
-  handler -> db : Insert under normalized email/category unique constraint
-  db --> handler : SQL result / current records
-
-  alt Duplicate normalized email/category
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    handler -> db : L2-039 / L2-040 commit business state and success audit together
-    alt Commit fails
+  handler -> db : Find contact with the normalized email and category
+  db --> handler : Existing contact or none
+  alt Normalized email/category already used
+    handler --> ctrl : 409 duplicate with existing contact ID, name, category; nothing written
+    ctrl --> client : Conflict ProblemDetails
+    client --> page : Keep input; flag email and category; name and link the existing lead
+  else Pair available
+    handler -> entity : L2-009 create independent contact; preserve phone text
+    entity --> handler : New lead
+    handler -> db : L2-039 / L2-040 insert lead and success audit in one transaction
+    alt Unique index rejects a racing duplicate
+      db --> handler : Roll back insert and audit
+      handler --> ctrl : 409 duplicate with the winning contact's ID, name, category
+      ctrl --> client : Conflict ProblemDetails
+      client --> page : Keep input; flag email and category; name and link the existing lead
+    else Commit fails unexpectedly
       db --> handler : Roll back business state and success audit
       handler --> ctrl : Generic 500 with correlation ID
       ctrl --> client : Failure; no successful-save claim
-      client --> page : Keep draft / restore saved placement
+      client --> page : Keep input; show reference ID; Save lead retries
     else Commit succeeds
-      db --> handler : New committed version
-    handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+      db --> handler : New lead ID and version
+      handler --> ctrl : 201 Created with the saved lead
+      ctrl --> client : Success response
+      client --> page : Close dialog; refresh directory; announce the saved lead
+      page --> actor : New lead listed; focus returns to Add lead
     end
   end
 end

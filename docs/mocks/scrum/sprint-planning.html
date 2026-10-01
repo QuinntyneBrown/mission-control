@@ -38,7 +38,7 @@
     <p class="mock-note" data-when="done-story" hidden>Done stories stay visible so people can see why they're missing, but they can't be added. Reopening the story makes it eligible again.</p>
     <p class="mock-note" data-when="allocated-conflict" hidden>Plans save all-or-nothing. Because HCK-120 joined Sprint 8 while this plan was open, no membership changed. The story is marked, and the rest of the selection is kept for another try. Screen readers hear the alert.</p>
     <p class="mock-note" data-when="saving" hidden>Save plan shows progress and ignores repeat clicks.</p>
-    <p class="mock-note" data-when="not-found" hidden>The sprint was removed or the link is wrong. The page offers a way back to the project's sprints.</p>
+    <p class="mock-note" data-when="not-found" hidden>The link is wrong or names a sprint from another project (the API returns 404). The page offers a way back to the project's sprints.</p>
     <p class="mock-note" data-when="loading" hidden>Placeholders keep both lists in place while the plan loads.</p>
   </div>
 
@@ -168,7 +168,7 @@
           <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
           <div class="mc-alert__body">
             <p class="mc-alert__title">Done stories can't be added to a sprint</p>
-            <p class="mc-alert__text">HCK-119 "Teams can register a project idea" is Done, so it stays out of Sprint 9. If it needs more work, move it back to To Do or In Progress first.</p>
+            <p class="mc-alert__text">HCK-131 "Mentor sign-up page" is Done, so it stays out of Sprint 9. If it needs more work, move it back to To Do or In Progress first.</p>
           </div>
         </div>
 
@@ -190,7 +190,7 @@
                 </li>
                 <li class="mc-list__item">
                   <div class="mc-list__main">
-                    <a class="mc-list__title" href="../work/work-item-detail.html">&lt;script&gt;alert(1)&lt;/script&gt; feedback form</a>
+                    <a class="mc-list__title" href="../work/work-item-detail.html#state=inactive-assignee">&lt;script&gt;alert(1)&lt;/script&gt; feedback form</a>
                     <div class="mc-list__meta"><span>HCK-123</span><span>Judging and feedback</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true">JR</span>Jordan Reyes (inactive)</span><span>1 pt</span></div>
                   </div>
                   <div class="mc-list__aside">
@@ -237,16 +237,16 @@
 
             <h3 class="mc-h4 mc-mt-8 mc-mb-4" id="unavailable-heading">Not available</h3>
             <ul class="mc-list" aria-labelledby="unavailable-heading">
-                <li class="mc-list__item mc-list__item--disabled" data-attr-done-story="class=mc-list__item mc-list__item--disabled mc-list__item--selected">
+                <li class="mc-list__item mc-list__item--disabled">
                   <div class="mc-list__main">
                     <a class="mc-list__title" href="../work/work-item-detail.html">Teams can register a project idea</a>
                     <div class="mc-list__meta"><span>HCK-119</span><span>Hackathon team formation</span><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span></div>
                   </div>
                   <div class="mc-list__aside">
-                    <span class="mc-reason"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span>Done stories can't be added</span>
+                    <span class="mc-reason"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span>In Sprint 8</span>
                   </div>
                 </li>
-                <li class="mc-list__item mc-list__item--disabled">
+                <li class="mc-list__item mc-list__item--disabled" data-attr-done-story="class=mc-list__item mc-list__item--disabled mc-list__item--selected">
                   <div class="mc-list__main">
                     <a class="mc-list__title" href="../work/work-item-detail.html">Mentor sign-up page</a>
                     <div class="mc-list__meta"><span>HCK-131</span><span>Hackathon team formation</span><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span></div>
@@ -319,7 +319,7 @@
         <div class="mc-empty mc-empty--page" data-when="not-found" hidden>
           <span class="mc-empty__icon"><span class="mc-icon mc-icon--compass mc-icon--lg" aria-hidden="true"></span></span>
           <h1 class="mc-empty__title" tabindex="-1">Sprint not found</h1>
-          <p class="mc-empty__text">This sprint may have been removed, or the link is incomplete.</p>
+          <p class="mc-empty__text">This sprint doesn't exist in Community Hackathon 2026, or the link is incomplete.</p>
           <div class="mc-empty__actions">
             <button class="mc-button mc-button--primary" type="button" data-nav="sprints.html">
               <span class="mc-icon mc-icon--arrow-left" aria-hidden="true"></span>Back to sprints

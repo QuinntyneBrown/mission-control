@@ -23,6 +23,10 @@ class LeadDirectoryPage {
   +routeContext: Signal<RouteContext>
   +openDialog(): void
 }
+class LeadFormDialog {
+  +comparison: Signal<LeadComparison?>
+  +reloadLatest(): void
+}
 class LeadView {
   +state: Signal<FeatureState>
   +submit(): void
@@ -30,6 +34,7 @@ class LeadView {
 interface ILeadService {
   +create(request: CreateLeadCommand): Promise<FeatureResult>
   +edit(request: UpdateLeadCommand): Promise<FeatureResult>
+  +read(id: Guid): Promise<LeadDetailResult>
 }
 class LeadService {
   -http: HttpClient
@@ -56,6 +61,8 @@ class MissionControlDataSession {
   -connection: DbConnection
 }
 LeadDirectoryPage --> LeadView : composes
+LeadDirectoryPage ..> LeadFormDialog : opens for add / edit
+LeadFormDialog --> LeadView : composes
 LeadView ..> ILeadService : inject token
 ILeadService <|.. LeadService
 IMissionControlDataSession <|.. MissionControlDataSession
@@ -85,6 +92,25 @@ LeadsController ..> UpdateLeadCommand : dispatches
 UpdateLeadCommandHandler ..> UpdateLeadCommand : handles
 UpdateLeadCommandHandler --> LeadContact : loads / applies
 UpdateLeadCommandHandler ..> IMissionControlDataSession : uses
+class DuplicateLeadProblem {
+  +status: 409
+  +existingLeadId: Guid
+  +existingName: string
+  +existingCategory: LeadCategory
+}
+class StaleLeadProblem {
+  +status: 409
+  +currentVersion: long
+}
+class LeadComparison {
+  +attempted: LeadDetails
+  +latest: LeadDetails
+  +latestVersion: long
+}
+CreateLeadCommandHandler ..> DuplicateLeadProblem : duplicate pair
+UpdateLeadCommandHandler ..> DuplicateLeadProblem : duplicate pair
+UpdateLeadCommandHandler ..> StaleLeadProblem : version mismatch
+LeadView ..> LeadComparison : builds after stale 409 (one read)
 
 enum LeadCategory {
   Create

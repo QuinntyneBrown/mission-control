@@ -17,6 +17,8 @@ All named production types are proposed; the repository currently contains requi
 | Part | Responsibility and architectural home |
 | --- | --- |
 | `WorkItemDetailPage` | Routed page or dialog owned by `frontend/projects/mission-control`; composes the domain library and presentational components. |
+| `MoveStoryDialog` | Application dialog in `frontend/projects/mission-control`, opened by `KanbanBoardPage` and `SprintBoardPage`; a Done destination submits the move that can return the confirmation. |
+| `UnfinishedTasksDialog` | Application dialog in `frontend/projects/mission-control`, opened by `KanbanBoardPage`, `SprintBoardPage`, and (confirmation only) `WorkItemDetailPage`; shows the returned unfinished count and focuses Keep in progress. |
 | `WorkItemView` | Domain component in `frontend/projects/domain`; injects `WORK_ITEM_SERVICE` and holds feature state in signals. |
 | `IWorkItemService`, `WORK_ITEM_SERVICE` | Interface and token in `frontend/projects/api/work-item.service.contract.ts`; the consumer imports the contract only. |
 | `WorkItemService` | Production HTTP adapter in `api`; owns HTTP calls and observable-to-signal conversion. Composition binds a mock adapter for Chromium Playwright. |
@@ -30,12 +32,18 @@ MediatR remains pinned to `12.5.0`. Microsoft.Extensions supplies dependency inj
 `StoryCompletionPolicy` in Application loads unfinished count and `TaskRevision` under the workspace transaction lock.
 Every child task create, delete, reparent, or status update increments the affected story's task revision in the same transaction.
 A Done request with no tasks or all tasks Done proceeds without confirmation.
-Otherwise it returns `409` with a specific `unfinished-tasks` category, current count, story version, and task revision.
+Otherwise it returns `409` with a specific `unfinished-tasks` category and a `StoryCompletionCondition`: current count, story version, and task revision.
+Any board (Kanban or sprint) or the story detail then opens `UnfinishedTasksDialog`.
 The dialog initially focuses Keep in progress and names the story and unfinished count.
+It shows the count only; it lists no task titles and names no one who changed a task.
 
-Explicit confirmation resubmits the requested transition with `confirmed=true` and the displayed completion condition.
-The server rechecks the condition atomically. A changed revision/count returns a new `409` and the `server-count` mock state requests fresh confirmation.
-Cancellation restores any dragged card and sends no transition. Success updates story status and live placements without changing any task status.
+Mark story Done resubmits the refused command unchanged except for the returned `StoryCompletionCondition`.
+A board resubmits `MoveStoryCommand` with the same destination and position; the story detail resubmits the `CompleteStoryCommand` or `UpdateWorkItemCommand` it sent.
+The server rechecks the condition under the lock before any write. A changed revision/count returns a new `409` and the `server-count` mock state requests fresh confirmation.
+A changed story version is a stale-version `409`: the dialog closes, a board restores its snapshot and offers Reload board, and the detail reads the latest story.
+Keep in progress sends no request: a board restores its snapshot and the detail keeps the saved status.
+An unexpected `500` keeps the dialog open in its `failed` state with the reference ID; Mark story Done retries the same request.
+Success updates story status and live placements without changing any task status.
 The completion command delegates to the same status-transition service used by `MoveStoryCommand` and `UpdateWorkItemCommand`.
 The dedicated endpoint below supports the detail status control; it does not bypass the shared guard.
 
@@ -54,7 +62,7 @@ Field errors connect to inputs; asynchronous results use status or alert announc
 
 Mock input and review references:
 
-- [Unfinished tasks confirmation · Mission Control mock](../../../mocks/kanban/unfinished-tasks-dialog.html); review states: `default`, `server-count`, `saving`.
+- [Unfinished tasks confirmation · Mission Control mock](../../../mocks/kanban/unfinished-tasks-dialog.html); review states: `default`, `server-count`, `saving`, `failed`.
 - [Move story · Mission Control mock](../../../mocks/kanban/move-story-dialog.html); review states: `default`, `to-done`, `saving`, `failed`.
 - [Work item detail · Mission Control mock](../../../mocks/work/work-item-detail.html); review states: `default`, `initiative`, `epic`, `task`, `unset`, `inactive-assignee`, `collaborator`, `not-found`, `loading`, `error`.
 

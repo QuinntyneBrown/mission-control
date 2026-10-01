@@ -6,9 +6,9 @@ Person(actor, "Authorized user", "Review home coverage and progress")
 System_Boundary(mc, "Mission Control") {
   Container(web, "Mission Control web client", "Angular", "Review home coverage and progress")
   Container(api, "MissionControl.Api", ".NET", "Authorized application handlers")
-  ContainerDb(db, "Mission Control database", "SQL - provider <TO SUPPLY>", "HomeSummary and related records")
+  ContainerDb(db, "Mission Control database", "SQL - provider <TO SUPPLY>", "Leads, workspaces, work items, and sprints")
 }
 Rel(actor, web, "Uses")
 Rel(web, api, "Requests feature behavior", "HTTPS / JSON")
-Rel(api, db, "Reads or commits feature records", "Parameterized SQL")
+Rel(api, db, "Reads persisted totals in read transactions", "Parameterized SQL")
 @enduml

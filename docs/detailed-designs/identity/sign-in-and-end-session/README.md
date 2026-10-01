@@ -23,6 +23,7 @@ All named production types are proposed; the repository currently contains requi
 | `SessionService` | Production HTTP adapter in `api`; owns HTTP calls and observable-to-signal conversion. Composition binds a mock adapter for Chromium Playwright. |
 | `SessionsController` | Thin controller under `backend/src/MissionControl.Api/Controllers`, namespace `MissionControl.Api.Controllers`; binds, dispatches, and returns. |
 | `UserAccount` | Domain entity or Application read projection described below; Domain has no external project dependency. |
+| `CurrentSession` | Application read projection returned by `GET /api/session`: account ID, display name, role, and capability summary; no contact data. |
 | `IMissionControlDataSession` | Application data port; the Infrastructure adapter runs parameterized queries and transaction commits. |
 
 Commands, queries, handlers, and request validators live in Application feature folders. Each type has its own file; folders and namespaces agree.
@@ -33,16 +34,22 @@ The Infrastructure password adapter uses a maintained salted password hash; the 
 `JwtOptions` validates external issuer, audience, and signing material. No fallback key exists. The signing algorithm and external secret facility are `<TO SUPPLY>`.
 The token contains account ID, credential version, issuer, audience, and expiry. It excludes contact data and passwords.
 `CurrentAccountAuthorization` verifies the token and loads current SQL status, role, and credential version on every protected request.
-Role changes apply on the next request. Password replacement increments the version and invalidates earlier tokens.
+Token validation sets `ClockSkew` to zero, so any request at or after `exp` returns `401` (L2-003.1); the .NET default skew of five minutes is not used.
+An inactive or missing account, or a credential version that differs from the token's, returns `401` (L2-002.3, L2-004.4).
+The client then clears the session and opens login in its `session-ended` state.
+Role changes apply on the next request as `403` for operations no longer permitted. Password replacement increments the version and invalidates earlier tokens.
+`GET /api/session` returns the `CurrentSession` projection for the current account.
 
 `LoginAttempt` records a keyed digest of normalized email, failure instants, and a blocked-until instant in SQL.
 Atomic per-key updates enforce five failures in a rolling 15-minute window; the fifth sets a further 15-minute throttle.
-The fifth invalid attempt returns the generic `401`; subsequent attempts return `429` with retry timing, including unknown emails.
+The fifth invalid attempt returns the generic `401`; subsequent attempts return `429`, including unknown emails.
+`429` carries `Retry-After` and the blocked-until UTC instant. The login view shows that instant in Toronto time and the remaining minutes, keeping the email.
 Successful login after the interval clears the failure window. Unknown, incorrect, and inactive credentials share the same failure message.
 The handler performs a dummy hash verification for unknown accounts. Throttling never changes account status or role.
 
 `SessionService` stores tokens only in memory; it never uses local storage, session storage, URLs, or cookies.
-Logout is a client operation, clears protected signal caches, cancels in-flight protected requests, and navigates to login.
+`ISessionService.logout()` is a client-only operation: it clears the in-memory token and protected signal caches and cancels in-flight protected requests (L2-003.2).
+The user menu's Sign out and the unsaved-changes dialog's "Sign out without saving" call it; the application then navigates to login.
 A session generation counter ignores responses from an earlier session, preventing late responses from repopulating cleared data.
 Reload and expiry require login; unsaved-form expiry explains that no save completed. Local logout does not revoke a copied token.
 Login failure clears the password and retains email, matching the `invalid` mock. The requested internal route is restored only after access checks.

@@ -29,15 +29,26 @@ Commands, queries, handlers, and request validators live in Application feature 
 MediatR remains pinned to `12.5.0`. Microsoft.Extensions supplies dependency injection, Options, and Configuration.
 
 `SprintsPage` owns `/projects/:id/sprints`; `SprintPlanningPage` owns `/projects/:id/sprints/:sprintId/plan`.
+A Scrum workspace with no sprints shows Plan sprint on its Sprints and Board tabs; collaborators see it too.
 `SprintFormDialog` captures required name 1–200, goal 1–2,000, and start/end dates with end on or after start.
 Dates use Toronto calendar values; actual start/closure use UTC instants. A suggested next sprint name is display assistance, not a uniqueness rule.
+A sprint may be planned before any stories exist; its stories can be chosen later.
+Edits to a planned sprint carry its version.
+On a stale-version `409` the form keeps the attempted values and reads the latest version once (no resubmission); Reload latest adopts the latest values and version while the comparison stays visible.
+
 `SaveSprintPlanCommand` validates every selected story before replacing membership atomically.
 Only unfinished stories in this workspace are newly eligible. Membership removal returns a story to the unallocated backlog without changing status.
+`SaveSprintPlanCommandHandler` locks the workspace, then reads its mode, the sprint and its version, and every selected story with its open membership.
+It decides every rejection before any write, so a rejected plan changes nothing.
+Done or foreign-workspace selections return `400` identifying each story; allocation while the workspace is in Kanban mode returns `409` (L2-027.3).
+A story already in another planned or active sprint returns `409` naming it (L2-022.3); the page marks the story and keeps the rest of the selection.
+A sprint that is no longer Planned returns `409`. A stale sprint version returns `409` and follows the stale-version rule above.
+A missing sprint, or one in another workspace, returns `404`; the page shows Sprint not found with a link back to the sprint list.
 
 `OpenSprintMembership` uniquely indexes StoryId and references a same-workspace Story and Sprint.
 Planned or active is the permitted referenced sprint state; closed membership moves to history and leaves this live table.
-`SaveSprintPlanCommandHandler` locks the workspace, compares sprint/version and scope changes, and rejects raced allocations with `409`.
-Kanban mode blocks plan mutations and allocations while preserving readable plans.
+The unique index backs the workspace lock: a raced allocation rolls back the whole plan and returns `409` naming the story.
+Kanban mode blocks creating sprints, plan mutations, and allocations with `409` while plans stay readable.
 Story pickers page through bounded results, with unavailable Done stories explained.
 Already-selected stories that became Done are retained unless explicitly removed; new Done allocation remains prohibited.
 Below `992px` the available-story and selected-story lists stack, matching the planning mock.
@@ -59,10 +70,10 @@ Field errors connect to inputs; asynchronous results use status or alert announc
 
 Mock input and review references:
 
-- [Sprints · Mission Control mock](../../../mocks/scrum/sprints.html); review states: `default`, `no-sprints`, `kanban-paused`, `loading`, `error`.
-- [Plan or edit sprint · Mission Control mock](../../../mocks/scrum/sprint-form-dialog.html); review states: `create`, `validation`, `saving`, `failed`, `edit`, `conflict`.
+- [Sprints · Mission Control mock](../../../mocks/scrum/sprints.html); review states: `default`, `empty`, `kanban-paused`, `loading`, `error`.
+- [Plan or edit sprint · Mission Control mock](../../../mocks/scrum/sprint-form-dialog.html); review states: `create`, `validation`, `saving`, `failed`, `edit`, `conflict`, `conflict-reloaded`.
 - [Plan sprint stories · Mission Control mock](../../../mocks/scrum/sprint-planning.html); review states: `default`, `done-story`, `allocated-conflict`, `saving`, `not-found`, `loading`.
-- [Backlog · Mission Control mock](../../../mocks/backlog/backlog.html); review states: `default`, `add-to-sprint`, `kanban`, `kanban-preserved`, `collaborator`, `empty`, `reorder-failed`, `loading`, `error`.
+- [Backlog · Mission Control mock](../../../mocks/backlog/backlog.html); review states: `default`, `add-to-sprint`, `kanban`, `kanban-preserved`, `collaborator`, `paged`, `empty`, `reorder-failed`, `reorder-conflict`, `loading`, `error`.
 
 Implementation proceeds one behavior at a time using the linked Given-When-Then criteria. An API integration acceptance check first fails for the expected missing behavior.
 A Chromium Playwright check uses one page object per screen and a mock service bound through the same token. Tests express intent; page objects own selectors.

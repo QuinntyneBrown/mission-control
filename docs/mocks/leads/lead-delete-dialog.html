@@ -33,8 +33,8 @@
   <div class="mock-notes">
     <p class="mock-note" data-when="default">Opened from a lead's Delete action. Focus starts on Cancel, the safe choice; Escape or Cancel closes without a request and returns focus to the Delete button. The dialog names the lead and category.</p>
     <p class="mock-note" data-when="city-lead" hidden>Deleting Quinntyne Brown's City contact is allowed. It never touches the administrator account, its password, status, or permissions.</p>
-    <p class="mock-note" data-when="blocked" hidden>Grace Mensah is the responsible lead for Prayer Wall App, so the API answers 409 and nothing changes, even for a direct request. The dialog explains the fix and offers no delete button.</p>
-    <p class="mock-note" data-when="deleting" hidden>The delete button shows progress and ignores repeat clicks; Cancel waits. On success the dialog closes, the directory reloads without the lead, and a toast confirms it.</p>
+    <p class="mock-note" data-when="blocked" hidden>Grace Mensah is the responsible lead for Prayer Wall App. Lead details already list that project, so their Delete opens this explanation without a request. From a directory row, it replaces the confirmation after the API's 409, whose details name each referencing project. Nothing changes, even for a direct request; the dialog explains the fix and offers no delete or retry button.</p>
+    <p class="mock-note" data-when="deleting" hidden>The delete button shows progress and ignores repeat clicks; Cancel waits. On success the dialog closes, the directory reloads without the lead, and a toast confirms it. If the API answers 404 because the lead was already deleted, the dialog closes, the directory reloads without it, and the announcement says it was already deleted. A 409 for a newly assigned project switches to the blocked explanation.</p>
     <p class="mock-note" data-when="failed" hidden>Nothing was deleted. "Delete lead" tries again; the reference ID matches the server's diagnostic record.</p>
   </div>
 

@@ -16,7 +16,7 @@ skinparam package {
 title Behavior - Prioritize a story across epics
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "BacklogPage / WorkOrderView" as page
+  participant "BacklogPage / MovePositionDialog / WorkOrderView" as page
   participant "IWorkOrderService / WorkOrderService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,51 +31,64 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Prioritize a story across epics
-page -> client : Build typed PrioritizeStoryCommand
+actor -> page : Drag within the page, Move up / Move down, or Move to position...
+page -> page : Snapshot saved page; compute the absolute target rank (rank 26 up becomes 25 on page 1)
+page -> client : Build typed PrioritizeStoryCommand (story, absolute target position, expected backlog-order version)
 client -> access : PUT /api/workspaces/{id}/work-order/backlog
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
+alt Missing, invalid or expired JWT; deactivated account
+  access --> client : 401; audit denial without payloads
+  client --> page : Restore snapshot; clear session; sign in with the backlog as return route
+else Authenticated without permission to prioritize the backlog
+  access --> client : 403; audit denial without payloads
+  client --> page : Restore snapshot; explain that prioritizing is not permitted
 else Authorized
   access -> ctrl : Authorized request
-ctrl -> validation : Send PrioritizeStoryCommand through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
-alt Invalid request
-  validation --> ctrl : 400 field errors; no business mutation
-  ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
-else Valid request
-  validation -> handler : Handle PrioritizeStoryCommand
-  handler -> db : Lock workspace order; read story backlog and full count
-  db --> handler : Current backlog
-  handler -> entity : L2-017 move story in backlog only
-  entity --> handler : New priority interval; parents/sibling/board order unchanged
-  alt Foreign-workspace story or invalid/stale position
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    handler -> db : L2-039 / L2-040 commit business state and success audit together
-    alt Commit fails
-      db --> handler : Roll back business state and success audit
-      handler --> ctrl : Generic 500 with correlation ID
-      ctrl --> client : Failure; no successful-save claim
-      client --> page : Keep draft / restore saved placement
-    else Commit succeeds
-      db --> handler : New committed version
-    handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+  ctrl -> validation : Send PrioritizeStoryCommand through MediatR 12.5.0
+  validation -> validation : Identifiers well formed; target position is a whole number of 1 or more
+  alt Malformed request
+    validation --> ctrl : 400 field errors; nothing read or changed
+    ctrl --> client : Validation ProblemDetails
+    client --> page : Restore snapshot; MovePositionDialog keeps the value and shows the position message
+  else Valid request
+    validation -> handler : Handle PrioritizeStoryCommand
+    handler -> db : Lock workspace; read the full story backlog order, its count, and its version
+    db --> handler : Ordered story IDs and version
+    alt Workspace or story not found
+      handler --> ctrl : 404; nothing changed
+      ctrl --> client : ProblemDetails (not found)
+      client --> page : Reload the backlog page without the story; announce that it no longer exists
+    else Story from another workspace, not a story, or position beyond the full count (L2-017.3)
+      handler --> ctrl : 400 invalid position or reference; nothing changed
+      ctrl --> client : Validation ProblemDetails
+      client --> page : Restore snapshot; "Enter a position from 1 to N" (out-of-range state)
+    else Stale backlog-order version (L2-041)
+      handler --> ctrl : 409 order changed; nothing applied
+      ctrl --> client : ProblemDetails (order changed)
+      client --> page : Restore snapshot; highlight the story; "Backlog order changed" alert; Reload backlog only, never resent (reorder-conflict state)
+    else Move permitted
+      handler -> entity : L2-017 move the story in the backlog only
+      entity --> handler : New priority interval; parents, sibling order, board order, and sprint membership unchanged
+      handler -> db : L2-039 / L2-040 rewrite the interval, bump the backlog-order version, and record success audit in one transaction
+      alt Commit fails
+        db --> handler : Roll back business state and success audit
+        handler --> ctrl : Generic 500 with correlation ID
+        ctrl --> client : Failure; no successful-move claim
+        client --> page : Restore snapshot; highlight the story; keep focus on the move control; Try again resends the same move (reorder-failed state)
+      else Commit succeeds
+        db --> handler : New backlog-order version
+        handler --> ctrl : Committed rank
+        ctrl --> client : 200 with rank, total, and version
+        client --> page : Replace snapshot; follow the story to its page when it crosses a page boundary
+        page --> actor : Announce "Moved {title} to position N of M"
+      end
     end
   end
 end
-end
 note over ctrl, db
+All rejection checks run under the lock before any write.
 Unexpected failures return generic 500 plus correlation ID (L2-043).
 Diagnostics exclude secrets and contact payloads.
 end note

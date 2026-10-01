@@ -14,9 +14,9 @@ skinparam package {
   BackgroundColor #F9FAFB
 }
 title Behavior - Edit workspace settings
-actor "Authorized user" as actor
+actor "Administrator" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "ProjectListPage / WorkspaceView" as page
+  participant "ProjectOverviewPage\nProjectFormDialog / WorkspaceView" as page
   participant "IWorkspaceService / WorkspaceService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,49 +31,81 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Edit workspace settings
-page -> client : Build typed UpdateWorkspaceCommand
+actor -> page : Project actions > Edit project; change settings; Save changes
+page -> page : Disable repeat submission; show saving progress
+page -> client : Build UpdateWorkspaceCommand with the opened expectedVersion
 client -> access : PUT /api/workspaces/{id}
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
-else Authorized
+alt Missing, invalid, or expired JWT; inactive account
+  access --> client : 401; audit denial without payloads
+  client --> page : Clear in-memory session; require login; nothing saved
+else Collaborator (profile P: no workspace edits)
+  access --> client : 403; audit denial without payloads
+  client --> page : Close dialog; explain that only administrators change project settings
+else Administrator
   access -> ctrl : Authorized request
-ctrl -> validation : Send UpdateWorkspaceCommand through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
-alt Invalid request
-  validation --> ctrl : 400 field errors; no business mutation
-  ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
-else Valid request
-  validation -> handler : Handle UpdateWorkspaceCommand
-  handler -> db : Load versioned workspace and optional lead reference
-  db --> handler : Current workspace
-  handler -> entity : Edit settings; mode remains unchanged
-  entity --> handler : Updated workspace
-  alt Stale version / invalid lead
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    handler -> db : L2-039 / L2-040 commit business state and success audit together
-    alt Commit fails
-      db --> handler : Roll back business state and success audit
-      handler --> ctrl : Generic 500 with correlation ID
-      ctrl --> client : Failure; no successful-save claim
-      client --> page : Keep draft / restore saved placement
-    else Commit succeeds
-      db --> handler : New committed version
-    handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+  ctrl -> validation : Send UpdateWorkspaceCommand through MediatR 12.5.0
+  validation -> validation : Validation V: trimmed name 1-200; description <= 10,000; no mode field
+  alt Invalid fields
+    validation --> ctrl : 400 field errors; nothing saved
+    ctrl --> client : Validation ProblemDetails
+    client --> page : Show field errors and summary; focus the summary; keep valid input
+  else Valid request
+    validation -> handler : Handle UpdateWorkspaceCommand
+    handler -> db : Begin transaction; load workspace and version
+    db --> handler : Workspace row or none
+    alt Workspace missing (deleted meanwhile)
+      handler --> ctrl : 404; nothing saved
+      ctrl --> client : NotFound ProblemDetails
+      client --> page : Close dialog; show "Project not found" with Back to projects
+    else Version differs from expectedVersion
+      handler --> ctrl : L2-041 409 stale version; nothing saved
+      ctrl --> client : Conflict ProblemDetails
+      client -> access : GET /api/workspaces/{id} once for the latest version
+      access --> client : Latest WorkspaceDetail (authorized as above)
+      client --> page : Keep attempted values; show "Your edit" beside "Latest saved"; no resubmission
+      opt Reload latest
+        page -> page : Adopt latest values and version; keep the comparison visible
+        page --> actor : "Latest version loaded"; re-apply edits, then Save changes sends a new request
+      end
+    else Current version
+      handler -> db : Check optional responsible lead still exists
+      db --> handler : Lead row or none
+      alt Selected lead no longer exists
+        handler --> ctrl : 400 responsibleLeadId field error; nothing saved
+        ctrl --> client : Validation ProblemDetails
+        client --> page : Show missing-lead alert and field error; keep every other value
+      else Lead exists or cleared
+        handler -> entity : L2-014 edit name, description, lead; mode unchanged
+        entity --> handler : Updated workspace; version + 1
+        handler -> db : L2-039 / L2-040 update guarded by expectedVersion with success audit; one transaction
+        alt Version guard matches no row (racing save)
+          db --> handler : Roll back update and audit
+          handler --> ctrl : Same 409 stale version
+          ctrl --> client : Conflict ProblemDetails
+          client --> page : Same comparison flow as above; no resubmission
+        else Restrictive lead FK rejects a racing lead deletion
+          db --> handler : Roll back update and audit
+          handler --> ctrl : Same 400 responsibleLeadId field error
+          ctrl --> client : Validation ProblemDetails
+          client --> page : Show missing-lead alert and field error; keep every other value
+        else Commit fails unexpectedly
+          db --> handler : Roll back update and audit
+          handler --> ctrl : Generic 500 with correlation ID
+          ctrl --> client : Failure; no successful-save claim
+          client --> page : Show save-failed alert with reference ID; keep every value; Save changes retries
+        else Commit succeeds
+          db --> handler : New committed version
+          handler --> ctrl : 200 with updated WorkspaceDetail
+          ctrl --> client : Success response
+          client --> page : Close dialog; update overview signals
+          page --> actor : "Changes saved" toast; focus returns to Project actions
+        end
+      end
     end
   end
-end
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).

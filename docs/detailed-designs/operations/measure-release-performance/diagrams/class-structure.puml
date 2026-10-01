@@ -13,23 +13,90 @@ skinparam package {
   FontColor #101828
   BackgroundColor #F9FAFB
 }
+set separator none
 title Class structure - Measure release workflow performance
-class PerformanceResult {
-  +operationClass: string
-  +count: long
-  +p95ServerMilliseconds: decimal
-  +unexpected5xx: long
-  +integrityFailures: long
-  +environmentManifest: string
+package "backend/src/MissionControl.Operations" {
+  class SeedPerformanceFixtureOperation {
+    +run(options: PerformanceOptions): void
+  }
+  class MeasureApiLoadOperation {
+    +run(options: PerformanceOptions, manifest: EnvironmentManifest): PerformanceResult
+  }
+  class PerformanceOptions {
+    +apiBaseUrl: string
+    +sessionAccounts: string[]
+    +warmUp: TimeSpan
+    +duration: TimeSpan
+    +requestsPerSecondPerSession: int
+    +readShare: decimal
+  }
+  class PerformanceResult {
+    +environmentManifest: EnvironmentManifest
+    +operationClasses: OperationClassResult[]
+    +invariantFailures: string[]
+    +outcome: MeasurementOutcome
+  }
+  class OperationClassResult {
+    +operationClass: string
+    +isWrite: bool
+    +count: long
+    +p95ServerMilliseconds: decimal
+    +status4xx: long
+    +unexpected5xx: long
+  }
+  enum MeasurementOutcome {
+    NotRun
+    Passed
+    Failed
+    OtherEnvironment
+  }
 }
-class PerformanceHarness {
-  +run(configuration: OperationConfiguration): PerformanceResult
+package "backend/src/MissionControl.Api" {
+  class ServerTimingMiddleware {
+    +invoke(context: HttpContext): Task
+  }
+  class ServerTimingOptions {
+    +enabled: bool
+  }
 }
-class OperationConfiguration {
-  +environment: string
-  +sqlProvider: string
-  +externalSecretsAvailable: bool
+package "e2e/performance" {
+  class MeasureColdViewsOperation {
+    +run(manifest: EnvironmentManifest): ColdViewResult[]
+  }
+  class ColdViewResult {
+    +view: string
+    +runs: number
+    +failedRuns: number
+    +p95UsableMilliseconds: number
+    +environmentManifest: EnvironmentManifest
+    +outcome: MeasurementOutcome
+  }
 }
-PerformanceHarness ..> OperationConfiguration : consumes
-PerformanceHarness --> PerformanceResult : records outcome
+package "docs/operations/performance/<run>" {
+  class EnvironmentManifest {
+    +frameworkVersions: string[]
+    +browserVersion: string
+    +sqlProviderVersion: string
+    +configuration: string
+    +fixture: string
+    +hardware: string
+    +networkProfile: string
+    +matchesL2046Profile: bool
+  }
+}
+note bottom of ServerTimingOptions
+Enabled only for the measurement
+instance; off by default.
+end note
+SeedPerformanceFixtureOperation ..> PerformanceOptions : consumes
+MeasureApiLoadOperation ..> PerformanceOptions : consumes
+MeasureApiLoadOperation --> PerformanceResult : records
+PerformanceResult *-- "8" OperationClassResult : one per read/write class
+PerformanceResult --> MeasurementOutcome
+PerformanceResult --> EnvironmentManifest
+MeasureApiLoadOperation ..> ServerTimingMiddleware : reads Server-Timing app;dur
+ServerTimingMiddleware ..> ServerTimingOptions : consumes
+MeasureColdViewsOperation --> ColdViewResult : records one per view
+ColdViewResult --> EnvironmentManifest
+ColdViewResult ..> MeasurementOutcome : same values
 @enduml

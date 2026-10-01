@@ -37,12 +37,13 @@
 
   <div class="mock-notes">
     <p class="mock-note" data-when="default">Initiative → Epic → Story → Task as an outline. Each toggle reports its expanded state. Move up and Move down change sibling order only and are announced, for example "Book AV for demo day moved to position 2 of 6". Below 768px they move into the row menu. The mock draws a representative part of the project, not all 24 stories and 55 tasks. The project header and tabs stay pinned while the tab content scrolls; on phones only the tabs stay pinned.</p>
-    <p class="mock-note" data-when="move-menu" hidden>The row menu holds every action, so nothing depends on hover or dragging. Move to position… covers reorders that cross pages. Delete appears only for administrators and opens a confirmation that names the item.</p>
+    <p class="mock-note" data-when="move-menu" hidden>The row menu holds every action, so nothing depends on hover or dragging. Below 768px it also holds Move up and Move down, marked unavailable at either end of the siblings. Move to position… covers reorders that cross pages. Delete appears only for administrators and opens a confirmation that names the item.</p>
     <p class="mock-note" data-when="collaborator" hidden>Collaborators can add, edit, move, and reorder work. Delete is shown disabled with the reason; the API still refuses it.</p>
-    <p class="mock-note" data-when="empty" hidden>A new project has no work yet. Both roles can add the first initiative.</p>
+    <p class="mock-note" data-when="empty" hidden>Youth Coding Night is a new Scrum project with no work yet. Both roles can add the first initiative. With no work and no sprint history, the project can still be deleted.</p>
     <p class="mock-note" data-when="large" hidden>Shown with a larger dataset. Children load in bounded batches of up to 100; counts always come from the full data. Loading more keeps focus on the button and announces "100 more stories loaded".</p>
     <p class="mock-note" data-when="batch-error" hidden>The failed batch leaves loaded items in place and offers Retry with a reference ID.</p>
     <p class="mock-note" data-when="loading" hidden>A skeleton outline holds the layout while work loads. Screen readers hear "Loading work".</p>
+    <p class="mock-note" data-when="error" hidden>The outline couldn't load, so no stale work is shown. The reference ID matches the server's diagnostic record; Try again reloads the outline.</p>
   </div>
 
   <div class="mc-app">
@@ -117,15 +118,16 @@
           <nav class="mc-breadcrumbs" aria-label="Breadcrumb">
             <ol>
               <li><a href="../projects/project-list.html">Projects</a></li>
-              <li><span aria-current="page">Community Hackathon 2026</span></li>
+              <li><span aria-current="page" data-unless="empty">Community Hackathon 2026</span><span aria-current="page" data-when="empty" hidden>Youth Coding Night</span></li>
             </ol>
           </nav>
           <header class="mc-page-header">
             <div class="mc-page-header__main">
-              <h1 class="mc-page-header__title" tabindex="-1">Community Hackathon 2026</h1>
+              <h1 class="mc-page-header__title" tabindex="-1"><span data-unless="empty">Community Hackathon 2026</span><span data-when="empty" hidden>Youth Coding Night</span></h1>
               <div class="mc-page-header__meta">
                 <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
-                <span>Responsible lead: <a href="../leads/lead-detail.html#state=lead">Rafael Da Silva</a></span>
+                <span data-unless="empty">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Rafael Da Silva</a></span>
+                <span data-when="empty" hidden>Responsible lead: <span class="mc-unset">Not set</span></span>
               </div>
             </div>
             <div class="mc-page-header__actions">
@@ -138,20 +140,20 @@
                 </button>
                 <div class="mc-menu" id="project-actions">
                   <button class="mc-menu__item" type="button" data-nav="../projects/project-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit project</button>
-                  <button class="mc-menu__item" type="button" data-nav="../projects/mode-change-dialog.html#state=blocked"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
+                  <button class="mc-menu__item" type="button" data-nav="../projects/mode-change-dialog.html#state=blocked" data-attr-empty="data-nav=../projects/mode-change-dialog.html#state=to-kanban"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
                   <div class="mc-menu__separator"></div>
-                  <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="../projects/project-delete-dialog.html#state=blocked"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
+                  <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="../projects/project-delete-dialog.html#state=blocked" data-attr-empty="data-nav=../projects/project-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
                 </div>
               </div>
             </div>
           </header>
           <nav class="mc-project-tabs" aria-label="Project sections">
             <ul class="mc-tabs">
-              <li><a class="mc-tabs__link" href="../projects/project-overview.html"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</a></li>
-              <li><a class="mc-tabs__link" href="work-hierarchy.html" aria-current="page"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</a></li>
-              <li><a class="mc-tabs__link" href="../backlog/backlog.html"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</a></li>
-              <li><a class="mc-tabs__link" href="../scrum/sprint-board.html"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</a></li>
-              <li><a class="mc-tabs__link" href="../scrum/sprints.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</a></li>
+              <li><a class="mc-tabs__link" href="../projects/project-overview.html" data-attr-empty="href=../projects/project-overview.html#state=new-empty"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</a></li>
+              <li><a class="mc-tabs__link" href="work-hierarchy.html" aria-current="page" data-attr-empty="href=work-hierarchy.html#state=empty"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</a></li>
+              <li><a class="mc-tabs__link" href="../backlog/backlog.html" data-attr-empty="href=../backlog/backlog.html#state=empty"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</a></li>
+              <li><a class="mc-tabs__link" href="../scrum/sprint-board.html" data-attr-empty="href=../scrum/sprint-board.html#state=no-active"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</a></li>
+              <li><a class="mc-tabs__link" href="../scrum/sprints.html" data-attr-empty="href=../scrum/sprints.html#state=no-sprints"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</a></li>
             </ul>
           </nav>
         </div>
@@ -191,6 +193,8 @@
                       <a class="mc-menu__item" href="work-item-detail.html#state=initiative"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
                       <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                       <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-epic"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add epic</button>
+                      <button class="mc-menu__item mc-show-compact" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                      <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                       <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                       <div class="mc-menu__separator"></div>
                       <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=has-children"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
@@ -218,6 +222,8 @@
                           <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                           <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-story"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add story</button>
                           <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                          <button class="mc-menu__item mc-show-compact" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                          <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                           <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                           <div class="mc-menu__separator"></div>
                           <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=has-children"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
@@ -245,6 +251,8 @@
                               <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                               <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-task"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add task</button>
                               <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                              <button class="mc-menu__item mc-show-compact" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                              <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                               <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                               <div class="mc-menu__separator"></div>
                               <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=has-children"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
@@ -271,6 +279,8 @@
                                   <a class="mc-menu__item" href="work-item-detail.html#state=task"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
                                   <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                                   <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                                  <button class="mc-menu__item mc-show-compact" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                                  <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                                   <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                                   <div class="mc-menu__separator"></div>
                                   <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
@@ -297,6 +307,8 @@
                                   <a class="mc-menu__item" href="work-item-detail.html#state=task"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
                                   <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                                   <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                                  <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                                  <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                                   <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                                   <div class="mc-menu__separator"></div>
                                   <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
@@ -323,6 +335,8 @@
                                   <a class="mc-menu__item" href="work-item-detail.html#state=task"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
                                   <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                                   <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                                  <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                                  <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                                   <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                                   <div class="mc-menu__separator"></div>
                                   <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
@@ -349,6 +363,8 @@
                                   <a class="mc-menu__item" href="work-item-detail.html#state=task"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
                                   <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                                   <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                                  <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                                  <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                                   <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                                   <div class="mc-menu__separator"></div>
                                   <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
@@ -375,6 +391,8 @@
                                   <a class="mc-menu__item" href="work-item-detail.html#state=task"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
                                   <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                                   <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                                  <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                                  <button class="mc-menu__item mc-show-compact" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                                   <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                                   <div class="mc-menu__separator"></div>
                                   <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
@@ -404,6 +422,8 @@
                               <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                               <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-task"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add task</button>
                               <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                              <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                              <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                               <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                               <div class="mc-menu__separator"></div>
                               <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=in-sprint"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
@@ -431,6 +451,8 @@
                               <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                               <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-task"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add task</button>
                               <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                              <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                              <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                               <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                               <div class="mc-menu__separator"></div>
                               <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=has-children"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
@@ -458,6 +480,8 @@
                               <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                               <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-task"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add task</button>
                               <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                              <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                              <button class="mc-menu__item mc-show-compact" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                               <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                               <div class="mc-menu__separator"></div>
                               <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=has-children"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
@@ -508,6 +532,8 @@
                           <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                           <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-story"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add story</button>
                           <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                          <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                          <button class="mc-menu__item mc-show-compact" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                           <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                           <div class="mc-menu__separator"></div>
                           <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=has-children"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
@@ -535,6 +561,8 @@
                               <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                               <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-task"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add task</button>
                               <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                              <button class="mc-menu__item mc-show-compact" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                              <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                               <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                               <div class="mc-menu__separator"></div>
                               <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=history"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
@@ -562,6 +590,8 @@
                               <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                               <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-task"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add task</button>
                               <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                              <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                              <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                               <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                               <div class="mc-menu__separator"></div>
                               <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=has-children"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
@@ -589,6 +619,8 @@
                               <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                               <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-task"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add task</button>
                               <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                              <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                              <button class="mc-menu__item mc-show-compact" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                               <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                               <div class="mc-menu__separator"></div>
                               <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=has-children"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
@@ -608,7 +640,7 @@
               <span class="mc-type mc-type--initiative" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--initiative" aria-hidden="true"></span></span><span class="mc-type__label">Initiative</span></span>
               <div class="mc-tree__main">
                 <a class="mc-tree__title" href="work-item-detail.html#state=initiative"><span class="mc-visually-hidden">Initiative: </span>Demo day showcase</a>
-                <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Initiative</span><span>HCK-102</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-unset">Unassigned</span><span>1 epic</span></div>
+                <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Initiative</span><span>HCK-102</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-unset">Unassigned</span><span>2 epics</span></div>
               </div>
               <div class="mc-tree__actions">
                 <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Demo day showcase” up"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
@@ -619,6 +651,8 @@
                       <a class="mc-menu__item" href="work-item-detail.html#state=initiative"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
                       <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                       <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-epic"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add epic</button>
+                      <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                      <button class="mc-menu__item mc-show-compact" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                       <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                       <div class="mc-menu__separator"></div>
                       <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=has-children"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
@@ -638,7 +672,7 @@
                   </div>
                   <div class="mc-tree__actions">
                     <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Judging and feedback” up" disabled><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
-                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Judging and feedback” down" disabled><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Judging and feedback” down"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-106" aria-expanded="false" aria-label="Actions for Judging and feedback"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="menu-hck-106">
@@ -646,6 +680,8 @@
                           <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                           <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-story"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add story</button>
                           <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                          <button class="mc-menu__item mc-show-compact" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                          <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                           <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                           <div class="mc-menu__separator"></div>
                           <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=has-children"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
@@ -673,6 +709,8 @@
                               <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                               <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-task"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add task</button>
                               <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                              <button class="mc-menu__item mc-show-compact" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                              <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                               <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                               <div class="mc-menu__separator"></div>
                               <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=has-children"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
@@ -697,9 +735,11 @@
                           <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-123" aria-expanded="false" aria-label="Actions for &lt;script&gt;alert(1)&lt;/script&gt; feedback form"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                           <div class="mc-menu" id="menu-hck-123">
                               <a class="mc-menu__item" href="work-item-detail.html#state=inactive-assignee"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
-                              <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
+                              <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit-inactive-assignee"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                               <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-task"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add task</button>
                               <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                              <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                              <button class="mc-menu__item mc-show-compact" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                               <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                               <div class="mc-menu__separator"></div>
                               <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
@@ -710,6 +750,35 @@
                     </div>
                   </li>
                 </ul>
+              </li>
+              <li>
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--epic" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--epic" aria-hidden="true"></span></span><span class="mc-type__label">Epic</span></span>
+                  <div class="mc-tree__main">
+                    <a class="mc-tree__title" href="work-item-detail.html#state=epic"><span class="mc-visually-hidden">Epic: </span>Sponsor outreach</a>
+                    <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Epic</span><span>HCK-107</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-unset">Unassigned</span><span>No stories</span></div>
+                  </div>
+                  <div class="mc-tree__actions">
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Sponsor outreach” up"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Sponsor outreach” down" disabled><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                    <div class="mc-menu-anchor">
+                      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-107" aria-expanded="false" aria-label="Actions for Sponsor outreach"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                      <div class="mc-menu" id="menu-hck-107">
+                          <a class="mc-menu__item" href="work-item-detail.html#state=epic"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                          <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
+                          <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-story"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add story</button>
+                          <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
+                          <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                          <button class="mc-menu__item mc-show-compact" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                          <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
+                          <div class="mc-menu__separator"></div>
+                          <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
+                          <span class="mc-menu__item mock-collaborator-only" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Delete<span class="mc-menu__hint">Only administrators can delete work</span></span></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </li>
             </ul>
           </li>

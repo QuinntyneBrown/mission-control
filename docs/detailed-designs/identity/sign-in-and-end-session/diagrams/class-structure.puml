@@ -30,9 +30,16 @@ class SessionView {
 interface ISessionService {
   +login(request: LoginCommand): Promise<FeatureResult>
   +check_access(request: GetCurrentSessionQuery): Promise<FeatureResult>
+  +logout(): void
 }
+note right of ISessionService
+  logout() is client-only: clears the in-memory
+  token and protected cached data (L2-003.2).
+end note
 class SessionService {
   -http: HttpClient
+  -token: Signal<string?>
+  -generation: number
 }
 class SessionsController {
   -sender: ISender
@@ -45,6 +52,24 @@ class UserAccount {
   +role: AccountRole
   +credentialVersion: long
   +verifyPassword(password: string): bool
+}
+class CurrentSession {
+  +accountId: Guid
+  +displayName: string
+  +role: AccountRole
+  +capabilities: string[]
+}
+class LoginAttempt {
+  +emailDigest: string
+  +failureInstantsUtc: DateTimeOffset[]
+  +blockedUntilUtc: DateTimeOffset?
+}
+class JwtOptions {
+  +issuer: string
+  +audience: string
+  +signingKey: string
+  +lifetime: TimeSpan
+  +clockSkew: TimeSpan = 0
 }
 interface IMissionControlDataSession {
   +query(specification): Task<ReadResult>
@@ -66,7 +91,9 @@ class LoginCommandHandler {
 }
 SessionsController ..> LoginCommand : dispatches
 LoginCommandHandler ..> LoginCommand : handles
-LoginCommandHandler --> UserAccount : loads / applies
+LoginCommandHandler --> UserAccount : loads / verifies
+LoginCommandHandler --> LoginAttempt : records failures / throttle
+LoginCommandHandler ..> JwtOptions : issues token
 LoginCommandHandler ..> IMissionControlDataSession : uses
 class GetCurrentSessionQuery {
   +subject: Guid
@@ -76,7 +103,7 @@ class GetCurrentSessionQueryHandler {
 }
 SessionsController ..> GetCurrentSessionQuery : dispatches
 GetCurrentSessionQueryHandler ..> GetCurrentSessionQuery : handles
-GetCurrentSessionQueryHandler --> UserAccount : loads / applies
+GetCurrentSessionQueryHandler --> CurrentSession : projects
 GetCurrentSessionQueryHandler ..> IMissionControlDataSession : uses
 
 enum AccountRole {
@@ -84,4 +111,5 @@ enum AccountRole {
   Collaborator
 }
 UserAccount --> AccountRole : SQL authority
+CurrentSession --> AccountRole
 @enduml

@@ -38,7 +38,7 @@
 
   <div class="mock-notes">
     <p class="mock-note" data-when="default">Counts come from every persisted item, not the visible page; each number opens the matching filtered work list. Community Hackathon 2026 has an active sprint, so Project actions › Change delivery mode explains that it must close first. The project header and tabs stay pinned while the tab content scrolls; on phones only the tabs stay pinned.</p>
-    <p class="mock-note" data-when="kanban" hidden>Kanban projects have no Sprints tab; Board opens the continuous Kanban board.</p>
+    <p class="mock-note" data-when="kanban" hidden>Church Website Refresh has never had sprints, so it has no Sprints tab; Board opens the continuous Kanban board. Its 60 work items block deletion, and switching it to Scrum has no sprint history to restore.</p>
     <p class="mock-note" data-when="new-empty" hidden>Shown right after "New project" saves. The empty state explains the hierarchy and offers the next step; the toast confirms the project was created.</p>
     <p class="mock-note" data-when="new-empty-collaborator" hidden>Collaborators can add work, so they get the same "Add initiative" action, but no project settings.</p>
     <p class="mock-note" data-when="kanban-preserved" hidden>Switching Scrum → Kanban keeps sprint plans and history. They stay readable under Sprints, but can't be planned or started until an administrator switches back to Scrum.</p>
@@ -172,7 +172,7 @@
                   <dt>Delivery mode</dt><dd><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span></dd>
                   <dt>Responsible lead</dt><dd><a href="../leads/lead-detail.html#state=lead">Rafael Da Silva</a></dd>
                   <dt>Project key</dt><dd class="mc-mono">HCK</dd>
-                  <dt>Work items</dt><dd>84</dd>
+                  <dt>Work items</dt><dd>85</dd>
                 </dl>
               </div>
             </section>
@@ -188,7 +188,7 @@
                   </thead>
                   <tbody>
                     <tr><th scope="row">Initiatives</th><td><a href="../work/work-list.html?project=hck&amp;type=initiative&amp;status=todo" aria-label="1 initiative in To Do">1</a></td><td><a href="../work/work-list.html?project=hck&amp;type=initiative&amp;status=progress" aria-label="1 initiative in In Progress">1</a></td><td class="mc-muted">0</td><td><a href="../work/work-list.html?project=hck&amp;type=initiative" aria-label="2 initiatives in total">2</a></td></tr>
-                    <tr><th scope="row">Epics</th><td><a href="../work/work-list.html?project=hck&amp;type=epic&amp;status=todo" aria-label="2 epics in To Do">2</a></td><td><a href="../work/work-list.html?project=hck&amp;type=epic&amp;status=progress" aria-label="1 epic in In Progress">1</a></td><td class="mc-muted">0</td><td><a href="../work/work-list.html?project=hck&amp;type=epic" aria-label="3 epics in total">3</a></td></tr>
+                    <tr><th scope="row">Epics</th><td><a href="../work/work-list.html?project=hck&amp;type=epic&amp;status=todo" aria-label="3 epics in To Do">3</a></td><td><a href="../work/work-list.html?project=hck&amp;type=epic&amp;status=progress" aria-label="1 epic in In Progress">1</a></td><td class="mc-muted">0</td><td><a href="../work/work-list.html?project=hck&amp;type=epic" aria-label="4 epics in total">4</a></td></tr>
                     <tr><th scope="row">Stories</th><td><a href="../work/work-list.html?project=hck&amp;type=story&amp;status=todo" aria-label="9 stories in To Do">9</a></td><td><a href="../work/work-list.html?project=hck&amp;type=story&amp;status=progress" aria-label="4 stories in In Progress">4</a></td><td><a href="../work/work-list.html?project=hck&amp;type=story&amp;status=done" aria-label="11 stories in Done">11</a></td><td><a href="../work/work-list.html?project=hck&amp;type=story" aria-label="24 stories in total">24</a></td></tr>
                     <tr><th scope="row">Tasks</th><td><a href="../work/work-list.html?project=hck&amp;type=task&amp;status=todo" aria-label="18 tasks in To Do">18</a></td><td><a href="../work/work-list.html?project=hck&amp;type=task&amp;status=progress" aria-label="6 tasks in In Progress">6</a></td><td><a href="../work/work-list.html?project=hck&amp;type=task&amp;status=done" aria-label="31 tasks in Done">31</a></td><td><a href="../work/work-list.html?project=hck&amp;type=task" aria-label="55 tasks in total">55</a></td></tr>
                   </tbody>
@@ -249,9 +249,9 @@
                 </button>
                 <div class="mc-menu" id="project-actions-web">
                   <button class="mc-menu__item" type="button" data-nav="project-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit project</button>
-                  <button class="mc-menu__item" type="button" data-nav="mode-change-dialog.html#state=to-scrum"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
+                  <button class="mc-menu__item" type="button" data-nav="mode-change-dialog.html#state=to-scrum-empty"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
                   <div class="mc-menu__separator"></div>
-                  <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="project-delete-dialog.html#state=blocked"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
+                  <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="project-delete-dialog.html#state=blocked-work"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
                 </div>
               </div>
             </div>
@@ -260,7 +260,7 @@
             <ul class="mc-tabs">
               <li><a class="mc-tabs__link" href="project-overview.html" aria-current="page"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</a></li>
               <li><a class="mc-tabs__link" href="../work/work-hierarchy.html"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</a></li>
-              <li><a class="mc-tabs__link" href="../backlog/backlog.html"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</a></li>
+              <li><a class="mc-tabs__link" href="../backlog/backlog.html#state=kanban"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</a></li>
               <li><a class="mc-tabs__link" href="../kanban/kanban-board.html"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</a></li>
             </ul>
           </nav>
@@ -350,7 +350,7 @@
             <ul class="mc-tabs">
               <li><a class="mc-tabs__link" href="project-overview.html" aria-current="page"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</a></li>
               <li><a class="mc-tabs__link" href="../work/work-hierarchy.html"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</a></li>
-              <li><a class="mc-tabs__link" href="../backlog/backlog.html"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</a></li>
+              <li><a class="mc-tabs__link" href="../backlog/backlog.html#state=kanban-preserved"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</a></li>
               <li><a class="mc-tabs__link" href="../kanban/kanban-board.html#state=preserved"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</a></li>
               <li><a class="mc-tabs__link" href="../scrum/sprints.html#state=kanban-paused"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</a></li>
             </ul>
@@ -404,7 +404,7 @@
           <div class="mc-stack mc-stack--lg">
             <section class="mc-card mc-stack" aria-labelledby="prw-board">
               <h2 class="mc-card__title" id="prw-board">Board</h2>
-              <p class="mc-muted mc-text-sm">Stories flow continuously through three columns. There are no sprints in Kanban.</p>
+              <p class="mc-muted mc-text-sm">Stories flow continuously through three columns. Sprints are paused while this project uses Kanban.</p>
               <ul class="mc-list">
                 <li class="mc-list__item"><div class="mc-list__main"><span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span></span></div><span class="mc-strong">5</span></li>
                 <li class="mc-list__item"><div class="mc-list__main"><span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></span></div><span class="mc-strong">2</span></li>
@@ -450,7 +450,7 @@
                 </button>
                 <div class="mc-menu" id="project-actions-ycn">
                   <button class="mc-menu__item" type="button" data-nav="project-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit project</button>
-                  <button class="mc-menu__item" type="button" data-nav="mode-change-dialog.html#state=to-kanban"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
+                  <button class="mc-menu__item" type="button" data-nav="mode-change-dialog.html#state=to-kanban-empty"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
                   <div class="mc-menu__separator"></div>
                   <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="project-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
                 </div>
@@ -460,10 +460,10 @@
           <nav class="mc-project-tabs" aria-label="Project sections">
             <ul class="mc-tabs">
               <li><a class="mc-tabs__link" href="project-overview.html" aria-current="page"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</a></li>
-              <li><a class="mc-tabs__link" href="../work/work-hierarchy.html"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</a></li>
-              <li><a class="mc-tabs__link" href="../backlog/backlog.html"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</a></li>
-              <li><a class="mc-tabs__link" href="../scrum/sprint-board.html#state=no-active"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</a></li>
-              <li><a class="mc-tabs__link" href="../scrum/sprints.html#state=no-sprints"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</a></li>
+              <li><a class="mc-tabs__link" href="../work/work-hierarchy.html#state=empty"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</a></li>
+              <li><a class="mc-tabs__link" href="../backlog/backlog.html#state=empty"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</a></li>
+              <li><a class="mc-tabs__link" href="../scrum/sprint-board.html#state=no-sprints"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</a></li>
+              <li><a class="mc-tabs__link" href="../scrum/sprints.html#state=empty"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</a></li>
             </ul>
           </nav>
         </div>

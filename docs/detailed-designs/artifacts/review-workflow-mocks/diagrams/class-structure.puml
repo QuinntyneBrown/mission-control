@@ -27,8 +27,14 @@ class ArtifactCatalog {
 }
 class ReviewProfile {
   +viewportWidth: int
+  +viewportHeight: int
   +textZoomPercent: int
 }
+note right of ReviewProfile
+viewer.html widths: 320, 375, 576, 768,
+992, 1200, 1440, 1920 at 800 high.
+L2-048 uses 375, 768, 1440.
+end note
 ArtifactCatalog "1" o-- "*" MockScreen : lists
 ArtifactCatalog ..> ReviewProfile : reviews at
 class MockState {

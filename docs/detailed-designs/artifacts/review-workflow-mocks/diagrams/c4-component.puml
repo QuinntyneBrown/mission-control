@@ -3,10 +3,10 @@
 LAYOUT_WITH_LEGEND()
 title Components - Review workflow mock artifacts
 Container_Boundary(site, "docs/mocks/ static artifact") {
-  Component(catalog, "Catalog / viewer", "HTML / JavaScript", "Names available specimens or workflow states")
-  Component(examples, "Controls and responsive examples", "HTML / CSS", "Renders compact through expanded layouts")
-  Component(tokens, "--mc- token stylesheet", "CSS custom properties", "Authoritative in design-system; provisional in current mocks")
+  Component(catalog, "ArtifactCatalog", "index.html / viewer.html / catalog.js", "Lists every mock and state; frames them at 320-1920 widths")
+  Component(examples, "MockScreen files", "HTML / mocks.js", "Default and data-when states with design notes")
+  Component(tokens, "--mc- token stylesheet", "CSS custom properties", "Provisional mirror of the authoritative design-system copy")
 }
-Rel(catalog, examples, "Opens named example or state")
-Rel(examples, tokens, "Consumes visual roles")
+Rel(catalog, examples, "Opens named mock and #state")
+Rel(examples, tokens, "Consumes visual roles through mocks.css")
 @enduml

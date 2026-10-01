@@ -16,7 +16,7 @@ skinparam package {
 title Behavior - Edit a lead
 actor "Administrator" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "LeadDirectoryPage / LeadView" as page
+  participant "LeadFormDialog / LeadView" as page
   participant "ILeadService / LeadService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,46 +31,74 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Edit a lead
-page -> client : Build typed UpdateLeadCommand
+actor -> page : Change lead details and save
+page -> page : Disable repeat submission; show saving progress
+page -> client : Build typed UpdateLeadCommand with expectedVersion
 client -> access : PUT /api/leads/{id}
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
-else Authorized
+alt Missing, invalid, or expired JWT; inactive account
+  access --> client : 401; audit denial without payloads
+  client --> page : Clear in-memory session; require login; explain edits were not saved (L2-003.4)
+else Collaborator (no contact mutation in profile P)
+  access --> client : 403; audit denial without payloads
+  client --> page : Keep input; show that only administrators can edit leads; nothing saved
+else Administrator
   access -> ctrl : Authorized request
 ctrl -> validation : Send UpdateLeadCommand through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
+validation -> validation : L2-009 trim; field limits, valid email, known category
 alt Invalid request
   validation --> ctrl : 400 field errors; no business mutation
   ctrl --> client : Validation ProblemDetails
   client --> page : Keep valid input; focus linked error summary
 else Valid request
   validation -> handler : Handle UpdateLeadCommand
-  handler -> db : Load lead and compare expected version
-  db --> handler : Current contact
-  handler -> entity : L2-011 edit fields and category; no account changes
-  entity --> handler : Updated contact
-  alt Duplicate pair, missing contact, or stale version
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    handler -> db : L2-039 / L2-040 commit business state and success audit together
-    alt Commit fails
-      db --> handler : Roll back business state and success audit
-      handler --> ctrl : Generic 500 with correlation ID
-      ctrl --> client : Failure; no successful-save claim
-      client --> page : Keep draft / restore saved placement
-    else Commit succeeds
-      db --> handler : New committed version
-    handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+  handler -> db : Load lead by ID
+  db --> handler : Current contact or none
+  alt Lead missing or deleted
+    handler --> ctrl : 404; nothing changed
+    ctrl --> client : NotFound ProblemDetails
+    client --> page : Disable fields and Save; offer Back to leads
+  else Stored version differs from expectedVersion
+    handler --> ctrl : 409 stale version; nothing changed
+    ctrl --> client : Conflict ProblemDetails
+    client -> ctrl : GET /api/leads/{id} once (authorized as above)
+    ctrl --> client : Latest saved values and version
+    client --> page : Keep attempted values; show Your edit vs Latest saved; offer Reload latest; no resubmission
+    note right of page
+      L2-041.3: Reload latest adopts the latest values
+      and version without a request; the comparison
+      stays visible until the edits are re-applied and saved.
+    end note
+  else Current version
+    handler -> db : Find another contact with the normalized email and category
+    db --> handler : Existing contact or none
+    alt Pair used by another contact
+      handler --> ctrl : 409 duplicate with existing contact ID, name, category; nothing changed
+      ctrl --> client : Conflict ProblemDetails
+      client --> page : Keep input; flag email and category; name and link the existing lead
+    else Pair available
+      handler -> entity : L2-011 edit fields and category; no account changes
+      entity --> handler : Updated contact
+      handler -> db : L2-039 / L2-040 update where version matches; append success audit; one transaction
+      alt Racing save changed the version, or unique index rejects the pair
+        db --> handler : Roll back update and audit
+        handler --> ctrl : 409 stale version or 409 duplicate, as above
+        ctrl --> client : Conflict ProblemDetails
+        client --> page : Same handling as the matching 409 above
+      else Commit fails unexpectedly
+        db --> handler : Roll back business state and success audit
+        handler --> ctrl : Generic 500 with correlation ID
+        ctrl --> client : Failure; no successful-save claim
+        client --> page : Keep input; show reference ID; Save changes retries
+      else Commit succeeds
+        db --> handler : New committed version
+        handler --> ctrl : 200 with the saved lead and version
+        ctrl --> client : Success response
+        client --> page : Close dialog; show saved values; announce Changes saved
+        page --> actor : Saved lead shown; focus returns to Edit
+      end
     end
   end
 end

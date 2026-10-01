@@ -17,6 +17,8 @@ All named production types are proposed; the repository currently contains requi
 | Part | Responsibility and architectural home |
 | --- | --- |
 | `LeadDetailPage` | Routed page or dialog owned by `frontend/projects/mission-control`; composes the domain library and presentational components. |
+| `LeadDirectoryPage` | Routed directory page in `frontend/projects/mission-control`; each administrator row offers Delete. |
+| `LeadDeleteDialog` | Application dialog in `frontend/projects/mission-control`; shows the named confirmation or the blocked explanation. |
 | `LeadView` | Domain component in `frontend/projects/domain`; injects `LEAD_SERVICE` and holds feature state in signals. |
 | `ILeadService`, `LEAD_SERVICE` | Interface and token in `frontend/projects/api/lead.service.contract.ts`; the consumer imports the contract only. |
 | `LeadService` | Production HTTP adapter in `api`; owns HTTP calls and observable-to-signal conversion. Composition binds a mock adapter for Chromium Playwright. |
@@ -28,10 +30,13 @@ Commands, queries, handlers, and request validators live in Application feature 
 MediatR remains pinned to `12.5.0`. Microsoft.Extensions supplies dependency injection, Options, and Configuration.
 
 `LeadDeleteDialog` names the contact and initially focuses Cancel. Cancellation sends no mutation request.
-`DeleteLeadCommandHandler` checks current ownership references within the deletion transaction.
-A restrictive workspace foreign key prevents a racing ownership assignment from creating a dangling contact reference.
-Referenced contacts return `409` with ownership reassignment guidance; the dialog lists permitted owning-workspace links.
-Deletion carries the expected contact version. A concurrent edit prompts review rather than silently deleting the newer contact.
+When the loaded lead details already list responsible workspaces, Delete opens the blocked explanation without a request.
+`DeleteLeadCommand` carries only the lead ID; deletion carries no expected version.
+`DeleteLeadCommandHandler` loads the lead and its referencing workspaces inside the deletion transaction, before it deletes anything.
+A missing lead returns `404`. The dialog closes, the directory reloads without the lead, and an announcement says it was already deleted.
+A referenced contact returns `409`. Its ProblemDetails lists the referencing workspaces (ID and name) with reassignment guidance.
+A directory-row delete shows the blocked explanation after that `409`, with project links and no delete or retry action.
+A restrictive workspace foreign key prevents a racing ownership assignment from creating a dangling contact reference; that rejection returns the same `409`.
 Successful deletion removes only that lead row, updates live counts, and returns focus to a surviving directory control or heading.
 Account identity and closed history have no cascading contact dependency.
 
@@ -52,6 +57,7 @@ Mock input and review references:
 
 - [Delete lead · Mission Control mock](../../../mocks/leads/lead-delete-dialog.html); review states: `default`, `city-lead`, `blocked`, `deleting`, `failed`.
 - [Lead directory · Mission Control mock](../../../mocks/leads/lead-directory.html); review states: `default`, `collaborator`, `filtered`, `zero-results`, `page-2`, `deleted`, `empty-admin`, `empty-collaborator`, `loading`, `error`.
+- [Lead details · Mission Control mock](../../../mocks/leads/lead-detail.html); review states: `default`, `lead`, `saved`, `collaborator`, `not-found`, `loading`, `error`.
 
 Implementation proceeds one behavior at a time using the linked Given-When-Then criteria. An API integration acceptance check first fails for the expected missing behavior.
 A Chromium Playwright check uses one page object per screen and a mock service bound through the same token. Tests express intent; page objects own selectors.

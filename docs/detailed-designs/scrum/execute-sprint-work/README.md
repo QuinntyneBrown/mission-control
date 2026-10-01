@@ -21,6 +21,9 @@ All named production types are proposed; the repository currently contains requi
 | `IBoardService`, `BOARD_SERVICE` | Interface and token in `frontend/projects/api/board.service.contract.ts`; the consumer imports the contract only. |
 | `BoardService` | Production HTTP adapter in `api`; owns HTTP calls and observable-to-signal conversion. Composition binds a mock adapter for Chromium Playwright. |
 | `BoardsController` | Thin controller under `backend/src/MissionControl.Api/Controllers`, namespace `MissionControl.Api.Controllers`; binds, dispatches, and returns. |
+| `MoveStoryDialog` | Application dialog in `frontend/projects/mission-control`, owned by the kanban move-story-cards slice; `SprintBoardPage` opens it from a card's Move action. |
+| `UnfinishedTasksDialog` | Application dialog in `frontend/projects/mission-control`, owned by the kanban confirm-story-completion slice; `SprintBoardPage` opens it on a `409 unfinished-tasks`. |
+| `SprintScopeDialog` | Application dialog in `frontend/projects/mission-control`, owned by the start-and-adjust-sprint slice; `SprintBoardPage` opens it from Change scope and from Remove on an unfinished card. |
 | `SprintBoardCard` | Domain entity or Application read projection described below; Domain has no external project dependency. |
 | `IMissionControlDataSession` | Application data port; the Infrastructure adapter runs parameterized queries and transaction commits. |
 
@@ -29,14 +32,23 @@ MediatR remains pinned to `12.5.0`. Microsoft.Extensions supplies dependency inj
 
 `SprintBoardPage` occupies `/projects/:id/board` in Scrum mode and reads the workspace's active sprint.
 `GetActiveSprintBoardQueryHandler` filters cards by current open membership, not initial scope or historical outcomes.
-No active sprint renders a planning/start action; an empty active sprint still renders all three columns and Add stories.
-The header shows goal/dates and links to explicit scope change and closure. The scope log displays actor and instant without rewriting initial scope.
+With no active sprint the query returns `200` without columns. A planned sprint yields Start and Plan sprint; a workspace with no sprints yields Plan sprint and Open Work.
+An empty active sprint still renders all three columns and Add stories.
+A missing workspace returns `404` with a not-found state linking to Projects.
+Kanban mode returns `409` (L2-027.3), and the page routes to the workspace Kanban board.
+The header shows goal/dates and links to explicit scope change and closure.
+The scope log displays the start actor and each change's actor and instant without rewriting initial scope.
 
-Moves delegate to `MoveStoryCommand` through `IBoardService` and its token. Task updates delegate to `IWorkItemService` and its token.
+Moves delegate to `MoveStoryCommand` through `IBoardService` and its token, with `sprintBoardId` set to the active sprint.
+Task updates delegate to `IWorkItemService` and its token.
 Their handlers update shared WorkItem status, task revision, board placement, and active-sprint revision atomically.
 The board invalidates cached task counts and refetches changed summaries after commit.
 Only current scope appears; removed or unallocated stories cannot be moved through this sprint board endpoint.
-The completion-confirmation slice handles unfinished tasks. Layout and bounded column loading follow the Kanban board rules.
+Each unfinished card also offers Remove, which opens `SprintScopeDialog` for that story; Done cards offer Move only.
+The sprint board handles a `409 unfinished-tasks` by opening `UnfinishedTasksDialog`, owned by the kanban confirm-story-completion slice.
+The dialog shows the returned unfinished count only, with no task titles and no attribution.
+Mark story Done resubmits the same `MoveStoryCommand` with the returned `StoryCompletionCondition`; Keep restores the saved view and sends nothing.
+Layout and bounded column loading follow the Kanban board rules.
 Collaborators can move, change scope, and close the sprint; workspace settings remain administrator-only.
 
 The authenticated API evaluates current SQL permissions before feature dispatch. Validation V maps invalid fields to `400`, absent authentication to `401`, forbidden access to `403`, missing records to `404`, and conflicts to `409`.
@@ -54,9 +66,10 @@ Field errors connect to inputs; asynchronous results use status or alert announc
 
 Mock input and review references:
 
-- [Sprint board · Mission Control mock](../../../mocks/scrum/sprint-board.html); review states: `default`, `scope-log`, `no-stories`, `no-active`, `move-failed`, `collaborator`, `loading`, `error`.
+- [Sprint board · Mission Control mock](../../../mocks/scrum/sprint-board.html); review states: `default`, `scope-log`, `no-stories`, `no-active`, `no-sprints`, `move-failed`, `collaborator`, `loading`, `error`.
 - [Move story · Mission Control mock](../../../mocks/kanban/move-story-dialog.html); review states: `default`, `to-done`, `saving`, `failed`.
-- [Unfinished tasks confirmation · Mission Control mock](../../../mocks/kanban/unfinished-tasks-dialog.html); review states: `default`, `server-count`, `saving`.
+- [Unfinished tasks confirmation · Mission Control mock](../../../mocks/kanban/unfinished-tasks-dialog.html); review states: `default`, `server-count`, `saving`, `failed`.
+- [Change sprint scope · Mission Control mock](../../../mocks/scrum/sprint-scope-dialog.html); review states: `add`, `remove`, `closed`, `saving`, `failed`.
 - [Work item detail · Mission Control mock](../../../mocks/work/work-item-detail.html); review states: `default`, `initiative`, `epic`, `task`, `unset`, `inactive-assignee`, `collaborator`, `not-found`, `loading`, `error`.
 
 Implementation proceeds one behavior at a time using the linked Given-When-Then criteria. An API integration acceptance check first fails for the expected missing behavior.

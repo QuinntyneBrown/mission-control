@@ -16,7 +16,7 @@ skinparam package {
 title Behavior - Close with a disposition for every unfinished story
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "SprintBoardPage / SprintView" as page
+  participant "SprintBoardPage / CloseSprintDialog / SprintView" as page
   participant "ISprintService / SprintService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,54 +31,73 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Close with a disposition for every unfinished story
-page -> client : Build typed CloseSprintCommand
+actor -> page : Choose a destination for every unfinished story; confirm Close sprint
+page -> client : Build typed CloseSprintCommand with expected version and one disposition per unfinished story
 client -> access : POST /api/workspaces/{id}/sprints/{sprintId}/close
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
+alt Missing, invalid or expired JWT; deactivated account
+  access --> client : 401; audit denial without payloads
+  client --> page : Clear session; sign in with the sprint board as return route
+else Authenticated without the required permission
+  access --> client : 403; audit denial without payloads
+  client --> page : Keep the choices; explain that closing sprints is not permitted
 else Authorized
   access -> ctrl : Authorized request
-ctrl -> validation : Send CloseSprintCommand through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
-alt Invalid request
-  validation --> ctrl : 400 field errors; no business mutation
-  ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
-else Valid request
-  validation -> handler : Handle CloseSprintCommand
-  handler -> db : Lock workspace/source/targets; read current story scope/statuses/version
-  db --> handler : Current closure state
-  handler -> entity : L2-025 validate complete dispositions and destination eligibility
-  entity --> handler : Closure and snapshot plan
-  handler -> db : L2-026 insert immutable outcomes and scope snapshot
-  db --> handler : SQL result / current records
-  handler -> db : Transfer unfinished membership; retain statuses; close and release active slot
-  db --> handler : SQL result / current records
-
-  alt Unresolved destinations (400), invalid target (400), or scope race (409)
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    handler -> db : L2-039 / L2-040 commit business state and success audit together
-    alt Commit fails
-      db --> handler : Roll back business state and success audit
-      handler --> ctrl : Generic 500 with correlation ID
-      ctrl --> client : Failure; no successful-save claim
-      client --> page : Keep draft / restore saved placement
-    else Commit succeeds
-      db --> handler : New committed version
-    handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+  ctrl -> validation : Send CloseSprintCommand through MediatR 12.5.0
+  validation -> validation : Distinct story IDs; each disposition is Backlog or a sprint ID
+  alt Malformed or duplicate dispositions
+    validation --> ctrl : 400 field errors; nothing read or changed
+    ctrl --> client : Validation ProblemDetails
+    client --> page : Keep the choices; focus the error summary
+  else Valid request
+    validation -> handler : Handle CloseSprintCommand
+    handler -> db : Lock workspace; read sprint state and version, current scope, story statuses, named destinations
+    db --> handler : Current closure state
+    alt Sprint not found (or in another workspace)
+      handler --> ctrl : 404; nothing changed
+      ctrl --> client : ProblemDetails (not found)
+      client --> page : Close dialog; reload the board; announce that the sprint no longer exists
+    else Sprint already Closed (L2-023.4, L2-026.3)
+      handler --> ctrl : 409 closed; history unchanged
+      ctrl --> client : ProblemDetails (sprint closed)
+      client --> page : Explain that the sprint is closed; link to its history; no retry
+    else Stale version: scope or story status changed since review (L2-025.3)
+      handler --> ctrl : 409 identifying changed stories with their recorded scope change; nothing changed
+      ctrl --> client : ProblemDetails (membership changed)
+      client --> page : Mark changed rows; keep choices; Review again reloads scope; no resubmission
+    else Unfinished story without a disposition (L2-025.1)
+      handler --> ctrl : 400 identifying each unresolved story; sprint stays Active
+      ctrl --> client : Validation ProblemDetails per story
+      client --> page : Keep choices; focus the error summary linking each destination
+    else Destination is not a Planned sprint in this workspace (L2-025.3)
+      handler --> ctrl : 400 identifying the story and destination; nothing changed
+      ctrl --> client : Validation ProblemDetails per story
+      client --> page : Keep choices; mark the row; reload destination choices
+    else Closure accepted
+      handler -> entity : L2-025 close(dispositions, at, actorId)
+      entity --> handler : Closed sprint and SprintSnapshot with actors, scope changes, outcomes, destinations
+      handler -> db : L2-026 / L2-040 insert snapshot; move unfinished membership with unchanged status; release active slot; success audit in one transaction
+      alt Unique open-membership violation (concurrent allocation, L2-041.2)
+        db --> handler : Roll back everything
+        handler --> ctrl : 409 naming the story; sprint stays Active
+        ctrl --> client : ProblemDetails (membership changed)
+        client --> page : Mark the row; keep choices; Review again reloads scope
+      else Commit fails
+        db --> handler : Roll back business state and success audit
+        handler --> ctrl : Generic 500 with correlation ID
+        ctrl --> client : Failure; no successful-close claim
+        client --> page : Failed state with reference ID; sprint still active; choices kept for retry
+      else Commit succeeds
+        db --> handler : Closed sprint and snapshot
+        handler --> ctrl : Closure result
+        ctrl --> client : 200 with the history route
+        client --> page : Open sprint history; the board shows No active sprint
+        page --> actor : Announce the closure and carryover
+      end
     end
   end
-end
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).

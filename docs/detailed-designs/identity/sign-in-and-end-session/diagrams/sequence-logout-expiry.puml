@@ -25,21 +25,21 @@ box "Backend - MissionControl.Api" #D1FADF
 end box
 actor -> page : Select logout / reload / expiry occurs
 alt Explicit logout with dirty draft
-  page -> state : Request leave confirmation (L2-031)
-  state --> page : Stay or discard
+  page -> state : Open UnsavedChangesDialog (sign-out) (L2-031.4)
+  state --> page : Stay or Sign out without saving
   opt Stay selected
-    page --> actor : Retain session and draft
+    page --> actor : Retain session and draft; no request sent
   end
 end
 opt Logout confirmed / reload / token expiry / API 401
-  page -> state : L2-003 clear memory token and protected caches
+  page -> state : L2-003 ISessionService.logout(): clear memory token and protected caches
   state -> state : Cancel requests; increment session generation
   state --> page : Session ended; late responses ignored
   page -> router : Navigate to login without protected data
-  router --> actor : Explain unsaved changes if applicable
+  router --> actor : Login shows signed-out after logout; session-ended after expiry, reload or 401; session-unsaved if a draft was lost
 end
 note over state, api
 Local logout does not revoke a copied valid token.
-Protected requests still validate expiry and current SQL access.
+Protected requests still validate expiry (zero clock skew) and current SQL access.
 end note
 @enduml

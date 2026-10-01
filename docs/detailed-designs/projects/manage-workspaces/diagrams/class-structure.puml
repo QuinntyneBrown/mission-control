@@ -14,6 +14,7 @@ skinparam package {
   BackgroundColor #F9FAFB
 }
 title Class structure - Create and manage project workspaces
+left to right direction
 skinparam class {
   BorderColor #344054
   FontColor #101828
@@ -23,12 +24,28 @@ class ProjectListPage {
   +routeContext: Signal<RouteContext>
   +openDialog(): void
 }
+class ProjectOverviewPage {
+  +routeContext: Signal<RouteContext>
+  +openDialog(): void
+}
+class ProjectFormDialog {
+  +attempted: Signal<UpdateWorkspaceCommand?>
+  +latest: Signal<WorkspaceDetail?>
+  +save(): void
+  +reloadLatest(): void
+}
+class ProjectDeleteDialog {
+  +blocked: Signal<WorkspaceInUseProblem?>
+  +confirm(): void
+  +cancel(): void
+}
 class WorkspaceView {
   +state: Signal<FeatureState>
   +submit(): void
 }
 interface IWorkspaceService {
-  +read(request: GetWorkspaceQuery): Promise<FeatureResult>
+  +list(request: GetWorkspacesQuery): Promise<WorkspaceList>
+  +read(request: GetWorkspaceQuery): Promise<WorkspaceDetail>
   +create(request: CreateWorkspaceCommand): Promise<FeatureResult>
   +edit(request: UpdateWorkspaceCommand): Promise<FeatureResult>
   +delete(request: DeleteWorkspaceCommand): Promise<FeatureResult>
@@ -47,7 +64,7 @@ class Workspace {
   +responsibleLeadId: Guid?
   +version: long
   +edit(name: string, description: string?, leadId: Guid?): void
-  +checkDeletion(hasWorkOrSprints: bool): void
+  +checkDeletion(workItems: int, sprints: int): void
 }
 interface IMissionControlDataSession {
   +query(specification): Task<ReadResult>
@@ -57,21 +74,106 @@ class MissionControlDataSession {
   -connection: DbConnection
 }
 ProjectListPage --> WorkspaceView : composes
+ProjectOverviewPage --> WorkspaceView : composes
+ProjectListPage ..> ProjectFormDialog : opens (create)
+ProjectOverviewPage ..> ProjectFormDialog : opens (edit)
+ProjectOverviewPage ..> ProjectDeleteDialog : opens
+ProjectFormDialog --> WorkspaceView : composes
+ProjectDeleteDialog --> WorkspaceView : composes
 WorkspaceView ..> IWorkspaceService : inject token
 IWorkspaceService <|.. WorkspaceService
 IMissionControlDataSession <|.. MissionControlDataSession
-class GetWorkspaceQuery {
-  +id: Guid?
+
+class GetWorkspacesQuery {
   +page: int
   +pageSize: int
 }
-class GetWorkspaceQueryHandler {
-  +handle(request: GetWorkspaceQuery): Task<FeatureResult>
+class GetWorkspacesQueryHandler {
+  +handle(request: GetWorkspacesQuery): Task<WorkspaceList>
 }
+class WorkspaceList {
+  +items: WorkspaceListItem[]
+  +totalCount: int
+  +page: int
+  +pageSize: int
+}
+class WorkspaceListItem {
+  +id: Guid
+  +name: string
+  +description: string?
+  +mode: DeliveryMode
+  +responsibleLeadId: Guid?
+  +responsibleLeadName: string?
+  +storiesDone: int
+  +storiesTotal: int
+  +activeSprintName: string?
+  +activeSprintEndDate: DateOnly?
+  +sprintsPaused: bool
+}
+note right of WorkspaceListItem
+  Active sprint name and Toronto end date,
+  or sprintsPaused when Kanban keeps sprints.
+  Story counts cover every persisted story.
+end note
+WorkspacesController ..> GetWorkspacesQuery : dispatches
+GetWorkspacesQueryHandler ..> GetWorkspacesQuery : handles
+GetWorkspacesQueryHandler --> WorkspaceList : projects
+GetWorkspacesQueryHandler ..> IMissionControlDataSession : uses
+WorkspaceList *-- "0..100" WorkspaceListItem
+
+class GetWorkspaceQuery {
+  +id: Guid
+}
+class GetWorkspaceQueryHandler {
+  +handle(request: GetWorkspaceQuery): Task<WorkspaceDetail>
+}
+class WorkspaceDetail {
+  +id: Guid
+  +name: string
+  +description: string?
+  +mode: DeliveryMode
+  +responsibleLeadId: Guid?
+  +responsibleLeadName: string?
+  +version: long
+  +workItemTotal: int
+  +counts: TypeStatusCount[]
+  +activeSprint: SprintSummary?
+  +nextPlannedSprint: SprintSummary?
+  +latestClosedSprint: SprintSummary?
+  +keptSprints: SprintSummary[]
+}
+note right of WorkspaceDetail
+  Scrum: active, next planned, and latest closed sprint.
+  Kanban: keptSprints holds planned and closed sprints,
+  newest first, at most 25, each flagged paused.
+end note
+class TypeStatusCount {
+  +type: WorkItemType
+  +status: WorkStatus
+  +count: int
+}
+class SprintSummary {
+  +sprintId: Guid
+  +name: string
+  +state: SprintState
+  +goal: string?
+  +startDate: DateOnly
+  +endDate: DateOnly
+  +storiesDone: int
+  +storiesTotal: int
+  +paused: bool
+}
+note bottom of SprintSummary
+  Toronto calendar dates. A closed sprint's
+  done/total is its recorded closure outcome.
+end note
 WorkspacesController ..> GetWorkspaceQuery : dispatches
 GetWorkspaceQueryHandler ..> GetWorkspaceQuery : handles
-GetWorkspaceQueryHandler --> Workspace : loads / applies
+GetWorkspaceQueryHandler --> WorkspaceDetail : projects
 GetWorkspaceQueryHandler ..> IMissionControlDataSession : uses
+WorkspaceDetail *-- "12" TypeStatusCount
+WorkspaceDetail *-- SprintSummary
+
 class CreateWorkspaceCommand {
   +name: string
   +description: string?
@@ -83,8 +185,9 @@ class CreateWorkspaceCommandHandler {
 }
 WorkspacesController ..> CreateWorkspaceCommand : dispatches
 CreateWorkspaceCommandHandler ..> CreateWorkspaceCommand : handles
-CreateWorkspaceCommandHandler --> Workspace : loads / applies
+CreateWorkspaceCommandHandler --> Workspace : creates
 CreateWorkspaceCommandHandler ..> IMissionControlDataSession : uses
+
 class UpdateWorkspaceCommand {
   +id: Guid
   +name: string
@@ -99,16 +202,39 @@ WorkspacesController ..> UpdateWorkspaceCommand : dispatches
 UpdateWorkspaceCommandHandler ..> UpdateWorkspaceCommand : handles
 UpdateWorkspaceCommandHandler --> Workspace : loads / applies
 UpdateWorkspaceCommandHandler ..> IMissionControlDataSession : uses
+
 class DeleteWorkspaceCommand {
   +id: Guid
-  +expectedVersion: long
 }
 class DeleteWorkspaceCommandHandler {
   +handle(request: DeleteWorkspaceCommand): Task<FeatureResult>
 }
+class WorkspaceInUseProblem {
+  +status: 409
+  +workItemTotal: int
+  +workItemCounts: TypeCount[]
+  +sprintTotal: int
+  +sprints: SprintReference[]
+}
+note bottom of WorkspaceInUseProblem
+  Sprints of every state, newest first, at most 25.
+  Nothing is deleted or cascaded.
+end note
+class TypeCount {
+  +type: WorkItemType
+  +count: int
+}
+class SprintReference {
+  +sprintId: Guid
+  +name: string
+  +state: SprintState
+}
+WorkspaceInUseProblem *-- "4" TypeCount
+WorkspaceInUseProblem *-- "0..25" SprintReference
 WorkspacesController ..> DeleteWorkspaceCommand : dispatches
 DeleteWorkspaceCommandHandler ..> DeleteWorkspaceCommand : handles
-DeleteWorkspaceCommandHandler --> Workspace : loads / applies
+DeleteWorkspaceCommandHandler --> Workspace : loads / checks
+DeleteWorkspaceCommandHandler ..> WorkspaceInUseProblem : 409 when content exists
 DeleteWorkspaceCommandHandler ..> IMissionControlDataSession : uses
 
 @enduml

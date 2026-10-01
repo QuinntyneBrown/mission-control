@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Add or edit lead · Mission Control mock</title>
-  <meta name="description" content="Lead form dialog for adding and editing contacts: validation, saving, failure, duplicate email and category, edit conflict, and a lead deleted while editing.">
+  <meta name="description" content="Lead form dialog for adding and editing contacts: validation, saving, failure, duplicate email and category, edit conflict with the latest version reloaded for comparison, and a lead deleted while editing.">
   <meta name="mock-area" content="Leads">
   <meta name="mock-requirements" content="L2-009, L2-011, L2-013, L2-031, L2-033.2, L2-034.1, L2-041.3, L2-043.4">
   <link rel="stylesheet" href="../assets/tokens.css">
@@ -27,6 +27,7 @@
           <option value="duplicate">Duplicate email and category</option>
           <option value="edit">Edit</option>
           <option value="conflict">Edit conflict</option>
+          <option value="conflict-reloaded">Conflict · latest loaded</option>
           <option value="deleted">Lead deleted meanwhile</option>
         </select>
       </label>
@@ -40,10 +41,11 @@
     <p class="mock-note" data-when="validation" hidden>Whitespace-only names are invalid. Focus moves to the error summary, whose links jump to each field. Valid input (last name, phone) is kept.</p>
     <p class="mock-note" data-when="saving" hidden>The save button shows progress and ignores repeat clicks; Cancel waits until the request finishes.</p>
     <p class="mock-note" data-when="failed" hidden>Nothing was saved and every value is kept. "Save lead" retries the same request.</p>
-    <p class="mock-note" data-when="duplicate" hidden>Email/category pairs are unique after trimming and case folding. The same email is allowed in a different category, so choosing another category resolves the conflict.</p>
+    <p class="mock-note" data-when="duplicate" hidden>Email/category pairs are unique after trimming and case folding. The API answers 409 with the existing lead's ID, name, and category, so the alert names and links that lead. Every value is kept; the same email is allowed in a different category, so choosing another category resolves the conflict.</p>
     <p class="mock-note" data-when="edit" hidden>Opens from a lead's Edit action with saved values. Cancel leaves the saved lead unchanged.</p>
-    <p class="mock-note" data-when="conflict" hidden>The lead changed after this form opened. The user's edits are kept, never resubmitted automatically; "Reload latest" loads the saved version and keeps this comparison visible so edits can be re-applied.</p>
-    <p class="mock-note" data-when="deleted" hidden>The lead was deleted by someone else while the form was open.</p>
+    <p class="mock-note" data-when="conflict" hidden>Another save changed this lead after the form opened, so the API answered 409. The form keeps the attempted values, reads the latest version once for the comparison, and never resubmits. "Reload latest" goes to the next state.</p>
+    <p class="mock-note" data-when="conflict-reloaded" hidden>"Reload latest" put the latest saved values and version into the form without sending anything. The comparison stays visible so edits can be re-applied by hand before saving. Focus moves to First name and the status is announced politely; leaving now asks before discarding the unsaved edits.</p>
+    <p class="mock-note" data-when="deleted" hidden>Hana Kim was deleted while the form was open, so the save returned 404. Fields and Save are disabled; "Back to leads" opens the directory without her.</p>
   </div>
 
   <div class="mock-screen">
@@ -99,11 +101,11 @@
         <header class="mc-dialog__header">
           <div class="mc-dialog__heading">
             <h2 class="mc-dialog__title" id="lead-dialog-title">
-              <span data-unless="edit conflict deleted">Add lead</span>
-              <span data-when="edit conflict deleted" hidden>Edit lead</span>
+              <span data-unless="edit conflict conflict-reloaded deleted">Add lead</span>
+              <span data-when="edit conflict conflict-reloaded deleted" hidden>Edit lead</span>
             </h2>
             <p class="mc-dialog__subtitle" id="lead-dialog-note">
-              <span data-when="edit conflict deleted" hidden>Grace Mensah · </span>All fields are required unless marked optional.
+              <span data-when="edit conflict conflict-reloaded" hidden>Grace Mensah · </span><span data-when="deleted" hidden>Hana Kim · </span>All fields are required unless marked optional.
             </p>
           </div>
           <button class="mc-button mc-button--quiet mc-button--icon" type="button" aria-label="Close" data-nav="lead-directory.html"
@@ -112,6 +114,7 @@
             data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
             data-attr-duplicate="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
             data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-conflict-reloaded="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
             data-attr-saving="disabled">
             <span class="mc-icon mc-icon--close" aria-hidden="true"></span>
           </button>
@@ -155,8 +158,8 @@
               <div class="mc-alert mc-alert--warning" data-when="conflict" hidden>
                 <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
                 <div class="mc-alert__body">
-                  <p class="mc-alert__title">This lead changed while you were editing</p>
-                  <p class="mc-alert__text">Priya Raman saved changes at 10:42 a.m. Your edits haven't been saved. Compare them, then reload the latest version and re-apply what you need.</p>
+                  <p class="mc-alert__title">This lead changed after you opened it</p>
+                  <p class="mc-alert__text">Your edits haven't been saved. Compare them with the latest saved version, then reload it and re-apply what you need.</p>
                 </div>
               </div>
 
@@ -164,7 +167,7 @@
                 <span class="mc-icon mc-icon--x-circle" aria-hidden="true"></span>
                 <div class="mc-alert__body">
                   <p class="mc-alert__title">This lead no longer exists</p>
-                  <p class="mc-alert__text">Someone deleted Grace Mensah while you were editing. Your edits weren't saved.</p>
+                  <p class="mc-alert__text">Hana Kim was deleted while you were editing. Your edits weren't saved.</p>
                   <div class="mc-alert__actions">
                     <a class="mc-button mc-button--sm" href="lead-directory.html">Back to leads</a>
                   </div>
@@ -172,17 +175,31 @@
               </div>
             </div>
 
-            <div class="mc-table-wrap" data-when="conflict" hidden>
-              <table class="mc-table mc-table--stack">
-                <caption class="mc-visually-hidden">Your edits compared with the latest saved version</caption>
-                <thead>
-                  <tr><th scope="col">Field</th><th scope="col">Your edit</th><th scope="col">Latest saved</th></tr>
-                </thead>
-                <tbody>
-                  <tr class="mc-table__row--highlight"><td class="mc-table__primary">Phone</td><td data-label="Your edit">+1 416 555 0199</td><td data-label="Latest saved">+1 416 555 0117</td></tr>
-                  <tr class="mc-table__row--highlight"><td class="mc-table__primary">Email</td><td data-label="Your edit">grace.mensah<wbr>@example.org</td><td data-label="Latest saved">g.mensah<wbr>@example.org</td></tr>
-                </tbody>
-              </table>
+            <div class="mc-live" role="status" aria-live="polite">
+              <div class="mc-alert" data-when="conflict-reloaded" hidden>
+                <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__text">Latest version loaded. Re-apply your edits from the comparison, then save.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="mc-stack mc-stack--sm" data-when="conflict conflict-reloaded" hidden>
+              <h3 class="mc-h4" id="lead-compare-title">
+                <span data-when="conflict" hidden>Your edits compared with the latest saved version</span>
+                <span data-when="conflict-reloaded" hidden>Your unsaved edits to re-apply</span>
+              </h3>
+              <div class="mc-table-wrap">
+                <table class="mc-table mc-table--stack" aria-labelledby="lead-compare-title">
+                  <thead>
+                    <tr><th scope="col">Field</th><th scope="col">Your edit</th><th scope="col">Latest saved</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr class="mc-table__row--highlight"><td class="mc-table__primary">Phone</td><td data-label="Your edit">+1 416 555 0199</td><td data-label="Latest saved">+1 416 555 0117</td></tr>
+                    <tr class="mc-table__row--highlight"><td class="mc-table__primary">Email</td><td data-label="Your edit">grace.mensah<wbr>@example.org</td><td data-label="Latest saved">g.mensah<wbr>@example.org</td></tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <!-- Fields -->
@@ -197,7 +214,8 @@
                   data-attr-duplicate="value=Camille"
                   data-attr-edit="value=Grace"
                   data-attr-conflict="value=Grace"
-                  data-attr-deleted="value=Grace|disabled">
+                  data-attr-conflict-reloaded="value=Grace"
+                  data-attr-deleted="value=Hana|disabled">
                 <p class="mc-field-error" id="lead-first-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Enter a first name</p>
               </div>
 
@@ -211,7 +229,8 @@
                   data-attr-duplicate="value=Dubois"
                   data-attr-edit="value=Mensah"
                   data-attr-conflict="value=Mensah"
-                  data-attr-deleted="value=Mensah|disabled">
+                  data-attr-conflict-reloaded="value=Mensah"
+                  data-attr-deleted="value=Kim|disabled">
               </div>
 
               <div class="mc-field mc-field--full">
@@ -224,7 +243,8 @@
                   data-attr-duplicate="value=Camille.Dubois@example.org |aria-invalid=true|aria-describedby=lead-email-duplicate"
                   data-attr-edit="value=grace.mensah@example.org"
                   data-attr-conflict="value=grace.mensah@example.org"
-                  data-attr-deleted="value=grace.mensah@example.org|disabled">
+                  data-attr-conflict-reloaded="value=g.mensah@example.org"
+                  data-attr-deleted="value=hana.kim@example.org|disabled">
                 <p class="mc-field-error" id="lead-email-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Enter an email address like name@example.org</p>
                 <p class="mc-field-error" id="lead-email-duplicate" data-when="duplicate" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Already used by a Communication lead. Choose another category or email.</p>
               </div>
@@ -240,7 +260,8 @@
                   data-attr-duplicate="value=+44 20 7946 0958"
                   data-attr-edit="value=+1 416 555 0117"
                   data-attr-conflict="value=+1 416 555 0199"
-                  data-attr-deleted="value=+1 416 555 0117|disabled">
+                  data-attr-conflict-reloaded="value=+1 416 555 0117"
+                  data-attr-deleted="value=+1 416 555 0114|disabled">
               </div>
 
               <fieldset class="mc-choice-group mc-choice-group--row" aria-describedby="lead-category-error"
@@ -251,7 +272,7 @@
                 <p class="mc-field-error" id="lead-category-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Choose a category</p>
                 <div class="mc-choice-group__options">
                   <label class="mc-choice">
-                    <input type="radio" name="category" id="lead-category-create" value="create">
+                    <input type="radio" name="category" id="lead-category-create" value="create" data-attr-deleted="checked">
                     <span class="mc-choice__title"><span class="mc-icon mc-icon--category-create" aria-hidden="true"></span>Create</span>
                   </label>
                   <label class="mc-choice">
@@ -263,7 +284,7 @@
                     <span class="mc-choice__title"><span class="mc-icon mc-icon--category-city" aria-hidden="true"></span>City</span>
                   </label>
                   <label class="mc-choice">
-                    <input type="radio" name="category" value="prayer" data-attr-edit="checked" data-attr-conflict="checked" data-attr-deleted="checked">
+                    <input type="radio" name="category" value="prayer" data-attr-edit="checked" data-attr-conflict="checked" data-attr-conflict-reloaded="checked">
                     <span class="mc-choice__title"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer</span>
                   </label>
                   <label class="mc-choice">
@@ -284,8 +305,9 @@
               data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
               data-attr-duplicate="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
               data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+              data-attr-conflict-reloaded="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
               data-attr-saving="disabled">Cancel</button>
-            <button class="mc-button mc-button--primary" type="button" data-when="conflict" hidden data-goto-state="edit">
+            <button class="mc-button mc-button--primary" type="button" data-when="conflict" hidden data-goto-state="conflict-reloaded">
               <span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Reload latest
             </button>
             <button class="mc-button mc-button--primary" type="submit" data-unless="conflict"
@@ -293,8 +315,8 @@
               data-attr-deleted="disabled">
               <span class="mc-spinner" aria-hidden="true" data-when="saving" hidden></span>
               <span data-when="saving" hidden>Saving…</span>
-              <span data-unless="saving edit deleted">Save lead</span>
-              <span data-when="edit deleted" hidden>Save changes</span>
+              <span data-unless="saving edit conflict-reloaded deleted">Save lead</span>
+              <span data-when="edit conflict-reloaded deleted" hidden>Save changes</span>
             </button>
           </footer>
         </form>

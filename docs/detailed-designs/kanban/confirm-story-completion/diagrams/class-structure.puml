@@ -23,6 +23,21 @@ class WorkItemDetailPage {
   +routeContext: Signal<RouteContext>
   +openDialog(): void
 }
+class MoveStoryDialog {
+  +destination: Signal<WorkStatus>
+  +position: Signal<int>
+  +move(): void
+}
+class UnfinishedTasksDialog {
+  +storyTitle: string
+  +unfinishedCount: int
+  +keep(): void
+  +markDone(): void
+}
+note bottom of UnfinishedTasksDialog
+  KanbanBoardPage and SprintBoardPage also open it
+  when a Done move returns 409 unfinished-tasks.
+end note
 class WorkItemView {
   +state: Signal<FeatureState>
   +submit(): void
@@ -51,15 +66,17 @@ class MissionControlDataSession {
   -connection: DbConnection
 }
 WorkItemDetailPage --> WorkItemView : composes
+WorkItemDetailPage --> UnfinishedTasksDialog : opens on 409 unfinished-tasks
+MoveStoryDialog ..> UnfinishedTasksDialog : a refused Done move leads to
+UnfinishedTasksDialog ..> StoryCompletionCondition : shows count; returns it on Mark story Done
 WorkItemView ..> IWorkItemService : inject token
 IWorkItemService <|.. WorkItemService
 IMissionControlDataSession <|.. MissionControlDataSession
 class CompleteStoryCommand {
   +workspaceId: Guid
   +storyId: Guid
-  +confirmed: bool
   +expectedStoryVersion: long
-  +expectedTaskRevision: long
+  +completionCondition: StoryCompletionCondition?
 }
 class CompleteStoryCommandHandler {
   +handle(request: CompleteStoryCommand): Task<FeatureResult>

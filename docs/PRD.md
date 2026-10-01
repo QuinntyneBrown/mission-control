@@ -321,8 +321,10 @@ library boundaries, a standalone design system, and the inherited testing rules.
 Deliver incrementally: write Given–When–Then acceptance tests before production
 code, verify the expected failure, implement the slice, and run relevant regression
 checks. Backend checks use API integration tests; frontend checks use Chromium
-Playwright with page objects. Acceptance tests must identify the requirement IDs
-they cover in comments. This documentation task does not introduce automated tests.
+Playwright with page objects. [L1](specs/L1.md) and [L2](specs/L2.md) elaborate
+this PRD; L2's Given–When–Then criteria govern where they are explicit, and
+acceptance tests must identify the L2 requirement IDs they cover in comments.
+This documentation task does not introduce automated tests.
 
 ## 9. Suggested delivery sequence
 

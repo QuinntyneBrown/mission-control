@@ -23,6 +23,20 @@ class WorkItemDetailPage {
   +routeContext: Signal<RouteContext>
   +openDialog(): void
 }
+class WorkItemFormDialog {
+  +draft: Signal<WorkItemDraft>
+  +comparison: Signal<FieldComparison[]>
+  +reloadLatest(): void
+}
+class ReparentDialog {
+  +targets: Signal<ParentChoice[]>
+  +preview: Signal<string>
+}
+class UnfinishedTasksDialog {
+  +unfinishedCount: number
+  +confirm(): void
+  +keep(): void
+}
 class WorkItemView {
   +state: Signal<FeatureState>
   +submit(): void
@@ -62,6 +76,11 @@ class MissionControlDataSession {
   -connection: DbConnection
 }
 WorkItemDetailPage --> WorkItemView : composes
+WorkItemFormDialog --> WorkItemView : composes
+ReparentDialog --> WorkItemView : composes
+WorkItemDetailPage ..> WorkItemFormDialog : opens
+WorkItemDetailPage ..> ReparentDialog : opens
+WorkItemFormDialog ..> UnfinishedTasksDialog : opens on 409 unfinished-tasks
 WorkItemView ..> IWorkItemService : inject token
 IWorkItemService <|.. WorkItemService
 IMissionControlDataSession <|.. MissionControlDataSession
@@ -70,7 +89,13 @@ class UpdateWorkItemCommand {
   +itemId: Guid
   +details: WorkItemDetails
   +expectedVersion: long
-  +completionCondition: CompletionCondition?
+  +completionCondition: StoryCompletionCondition?
+}
+class StoryCompletionCondition {
+  +storyId: Guid
+  +storyVersion: long
+  +taskRevision: long
+  +unfinishedCount: int
 }
 class UpdateWorkItemCommandHandler {
   +handle(request: UpdateWorkItemCommand): Task<FeatureResult>
@@ -79,12 +104,12 @@ WorkItemsController ..> UpdateWorkItemCommand : dispatches
 UpdateWorkItemCommandHandler ..> UpdateWorkItemCommand : handles
 UpdateWorkItemCommandHandler --> WorkItem : loads / applies
 UpdateWorkItemCommandHandler ..> IMissionControlDataSession : uses
+UpdateWorkItemCommand --> StoryCompletionCondition : carries returned condition
 class ReparentWorkItemCommand {
   +workspaceId: Guid
   +itemId: Guid
   +targetParentId: Guid
   +expectedVersion: long
-  +expectedOrderVersion: long
 }
 class ReparentWorkItemCommandHandler {
   +handle(request: ReparentWorkItemCommand): Task<FeatureResult>

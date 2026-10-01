@@ -17,11 +17,16 @@ All named production types are proposed; the repository currently contains requi
 | Part | Responsibility and architectural home |
 | --- | --- |
 | `ProjectListPage` | Routed page or dialog owned by `frontend/projects/mission-control`; composes the domain library and presentational components. |
+| `ProjectOverviewPage` | Routed overview page in `frontend/projects/mission-control`; shows settings, type/status counts, and the mode-specific sprint or board summary. |
+| `ProjectFormDialog` | Application dialog in `frontend/projects/mission-control`; creates or edits settings and shows the edit-conflict comparison. |
+| `ProjectDeleteDialog` | Application dialog in `frontend/projects/mission-control`; shows the named confirmation or the blocked explanation. |
 | `WorkspaceView` | Domain component in `frontend/projects/domain`; injects `WORKSPACE_SERVICE` and holds feature state in signals. |
 | `IWorkspaceService`, `WORKSPACE_SERVICE` | Interface and token in `frontend/projects/api/workspace.service.contract.ts`; the consumer imports the contract only. |
 | `WorkspaceService` | Production HTTP adapter in `api`; owns HTTP calls and observable-to-signal conversion. Composition binds a mock adapter for Chromium Playwright. |
 | `WorkspacesController` | Thin controller under `backend/src/MissionControl.Api/Controllers`, namespace `MissionControl.Api.Controllers`; binds, dispatches, and returns. |
-| `Workspace` | Domain entity or Application read projection described below; Domain has no external project dependency. |
+| `Workspace` | Domain entity; Domain has no external project dependency. |
+| `WorkspaceList`, `WorkspaceListItem`, `WorkspaceDetail`, `SprintSummary`, `TypeStatusCount` | Application read projections returned by the list and overview queries. |
+| `WorkspaceInUseProblem` | Application `409` ProblemDetails for a delete blocked by work items or sprints. |
 | `IMissionControlDataSession` | Application data port; the Infrastructure adapter runs parameterized queries and transaction commits. |
 
 Commands, queries, handlers, and request validators live in Application feature folders. Each type has its own file; folders and namespaces agree.
@@ -29,16 +34,29 @@ MediatR remains pinned to `12.5.0`. Microsoft.Extensions supplies dependency inj
 
 `ProjectListPage` owns `/projects`; `ProjectOverviewPage` owns `/projects/:id`.
 `ProjectFormDialog` and `ProjectDeleteDialog` belong to the application project.
-The list sorts by name then stable ID, 25 per page by default. Creating a workspace opens its overview with a saved confirmation.
+The list sorts by name then stable ID, 25 per page by default. A page size outside 1–100 returns `400` with a page-size message.
+When the total exceeds the page size, the list shows the total and Previous/Next page controls.
+The list projection returns per-workspace story done/total and either the active sprint's name and Toronto end date or a sprints-paused flag.
+The detail projection adds the active sprint (name, goal, dates, done/total stories), the next planned sprint and the latest closed sprint's outcome; in Kanban mode it returns kept planned/closed sprints flagged paused.
+All counts come from persisted records. Kept sprints are listed newest first and bounded to 25; Sprints pages the full history.
+A missing workspace returns `404`, and the overview shows its not-found state with a way back to Projects.
+Creating a workspace opens its overview with a saved confirmation.
 Name measures 1–200 characters and description at most 10,000. Initial mode is Kanban or Scrum.
 An optional responsible lead uses a paginated searchable combobox, matching the `lead-picker` mock.
 The API rechecks the lead FK at save time; a lead removed after selection causes `400` without losing other input.
 
 `UpdateWorkspaceCommand` excludes mode changes; the separate mode-change slice enforces active-sprint rules.
 Create/edit/delete are administrator-only. Collaborators see an explanation rather than inaccessible create actions.
-Workspace edits and deletes compare `expectedVersion`. Deletion checks every existing work item and sprint, including planned/active records.
-Restrictive foreign keys prevent racing child creation and deletion. Any content returns `409`, with no cascade.
-The mock mentions sprint history; treating every existing sprint as workspace content is a conservative proposed deletion rule.
+Workspace edits compare `expectedVersion`; `UpdateWorkspaceCommandHandler` checks existence, version, and the lead reference before it writes.
+On a stale-version `409` the form keeps the attempted values and reads the latest version once (no resubmission); Reload latest adopts the latest values and version while the comparison stays visible.
+The conflict copy names no person or time; the comparison lists "Your edit" beside "Latest saved".
+`DeleteWorkspaceCommand` carries only the workspace ID; deletion carries no expected version.
+`DeleteWorkspaceCommandHandler` locks the workspace and counts every work item and sprint, including planned/active records, before it deletes anything.
+A missing workspace returns `404`. The dialog closes, the list reloads without it, and an announcement says it was already deleted.
+Any content returns `409` with the work-item counts by type and the workspace's sprints, with no cascade.
+The dialog then explains the block, as in `blocked` and the work-only `blocked-work`, and offers Close with no retry.
+Restrictive foreign keys reject a racing child creation; that rejection rolls back the delete and returns the same `409`.
+Treating every existing sprint, not only closed history, as workspace content is a conservative proposed deletion rule.
 
 The authenticated API evaluates current SQL permissions before feature dispatch. Validation V maps invalid fields to `400`, absent authentication to `401`, forbidden access to `403`, missing records to `404`, and conflicts to `409`.
 Unexpected errors return a generic `500` with a correlation ID. Structured diagnostics exclude secrets and contact payloads.
@@ -51,17 +69,17 @@ Field errors connect to inputs; asynchronous results use status or alert announc
 
 | Behavior | Proposed boundary | Request / handler |
 | --- | --- | --- |
-| Read workspace list and overview | `GET /api/workspaces[/{id}]` | `GetWorkspaceQuery` / `GetWorkspaceQueryHandler` |
+| Read workspace list and overview | `GET /api/workspaces`, `GET /api/workspaces/{id}` | `GetWorkspacesQuery` / `GetWorkspacesQueryHandler`; `GetWorkspaceQuery` / `GetWorkspaceQueryHandler` |
 | Create workspace | `POST /api/workspaces` | `CreateWorkspaceCommand` / `CreateWorkspaceCommandHandler` |
 | Edit workspace settings | `PUT /api/workspaces/{id}` | `UpdateWorkspaceCommand` / `UpdateWorkspaceCommandHandler` |
 | Delete empty workspace | `DELETE /api/workspaces/{id}` | `DeleteWorkspaceCommand` / `DeleteWorkspaceCommandHandler` |
 
 Mock input and review references:
 
-- [Projects · Mission Control mock](../../../mocks/projects/project-list.html); review states: `default`, `collaborator`, `empty-admin`, `empty-collaborator`, `loading`, `error`.
+- [Projects · Mission Control mock](../../../mocks/projects/project-list.html); review states: `default`, `collaborator`, `many`, `empty-admin`, `empty-collaborator`, `loading`, `error`.
 - [Project overview · Mission Control mock](../../../mocks/projects/project-overview.html); review states: `default`, `kanban`, `new-empty`, `new-empty-collaborator`, `kanban-preserved`, `collaborator`, `not-found`, `loading`, `error`.
-- [New or edit project · Mission Control mock](../../../mocks/projects/project-form-dialog.html); review states: `create`, `lead-picker`, `validation`, `lead-missing`, `saving`, `failed`, `edit`, `conflict`.
-- [Delete project · Mission Control mock](../../../mocks/projects/project-delete-dialog.html); review states: `default`, `blocked`, `deleting`, `failed`.
+- [New or edit project · Mission Control mock](../../../mocks/projects/project-form-dialog.html); review states: `create`, `lead-picker`, `validation`, `lead-missing`, `saving`, `failed`, `edit`, `conflict`, `conflict-reloaded`.
+- [Delete project · Mission Control mock](../../../mocks/projects/project-delete-dialog.html); review states: `default`, `blocked`, `blocked-work`, `deleting`, `failed`.
 
 Implementation proceeds one behavior at a time using the linked Given-When-Then criteria. An API integration acceptance check first fails for the expected missing behavior.
 A Chromium Playwright check uses one page object per screen and a mock service bound through the same token. Tests express intent; page objects own selectors.
@@ -98,7 +116,7 @@ The class view shows proposed typed requests, interface consumption, and relatio
 
 ![Create and manage project workspaces: class structure](diagrams/class-structure.png)
 
-Read workspace list and overview follows the sequence below. The flow traces its enforcing steps to `L2-014` and includes rejection or recovery paths.
+Read workspace list and overview follows the sequence below. The flow traces its enforcing steps to `L2-014` and `L2-045` and includes rejection or recovery paths.
 
 ![Read workspace list and overview](diagrams/sequence-read.png)
 

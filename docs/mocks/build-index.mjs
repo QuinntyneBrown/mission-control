@@ -126,12 +126,13 @@ const index = `<!doctype html>
           <h3 class="mc-h4">Nothing here is live</h3>
           <p class="mc-text-sm mc-muted">Every mock is labelled MOCK. Forms never submit, nothing is saved or sent, and simulated
             results only change what the page shows. Contact and work data is fictitious (example.org addresses,
-            555-01xx phone numbers); the only real identity is Quinntyne Brown, the City Lead.</p>
+            555-01xx phone numbers, and the UK drama range +44 20 7946 0xxx for international formats); the only real identity is Quinntyne Brown, the City Lead.</p>
         </div>
         <div class="mc-card mc-stack mc-stack--sm">
           <h3 class="mc-h4">Responsive by design</h3>
           <p class="mc-text-sm mc-muted">Each mock adapts from 320px to 1920px without page-level horizontal scrolling. Review at
-            375, 768, and 1440px in the <a href="viewer.html">responsive viewer</a>, or resize the browser. Design notes
+            375, 768, and 1440px (L2-048) and the profile R widths 320, 576, 992, 1200, and 1920px in the
+            <a href="viewer.html">responsive viewer</a>, or resize the browser. Design notes
             under the MOCK bar describe behaviour a picture can't show: focus, announcements, and rules.</p>
         </div>
         <div class="mc-card mc-stack mc-stack--sm">

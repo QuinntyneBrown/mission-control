@@ -2,7 +2,7 @@
 !include <C4/C4_Component>
 LAYOUT_WITH_LEGEND()
 title Components - Move and reorder story cards
-Container(web, "Mission Control web client", "Angular", "KanbanBoardPage / BoardView")
+Container(web, "Mission Control web client", "Angular", "KanbanBoardPage, MoveStoryDialog, UnfinishedTasksDialog / BoardView")
 ContainerDb(db, "Mission Control database", "SQL", "Versioned feature records and audit events")
 Container_Boundary(api, "MissionControl.Api runtime") {
   Component(ctrl, "BoardsController", "API boundary", "Binds request and dispatches through MediatR 12.5.0")

@@ -205,7 +205,7 @@
       <span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>
       <div class="mc-toast__body">
         <p class="mc-toast__title">Now using Scrum</p>
-        <p class="mc-toast__text">Your sprint plans and history are available again.</p>
+        <p class="mc-toast__text">Plan and run sprints from the Sprints tab. Any kept sprint plans and history are available again.</p>
       </div>
       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
     </div>
@@ -578,7 +578,7 @@
     </div>
             </div>
             <dl class="mc-dl mc-dl--stacked mc-text-sm">
-              <dt>Shown when</dt><dd>The API returns 403 because a role or status changed after sign-in.</dd>
+              <dt>Shown when</dt><dd>The API returns 403 because the account&#x27;s role changed after sign-in. A deactivated account gets 401 and the sign-in page&#x27;s “Your session ended” message instead.</dd>
               <dt>Tone and announcement</dt><dd>Error · Alert (assertive) · Stays until dismissed</dd>
             </dl>
             <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-access-changed"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Your access changed” toast</span></button></div>
@@ -637,11 +637,15 @@
           <div class="mc-alert mc-alert--warning">
             <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
             <div class="mc-alert__body">
-              <p class="mc-alert__title">This lead changed while you were editing</p>
-              <p class="mc-alert__text">Priya Raman saved changes at 10:42 a.m. Your edits haven't been saved. Compare them, then reload the latest version.</p>
-              <div class="mc-alert__actions"><a class="mc-button mc-button--sm" href="../leads/lead-form-dialog.html#state=conflict">See it in the form</a></div>
+              <p class="mc-alert__title">This lead changed after you opened it</p>
+              <p class="mc-alert__text">Your edits haven't been saved. Compare them with the latest saved version, then reload it and re-apply what you need.</p>
+              <div class="mc-alert__actions">
+                <a class="mc-button mc-button--sm" href="../leads/lead-form-dialog.html#state=conflict">See it in the form</a>
+                <a class="mc-button mc-button--sm" href="../leads/lead-form-dialog.html#state=conflict-reloaded">After Reload latest</a>
+              </div>
             </div>
           </div>
+          <p class="mc-hint">Shown when a save answers 409 because the record changed after the form opened. The form keeps your values beside the latest saved ones and never resubmits; Reload latest loads the latest values and keeps the comparison visible.</p>
         </li>
         <li class="mock-index__item">
           <h3 class="mc-h4">Error with reference ID</h3>
@@ -703,9 +707,10 @@
             <span class="mc-icon mc-icon--clock" aria-hidden="true"></span>
             <div class="mc-alert__body">
               <p class="mc-alert__title">Too many sign-in attempts</p>
-              <p class="mc-alert__text">For your security, sign-in for this email is paused. Try again in 15 minutes, after 3:42 p.m.</p>
+              <p class="mc-alert__text">For your security, sign-in for this email is paused. Try again after 3:42 p.m. (in about 12 minutes).</p>
             </div>
           </div>
+          <p class="mc-hint">The time comes from the 429 response&#x27;s retry timing, the remaining pause, so it is never a fixed 15 minutes.</p>
         </li>
         <li class="mock-index__item">
           <h3 class="mc-h4">Blocked action</h3>
@@ -1182,7 +1187,7 @@
                 <tr>
                   <td class="mc-table__primary">“Your session ended”</td>
                   <td data-label="Region">Status (polite) on the sign-in page</td>
-                  <td data-label="When">The session expires or the page reloads.</td>
+                  <td data-label="When">The session expires, the page reloads, or the account is deactivated (401).</td>
                 </tr>
                 <tr>
                   <td class="mc-table__primary">Toast titles and text</td>
@@ -1298,7 +1303,7 @@
       <span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>
       <div class="mc-toast__body">
         <p class="mc-toast__title">Now using Scrum</p>
-        <p class="mc-toast__text">Your sprint plans and history are available again.</p>
+        <p class="mc-toast__text">Plan and run sprints from the Sprints tab. Any kept sprint plans and history are available again.</p>
       </div>
       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
     </div>

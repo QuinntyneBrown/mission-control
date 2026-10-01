@@ -30,6 +30,9 @@ MediatR remains pinned to `12.5.0`. Microsoft.Extensions supplies dependency inj
 `KanbanBoardPage` owns `/projects/:id/board` when mode is Kanban and composes a `BoardView` domain component.
 Presentational `StoryCard` receives title, status, assignee, task counts, and outputs actions; it imports no API contract or application service.
 `GetKanbanBoardQueryHandler` reads story-only cards, with Unassigned text and saved per-column order.
+Creating a story in either mode inserts its Kanban `BoardPlacement` at the bottom of To Do in the same transaction.
+The workspace's Kanban `BoardState` is created with the workspace, so a mode switch needs no backfill.
+Deletion removes the placement and compacts its column. Cards order by `(Status, Position)`, with story ID only as a tie-breaker.
 Each column loads bounded batches, defaulting to 25 and capped at 100; its total count covers all matching stories.
 Task count aggregation uses persisted child task statuses and does not multiply counts through joined membership tables.
 
@@ -38,6 +41,8 @@ Below `576px` a named column selector exposes one column at a time without page 
 Empty columns remain represented, including a completely empty workspace; create actions reflect current permissions.
 Opening a card routes to work details with ancestor context and bounded tasks. Project tabs remain pinned on phones; larger layouts pin header and tabs.
 Scroll offsets include fixed-content clearance so keyboard focus remains visible. Failed batch loads preserve already loaded cards.
+A missing workspace returns `404` and shows a not-found state linking back to Projects.
+A read for a workspace now in Scrum mode returns `409`; the page re-reads the project and the Board tab shows the sprint board.
 The `preserved` state keeps board operation available while stored Scrum plans remain paused.
 
 The authenticated API evaluates current SQL permissions before feature dispatch. Validation V maps invalid fields to `400`, absent authentication to `401`, forbidden access to `403`, missing records to `404`, and conflicts to `409`.

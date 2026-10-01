@@ -23,12 +23,18 @@ class ProjectOverviewPage {
   +routeContext: Signal<RouteContext>
   +openDialog(): void
 }
+class ModeChangeDialog {
+  +destination: DeliveryMode
+  +blockedBy: Signal<SprintReference?>
+  +confirm(): void
+  +cancel(): void
+}
 class WorkspaceView {
   +state: Signal<FeatureState>
   +submit(): void
 }
 interface IWorkspaceService {
-  +change_mode(request: ChangeDeliveryModeCommand): Promise<FeatureResult>
+  +changeMode(request: ChangeDeliveryModeCommand): Promise<FeatureResult>
 }
 class WorkspaceService {
   -http: HttpClient
@@ -42,6 +48,11 @@ class Workspace {
   +version: long
   +changeMode(mode: DeliveryMode, activeSprint: bool): void
 }
+note right of Workspace
+  Writes Mode only. Stories already hold their Kanban
+  BoardPlacement (bottom of To Do) from creation,
+  so no board backfill runs in either direction.
+end note
 interface IMissionControlDataSession {
   +query(specification): Task<ReadResult>
   +commit(expectedVersion: long): Task<void>
@@ -50,6 +61,8 @@ class MissionControlDataSession {
   -connection: DbConnection
 }
 ProjectOverviewPage --> WorkspaceView : composes
+ProjectOverviewPage ..> ModeChangeDialog : opens from Project actions
+ModeChangeDialog --> WorkspaceView : composes
 WorkspaceView ..> IWorkspaceService : inject token
 IWorkspaceService <|.. WorkspaceService
 IMissionControlDataSession <|.. MissionControlDataSession
@@ -63,7 +76,17 @@ class ChangeDeliveryModeCommandHandler {
 }
 WorkspacesController ..> ChangeDeliveryModeCommand : dispatches
 ChangeDeliveryModeCommandHandler ..> ChangeDeliveryModeCommand : handles
+class ActiveSprintProblem {
+  +status: 409
+  +sprint: SprintReference
+}
+class SprintReference {
+  +sprintId: Guid
+  +name: string
+}
+ActiveSprintProblem *-- SprintReference
 ChangeDeliveryModeCommandHandler --> Workspace : loads / applies
+ChangeDeliveryModeCommandHandler ..> ActiveSprintProblem : 409 while a sprint is active
 ChangeDeliveryModeCommandHandler ..> IMissionControlDataSession : uses
 
 @enduml

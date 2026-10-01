@@ -2,7 +2,7 @@
 !include <C4/C4_Container>
 LAYOUT_WITH_LEGEND()
 title Containers - Review workflow mock artifacts
-Person(reviewer, "Design reviewer", "Reviews at stated viewport widths")
+Person(reviewer, "Design reviewer", "Reviews at 375, 768, 1440 and profile R widths")
 System_Boundary(artifact, "Review workflow mock artifacts") {
   Container(source, "docs/mocks/", "HTML / CSS / JavaScript", "Static sources and token values")
   Container(site, "Independent static review site", "Browser", "Catalog, examples, and review states")

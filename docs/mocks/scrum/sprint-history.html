@@ -33,7 +33,7 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">History is a snapshot taken at closure: goal, planned dates, actual start and close, initial and final scope, scope changes, and each story's title, status, and destination as recorded. It can't be edited (the API returns 409). Deleted stories keep their recorded row without a link.</p>
+    <p class="mock-note" data-when="default">History is a snapshot taken at closure: goal, planned dates, actual start and close, initial and final scope, scope changes, and each story's title, status, and destination as recorded. It can't be edited (the API returns 409). A story deleted after closure keeps its recorded ID, title, and status as plain text with a Deleted label and no link. Who started and closed the sprint, and each scope change, come from the snapshot too.</p>
     <p class="mock-note" data-when="renamed" hidden>A story renamed after closure keeps its recorded title here; the current title is shown as a note so the link still makes sense.</p>
     <p class="mock-note" data-when="not-found" hidden>Missing or mistyped sprint links show a readable message and a way back to the project's sprints.</p>
     <p class="mock-note" data-when="loading" hidden>Placeholders keep the layout while history loads. Screen readers hear "Loading Sprint 7".</p>
@@ -215,7 +215,7 @@
                   <td data-label="Outcome">Completed in Sprint 7</td>
                 </tr>
                 <tr>
-                  <td class="mc-table__primary"><span class="mc-table__secondary">HCK-109</span>Draft volunteer code of conduct <span class="mc-pill"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Deleted</span><span class="mc-table__secondary">Story deleted Sep 27, 2026</span></td>
+                  <td class="mc-table__primary"><span class="mc-table__secondary">HCK-109</span>Draft volunteer code of conduct <span class="mc-pill"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Deleted</span><span class="mc-table__secondary">Story deleted after closure</span></td>
                   <td data-label="At closure"><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span></td>
                   <td data-label="Outcome">Completed in Sprint 7</td>
                 </tr>

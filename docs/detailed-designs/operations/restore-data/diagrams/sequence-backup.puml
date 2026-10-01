@@ -15,34 +15,47 @@ skinparam package {
 }
 title Behavior - Capture a populated backup
 actor "Release operator" as actor
-box "Frontend - Operations console / Chromium harness" #E0F2FE
-  participant "RecoveryConsole" as handler
+box "Release tooling - backend/src/MissionControl.Operations" #E0F2FE
+  participant "OperationsConsole" as console
+  participant "CaptureBackupOperation" as capture
 end box
-box "Backend - MissionControl.Api existing endpoints" #D1FADF
-  participant "Existing feature API" as api
+box "Selected SQL provider" #FFF4E5
+  database "Source SQL\n(read-only during capture)" as source
+  collections "Backup storage" as storage
 end box
-box "Backend - Application / operational verification" #ECFDF3
-  participant "RecoveryRecord" as entity
+box "Release records - docs/operations" #ECFDF3
+  participant "RecoveryRecord" as record
 end box
-box "Backend - Infrastructure / selected SQL provider" #FFF4E5
-  database "Verified isolated SQL target / source backup" as db
-end box
-actor -> handler : Capture a populated backup
-  handler -> db : L2-044 capture provider-consistent populated backup
-  db --> handler : Backup point and artifact location
-  handler -> entity : Record source, backup point and capture outcome
-  entity --> handler : Recovery manifest
-alt Backup failure or restricted storage access
-  handler -> entity : Record failure; leave readiness/result unresolved
-  entity --> handler : Failed run record
-  handler --> actor : Failure and recovery guidance; no passing claim
-else Procedure succeeds
-  handler -> api : Verify through existing feature endpoints / health / page objects
-  api -> db : Read or commit representative protected behavior
-  db --> api : Persisted result
-  api --> handler : Result without secrets
-  handler -> entity : Record exact environment, timings and verified outcome
-  entity --> handler : Completed run record
-  handler --> actor : Rehearsal / measurement result
+actor -> console : backup (source write freeze recorded in runbook)
+console -> capture : Run with bound RecoveryOptions
+break Source, storage, or external credentials not configured
+  capture --> console : Refused before any provider command
+  console -> record : Outcome Failed: configuration incomplete
+  console --> actor : Exit non-zero; nothing ran against the source
 end
+capture -> source : Read DataFingerprint in one read-only transaction
+source --> capture : Counts, ordered ID / parent / position / membership / snapshot digests, samples
+capture -> source : L2-044 provider backup command <TO SUPPLY> (reads only)
+source -> storage : Write backup artifact
+break Backup command fails or storage access is denied
+  storage --> capture : Provider error
+  capture --> console : Failed step; provider message without secrets
+  console -> record : Outcome Failed; no backup point recorded
+  console --> actor : Failure and access guidance; source unchanged
+end
+capture -> storage : Provider read-only verification; SHA-256 checksum
+break Artifact unreadable or incomplete
+  storage --> capture : Verification error
+  capture --> console : Failed: artifact not usable for restore
+  console -> record : Outcome Failed; artifact marked unusable
+  console --> actor : Capture again; no backup point claimed
+end
+storage --> capture : Verified artifact and checksum
+capture --> console : Backup point, artifact location, checksum, fingerprint
+console -> record : L2-044.3 start/end, backup point, checksum, fingerprint; Outcome Captured
+console --> actor : Record path for the restore rehearsal
+note over console, storage
+No API call and no write reaches the source:
+a sign-in would append an audit event to it.
+end note
 @enduml

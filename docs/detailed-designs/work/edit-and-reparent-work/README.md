@@ -17,6 +17,8 @@ All named production types are proposed; the repository currently contains requi
 | Part | Responsibility and architectural home |
 | --- | --- |
 | `WorkItemDetailPage` | Routed page or dialog owned by `frontend/projects/mission-control`; composes the domain library and presentational components. |
+| `WorkItemFormDialog`, `ReparentDialog` | Application dialogs in `frontend/projects/mission-control`, opened from the hierarchy and the detail page; compose `WorkItemView`. |
+| `UnfinishedTasksDialog` | Application dialog in `frontend/projects/mission-control`, owned by the kanban confirm-story-completion slice and reused here for direct story status edits. |
 | `WorkItemView` | Domain component in `frontend/projects/domain`; injects `WORK_ITEM_SERVICE` and holds feature state in signals. |
 | `IWorkItemService`, `WORK_ITEM_SERVICE` | Interface and token in `frontend/projects/api/work-item.service.contract.ts`; the consumer imports the contract only. |
 | `WorkItemService` | Production HTTP adapter in `api`; owns HTTP calls and observable-to-signal conversion. Composition binds a mock adapter for Chromium Playwright. |
@@ -27,24 +29,33 @@ All named production types are proposed; the repository currently contains requi
 Commands, queries, handlers, and request validators live in Application feature folders. Each type has its own file; folders and namespaces agree.
 MediatR remains pinned to `12.5.0`. Microsoft.Extensions supplies dependency injection, Options, and Configuration.
 
-`UpdateWorkItemCommand` accepts title, description, status, nullable active-user assignee, dates, and story estimate.
+`UpdateWorkItemCommand` accepts title, description, status, nullable active-user assignee, dates, story estimate, and the expected item version.
 Title measures 1–200 and description at most 10,000 characters. Due date cannot precede start when both exist.
 Dates are calendar values, not UTC instants. Only stories accept a nonnegative integer estimate.
 Clearing an optional field sends explicit null; absent edit fields are not mistaken for a requested clear.
-Existing inactive assignees remain readable; an unchanged inactive assignment is preserved on unrelated edits.
-A newly selected or changed assignee is revalidated as active inside the transaction.
+Existing inactive assignees remain readable. The edit form keeps a current inactive assignee selected and labelled inactive (`edit-inactive-assignee` mock state).
+An unchanged inactive assignment is preserved on unrelated edits; inactive people are never offered as new choices.
+A newly selected or changed assignee is revalidated as active inside the transaction; an inactive or unknown choice returns `400` with an assignee field error.
+A missing item returns `404`; the form closes and the detail page shows its not-found state.
+On a stale-version `409` the form keeps the attempted values and reads the latest version once (no resubmission); Reload latest adopts the latest values and version while the comparison stays visible.
+The comparison lists each field whose attempted and latest values differ (`conflict` and `conflict-reloaded` mock states).
 
 `ReparentDialog` shows the current parent, searchable valid targets, and destination path preview.
 `ReparentWorkItemCommandHandler` changes only the item's parent link and appends its sibling position under the target.
 Descendant paths derive from links; no descendant ID or sprint membership is rewritten.
 Type and workspace are immutable. Initiatives have no reparent action.
-The workspace order version protects both source and destination sibling order; restrictive parent constraints reject targets removed after selection.
-Expected item and workspace versions detect racing edits or ordering changes.
+Under the workspace transaction lock the handler compacts the source siblings, appends to the target's children, and increments both sibling-order versions.
+The target position is always the end, so the command carries only the expected item version.
+A target that is missing or deleted after selection, of the wrong level, the current parent, or in another workspace returns `400` with a target field error (`rejected` mock state).
+A stale item version returns `409` (`conflict` mock state); Reload story reads the current parent and valid targets without resending.
+A missing item returns `404`; the dialog closes and the outline reloads without it. In every rejection the old hierarchy stays intact.
 
 Direct story status changes use `StoryCompletionPolicy`, also used by board moves.
-Done with unfinished tasks returns `409` until the exact current completion condition is explicitly confirmed.
-All stale edits preserve draft values and offer latest-value comparison without automatic retry.
-The shared completion slice describes confirmation and task-version races in detail.
+A story edit to Done while tasks are unfinished returns `409` with category `unfinished-tasks`, the current unfinished count, and a `StoryCompletionCondition`.
+The form keeps the edit and opens `UnfinishedTasksDialog`, which shows the count only.
+Mark story Done resubmits the same `UpdateWorkItemCommand` with the returned condition; Keep in progress restores the saved status and sends nothing.
+A changed count returns a new `409` and asks again. The shared completion slice describes these races in detail.
+A status change moves the story's live board placements to the new status column in the same transaction.
 
 The authenticated API evaluates current SQL permissions before feature dispatch. Validation V maps invalid fields to `400`, absent authentication to `401`, forbidden access to `403`, missing records to `404`, and conflicts to `409`.
 Unexpected errors return a generic `500` with a correlation ID. Structured diagnostics exclude secrets and contact payloads.
@@ -62,10 +73,10 @@ Field errors connect to inputs; asynchronous results use status or alert announc
 
 Mock input and review references:
 
-- [Add or edit work item · Mission Control mock](../../../mocks/work/work-item-form-dialog.html); review states: `create-initiative`, `create-epic`, `create-story`, `create-task`, `edit`, `validation`, `rejected`, `parent-deleted`, `saving`, `failed`, `conflict`.
-- [Move to another parent · Mission Control mock](../../../mocks/work/reparent-dialog.html); review states: `default`, `rejected`, `saving`, `failed`.
+- [Add or edit work item · Mission Control mock](../../../mocks/work/work-item-form-dialog.html); review states: `create-initiative`, `create-epic`, `create-story`, `create-task`, `edit`, `edit-inactive-assignee`, `validation`, `rejected`, `parent-deleted`, `saving`, `failed`, `conflict`, `conflict-reloaded`.
+- [Move to another parent · Mission Control mock](../../../mocks/work/reparent-dialog.html); review states: `default`, `rejected`, `conflict`, `saving`, `failed`.
 - [Work item detail · Mission Control mock](../../../mocks/work/work-item-detail.html); review states: `default`, `initiative`, `epic`, `task`, `unset`, `inactive-assignee`, `collaborator`, `not-found`, `loading`, `error`.
-- [Unfinished tasks confirmation · Mission Control mock](../../../mocks/kanban/unfinished-tasks-dialog.html); review states: `default`, `server-count`, `saving`.
+- [Unfinished tasks confirmation · Mission Control mock](../../../mocks/kanban/unfinished-tasks-dialog.html); review states: `default`, `server-count`, `saving`, `failed`.
 
 Implementation proceeds one behavior at a time using the linked Given-When-Then criteria. An API integration acceptance check first fails for the expected missing behavior.
 A Chromium Playwright check uses one page object per screen and a mock service bound through the same token. Tests express intent; page objects own selectors.

@@ -16,22 +16,34 @@ skinparam package {
 title Manual review - Review workflow mock artifacts
 actor "Design reviewer" as reviewer
 box "Frontend - Standalone static artifact" #E0F2FE
-  participant "MockViewer" as catalog
-  participant "Static specimen / state" as example
+  participant "ArtifactCatalog\n(index.html / viewer.html)" as catalog
+  participant "MockScreen / MockState" as example
   participant "--mc- token stylesheet" as tokens
 end box
 box "Backend - Application runtime excluded" #D1FADF
   participant "No API or SQL dependency" as excluded
 end box
-reviewer -> catalog : Open independent catalog / offline file
-catalog -> example : Select named specimen or workflow state
+reviewer -> catalog : ReviewWorkflowMocks: open index.html offline
+catalog -> example : Select a mock and #state=<id> in the viewer
 example -> tokens : Read visual roles
 tokens --> example : Token values
-example --> catalog : Static rendering; visible artifact label for mocks
-catalog --> reviewer : L2-048 review at required compact/medium/expanded widths
-alt Missing coverage / feedback or unreadable layout
-  reviewer -> catalog : Record review issue; revise artifact sources
-  catalog --> reviewer : Revised specimen for manual review
+example --> catalog : Static rendering under the visible MOCK bar
+catalog --> reviewer : L2-048 review at 375 / 768 / 1440, plus profile R widths (320-1920)
+alt Listed workflow has no named screen or interaction
+  reviewer -> catalog : Record L2-048.1 gap
+  catalog --> reviewer : New mock added to build-index.mjs; index regenerated
+else Overlapping controls or page-level horizontal scroll at a width
+  reviewer -> catalog : Record L2-048.2 issue with the failing width
+  catalog --> reviewer : Shared token-based style revised; recheck at that width
+else MOCK label missing, non-fictitious data, or a live send or write
+  reviewer -> catalog : Record L2-048.3 issue
+  catalog --> reviewer : Label restored; example.org, 555-01xx, or +44 20 7946 0xxx data; action simulated
+else Empty, loading, validation, failure, or success state missing
+  reviewer -> catalog : Record L2-048.4 gap
+  catalog --> reviewer : State option, data-when markup, and design note added
+else Tests or ATDD introduced for the mocks
+  reviewer -> catalog : Record L2-048.5 issue; remove them
+  catalog --> reviewer : Mocks remain manual-review only
 else Review criteria satisfied
   reviewer -> catalog : Record manual review outcome
   catalog --> reviewer : Artifact remains static; no ATDD or tests

@@ -30,13 +30,19 @@ MediatR remains pinned to `12.5.0`. Microsoft.Extensions supplies dependency inj
 `SprintHistoryPage` owns `/projects/:id/sprints/:sprintId/history`; `SprintsPage` links to closed records newest first.
 `GetSprintHistoryQueryHandler` reads immutable snapshot tables, not mutable WorkItem values as the historical truth.
 History lists default to 25 and cap at 100. Large outcome collections page independently; full completed/unfinished counts aggregate all outcome rows.
+An invalid page or page size returns `400`, and the page shows Load failed with Try again.
 Snapshot scope and outcomes preserve recorded IDs even after live item deletion. No cascade connects snapshots to live work.
 
-Optional live lookup determines whether a navigation link still exists; it never overwrites recorded text or status.
-The `renamed` mock shows the recorded title with an additional current-title note; missing stories/destinations remain labeled without broken links.
+The snapshot supplies the start and close instants with their recorded actors (`StartedByName`, `ClosedByName`).
+Its `ScopeChanges` supply the scope log: each `SprintScopeChange` records the actor, instant, story, and Add/Remove.
+Optional live lookup determines whether a story link still exists and reads its current title; it never overwrites recorded text or status.
+The `renamed` mock shows the recorded title with an additional current-title note.
+A story deleted after closure keeps its recorded ID, title, and status as plain text with a Deleted label and no link, so navigation never breaks.
+Carryover destinations show the sprint name recorded at closure and link to that sprint; sprints are never deleted, so the link resolves.
 Planned Toronto dates remain calendar values; actual instants store UTC and display Toronto time.
 Closed sprint mutation handlers return `409`; no snapshot edit endpoint exists.
-History stays available during Kanban mode. Missing sprint receives `404` with navigation to the workspace sprint list.
+History stays available during Kanban mode.
+A sprint with no closure snapshot (missing, in another workspace, or not yet closed) returns `404` with navigation to the workspace sprint list.
 
 The authenticated API evaluates current SQL permissions before feature dispatch. Validation V maps invalid fields to `400`, absent authentication to `401`, forbidden access to `403`, missing records to `404`, and conflicts to `409`.
 Unexpected errors return a generic `500` with a correlation ID. Structured diagnostics exclude secrets and contact payloads.
@@ -54,7 +60,7 @@ Field errors connect to inputs; asynchronous results use status or alert announc
 Mock input and review references:
 
 - [Sprint history · Mission Control mock](../../../mocks/scrum/sprint-history.html); review states: `default`, `renamed`, `not-found`, `loading`, `error`.
-- [Sprints · Mission Control mock](../../../mocks/scrum/sprints.html); review states: `default`, `no-sprints`, `kanban-paused`, `loading`, `error`.
+- [Sprints · Mission Control mock](../../../mocks/scrum/sprints.html); review states: `default`, `empty`, `kanban-paused`, `loading`, `error`.
 
 Implementation proceeds one behavior at a time using the linked Given-When-Then criteria. An API integration acceptance check first fails for the expected missing behavior.
 A Chromium Playwright check uses one page object per screen and a mock service bound through the same token. Tests express intent; page objects own selectors.

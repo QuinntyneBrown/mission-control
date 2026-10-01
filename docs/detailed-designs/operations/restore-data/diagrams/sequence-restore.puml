@@ -15,35 +15,81 @@ skinparam package {
 }
 title Behavior - Restore and verify isolated recovery
 actor "Release operator" as actor
-box "Frontend - Operations console / Chromium harness" #E0F2FE
-  participant "RecoveryConsole" as handler
+box "Release tooling - backend/src/MissionControl.Operations" #E0F2FE
+  participant "OperationsConsole" as console
+  participant "RestoreBackupOperation" as restore
+  participant "RecoveryApiProbe" as probe
 end box
-box "Backend - MissionControl.Api existing endpoints" #D1FADF
-  participant "Existing feature API" as api
+box "Selected SQL provider" #FFF4E5
+  collections "Backup storage" as storage
+  database "Isolated SQL target" as target
 end box
-box "Backend - Application / operational verification" #ECFDF3
-  participant "RecoveryRecord" as entity
+box "Backend - MissionControl.Api (recovery instance)" #D1FADF
+  participant "Recovery API instance" as api
 end box
-box "Backend - Infrastructure / selected SQL provider" #FFF4E5
-  database "Verified isolated SQL target / source backup" as db
+box "Release records - docs/operations" #ECFDF3
+  participant "RecoveryRecord" as record
 end box
-actor -> handler : Restore and verify isolated recovery
-  handler -> db : L2-044 restore backup into verified separate target
-  db --> handler : Restored SQL state
-  handler -> entity : Compare IDs, links, ordering, and immutable outcomes
-  entity --> handler : Verification results
-  handler -> db : L2-007 initialize without resetting existing password
-alt Restore failure / mismatched data / unsafe target
-  handler -> entity : Record failure; leave readiness/result unresolved
-  entity --> handler : Failed run record
-  handler --> actor : Failure and recovery guidance; no passing claim
-else Procedure succeeds
-  handler -> api : Verify through existing feature endpoints / health / page objects
-  api -> db : Read or commit representative protected behavior
-  db --> api : Persisted result
-  api --> handler : Result without secrets
-  handler -> entity : Record exact environment, timings and verified outcome
-  entity --> handler : Completed run record
-  handler --> actor : Rehearsal / measurement result
+actor -> console : restore (capture record, target)
+console -> restore : Run with bound RecoveryOptions
+restore -> target : Check identity, contents, and connected instances (read-only)
+break Target matches the source, holds data, or serves an application instance
+  restore --> console : Refused before any restore: unsafe target
+  console -> record : Outcome Failed: unsafe target named
+  console --> actor : Provide an isolated, empty target
 end
+restore -> storage : Read artifact; compare SHA-256 with the capture record
+break Checksum differs or artifact unreadable
+  restore --> console : Refused before any restore: artifact does not match the backup point
+  console -> record : Outcome Failed
+  console --> actor : Use a verified capture record
+end
+restore -> target : L2-044 provider restore command <TO SUPPLY>
+break Restore command fails
+  target --> restore : Provider error without secrets
+  restore --> console : Failed step; target left for disposal
+  console -> record : Outcome Failed; readiness unresolved
+  console --> actor : Discard the target; rerun on a new target
+end
+restore -> target : Read DataFingerprint (read-only)
+target --> restore : Restored counts, digests, samples
+break Any count or digest differs from the backup point
+  restore --> console : Failed: mismatched tables named
+  console -> record : Outcome Failed; mismatches listed
+  console --> actor : No passing claim; investigate backup and restore steps
+end
+actor -> api : Start against the target with independent signing and configuration
+api -> target : DatabaseInitializer: compatible schema; L2-007 repair preserving ID and password hash
+restore -> probe : Verify the recovery API
+probe -> api : GET /health/ready
+break Readiness 503 (incompatible schema or failed seed)
+  api --> probe : 503 without secrets
+  probe --> restore : Failed: not ready
+  restore --> console : Failed with diagnostic correlation ID
+  console -> record : Outcome Failed
+  console --> actor : Resolve schema or configuration; rerun on a new target
+end
+probe -> api : POST /api/sessions with the changed administrator password
+break 401: changed password rejected
+  api --> probe : 401
+  probe --> restore : Failed: L2-044.2 password not preserved
+  restore --> console : Failed
+  console -> record : Outcome Failed
+  console --> actor : No passing claim
+end
+api --> probe : Access token
+probe -> api : GET /api/session; sample leads, work items, board, sprint history
+api -> target : Parameterized reads
+target --> api : Restored records
+api --> probe : Active Administrator; sample results without secrets
+break Role, sample ID, order, title, or recorded outcome differs
+  probe --> restore : Failed: named mismatch
+  restore --> console : Failed
+  console -> record : Outcome Failed; mismatch listed
+  console --> actor : No passing claim
+end
+probe --> restore : API checks passed
+restore --> console : Passed with step timings
+console -> record : L2-044.3 start/end, backup point, verification results; Outcome Passed
+console --> actor : Record path to link from recovery-runbook.md
 @enduml

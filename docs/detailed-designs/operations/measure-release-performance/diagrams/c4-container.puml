@@ -2,16 +2,23 @@
 !include <C4/C4_Container>
 LAYOUT_WITH_LEGEND()
 title Containers - Measure release workflow performance
-Person(actor, "Deployment operator", "Runs documented release procedure")
-System_Boundary(mc, "Mission Control operations") {
-  Container(runner, "Release procedure / harness", ".NET / Microsoft.Extensions", "Provider commands and acceptance workload")
-  Container(api, "MissionControl.Api", ".NET", "Health status and behavioral verification")
-  ContainerDb(db, "Mission Control SQL", "SQL - provider <TO SUPPLY>", "Durable accounts, work, and sprint snapshots")
+Person(actor, "Release operator", "Completes the environment manifest and starts each run")
+System_Boundary(tooling, "Mission Control release tooling") {
+  Container(loadRunner, "API load runner", ".NET console - backend/src/MissionControl.Operations", "fixture and load verbs; post-load invariant reads")
+  Container(coldRunner, "Cold-view runner", "Playwright library / Chromium - e2e/performance", "30 fresh-context runs per view; reuses e2e/page-objects")
+  Container(records, "Performance records", "JSON in docs/operations/performance", "EnvironmentManifest, PerformanceResult, ColdViewResult")
 }
-Rel(actor, runner, "Starts / configures")
-Rel(runner, db, "Initializes / verifies", "SQL")
-Rel(actor, api, "Observes health or verifies behavior", "HTTPS")
-Rel(api, db, "Checks or reads restored data", "Parameterized SQL")
-ContainerDb(target, "Isolated SQL target", "Same selected SQL provider", "Recovered data or load fixture")
-Rel(runner, target, "Restores / prepares isolated fixture")
+System_Boundary(env, "Isolated L2-046 measurement environment") {
+  Container(web, "Mission Control web app", "Angular production build", "HTTP adapters bound to every service token")
+  Container(api, "MissionControl.Api (performance instance)", ".NET", "Existing endpoints; Server-Timing enabled")
+  ContainerDb(db, "Isolated SQL target", "Selected SQL provider", "Fixture restored before each run")
+}
+Rel(actor, loadRunner, "Runs fixture / load")
+Rel(actor, coldRunner, "Runs cold views")
+Rel(loadRunner, api, "25 sessions x 1 request/s; invariant reads", "HTTPS")
+Rel(coldRunner, web, "Drives fresh Chromium contexts", "HTTPS")
+Rel(web, api, "Production HTTP adapters", "HTTPS")
+Rel(api, db, "Reads / commits", "Parameterized SQL")
+Rel(loadRunner, records, "Writes PerformanceResult")
+Rel(coldRunner, records, "Writes ColdViewResult")
 @enduml

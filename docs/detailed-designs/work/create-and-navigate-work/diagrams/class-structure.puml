@@ -23,6 +23,16 @@ class WorkHierarchyPage {
   +routeContext: Signal<RouteContext>
   +openDialog(): void
 }
+class WorkListPage {
+  +filters: Signal<WorkFilters>
+}
+class WorkItemDetailPage {
+  +routeContext: Signal<RouteContext>
+}
+class WorkItemFormDialog {
+  +draft: Signal<WorkItemDraft>
+  +save(): void
+}
 class WorkItemView {
   +state: Signal<FeatureState>
   +submit(): void
@@ -61,6 +71,10 @@ class MissionControlDataSession {
   -connection: DbConnection
 }
 WorkHierarchyPage --> WorkItemView : composes
+WorkListPage --> WorkItemView : composes
+WorkItemDetailPage --> WorkItemView : composes
+WorkItemFormDialog --> WorkItemView : composes
+WorkHierarchyPage ..> WorkItemFormDialog : opens
 WorkItemView ..> IWorkItemService : inject token
 IWorkItemService <|.. WorkItemService
 IMissionControlDataSession <|.. MissionControlDataSession

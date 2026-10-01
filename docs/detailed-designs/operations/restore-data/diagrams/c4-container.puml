@@ -2,16 +2,22 @@
 !include <C4/C4_Container>
 LAYOUT_WITH_LEGEND()
 title Containers - Rehearse backup and restore
-Person(actor, "Deployment operator", "Runs documented release procedure")
-System_Boundary(mc, "Mission Control operations") {
-  Container(runner, "Release procedure / harness", ".NET / Microsoft.Extensions", "Provider commands and acceptance workload")
-  Container(api, "MissionControl.Api", ".NET", "Health status and behavioral verification")
-  ContainerDb(db, "Mission Control SQL", "SQL - provider <TO SUPPLY>", "Durable accounts, work, and sprint snapshots")
+Person(actor, "Release operator", "Follows docs/operations/recovery-runbook.md")
+ContainerDb(db, "Source SQL", "SQL - provider <TO SUPPLY>", "Populated rehearsal source; write freeze during capture")
+Container_Ext(storage, "Backup storage", "Facility <TO SUPPLY>", "Backup artifacts")
+System_Boundary(mc, "Mission Control release recovery") {
+  Container(runner, "MissionControl.Operations", ".NET console / Microsoft.Extensions", "Release tooling: backup and restore verbs")
+  ContainerDb(target, "Isolated SQL target", "Same selected SQL provider", "Restored rehearsal data")
+  Container(api, "MissionControl.Api (recovery instance)", ".NET", "Startup initialization; existing endpoints")
+  Container(records, "Recovery runbook and records", "Markdown / JSON in docs/operations", "L2-044 fields and RecoveryRecord history")
 }
-Rel(actor, runner, "Starts / configures")
-Rel(runner, db, "Initializes / verifies", "SQL")
-Rel(actor, api, "Observes health or verifies behavior", "HTTPS")
-Rel(api, db, "Checks or reads restored data", "Parameterized SQL")
-ContainerDb(target, "Isolated SQL target", "Same selected SQL provider", "Recovered data or load fixture")
-Rel(runner, target, "Restores / prepares isolated fixture")
+Rel(actor, runner, "Runs backup / restore")
+Rel(runner, db, "Captures backup (read-only)", "Provider command / read-only SQL")
+Rel(runner, storage, "Writes and verifies artifact")
+Rel(runner, target, "Checks isolation, restores, reads fingerprint", "Provider command / read-only SQL")
+Rel(actor, api, "Starts against the target with independent configuration")
+Rel(api, target, "Initializes; reads", "Parameterized SQL")
+Rel(runner, api, "Readiness, administrator sign-in, sample reads", "HTTPS")
+Rel(runner, records, "Writes RecoveryRecord")
+Rel(actor, records, "Links the latest rehearsal")
 @enduml

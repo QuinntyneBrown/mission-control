@@ -15,41 +15,76 @@ skinparam package {
 }
 title Behavior - Migrate and seed
 actor "Deployment operator" as actor
-box "Frontend - Operations health client" #E0F2FE
-  participant "Initialization / health client" as page
-end box
-box "Backend - MissionControl.Api" #D1FADF
-  participant "Host / health endpoints" as ctrl
+box "Backend - MissionControl.Api host" #D1FADF
+  participant "Host startup" as host
+  participant "DatabaseInitializer (hosted service)" as init
 end box
 box "Backend - MissionControl.Application and Domain" #ECFDF3
   participant "EnsureAdministrator / EnsureCityLead handlers" as handler
-  participant "Account / contact / readiness state" as entity
+  participant "UserAccount / LeadContact" as entity
+  participant "InitializationStatus" as status
 end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
-  participant "DatabaseInitializer" as init
+  participant "IInitializationLock / IMigrationRunner" as lock
   database "Mission Control SQL" as db
 end box
-actor -> page : Run initialization / request health
-page -> ctrl : Deployment startup / health probe
-ctrl -> init : Initialize before readiness
-init -> db : Acquire cross-instance lock; apply missing migrations (L2-042)
-db --> init : Compatible schema or failure
-init -> handler : Send required ensure commands with external Options
-handler -> db : Read designated account and City seed marker
-db --> handler : Existing state
-handler -> entity : L2-006 / L2-007 create only if absent; repair active Administrator
-entity --> handler : Existing password/ID preserved
-handler -> entity : L2-013 adopt/create independent City contact without phone
-entity --> handler : City seed result / retained prior marker
-alt Missing bootstrap/signing configuration or SQL/migration/seed failure
-  handler --> init : Failure; seed transaction rolls back
-  init --> ctrl : Readiness false; redacted diagnostic correlation ID
-  ctrl --> page : 503 readiness; no initialized-success claim
-else Initialization succeeds
-  handler -> db : Commit seeds and marker atomically
-  db --> handler : Committed state
-  handler --> init : Required seeds complete
-  init --> ctrl : Required schema and administrator ready
-  ctrl --> page : Readiness 200
+actor -> host : Start an instance with external configuration
+host -> init : Start hosted service
+init -> status : Record Initializing (readiness 503)
+init -> init : Bind InitializationOptions and JwtOptions
+alt Signing material missing or invalid (L2-036.2)
+  init -> status : Record Failed with redacted correlation ID
+  init --> actor : Readiness stays 503; no token can be issued; no secret in diagnostics
+else Configuration bound
+  init -> lock : Acquire database-wide initialization lock (L2-007.2)
+  lock -> db : Take lock; waits while another instance initializes
+  alt SQL unavailable or lock not obtained
+    db --> lock : Failure
+    init -> status : Record Failed with redacted correlation ID
+    init --> actor : Readiness stays 503; no connection string disclosed
+  else Lock held
+    init -> lock : Apply only missing versioned migrations (L2-042.2)
+    lock -> db : Migrate schema
+    alt Migration fails or schema incompatible
+      db --> lock : Failure; migration transaction rolls back
+      init -> lock : Release lock
+      init -> status : Record Failed with redacted correlation ID
+      init --> actor : Readiness stays 503
+    else Schema current
+      init -> handler : Send EnsureAdministratorCommand and EnsureCityLeadCommand (one seed transaction)
+      handler -> db : Read designated account by normalized email and the City seed marker
+      db --> handler : Existing state
+      alt Designated account absent and bootstrap configuration unavailable (L2-006.3)
+        handler --> init : Failure; seed transaction rolls back; no partial account
+        init -> lock : Release lock
+        init -> status : Record Failed with redacted correlation ID
+        init --> actor : Readiness stays 503; no secret exposed
+      else Account present, or absent with valid bootstrap configuration
+        handler -> entity : L2-006 / L2-007 create if absent with salted hash; else keep ID, hash, credential version
+        entity --> handler : Name Quinntyne Brown, active and Administrator restored
+        handler -> entity : L2-013 first run only: adopt or create City contact without phone; set marker
+        entity --> handler : City seed result, or untouched when the marker exists
+        handler -> db : L2-040 commit account, contact and marker atomically
+        alt Commit fails (unique email violation included)
+          db --> handler : Roll back all seed changes
+          handler --> init : Failure; a retry rereads the winning account instead of replacing it
+          init -> lock : Release lock
+          init -> status : Record Failed with redacted correlation ID
+          init --> actor : Readiness stays 503
+        else Commit succeeds
+          db --> handler : Committed state
+          handler --> init : Required seeds complete
+          init -> lock : Release lock
+          init -> status : Record Ready
+          init --> actor : GET /health/ready now returns 200
+        end
+      end
+    end
+  end
 end
+note over init, db
+A later instance waits on the lock, finds migrations applied and the
+account present, changes nothing it does not need to, and reports ready.
+Diagnostics carry operation, UTC time, outcome and correlation ID (L2-043).
+end note
 @enduml

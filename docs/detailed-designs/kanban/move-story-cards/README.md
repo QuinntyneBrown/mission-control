@@ -17,6 +17,8 @@ All named production types are proposed; the repository currently contains requi
 | Part | Responsibility and architectural home |
 | --- | --- |
 | `KanbanBoardPage` | Routed page or dialog owned by `frontend/projects/mission-control`; composes the domain library and presentational components. |
+| `MoveStoryDialog` | Application dialog in `frontend/projects/mission-control`, opened by `KanbanBoardPage` and `SprintBoardPage`; chooses destination column and position without dragging. |
+| `UnfinishedTasksDialog` | Application dialog in `frontend/projects/mission-control`, opened by `KanbanBoardPage`, `SprintBoardPage`, and (confirmation only) `WorkItemDetailPage`; shows the returned unfinished count and focuses Keep in progress. |
 | `BoardView` | Domain component in `frontend/projects/domain`; injects `BOARD_SERVICE` and holds feature state in signals. |
 | `IBoardService`, `BOARD_SERVICE` | Interface and token in `frontend/projects/api/board.service.contract.ts`; the consumer imports the contract only. |
 | `BoardService` | Production HTTP adapter in `api`; owns HTTP calls and observable-to-signal conversion. Composition binds a mock adapter for Chromium Playwright. |
@@ -29,8 +31,12 @@ MediatR remains pinned to `12.5.0`. Microsoft.Extensions supplies dependency inj
 
 `MoveStoryDialog` chooses destination column and absolute position; card menus also expose Move up/down.
 `MoveStoryCommand` contains workspace/story, optional sprint board ID, destination status/position, expected story version, and board version.
+After confirmation it also carries the returned `StoryCompletionCondition`; the first attempt carries none.
 The server validates story ownership and current active-sprint membership for a sprint board.
 `StoryCompletionPolicy` applies before any Done transition, including drag and direct edits.
+Unknown statuses, out-of-range positions, and boards outside the story's workspace return `400` before anything changes.
+A missing story returns `404`; the board reloads without it and announces that it was deleted.
+A missing workspace returns `404` and shows a not-found state linking back to Projects.
 
 `BoardState` uses a workspace Kanban identity or sprint ID and owns a versioned order per board.
 `BoardPlacement` uniquely identifies `(BoardId, StoryId)` and `(BoardId, Status, Position)`.
@@ -43,9 +49,15 @@ Column reorders affect only the selected board, never backlog or sibling priorit
 
 The UI snapshots the saved board before an optimistic move. The pending card reports Saving while totals remain committed totals.
 A confirmed commit replaces the snapshot and announces destination and position.
-A rejected or unavailable save restores the snapshot and offers retry; `409` reloads current state before a fresh explicit attempt.
+A rejected or unavailable save restores the snapshot and offers retry.
+A `409` with the `unfinished-tasks` category keeps the snapshot and opens `UnfinishedTasksDialog` with the returned count.
+Mark story Done resubmits the same `MoveStoryCommand` (same destination and position) carrying the returned `StoryCompletionCondition`.
+Keep restores the snapshot and sends no request. Any other `409` reloads current state before a fresh explicit attempt.
+That covers a stale story or board version, a story no longer on the sprint board, and a changed delivery mode.
+The board restores the snapshot, explains that the board changed, and Reload board reads the latest columns without resubmitting.
 An uncertain network outcome first reloads the story/board before retry, avoiding a second blind mutation.
-SQL transactions lock the workspace order boundary, compare versions, update status and affected positions, and append the audit event atomically.
+SQL transactions lock the workspace order boundary and compare versions and the completion condition before any write.
+They then update status and affected positions and append the audit event atomically.
 
 The authenticated API evaluates current SQL permissions before feature dispatch. Validation V maps invalid fields to `400`, absent authentication to `401`, forbidden access to `403`, missing records to `404`, and conflicts to `409`.
 Unexpected errors return a generic `500` with a correlation ID. Structured diagnostics exclude secrets and contact payloads.
@@ -64,7 +76,8 @@ Mock input and review references:
 
 - [Kanban board · Mission Control mock](../../../mocks/kanban/kanban-board.html); review states: `default`, `dragging`, `pending`, `move-failed`, `conflict`, `empty`, `empty-column`, `load-more`, `card-menu`, `collaborator`, `preserved`, `loading`, `error`.
 - [Move story · Mission Control mock](../../../mocks/kanban/move-story-dialog.html); review states: `default`, `to-done`, `saving`, `failed`.
-- [Sprint board · Mission Control mock](../../../mocks/scrum/sprint-board.html); review states: `default`, `scope-log`, `no-stories`, `no-active`, `move-failed`, `collaborator`, `loading`, `error`.
+- [Unfinished tasks confirmation · Mission Control mock](../../../mocks/kanban/unfinished-tasks-dialog.html); review states: `default`, `server-count`, `saving`, `failed`.
+- [Sprint board · Mission Control mock](../../../mocks/scrum/sprint-board.html); review states: `default`, `scope-log`, `no-stories`, `no-active`, `no-sprints`, `move-failed`, `collaborator`, `loading`, `error`.
 
 Implementation proceeds one behavior at a time using the linked Given-When-Then criteria. An API integration acceptance check first fails for the expected missing behavior.
 A Chromium Playwright check uses one page object per screen and a mock service bound through the same token. Tests express intent; page objects own selectors.

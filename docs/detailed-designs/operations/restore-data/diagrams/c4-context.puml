@@ -2,7 +2,13 @@
 !include <C4/C4_Context>
 LAYOUT_WITH_LEGEND()
 title System context - Rehearse backup and restore
-Person(actor, "Deployment operator", "Rehearse backup and restore")
-System(ops, "Mission Control release operations", "Repeatable operations against isolated or deployed SQL")
-Rel(actor, ops, "Rehearse backup and restore")
+Person(actor, "Release operator", "Follows docs/operations/recovery-runbook.md")
+System(ops, "Mission Control release tooling", "backend/src/MissionControl.Operations backup and restore verbs")
+System_Ext(source, "Source Mission Control environment", "Populated SQL; read-only during capture")
+System_Ext(storage, "Backup storage", "Facility <TO SUPPLY>")
+System(rehearsal, "Isolated recovery environment", "Separate SQL target and recovery API instance")
+Rel(actor, ops, "Runs backup, then restore")
+Rel(ops, source, "Captures backup (read-only)")
+Rel(ops, storage, "Writes and verifies artifacts")
+Rel(ops, rehearsal, "Restores and verifies")
 @enduml

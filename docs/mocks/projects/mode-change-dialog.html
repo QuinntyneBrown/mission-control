@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Change delivery mode · Mission Control mock</title>
-  <meta name="description" content="Delivery-mode confirmation for Scrum to Kanban and Kanban to Scrum, listing what is kept, plus the active-sprint block, progress, and failure.">
+  <meta name="description" content="Delivery-mode confirmation for Scrum to Kanban and Kanban to Scrum, listing what is kept, including projects with no sprints, plus the active-sprint block, progress, and failure.">
   <meta name="mock-area" content="Projects">
   <meta name="mock-requirements" content="L2-005, L2-027, L2-031.5, L2-033.2, L2-043.4">
   <link rel="stylesheet" href="../assets/tokens.css">
@@ -21,6 +21,8 @@
         <select data-mock-state>
           <option value="to-kanban">Scrum to Kanban</option>
           <option value="to-scrum">Kanban to Scrum</option>
+          <option value="to-scrum-empty">Kanban to Scrum (no sprints)</option>
+          <option value="to-kanban-empty">Scrum to Kanban (new project)</option>
           <option value="blocked">Blocked by active sprint</option>
           <option value="saving">Switching</option>
           <option value="failed">Switch failed</option>
@@ -33,6 +35,8 @@
   <div class="mock-notes">
     <p class="mock-note" data-when="to-kanban">Administrator-only. Shown as if Community Hackathon 2026 had no active sprint. Focus starts on Cancel; Escape closes without changes. Success shows "Now using Kanban — Sprint plans and history are kept."</p>
     <p class="mock-note" data-when="to-scrum" hidden>Switching back to Scrum restores planning and starting for the kept Sprint 3 plan, and Sprints 1–2 history stays readable. Success shows "Now using Scrum — Your sprint plans and history are available again."</p>
+    <p class="mock-note" data-when="to-scrum-empty" hidden>Church Website Refresh has never had sprints, so there is no sprint history to restore. Its work keeps its IDs, statuses, and order. After switching, plan the first sprint from Sprints; success shows "Now using Scrum — Plan your first sprint from Sprints."</p>
+    <p class="mock-note" data-when="to-kanban-empty" hidden>Youth Coding Night is new, with no work and no sprints, so nothing moves. Work added later lands at the bottom of To Do on the continuous board. Success shows "Now using Kanban" on the project overview.</p>
     <p class="mock-note" data-when="blocked" hidden>While Sprint 8 is active the API answers 409 and nothing changes. The dialog explains the fix instead of offering the switch.</p>
     <p class="mock-note" data-when="saving" hidden>The confirm button shows progress and ignores repeat clicks. The switch is atomic: everything changes, or nothing does.</p>
     <p class="mock-note" data-when="failed" hidden>Nothing changed. "Switch to Kanban" tries again; the reference ID matches the server's diagnostic record.</p>
@@ -62,7 +66,7 @@
         </div>
         <div class="mc-main">
           <div class="mc-page">
-            <div data-unless="to-scrum">
+            <div data-unless="to-scrum to-scrum-empty to-kanban-empty">
             <div class="mc-breadcrumbs"><ol><li><span>Projects</span></li><li><span aria-current="page">Community Hackathon 2026</span></li></ol></div>
             <div class="mc-page-header">
               <div class="mc-page-header__main">
@@ -102,6 +106,47 @@
               <div class="mc-card mc-stack mc-stack--sm"><p class="mc-h3">Delivery</p><span class="mc-skeleton mc-w-60"></span><span class="mc-skeleton mc-w-40"></span></div>
             </div>
             </div>
+            <div data-when="to-scrum-empty" hidden>
+            <div class="mc-breadcrumbs"><ol><li><span>Projects</span></li><li><span aria-current="page">Church Website Refresh</span></li></ol></div>
+            <div class="mc-page-header">
+              <div class="mc-page-header__main">
+                <p class="mc-h1">Church Website Refresh</p>
+                <div class="mc-page-header__meta"><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span><span>Responsible lead: Lucia Alvarez</span></div>
+              </div>
+              <div class="mc-page-header__actions"><span class="mc-button">Project actions<span class="mc-icon mc-icon--chevron-down mc-icon--sm" aria-hidden="true"></span></span></div>
+            </div>
+            <ul class="mc-tabs">
+              <li><span class="mc-tabs__link" aria-current="page"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</span></li>
+            </ul>
+            <div class="mc-split">
+              <div class="mc-card mc-stack mc-stack--sm"><p class="mc-h3">About this project</p><span class="mc-skeleton mc-w-80"></span><span class="mc-skeleton mc-w-60"></span></div>
+              <div class="mc-card mc-stack mc-stack--sm"><p class="mc-h3">Delivery</p><span class="mc-skeleton mc-w-60"></span><span class="mc-skeleton mc-w-40"></span></div>
+            </div>
+            </div>
+            <div data-when="to-kanban-empty" hidden>
+            <div class="mc-breadcrumbs"><ol><li><span>Projects</span></li><li><span aria-current="page">Youth Coding Night</span></li></ol></div>
+            <div class="mc-page-header">
+              <div class="mc-page-header__main">
+                <p class="mc-h1">Youth Coding Night</p>
+                <div class="mc-page-header__meta"><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span><span>Responsible lead: Not set</span></div>
+              </div>
+              <div class="mc-page-header__actions"><span class="mc-button">Project actions<span class="mc-icon mc-icon--chevron-down mc-icon--sm" aria-hidden="true"></span></span></div>
+            </div>
+            <ul class="mc-tabs">
+              <li><span class="mc-tabs__link" aria-current="page"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</span></li>
+            </ul>
+            <div class="mc-split">
+              <div class="mc-card mc-stack mc-stack--sm"><p class="mc-h3">About this project</p><span class="mc-skeleton mc-w-80"></span><span class="mc-skeleton mc-w-60"></span></div>
+              <div class="mc-card mc-stack mc-stack--sm"><p class="mc-h3">Delivery</p><span class="mc-skeleton mc-w-60"></span><span class="mc-skeleton mc-w-40"></span></div>
+            </div>
+            </div>
           </div>
         </div>
       </div>
@@ -116,6 +161,8 @@
             <h2 class="mc-dialog__title" id="mode-title">
               <span data-when="to-kanban saving failed">Switch Community Hackathon 2026 to Kanban?</span>
               <span data-when="to-scrum" hidden>Switch Prayer Wall App to Scrum?</span>
+              <span data-when="to-scrum-empty" hidden>Switch Church Website Refresh to Scrum?</span>
+              <span data-when="to-kanban-empty" hidden>Switch Youth Coding Night to Kanban?</span>
               <span data-when="blocked" hidden>Close Sprint 8 first</span>
             </h2>
           </div>
@@ -138,21 +185,23 @@
           <div id="mode-text" class="mc-stack mc-stack--sm">
             <p data-when="to-kanban saving failed">Work moves to a continuous Kanban board. Nothing is deleted.</p>
             <p data-when="to-scrum" hidden>Sprint 3's plan and the history of Sprints 1 and 2 become available again. Nothing is deleted.</p>
+            <p data-when="to-scrum-empty" hidden>Church Website Refresh has no sprint history to restore. Its work stays where it is, ready to plan into sprints. Nothing is deleted.</p>
+            <p data-when="to-kanban-empty" hidden>Youth Coding Night has no work or sprints yet, so nothing moves. Work you add later appears on the continuous Kanban board.</p>
             <p data-when="blocked" hidden>Community Hackathon 2026 can't change its delivery mode while Sprint 8 is active. Close the sprint, then try again.</p>
           </div>
 
-          <div data-unless="blocked">
+          <div data-unless="blocked to-kanban-empty">
             <div class="mc-stack mc-stack--sm">
               <p class="mc-strong mc-text-sm" id="kept-title">What stays the same</p>
               <ul class="mc-checklist" aria-labelledby="kept-title">
                 <li class="mc-checklist__item"><span class="mc-icon mc-icon--check" aria-hidden="true"></span><span>Initiatives, epics, stories, and tasks keep their IDs and parents</span></li>
                 <li class="mc-checklist__item"><span class="mc-icon mc-icon--check" aria-hidden="true"></span><span>Statuses, ordering, and assignments stay as they are</span></li>
-                <li class="mc-checklist__item"><span class="mc-icon mc-icon--check" aria-hidden="true"></span><span>Sprint plans and sprint history are kept</span></li>
+                <li class="mc-checklist__item" data-unless="to-scrum-empty"><span class="mc-icon mc-icon--check" aria-hidden="true"></span><span>Sprint plans and sprint history are kept</span></li>
               </ul>
             </div>
           </div>
 
-          <div class="mc-alert mc-alert--neutral" data-when="to-kanban saving failed">
+          <div class="mc-alert mc-alert--neutral" data-when="to-kanban saving failed to-kanban-empty">
             <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
             <div class="mc-alert__body">
               <p class="mc-alert__text">While the project uses Kanban, sprints can't be planned or started. Switch back to Scrum to use them again.</p>
@@ -164,6 +213,12 @@
               <p class="mc-alert__text">The Board tab shows the active sprint once one starts. Until then, plan or start Sprint 3 from Sprints.</p>
             </div>
           </div>
+          <div class="mc-alert mc-alert--neutral" data-when="to-scrum-empty" hidden>
+            <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__text">The Board tab shows the active sprint once one starts. After switching, plan the first sprint from Sprints.</p>
+            </div>
+          </div>
 
           <div class="mc-cluster" data-when="blocked" hidden>
             <button class="mc-button mc-button--sm" type="button" data-nav="../scrum/close-sprint-dialog.html">
@@ -173,7 +228,7 @@
         </div>
 
         <footer class="mc-dialog__footer">
-          <button class="mc-button" type="button" data-unless="blocked" data-nav="project-overview.html" data-attr-to-scrum="data-nav=project-overview.html#state=kanban-preserved" data-attr-saving="disabled">Cancel</button>
+          <button class="mc-button" type="button" data-unless="blocked" data-nav="project-overview.html" data-attr-to-scrum="data-nav=project-overview.html#state=kanban-preserved" data-attr-to-scrum-empty="data-nav=project-overview.html#state=kanban" data-attr-to-kanban-empty="data-nav=project-overview.html#state=new-empty" data-attr-saving="disabled">Cancel</button>
           <button class="mc-button mc-button--primary" type="button" data-when="to-kanban saving failed" data-goto-state="saving"
             data-attr-saving="aria-busy=true|aria-disabled=true">
             <span class="mc-spinner" aria-hidden="true" data-when="saving" hidden></span>
@@ -181,6 +236,8 @@
             <span data-when="saving" hidden>Switching…</span>
           </button>
           <button class="mc-button mc-button--primary" type="button" data-when="to-scrum" hidden data-nav="project-overview.html">Switch to Scrum</button>
+          <button class="mc-button mc-button--primary" type="button" data-when="to-scrum-empty" hidden>Switch to Scrum</button>
+          <button class="mc-button mc-button--primary" type="button" data-when="to-kanban-empty" hidden>Switch to Kanban</button>
           <button class="mc-button mc-button--primary" type="button" data-when="blocked" hidden data-nav="project-overview.html">Close</button>
         </footer>
       </section>

@@ -23,6 +23,16 @@ class LeadDetailPage {
   +routeContext: Signal<RouteContext>
   +openDialog(): void
 }
+class LeadDirectoryPage {
+  +routeContext: Signal<RouteContext>
+  +openDialog(): void
+}
+class LeadDeleteDialog {
+  +lead: LeadSummary
+  +blockingWorkspaces: Signal<ReferencingWorkspace[]>
+  +confirm(): void
+  +cancel(): void
+}
 class LeadView {
   +state: Signal<FeatureState>
   +submit(): void
@@ -41,7 +51,7 @@ class LeadContact {
   +firstName: string
   +lastName: string
   +version: long
-  +checkDeletion(referenced: bool): void
+  +checkDeletion(referencing: ReferencingWorkspace[]): void
 }
 interface IMissionControlDataSession {
   +query(specification): Task<ReadResult>
@@ -51,19 +61,37 @@ class MissionControlDataSession {
   -connection: DbConnection
 }
 LeadDetailPage --> LeadView : composes
+LeadDirectoryPage --> LeadView : composes
+LeadDetailPage ..> LeadDeleteDialog : opens; blocked at once when\nresponsibleWorkspaces is not empty
+LeadDirectoryPage ..> LeadDeleteDialog : opens confirmation
+LeadDeleteDialog --> LeadView : composes
 LeadView ..> ILeadService : inject token
 ILeadService <|.. LeadService
 IMissionControlDataSession <|.. MissionControlDataSession
 class DeleteLeadCommand {
   +id: Guid
-  +expectedVersion: long
 }
 class DeleteLeadCommandHandler {
   +handle(request: DeleteLeadCommand): Task<FeatureResult>
 }
+class ReferencingWorkspace {
+  +id: Guid
+  +name: string
+}
+class LeadReferencedProblem {
+  +status: 409
+  +detail: string
+  +workspaces: ReferencingWorkspace[]
+}
+note bottom of LeadReferencedProblem
+  detail: reassign or remove the responsible lead
+  in each listed workspace before deleting.
+end note
+LeadReferencedProblem *-- ReferencingWorkspace
 LeadsController ..> DeleteLeadCommand : dispatches
 DeleteLeadCommandHandler ..> DeleteLeadCommand : handles
 DeleteLeadCommandHandler --> LeadContact : loads / applies
+DeleteLeadCommandHandler ..> LeadReferencedProblem : 409 when referenced
 DeleteLeadCommandHandler ..> IMissionControlDataSession : uses
 
 enum LeadCategory {

@@ -16,7 +16,7 @@ skinparam package {
 title Behavior - Read sprint plans and available stories
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "SprintPlanningPage / SprintView" as page
+  participant "SprintsPage / SprintPlanningPage / SprintView" as page
   participant "ISprintService / SprintService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,41 +31,43 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Read sprint plans and available stories
-page -> client : Build typed GetSprintPlanQuery
+actor -> page : Open the Sprints tab or a sprint's planning page
+page -> client : Build typed GetSprintPlanQuery with page and page size
 client -> access : GET /api/workspaces/{id}/sprints[/{sprintId}/plan]
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
+alt Missing, invalid or expired JWT; deactivated account
+  access --> client : 401; audit denial without payloads
+  client --> page : Clear session; sign in with this route as return route
+else Authenticated without the required permission
+  access --> client : 403; audit denial without payloads
+  client --> page : Access-denied state; nothing loaded
 else Authorized
   access -> ctrl : Authorized request
-ctrl -> validation : Send GetSprintPlanQuery through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
-alt Invalid request
-  validation --> ctrl : 400 field errors; no business mutation
-  ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
-else Valid request
-  validation -> handler : Handle GetSprintPlanQuery
-  handler -> db : Read bounded sprint list or planned fields and paged candidates
-  db --> handler : SQL result / current records
-  handler -> entity : Project eligibility, selection, and Toronto dates
-  entity --> handler : Saved plan
-  alt Missing sprint / invalid page
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    db --> handler : Bounded persisted projection; full matching count
-    handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+  ctrl -> validation : Send GetSprintPlanQuery through MediatR 12.5.0
+  validation -> validation : L2-045 page size 1-100, default 25
+  alt Invalid page or page size
+    validation --> ctrl : 400 field errors; nothing read
+    ctrl --> client : Validation ProblemDetails
+    client --> page : Load-failed state; Try again uses the default page size
+  else Valid request
+    validation -> handler : Handle GetSprintPlanQuery
+    handler -> db : Read workspace mode, sprint list or planned sprint, one bounded page of candidate stories
+    db --> handler : Records, full matching counts, stable order
+    alt Workspace or sprint not found (or sprint in another workspace)
+      handler --> ctrl : 404
+      ctrl --> client : ProblemDetails (not found)
+      client --> page : Sprint not found state with Back to sprints
+    else Found
+      handler -> entity : Project eligibility, unavailable reasons (Done, in another sprint), selection, Toronto dates
+      entity --> handler : Plan or sprint list view
+      handler --> ctrl : Plans and bounded candidates with full counts and versions
+      ctrl --> client : 200 with view
+      client --> page : Update signals; no sprints shows Plan your first sprint; Kanban mode shows plans read-only
+      page --> actor : Present sprints, eligible stories and unavailable stories with reasons
+    end
   end
-end
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).

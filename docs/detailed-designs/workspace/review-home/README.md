@@ -17,26 +17,34 @@ All named production types are proposed; the repository currently contains requi
 
 | Part | Responsibility and architectural home |
 | --- | --- |
-| `HomePage` | Routed page or dialog owned by `frontend/projects/mission-control`; composes the domain library and presentational components. |
-| `HomeView` | Domain component in `frontend/projects/domain`; injects `HOME_SERVICE` and holds feature state in signals. |
+| `HomePage` | Routed page owned by `frontend/projects/mission-control` at `/home`; composes the three section views and offers New project to administrators. |
+| `LeadCoverageView`, `WorkspaceProgressView`, `ActiveSprintSummaryView` | Domain components in `frontend/projects/domain`; each injects `HOME_SERVICE`, holds its own `SectionState` signal, and retries only its own request. |
 | `IHomeService`, `HOME_SERVICE` | Interface and token in `frontend/projects/api/home.service.contract.ts`; the consumer imports the contract only. |
 | `HomeService` | Production HTTP adapter in `api`; owns HTTP calls and observable-to-signal conversion. Composition binds a mock adapter for Chromium Playwright. |
 | `HomeController` | Thin controller under `backend/src/MissionControl.Api/Controllers`, namespace `MissionControl.Api.Controllers`; binds, dispatches, and returns. |
-| `HomeSummary` | Domain entity or Application read projection described below; Domain has no external project dependency. |
+| `LeadCoverage`, `WorkspaceProgressPage`, `ActiveSprintSummaryPage` | Application read projections, one per endpoint. Their item types (`CategoryCount`, `WorkspaceProgress`, `TypeStatusCount`, `SprintReference`, `ActiveSprintSummary`, `StatusCount`) each take their own file. No Domain entity is added. |
 | `IMissionControlDataSession` | Application data port; the Infrastructure adapter runs parameterized queries and transaction commits. |
 
 Commands, queries, handlers, and request validators live in Application feature folders. Each type has its own file; folders and namespaces agree.
 MediatR remains pinned to `12.5.0`. Microsoft.Extensions supplies dependency injection, Options, and Configuration.
 
-`HomePage` owns `/home` and composes `LeadCoverageView`, `WorkspaceProgressView`, and `ActiveSprintSummaryView` in the domain library.
-Each consumes `IHomeService` through `HOME_SERVICE`; separate signals distinguish loading, ready, empty, and failed sections.
+`HomePage` owns `/home` and composes `LeadCoverageView`, `WorkspaceProgressView`, and `ActiveSprintSummaryView` from the domain library.
+Each view consumes `IHomeService` through `HOME_SERVICE` and calls its own endpoint.
+Its `state` signal holds a `SectionState` of `Loading`, `Ready`, `Empty`, or `Failed`, with the reference ID of a failed request.
+`retry()` repeats only that section's request; the views have no submit action because Home is read-only.
 The API runs grouped SQL counts over all persisted records, not client-loaded pages.
-The five-category projection fills missing groups with zero. Work counts group each WorkItem once by type/status.
+`GetLeadCoverageQuery` takes no parameters and always returns all five categories; absent categories count zero.
+Work counts group each work item once by type and status, and absent type and status pairs count zero.
 Project and active-sprint lists are paged, defaulting to 25 and capped at 100; work totals are not truncated with the list.
+Projects order by name, then ID; active sprints order by workspace name, then sprint ID, so paging stays stable.
+Each page carries `totalCount`; the Projects hint shows it, and View all projects reaches workspaces beyond the first page.
 Separate summary endpoints allow the `section-error` mock to retry Projects while Leads and Sprints remain visible.
+When every section request fails, `HomePage` shows the full-page `error` state with one Try again.
+Home reads need no capability beyond an active account, so no section has a `403` path.
+A `401` from any section clears the in-memory session, and sign-in opens with the session-ended message.
 
 Category links set directory filters; type/status counts set workspace work-list filters; sprint names open the matching board.
-Summary reads use consistent SQL read transactions per response, avoiding contradictory counts from separate queries within one projection.
+Each summary read runs in one SQL read transaction per response, avoiding contradictory counts from separate queries within one projection.
 Separate sections may reflect different request instants; they do not claim a single global snapshot.
 Completed mutations invalidate related summary signals; revisiting or refreshing refetches persisted totals.
 The first-run administrator sees the seeded City contact and permitted New project action; a collaborator sees an explanatory empty state.
@@ -91,7 +99,7 @@ The container view separates the client, .NET API, and durable SQL records.
 
 ![Review home coverage and progress: c4 container](diagrams/c4-container.png)
 
-The component view locates request dispatch, domain behavior, and persistence within the feature.
+The component view locates request dispatch, the three read projections, and persistence within the feature.
 
 ![Review home coverage and progress: c4 component](diagrams/c4-component.png)
 
@@ -99,15 +107,18 @@ The class view shows proposed typed requests, interface consumption, and relatio
 
 ![Review home coverage and progress: class structure](diagrams/class-structure.png)
 
-Read all five lead category totals follows the sequence below. The flow traces its enforcing steps to `L2-028` and includes rejection or recovery paths.
+Read all five lead category totals follows the sequence below. The flow traces its enforcing steps to `L2-028`.
+It covers the `401` path and the section-only `500` path; the query has no input, so no `400` path exists.
 
 ![Read all five lead category totals](diagrams/sequence-leads.png)
 
-Read workspace progress summaries follows the sequence below. The flow traces its enforcing steps to `L2-028` and includes rejection or recovery paths.
+Read workspace progress summaries follows the sequence below. The flow traces its enforcing steps to `L2-028`.
+It covers the `401`, page-size `400`, and section-only `500` paths, and the empty and ready states.
 
 ![Read workspace progress summaries](diagrams/sequence-projects.png)
 
-Read active sprint summaries follows the sequence below. The flow traces its enforcing steps to `L2-028` and includes rejection or recovery paths.
+Read active sprint summaries follows the sequence below. The flow traces its enforcing steps to `L2-028`.
+It covers the `401`, page-size `400`, and section-only `500` paths, and the empty and ready states.
 
 ![Read active sprint summaries](diagrams/sequence-sprints.png)
 

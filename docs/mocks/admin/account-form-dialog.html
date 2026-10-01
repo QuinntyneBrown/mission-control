@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Add or edit account · Mission Control mock</title>
-  <meta name="description" content="Account dialog for provisioning and editing sign-in accounts: validation, duplicate email, saving, failure, success, editing names and role, the locked designated administrator, and an edit conflict.">
+  <meta name="description" content="Account dialog for provisioning and editing sign-in accounts: validation, duplicate email, saving, failure, success, editing names and role, the locked designated administrator, and an edit conflict with the latest version reloaded.">
   <meta name="mock-area" content="Administration">
   <meta name="mock-requirements" content="L2-004, L2-005.2, L2-008, L2-031, L2-033.2, L2-034.1, L2-036, L2-041.3, L2-043.4">
   <link rel="stylesheet" href="../assets/tokens.css">
@@ -28,6 +28,7 @@
           <option value="edit">Edit names and role</option>
           <option value="designated">Edit designated administrator</option>
           <option value="conflict">Edit conflict</option>
+          <option value="conflict-reloaded">Conflict · latest loaded</option>
         </select>
       </label>
       <a href="../index.html">All mocks</a>
@@ -36,14 +37,15 @@
 
   <div class="mock-notes">
     <p class="mock-note" data-when="create">Administrator-only. Opens from "Add account", with focus on First name. Collaborator is preselected as the lower-privilege role. Accounts are provisioned privately; there is no public sign-up. Below 576px the dialog fills the screen.</p>
-    <p class="mock-note" data-when="validation" hidden>Focus moves to the error summary. Names and email are trimmed; the password is never trimmed, and a 12–128 character length is the only rule shown. Valid input is kept.</p>
+    <p class="mock-note" data-when="validation" hidden>Focus moves to the error summary. Names and email are trimmed; the password is never trimmed. Length is the only password rule, and both bounds get field messages: "Use at least 12 characters." or "Use 128 characters or fewer." The input has no maxlength, so a longer pasted password is reported instead of silently cut. Valid input is kept.</p>
     <p class="mock-note" data-when="duplicate" hidden>Account emails are unique after trimming and case folding, so the API answers 409 and no account is created. Lead contacts don't count: a lead may share an account's email.</p>
     <p class="mock-note" data-when="saving" hidden>Save shows progress and ignores repeat clicks, so only one account can be created.</p>
     <p class="mock-note" data-when="failed" hidden>Nothing was created. Every value, including the password, is kept for a retry.</p>
     <p class="mock-note" data-when="created" hidden>The password is never shown again or sent anywhere. Lena can sign in immediately. Done returns to the account list, where the new row appears.</p>
-    <p class="mock-note" data-when="edit" hidden>Email is shown as text because it can't change. A role change applies on Ada's next request. Passwords are replaced from their own dialog.</p>
-    <p class="mock-note" data-when="designated" hidden>Names can be edited, but the role choice is disabled and the reason is written beside it. A forced API request to demote or change the email returns 409.</p>
-    <p class="mock-note" data-when="conflict" hidden>The account changed after the form opened. The edits are kept and never resubmitted automatically. "Reload latest" loads the saved version so edits can be re-applied.</p>
+    <p class="mock-note" data-when="edit" hidden>Email is shown as text because it can't change; a forced API request with a different email returns 409. A role change applies on Ada's next request. Passwords are replaced, and accounts deactivated, from their own dialogs.</p>
+    <p class="mock-note" data-when="designated" hidden>Nothing here can change: the names are read-only, the email is fixed, and the role choice is disabled, each with its reason written beside it. The dialog offers only Close; the password is replaced from its own dialog. A forced API request that renames, demotes, or changes the email returns 409 and is recorded in the audit log as Rejected.</p>
+    <p class="mock-note" data-when="conflict" hidden>The account changed after the form opened, so the API answered 409. The edits are kept and never resubmitted automatically; the latest version is read once to fill the Latest saved column. "Reload latest" adopts the latest values and version.</p>
+    <p class="mock-note" data-when="conflict-reloaded" hidden>The fields now hold the latest saved values and version. The comparison stays visible so the role change can be re-applied by hand. Nothing is sent until Save changes is chosen.</p>
   </div>
 
   <div class="mock-screen">
@@ -99,13 +101,14 @@
         <header class="mc-dialog__header">
           <div class="mc-dialog__heading">
             <h2 class="mc-dialog__title" id="account-dialog-title">
-              <span data-unless="edit designated conflict">Add account</span>
-              <span data-when="edit designated conflict" hidden>Edit account</span>
+              <span data-unless="edit designated conflict conflict-reloaded">Add account</span>
+              <span data-when="edit designated conflict conflict-reloaded" hidden>Edit account</span>
             </h2>
             <p class="mc-dialog__subtitle" id="account-dialog-note">
               <span data-when="edit conflict" hidden>Ada Okafor · </span>
-              <span data-when="designated" hidden>Quinntyne Brown · </span>
-              <span data-unless="created">All fields are required.</span>
+              <span data-when="conflict-reloaded" hidden>Ada Okafor-Bello · </span>
+              <span data-when="designated" hidden>Quinntyne Brown · Protected account</span>
+              <span data-unless="created designated">All fields are required.</span>
               <span data-when="created" hidden>Lena Fischer can sign in now.</span>
             </p>
           </div>
@@ -114,6 +117,7 @@
             data-attr-duplicate="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
             data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
             data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-conflict-reloaded="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
             data-attr-saving="disabled">
             <span class="mc-icon mc-icon--close" aria-hidden="true"></span>
           </button>
@@ -149,6 +153,15 @@
         <form class="mc-dialog__form" novalidate data-goto-state="saving" data-unless="created">
           <div class="mc-dialog__body">
             <!-- Outcome messages -->
+            <div class="mc-live" role="status" aria-live="polite">
+              <div class="mc-alert" data-when="conflict-reloaded" hidden>
+                <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__text">Latest version loaded. Re-apply your edits from the comparison, then save.</p>
+                </div>
+              </div>
+            </div>
+
             <div class="mc-live" role="alert">
               <div class="mc-error-summary" tabindex="-1" aria-labelledby="account-errors-title" data-when="validation" hidden>
                 <p class="mc-error-summary__title" id="account-errors-title"><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Fix 3 problems to add this account</p>
@@ -184,23 +197,28 @@
               <div class="mc-alert mc-alert--warning" data-when="conflict" hidden>
                 <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
                 <div class="mc-alert__body">
-                  <p class="mc-alert__title">This account changed while you were editing</p>
-                  <p class="mc-alert__text">Priya Raman saved changes at 11:08 a.m. Your edits haven't been saved. Compare them, then reload the latest version and re-apply what you need.</p>
+                  <p class="mc-alert__title">This account changed after you opened it</p>
+                  <p class="mc-alert__text">Your edits haven't been saved. Compare them with the latest saved version, then reload it and re-apply what you need.</p>
                 </div>
               </div>
             </div>
 
-            <div class="mc-table-wrap" data-when="conflict" hidden>
-              <table class="mc-table mc-table--stack">
-                <caption class="mc-visually-hidden">Your edits compared with the latest saved version</caption>
-                <thead>
-                  <tr><th scope="col">Field</th><th scope="col">Your edit</th><th scope="col">Latest saved</th></tr>
-                </thead>
-                <tbody>
-                  <tr class="mc-table__row--highlight"><td class="mc-table__primary">Last name</td><td data-label="Your edit">Okafor</td><td data-label="Latest saved">Okafor-Bello</td></tr>
-                  <tr class="mc-table__row--highlight"><td class="mc-table__primary">Role</td><td data-label="Your edit">Administrator</td><td data-label="Latest saved">Collaborator</td></tr>
-                </tbody>
-              </table>
+            <div class="mc-stack mc-stack--sm" data-when="conflict conflict-reloaded" hidden>
+              <h3 class="mc-h4" id="account-compare-title">
+                <span data-when="conflict" hidden>Your edits and the latest saved version</span>
+                <span data-when="conflict-reloaded" hidden>Your unsaved edits to re-apply</span>
+              </h3>
+              <div class="mc-table-wrap">
+                <table class="mc-table mc-table--stack" aria-labelledby="account-compare-title">
+                  <thead>
+                    <tr><th scope="col">Field</th><th scope="col">Your edit</th><th scope="col">Latest saved</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr class="mc-table__row--highlight"><td class="mc-table__primary">Last name</td><td data-label="Your edit">Okafor</td><td data-label="Latest saved">Okafor-Bello</td></tr>
+                    <tr class="mc-table__row--highlight"><td class="mc-table__primary">Role</td><td data-label="Your edit">Administrator</td><td data-label="Latest saved">Collaborator</td></tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <!-- Designated administrator explanation -->
@@ -208,7 +226,7 @@
               <span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>
               <div class="mc-alert__body">
                 <p class="mc-alert__title">Designated administrator</p>
-                <p class="mc-alert__text" id="designated-reason">This account keeps the Administrator role and its email can't change, so Mission Control always has an administrator. The name can still be edited.</p>
+                <p class="mc-alert__text" id="designated-reason">So that Mission Control always has an administrator, this account keeps the Administrator role, and its name and email can't change. Its password can be replaced.</p>
               </div>
             </div>
 
@@ -222,8 +240,10 @@
                   data-attr-saving="value=Lena|readonly"
                   data-attr-failed="value=Lena"
                   data-attr-edit="value=Ada"
-                  data-attr-designated="value=Quinntyne"
-                  data-attr-conflict="value=Ada">
+                  data-attr-designated="value=Quinntyne|readonly|aria-describedby=account-first-locked"
+                  data-attr-conflict="value=Ada"
+                  data-attr-conflict-reloaded="value=Ada">
+                <p class="mc-reason" id="account-first-locked" data-when="designated" hidden><span class="mc-icon mc-icon--lock" aria-hidden="true"></span>Locked for the designated administrator.</p>
               </div>
 
               <div class="mc-field">
@@ -234,13 +254,15 @@
                   data-attr-saving="value=Fischer|readonly"
                   data-attr-failed="value=Fischer"
                   data-attr-edit="value=Okafor"
-                  data-attr-designated="value=Brown"
-                  data-attr-conflict="value=Okafor">
+                  data-attr-designated="value=Brown|readonly|aria-describedby=account-last-locked"
+                  data-attr-conflict="value=Okafor"
+                  data-attr-conflict-reloaded="value=Okafor-Bello">
+                <p class="mc-reason" id="account-last-locked" data-when="designated" hidden><span class="mc-icon mc-icon--lock" aria-hidden="true"></span>Locked for the designated administrator.</p>
                 <p class="mc-field-error" id="account-last-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Enter a last name</p>
               </div>
 
               <!-- Email: editable when adding, read-only text when editing -->
-              <div class="mc-field mc-field--full" data-unless="edit designated conflict">
+              <div class="mc-field mc-field--full" data-unless="edit designated conflict conflict-reloaded">
                 <label class="mc-label" for="account-email">Email</label>
                 <p class="mc-hint" id="account-email-hint">They'll use this to sign in. It can't be changed later.</p>
                 <input class="mc-input" id="account-email" name="email" type="email" autocomplete="off" spellcheck="false" maxlength="254" required aria-describedby="account-email-hint"
@@ -251,7 +273,7 @@
                 <p class="mc-field-error" id="account-email-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Enter an email address like name@example.org</p>
                 <p class="mc-field-error" id="account-email-duplicate" data-when="duplicate" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Already used by Ada Okafor's account</p>
               </div>
-              <div class="mc-field mc-field--full" data-when="edit designated conflict" hidden>
+              <div class="mc-field mc-field--full" data-when="edit designated conflict conflict-reloaded" hidden>
                 <span class="mc-label">Email</span>
                 <p>
                   <span data-unless="designated">ada.okafor<wbr>@example.org</span>
@@ -285,17 +307,17 @@
                   </label>
                 </div>
                 <p class="mc-hint" id="account-role-hint">
-                  <span data-unless="edit designated conflict">Roles grant permissions. Lead categories don't.</span>
-                  <span data-when="edit conflict" hidden>Role changes take effect on their next request.</span>
+                  <span data-unless="edit designated conflict conflict-reloaded">Roles grant permissions. Lead categories don't.</span>
+                  <span data-when="edit conflict conflict-reloaded" hidden>Role changes take effect on their next request.</span>
                   <span data-when="designated" hidden>The designated administrator keeps the Administrator role.</span>
                 </p>
               </fieldset>
 
-              <div class="mc-field mc-field--full" data-unless="edit designated conflict">
+              <div class="mc-field mc-field--full" data-unless="edit designated conflict conflict-reloaded">
                 <label class="mc-label" for="account-password">Initial password</label>
-                <p class="mc-hint" id="account-password-hint">At least 12 characters. Share it with them directly; Mission Control doesn't send email.</p>
+                <p class="mc-hint" id="account-password-hint">12–128 characters. Spaces count. Share it with them directly; Mission Control doesn't send email.</p>
                 <div class="mc-input-group">
-                  <input class="mc-input" id="account-password" name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required aria-describedby="account-password-hint"
+                  <input class="mc-input" id="account-password" name="password" type="password" autocomplete="new-password" minlength="12" required aria-describedby="account-password-hint"
                     data-attr-validation="value=short-pw|aria-invalid=true|aria-describedby=account-password-hint account-password-error"
                     data-attr-duplicate="value=Mock-Initial-2026"
                     data-attr-saving="value=Mock-Initial-2026|readonly"
@@ -304,11 +326,11 @@
                     <span class="mc-icon mc-icon--eye" aria-hidden="true"></span>
                   </button>
                 </div>
-                <p class="mc-field-error" id="account-password-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Use at least 12 characters for the password</p>
+                <p class="mc-field-error" id="account-password-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Use at least 12 characters.</p>
               </div>
 
-              <p class="mc-hint mc-field--full" data-unless="edit designated conflict">Creating an account doesn't add a lead contact.</p>
-              <p class="mc-hint mc-field--full" data-when="edit designated conflict" hidden>To set a new password, use <a href="replace-password-dialog.html">Replace password</a>.</p>
+              <p class="mc-hint mc-field--full" data-unless="edit designated conflict conflict-reloaded">Creating an account doesn't add a lead contact.</p>
+              <p class="mc-hint mc-field--full" data-when="edit designated conflict conflict-reloaded" hidden>To set a new password, use <a href="replace-password-dialog.html">Replace password</a>.</p>
             </div>
           </div>
 
@@ -318,16 +340,17 @@
               data-attr-duplicate="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
               data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
               data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
-              data-attr-saving="disabled">Cancel</button>
-            <button class="mc-button mc-button--primary" type="button" data-when="conflict" hidden data-goto-state="edit">
+              data-attr-conflict-reloaded="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+              data-attr-saving="disabled"><span data-unless="designated">Cancel</span><span data-when="designated" hidden>Close</span></button>
+            <button class="mc-button mc-button--primary" type="button" data-when="conflict" hidden data-goto-state="conflict-reloaded">
               <span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Reload latest
             </button>
-            <button class="mc-button mc-button--primary" type="submit" data-unless="conflict"
+            <button class="mc-button mc-button--primary" type="submit" data-unless="conflict designated"
               data-attr-saving="aria-busy=true|aria-disabled=true">
               <span class="mc-spinner" aria-hidden="true" data-when="saving" hidden></span>
               <span data-when="saving" hidden>Adding account…</span>
-              <span data-unless="saving edit designated">Add account</span>
-              <span data-when="edit designated" hidden>Save changes</span>
+              <span data-unless="saving edit designated conflict conflict-reloaded">Add account</span>
+              <span data-when="edit conflict-reloaded" hidden>Save changes</span>
             </button>
           </footer>
         </form>

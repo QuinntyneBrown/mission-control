@@ -23,6 +23,17 @@ class BacklogPage {
   +routeContext: Signal<RouteContext>
   +openDialog(): void
 }
+class WorkHierarchyPage {
+  +routeContext: Signal<RouteContext>
+}
+class WorkItemDetailPage {
+  +routeContext: Signal<RouteContext>
+}
+class MovePositionDialog {
+  +currentPosition: number
+  +total: number
+  +move(targetPosition: number): void
+}
 class WorkOrderView {
   +state: Signal<FeatureState>
   +submit(): void
@@ -54,6 +65,12 @@ class MissionControlDataSession {
   -connection: DbConnection
 }
 BacklogPage --> WorkOrderView : composes
+WorkHierarchyPage --> WorkOrderView : composes (sibling moves)
+WorkItemDetailPage --> WorkOrderView : composes (sibling moves)
+MovePositionDialog --> WorkOrderView : uses
+BacklogPage ..> MovePositionDialog : opens
+WorkHierarchyPage ..> MovePositionDialog : opens
+WorkItemDetailPage ..> MovePositionDialog : opens
 WorkOrderView ..> IWorkOrderService : inject token
 IWorkOrderService <|.. WorkOrderService
 IMissionControlDataSession <|.. MissionControlDataSession

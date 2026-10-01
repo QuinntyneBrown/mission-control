@@ -31,44 +31,57 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Read current sprint board
-page -> client : Build typed GetActiveSprintBoardQuery
+actor -> page : Open the Board tab of a Scrum project
+page -> client : Build typed GetActiveSprintBoardQuery with status batch and size
 client -> access : GET /api/workspaces/{id}/active-sprint/board
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
+alt Missing, invalid or expired JWT; deactivated account
+  access --> client : 401; audit denial without payloads
+  client --> page : Clear session; sign in with the board as return route
+else Authenticated without the required permission
+  access --> client : 403; audit denial without payloads
+  client --> page : Access-denied state; nothing loaded
 else Authorized
   access -> ctrl : Authorized request
-ctrl -> validation : Send GetActiveSprintBoardQuery through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
-alt Invalid request
-  validation --> ctrl : 400 field errors; no business mutation
-  ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
-else Valid request
-  validation -> handler : Handle GetActiveSprintBoardQuery
-  handler -> db : L2-024 filter current active membership; read bounded status batches
-  db --> handler : SQL result / current records
-  handler -> entity : Project shared story status, task counts, full column totals
-  entity --> handler : Active sprint board or no-active state
-  alt Missing workspace / invalid page / Kanban execution
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    db --> handler : Bounded persisted projection; full matching count
-    handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+  ctrl -> validation : Send GetActiveSprintBoardQuery through MediatR 12.5.0
+  validation -> validation : L2-045 batch size 1-100; known status
+  alt Invalid batch size or status
+    validation --> ctrl : 400 field errors; nothing read
+    ctrl --> client : Validation ProblemDetails
+    client --> page : Load-failed state with Try again
+  else Valid request
+    validation -> handler : Handle GetActiveSprintBoardQuery
+    handler -> db : Read workspace mode, active sprint, and planned sprint summary
+    db --> handler : Mode and sprint summary
+    alt Workspace not found
+      handler --> ctrl : 404
+      ctrl --> client : ProblemDetails (not found)
+      client --> page : Project not-found state linking to Projects
+    else Workspace in Kanban mode (L2-027.3)
+      handler --> ctrl : 409 sprints paused
+      ctrl --> client : ProblemDetails (sprints paused)
+      client --> page : Route to the workspace Kanban board; sprint plans stay on the Sprints tab
+    else No active sprint
+      handler --> ctrl : No-active view with the next planned sprint, or none
+      ctrl --> client : 200 without board columns
+      client --> page : Planned sprint: Start and Plan sprint; no sprints: Plan sprint and Open Work
+    else Active sprint
+      handler -> db : L2-024 read current open membership in bounded status batches of at most 100
+      db --> handler : Cards, shared story status, task counts, full column totals
+      handler -> entity : Project one SprintBoardCard per allocated story in its status column
+      entity --> handler : Active sprint board
+      handler --> ctrl : Board with goal, dates, start actor, scope log, versions
+      ctrl --> client : 200 with board and versions
+      client --> page : Update signals; an empty sprint keeps all three columns and Add stories
+      page --> actor : Columns with Move on every card and Remove on unfinished cards
+    end
   end
 end
-end
 note over ctrl, db
-Unexpected failures return generic 500 plus correlation ID (L2-043).
+Unexpected failures return generic 500 plus correlation ID (L2-043); the page shows Load failed with Try again.
+Moves send MoveStoryCommand with sprintBoardId; a 409 unfinished-tasks opens UnfinishedTasksDialog.
 Diagnostics exclude secrets and contact payloads.
 end note
 @enduml

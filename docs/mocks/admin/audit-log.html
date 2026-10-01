@@ -32,7 +32,7 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">Administrator-only; collaborators who open this URL get the <a href="../shell/status-pages.html#state=access-denied">access-denied page</a>, and the API returns 403. Entries identify what changed by type and ID only. They never contain names, emails, or phone numbers from contacts, and never passwords or tokens. Newest first, 25 per page. Times are Toronto time, with the recorded UTC time beneath.</p>
+    <p class="mock-note" data-when="default">Administrator-only; collaborators who open this URL get the <a href="../shell/status-pages.html#state=access-denied">access-denied page</a>, and the API returns 403. Entries identify what changed by entity type and ID only, with the ID shortened to its first eight characters. They never contain names, emails, or phone numbers from contacts, and never passwords or tokens. Outcomes are Succeeded, Rejected (a protected change refused with 409), Denied, and Throttled. The Actor filter lists accounts; events with no known actor show Unknown and appear when the filter is Anyone. Newest first, 25 per page. Times are Toronto time, with the recorded UTC time beneath.</p>
     <p class="mock-note" data-when="filtered-zero" hidden>Filters combine with AND. Changing a filter resets to page 1 and screen readers hear the result count. Clear filters restores the full log.</p>
     <p class="mock-note" data-when="loading" hidden>A skeleton holds the table's shape. Screen readers hear "Loading audit events".</p>
     <p class="mock-note" data-when="error" hidden>The request failed. Try again repeats it. The audit log itself is never changed by viewing it.</p>
@@ -132,7 +132,6 @@
                 <option>Ada Okafor</option>
                 <option>Mateo Silva</option>
                 <option data-attr-filtered-zero="selected">Jordan Reyes</option>
-                <option>Unknown</option>
               </select>
             </span>
           </div>
@@ -203,7 +202,7 @@
                 <td class="mc-table__primary"><time datetime="2026-09-30T15:08:00Z">Sep 30, 2026, 11:08 a.m.</time><span class="mc-table__secondary">15:08 UTC</span></td>
                 <td data-label="Actor">Priya Raman</td>
                 <td data-label="Operation">Account updated</td>
-                <td data-label="Entity">Account <span class="mc-mono">AC-0003</span></td>
+                <td data-label="Entity">Account <span class="mc-mono">3f9c2a1e…</span></td>
                 <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
                 <td data-label="Reference"><span class="mc-mono">b8f2-e5bc-51ec</span></td>
               </tr>
@@ -211,7 +210,7 @@
                 <td class="mc-table__primary"><time datetime="2026-09-30T14:52:00Z">Sep 30, 2026, 10:52 a.m.</time><span class="mc-table__secondary">14:52 UTC</span></td>
                 <td data-label="Actor">Quinntyne Brown</td>
                 <td data-label="Operation">Deactivation rejected</td>
-                <td data-label="Entity">Account <span class="mc-mono">AC-0001</span></td>
+                <td data-label="Entity">Account <span class="mc-mono">0c7e41d2…</span></td>
                 <td data-label="Outcome"><span class="mc-pill mc-pill--warning"><span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>Rejected</span></td>
                 <td data-label="Reference"><span class="mc-mono">9660-c61a-8139</span></td>
               </tr>
@@ -219,7 +218,7 @@
                 <td class="mc-table__primary"><time datetime="2026-09-30T14:42:00Z">Sep 30, 2026, 10:42 a.m.</time><span class="mc-table__secondary">14:42 UTC</span></td>
                 <td data-label="Actor">Priya Raman</td>
                 <td data-label="Operation">Lead updated</td>
-                <td data-label="Entity">Lead <span class="mc-mono">LD-0218</span></td>
+                <td data-label="Entity">Lead <span class="mc-mono">7d4e19ac…</span></td>
                 <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
                 <td data-label="Reference"><span class="mc-mono">6cc4-b238-9475</span></td>
               </tr>
@@ -227,7 +226,7 @@
                 <td class="mc-table__primary"><time datetime="2026-09-30T14:31:00Z">Sep 30, 2026, 10:31 a.m.</time><span class="mc-table__secondary">14:31 UTC</span></td>
                 <td data-label="Actor">Ada Okafor</td>
                 <td data-label="Operation">Card moved</td>
-                <td data-label="Entity">Story <span class="mc-mono">HCK-118</span></td>
+                <td data-label="Entity">Story <span class="mc-mono">c6e1f483…</span></td>
                 <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
                 <td data-label="Reference"><span class="mc-mono">08b6-2215-4971</span></td>
               </tr>
@@ -235,7 +234,7 @@
                 <td class="mc-table__primary"><time datetime="2026-09-30T14:30:00Z">Sep 30, 2026, 10:30 a.m.</time><span class="mc-table__secondary">14:30 UTC</span></td>
                 <td data-label="Actor">Ada Okafor</td>
                 <td data-label="Operation">Access denied</td>
-                <td data-label="Entity">Lead <span class="mc-mono">LD-0114</span></td>
+                <td data-label="Entity">Lead <span class="mc-mono">b03f5e72…</span></td>
                 <td data-label="Outcome"><span class="mc-pill mc-pill--danger"><span class="mc-icon mc-icon--ban" aria-hidden="true"></span>Denied</span></td>
                 <td data-label="Reference"><span class="mc-mono">4cee-4398-9b47</span></td>
               </tr>
@@ -259,7 +258,7 @@
                 <td class="mc-table__primary"><time datetime="2026-09-30T14:02:00Z">Sep 30, 2026, 10:02 a.m.</time><span class="mc-table__secondary">14:02 UTC</span></td>
                 <td data-label="Actor">Mateo Silva</td>
                 <td data-label="Operation">Sign-in succeeded</td>
-                <td data-label="Entity">Account <span class="mc-mono">AC-0004</span></td>
+                <td data-label="Entity">Account <span class="mc-mono">a51d07b4…</span></td>
                 <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
                 <td data-label="Reference"><span class="mc-mono">4193-6845-26bf</span></td>
               </tr>
@@ -267,7 +266,7 @@
                 <td class="mc-table__primary"><time datetime="2026-09-30T13:47:00Z">Sep 30, 2026, 9:47 a.m.</time><span class="mc-table__secondary">13:47 UTC</span></td>
                 <td data-label="Actor">Quinntyne Brown</td>
                 <td data-label="Operation">Role changed</td>
-                <td data-label="Entity">Account <span class="mc-mono">AC-0003</span></td>
+                <td data-label="Entity">Account <span class="mc-mono">3f9c2a1e…</span></td>
                 <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
                 <td data-label="Reference"><span class="mc-mono">3904-62eb-5977</span></td>
               </tr>
@@ -275,7 +274,7 @@
                 <td class="mc-table__primary"><time datetime="2026-09-30T13:40:00Z">Sep 30, 2026, 9:40 a.m.</time><span class="mc-table__secondary">13:40 UTC</span></td>
                 <td data-label="Actor">Quinntyne Brown</td>
                 <td data-label="Operation">Password replaced</td>
-                <td data-label="Entity">Account <span class="mc-mono">AC-0004</span></td>
+                <td data-label="Entity">Account <span class="mc-mono">a51d07b4…</span></td>
                 <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
                 <td data-label="Reference"><span class="mc-mono">0990-728e-ff75</span></td>
               </tr>
@@ -283,7 +282,7 @@
                 <td class="mc-table__primary"><time datetime="2026-09-30T13:15:00Z">Sep 30, 2026, 9:15 a.m.</time><span class="mc-table__secondary">13:15 UTC</span></td>
                 <td data-label="Actor">Ada Okafor</td>
                 <td data-label="Operation">Task updated</td>
-                <td data-label="Entity">Task <span class="mc-mono">HCK-115</span></td>
+                <td data-label="Entity">Task <span class="mc-mono">2e95a7c1…</span></td>
                 <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
                 <td data-label="Reference"><span class="mc-mono">d604-21e9-05ba</span></td>
               </tr>
@@ -291,7 +290,7 @@
                 <td class="mc-table__primary"><time datetime="2026-09-30T13:02:00Z">Sep 30, 2026, 9:02 a.m.</time><span class="mc-table__secondary">13:02 UTC</span></td>
                 <td data-label="Actor">Ada Okafor</td>
                 <td data-label="Operation">Sign-in succeeded</td>
-                <td data-label="Entity">Account <span class="mc-mono">AC-0003</span></td>
+                <td data-label="Entity">Account <span class="mc-mono">3f9c2a1e…</span></td>
                 <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
                 <td data-label="Reference"><span class="mc-mono">f8ff-64eb-7509</span></td>
               </tr>
@@ -307,7 +306,7 @@
                 <td class="mc-table__primary"><time datetime="2026-09-29T20:47:00Z">Sep 29, 2026, 4:47 p.m.</time><span class="mc-table__secondary">20:47 UTC</span></td>
                 <td data-label="Actor">Priya Raman</td>
                 <td data-label="Operation">Story updated</td>
-                <td data-label="Entity">Story <span class="mc-mono">HCK-121</span></td>
+                <td data-label="Entity">Story <span class="mc-mono">91ad2b6e…</span></td>
                 <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
                 <td data-label="Reference"><span class="mc-mono">373c-6b8e-2fe9</span></td>
               </tr>
@@ -315,23 +314,23 @@
                 <td class="mc-table__primary"><time datetime="2026-09-29T18:10:00Z">Sep 29, 2026, 2:10 p.m.</time><span class="mc-table__secondary">18:10 UTC</span></td>
                 <td data-label="Actor">Ada Okafor</td>
                 <td data-label="Operation">Sprint scope changed</td>
-                <td data-label="Entity">Sprint <span class="mc-mono">HCK-S8</span></td>
+                <td data-label="Entity">Sprint <span class="mc-mono">6b3d92e0…</span></td>
                 <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
                 <td data-label="Reference"><span class="mc-mono">ca57-34a5-f9dd</span></td>
               </tr>
               <tr>
                 <td class="mc-table__primary"><time datetime="2026-09-29T17:55:00Z">Sep 29, 2026, 1:55 p.m.</time><span class="mc-table__secondary">17:55 UTC</span></td>
                 <td data-label="Actor">Mateo Silva</td>
-                <td data-label="Operation">Card move rejected</td>
-                <td data-label="Entity">Story <span class="mc-mono">HCK-112</span></td>
-                <td data-label="Outcome"><span class="mc-pill mc-pill--warning"><span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>Rejected</span></td>
+                <td data-label="Operation">Delete denied</td>
+                <td data-label="Entity">Story <span class="mc-mono">48f7d05c…</span></td>
+                <td data-label="Outcome"><span class="mc-pill mc-pill--danger"><span class="mc-icon mc-icon--ban" aria-hidden="true"></span>Denied</span></td>
                 <td data-label="Reference"><span class="mc-mono">e781-2dc3-72ea</span></td>
               </tr>
               <tr>
                 <td class="mc-table__primary"><time datetime="2026-09-29T17:40:00Z">Sep 29, 2026, 1:40 p.m.</time><span class="mc-table__secondary">17:40 UTC</span></td>
                 <td data-label="Actor">Priya Raman</td>
                 <td data-label="Operation">Lead added</td>
-                <td data-label="Entity">Lead <span class="mc-mono">LD-0219</span></td>
+                <td data-label="Entity">Lead <span class="mc-mono">5a82c0d9…</span></td>
                 <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
                 <td data-label="Reference"><span class="mc-mono">8954-60bd-7390</span></td>
               </tr>
@@ -339,7 +338,7 @@
                 <td class="mc-table__primary"><time datetime="2026-09-29T15:22:00Z">Sep 29, 2026, 11:22 a.m.</time><span class="mc-table__secondary">15:22 UTC</span></td>
                 <td data-label="Actor">Quinntyne Brown</td>
                 <td data-label="Operation">Project updated</td>
-                <td data-label="Entity">Project <span class="mc-mono">HCK</span></td>
+                <td data-label="Entity">Project <span class="mc-mono">1fa9e3c6…</span></td>
                 <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
                 <td data-label="Reference"><span class="mc-mono">9117-3ae2-161e</span></td>
               </tr>
@@ -347,7 +346,7 @@
                 <td class="mc-table__primary"><time datetime="2026-09-29T13:30:00Z">Sep 29, 2026, 9:30 a.m.</time><span class="mc-table__secondary">13:30 UTC</span></td>
                 <td data-label="Actor">Priya Raman</td>
                 <td data-label="Operation">Work item deleted</td>
-                <td data-label="Entity">Task <span class="mc-mono">HCK-109</span></td>
+                <td data-label="Entity">Task <span class="mc-mono">f18c4d3a…</span></td>
                 <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
                 <td data-label="Reference"><span class="mc-mono">a0e2-81c5-8a02</span></td>
               </tr>
@@ -355,7 +354,7 @@
                 <td class="mc-table__primary"><time datetime="2026-09-29T13:12:00Z">Sep 29, 2026, 9:12 a.m.</time><span class="mc-table__secondary">13:12 UTC</span></td>
                 <td data-label="Actor">Mateo Silva</td>
                 <td data-label="Operation">Access denied</td>
-                <td data-label="Entity">Account <span class="mc-mono">AC-0005</span></td>
+                <td data-label="Entity">Account <span class="mc-mono">e2b8693f…</span></td>
                 <td data-label="Outcome"><span class="mc-pill mc-pill--danger"><span class="mc-icon mc-icon--ban" aria-hidden="true"></span>Denied</span></td>
                 <td data-label="Reference"><span class="mc-mono">8c72-096a-1e52</span></td>
               </tr>
@@ -363,7 +362,7 @@
                 <td class="mc-table__primary"><time datetime="2026-09-28T13:15:00Z">Sep 28, 2026, 9:15 a.m.</time><span class="mc-table__secondary">13:15 UTC</span></td>
                 <td data-label="Actor">Quinntyne Brown</td>
                 <td data-label="Operation">Sprint started</td>
-                <td data-label="Entity">Sprint <span class="mc-mono">HCK-S8</span></td>
+                <td data-label="Entity">Sprint <span class="mc-mono">6b3d92e0…</span></td>
                 <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
                 <td data-label="Reference"><span class="mc-mono">8b54-ce97-0271</span></td>
               </tr>
@@ -371,7 +370,7 @@
                 <td class="mc-table__primary"><time datetime="2026-09-28T13:05:00Z">Sep 28, 2026, 9:05 a.m.</time><span class="mc-table__secondary">13:05 UTC</span></td>
                 <td data-label="Actor">Quinntyne Brown</td>
                 <td data-label="Operation">Sprint planned</td>
-                <td data-label="Entity">Sprint <span class="mc-mono">HCK-S9</span></td>
+                <td data-label="Entity">Sprint <span class="mc-mono">d47a1c85…</span></td>
                 <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
                 <td data-label="Reference"><span class="mc-mono">1c78-8486-2396</span></td>
               </tr>
@@ -379,7 +378,7 @@
                 <td class="mc-table__primary"><time datetime="2026-09-28T12:59:00Z">Sep 28, 2026, 8:59 a.m.</time><span class="mc-table__secondary">12:59 UTC</span></td>
                 <td data-label="Actor">Quinntyne Brown</td>
                 <td data-label="Operation">Sign-in succeeded</td>
-                <td data-label="Entity">Account <span class="mc-mono">AC-0001</span></td>
+                <td data-label="Entity">Account <span class="mc-mono">0c7e41d2…</span></td>
                 <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
                 <td data-label="Reference"><span class="mc-mono">8e93-a65b-bce4</span></td>
               </tr>
@@ -387,16 +386,16 @@
                 <td class="mc-table__primary"><time datetime="2026-09-25T20:47:00Z">Sep 25, 2026, 4:47 p.m.</time><span class="mc-table__secondary">20:47 UTC</span></td>
                 <td data-label="Actor">Priya Raman</td>
                 <td data-label="Operation">Sprint closed</td>
-                <td data-label="Entity">Sprint <span class="mc-mono">HCK-S7</span></td>
+                <td data-label="Entity">Sprint <span class="mc-mono">8e0f6b17…</span></td>
                 <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
                 <td data-label="Reference"><span class="mc-mono">74b8-a8ed-f6db</span></td>
               </tr>
               <tr>
                 <td class="mc-table__primary"><time datetime="2026-09-25T20:45:00Z">Sep 25, 2026, 4:45 p.m.</time><span class="mc-table__secondary">20:45 UTC</span></td>
                 <td data-label="Actor">Priya Raman</td>
-                <td data-label="Operation">Sprint close rejected</td>
-                <td data-label="Entity">Sprint <span class="mc-mono">HCK-S7</span></td>
-                <td data-label="Outcome"><span class="mc-pill mc-pill--warning"><span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>Rejected</span></td>
+                <td data-label="Operation">Sprint scope changed</td>
+                <td data-label="Entity">Sprint <span class="mc-mono">8e0f6b17…</span></td>
+                <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
                 <td data-label="Reference"><span class="mc-mono">febc-cee7-8598</span></td>
               </tr>
             </tbody>

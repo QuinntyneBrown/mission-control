@@ -15,35 +15,62 @@ skinparam package {
 }
 title Behavior - Measure proposed concurrent API workload
 actor "Release operator" as actor
-box "Frontend - Operations console / Chromium harness" #E0F2FE
-  participant "PerformanceHarness" as handler
+box "Release tooling - backend/src/MissionControl.Operations" #E0F2FE
+  participant "OperationsConsole" as console
+  participant "MeasureApiLoadOperation" as load
 end box
-box "Backend - MissionControl.Api existing endpoints" #D1FADF
-  participant "Existing feature API" as api
+box "Backend - MissionControl.Api (performance instance)" #D1FADF
+  participant "ServerTimingMiddleware" as timing
+  participant "Existing feature endpoints" as api
 end box
-box "Backend - Application / operational verification" #ECFDF3
-  participant "PerformanceResult" as entity
+box "Selected SQL provider" #FFF4E5
+  database "Isolated SQL target\n(L2-046 fixture)" as db
 end box
-box "Backend - Infrastructure / selected SQL provider" #FFF4E5
-  database "Verified isolated SQL target / source backup" as db
+box "Release records - docs/operations/performance" #ECFDF3
+  participant "PerformanceResult" as result
 end box
-actor -> handler : Measure proposed concurrent API workload
-  handler -> db : Prepare isolated L2-046 fixture and account permissions
-  db --> handler : Baseline fixture
-  handler -> entity : Execute 60% read / 40% write workload; collect per-class server durations
-  entity --> handler : Percentiles, operation counts and failures
-  handler -> db : Verify committed relationships and ordering after load
-alt Unexpected 5xx, integrity failure, or exceeded per-class p95
-  handler -> entity : Record failure; leave readiness/result unresolved
-  entity --> handler : Failed run record
-  handler --> actor : Failure and recovery guidance; no passing claim
-else Procedure succeeds
-  handler -> api : Verify through existing feature endpoints / health / page objects
-  api -> db : Read or commit representative protected behavior
-  db --> api : Persisted result
-  api --> handler : Result without secrets
-  handler -> entity : Record exact environment, timings and verified outcome
-  entity --> handler : Completed run record
-  handler --> actor : Rehearsal / measurement result
+actor -> console : load (EnvironmentManifest; fixture restored; Server-Timing enabled)
+console -> load : Run with bound PerformanceOptions
+load -> timing : GET /health/ready; list totals for leads, workspaces, work items
+timing -> api : Pipeline
+api -> db : Parameterized reads
+db --> api : Counts
+api --> load : Readiness and total counts
+break Readiness 503 or totals differ from 1,000 leads / 50 workspaces / 10,000 work items
+  load --> console : Not started: fixture not ready
+  console -> result : Outcome NotRun; no latency recorded
+  console --> actor : Restore the fixture into an empty target and restart the API
+end
+load -> timing : POST /api/sessions for 25 session accounts
+timing -> api : Pipeline
+api --> load : Access tokens
+break Any 401 or 429
+  load --> console : Not started: session sign-in failed
+  console -> result : Outcome NotRun
+  console --> actor : Check session accounts, secrets, and throttling
+end
+loop 1 minute warm-up, then 10 measured minutes: 25 sessions x 1 request/s
+  load -> timing : L2-046 60% reads / 40% permitted writes on allocated records
+  timing -> api : Authenticated pipeline; thin controller; MediatR handler
+  api -> db : Parameterized reads / transactional writes
+  db --> api : Rows / commit
+  api --> timing : Response
+  timing --> load : Status and Server-Timing app;dur (server time only)
+  load -> load : Measured window only: per-class count, duration, 4xx, unexpected 5xx
+end
+load -> timing : Post-load invariant reads: paged GET work items, backlog, boards, sprints, history
+timing -> api : Pipeline
+api -> db : Parameterized reads
+db --> api : Rows and total counts
+api --> load : Pages with total counts
+load -> load : L2-046.3 identity, typed parents, order, sprint membership, unchanged closed history
+load --> console : Per-class count, p95 server ms, 4xx, 5xx; invariant results
+console -> result : Record classes, invariant results, manifest, outcome
+alt Missing Server-Timing, transport error, unexpected 5xx, invariant failure, or any class p95 > 500 ms
+  console --> actor : Outcome Failed; failing classes or rules named; no passing claim
+else Manifest differs from the L2-046 profile
+  console --> actor : Outcome OtherEnvironment; recorded separately, never labeled passing
+else Every class within budget on the stated profile
+  console --> actor : Outcome Passed for this run; proposed budget met
 end
 @enduml

@@ -16,7 +16,7 @@ skinparam package {
 title Behavior - Check current access
 actor "Account holder" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "LoginPage / SessionView" as page
+  participant "Guards / SessionView" as page
   participant "ISessionService / SessionService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -24,51 +24,54 @@ box "Backend - MissionControl.Api" #D1FADF
   participant "SessionsController" as ctrl
 end box
 box "Backend - MissionControl.Application and Domain" #ECFDF3
-  participant "ValidationBehavior" as validation
   participant "GetCurrentSessionQueryHandler" as handler
-  participant "UserAccount" as entity
+  participant "CurrentSession" as entity
 end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
+  participant "IAuditEventWriter" as audit
   database "Mission Control SQL" as db
 end box
-actor -> page : Check current access
-page -> client : Build typed GetCurrentSessionQuery
-client -> access : GET /api/session
-access -> access : L2-002 validate signature, issuer, audience, subject, expiry
-access -> db : Read current status, role and credential version
-db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
-else Authorized
-  access -> ctrl : Authorized request
-ctrl -> validation : Send GetCurrentSessionQuery through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
-alt Invalid request
-  validation --> ctrl : 400 field errors; no business mutation
-  ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
-else Valid request
-  validation -> handler : Handle GetCurrentSessionQuery
-  handler -> db : Read safe account summary and current capabilities
-  db --> handler : SQL result / current records
-  handler -> entity : Project account ID, name and role; exclude credential fields
-  entity --> handler : Current session summary
-  alt Account inactive, missing, or credential version changed
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    db --> handler : Bounded persisted projection; full matching count
-    handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+actor -> page : Open a protected route after sign-in
+alt No token in memory (reload or never signed in)
+  page --> actor : Open login (deep-link or session-ended); no request sent; no protected data shown
+else Token held in memory
+  page -> client : Build GetCurrentSessionQuery for this session generation
+  client -> access : GET /api/session with bearer token
+  access -> access : L2-002 validate signature, issuer, audience, subject, expiry (zero clock skew)
+  alt Absent, malformed, tampered, wrong issuer or audience, or at or after exp
+    access -> audit : Append Denied audit (restricted append; no payload)
+    access --> client : 401; no data
+    client -> client : Clear token and protected caches; increment session generation
+    client --> page : Open login (session-ended; session-unsaved if a form was dirty)
+  else Token valid
+    access -> db : Read current status, role and credential version
+    db --> access : Current account access or none
+    alt Account inactive, missing, or credential version changed (L2-002.3, L2-004.4)
+      access -> audit : Append Denied audit (restricted append; no payload)
+      access --> client : 401; no data
+      client -> client : Clear token and protected caches; increment session generation
+      client --> page : Open login (session-ended; session-unsaved if a form was dirty)
+    else Active account at the token's credential version
+      access -> ctrl : Authenticated request (subject from token)
+      ctrl -> handler : Send GetCurrentSessionQuery through MediatR 12.5.0
+      handler -> db : Read names, role and current capabilities
+      db --> handler : Current SQL authority
+      handler -> entity : Project account ID, display name, role, capability summary
+      entity --> handler : CurrentSession; no contact data or credential fields
+      handler --> ctrl : 200 CurrentSession
+      ctrl --> client : Success response
+      alt Response belongs to an earlier session generation
+        client -> client : Ignore late response
+      else Current generation
+        client --> page : Update session signal; guards evaluate capabilities
+        page --> actor : Open the route, or the access-denied page if not permitted
+      end
+    end
   end
 end
-end
 note over ctrl, db
-Unexpected failures return generic 500 plus correlation ID (L2-043).
+Unexpected failures return generic 500 plus correlation ID (L2-043);
+the page shows the service-error page with the reference ID and Try again.
 Diagnostics exclude secrets and contact payloads.
 end note
 @enduml

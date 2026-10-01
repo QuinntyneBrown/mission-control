@@ -23,6 +23,7 @@ All named production types are proposed; the repository currently contains requi
 | `SprintService` | Production HTTP adapter in `api`; owns HTTP calls and observable-to-signal conversion. Composition binds a mock adapter for Chromium Playwright. |
 | `SprintsController` | Thin controller under `backend/src/MissionControl.Api/Controllers`, namespace `MissionControl.Api.Controllers`; binds, dispatches, and returns. |
 | `Sprint` | Domain entity or Application read projection described below; Domain has no external project dependency. |
+| `SprintSnapshot`, `SprintScopeChange` | Domain records created by `Sprint.close`; immutable after closure and read by the sprint history slice. |
 | `IMissionControlDataSession` | Application data port; the Infrastructure adapter runs parameterized queries and transaction commits. |
 
 Commands, queries, handlers, and request validators live in Application feature folders. Each type has its own file; folders and namespaces agree.
@@ -30,15 +31,22 @@ MediatR remains pinned to `12.5.0`. Microsoft.Extensions supplies dependency inj
 
 `CloseSprintDialog` lists every unfinished story with a destination and supports Set all.
 No planned destination leaves backlog as the available choice. A sprint with only Done stories closes without carryover choices.
-`CloseSprintCommandValidator` returns `400` identifying each unresolved story and invalid target.
+`CloseSprintCommandValidator` rejects malformed or duplicate dispositions with `400` before anything is read.
 The request carries expected sprint version and one disposition per unfinished story in the reviewed scope.
 
 `CloseSprintCommandHandler` locks the workspace, source sprint, selected planned destinations, and affected stories.
 The shared workspace transaction/version protocol serializes board/task changes, scope changes, start, mode change, and closure.
 Every membership and relevant story/task mutation increments active sprint revision, so stale closure review receives `409`.
-The handler validates that each destination is Planned and in this workspace and that no exclusive-membership constraint is violated.
-It captures name, goal, planned dates, actual start/close, initial/final scope, scope log, and each story ID/title/status/destination.
-Snapshot rows carry recorded destination names/IDs independently of live FKs, preserving later missing destinations.
+The handler decides every rejection before any write. A missing sprint returns `404`; an already Closed sprint returns `409` with history unchanged.
+A stale version returns `409` identifying each changed story with its recorded scope change (actor and instant); the dialog marks those rows.
+An unfinished story without a disposition returns `400` identifying each unresolved story, and the sprint stays Active.
+A destination that is not a Planned sprint in this workspace returns `400` identifying the story and destination.
+A raced exclusive-membership violation rolls back the closure and returns `409` naming the story.
+
+Closure records `ClosedAtUtc` and the closing actor (`ClosedByUserId`, `ClosedByName`).
+`Sprint.close` returns a `SprintSnapshot` that captures name, goal, planned dates, and actual start and close with their actors.
+It also captures initial and final scope, the scope log as `SprintScopeChange` entries with actor and instant, and each story ID/title/status/destination.
+Snapshot rows carry recorded destination names and IDs independently of live FKs, so history keeps the name recorded at closure.
 
 Done stories leave live open membership and remain associated through immutable outcomes.
 Unfinished stories remove source membership and optionally add target planned membership with unchanged status, IDs, parents, and tasks.
@@ -63,7 +71,7 @@ Mock input and review references:
 
 - [Close sprint · Mission Control mock](../../../mocks/scrum/close-sprint-dialog.html); review states: `default`, `unresolved`, `all-done`, `no-planned`, `conflict`, `closing`, `failed`.
 - [Sprint history · Mission Control mock](../../../mocks/scrum/sprint-history.html); review states: `default`, `renamed`, `not-found`, `loading`, `error`.
-- [Sprint board · Mission Control mock](../../../mocks/scrum/sprint-board.html); review states: `default`, `scope-log`, `no-stories`, `no-active`, `move-failed`, `collaborator`, `loading`, `error`.
+- [Sprint board · Mission Control mock](../../../mocks/scrum/sprint-board.html); review states: `default`, `scope-log`, `no-stories`, `no-active`, `no-sprints`, `move-failed`, `collaborator`, `loading`, `error`.
 
 Implementation proceeds one behavior at a time using the linked Given-When-Then criteria. An API integration acceptance check first fails for the expected missing behavior.
 A Chromium Playwright check uses one page object per screen and a mock service bound through the same token. Tests express intent; page objects own selectors.

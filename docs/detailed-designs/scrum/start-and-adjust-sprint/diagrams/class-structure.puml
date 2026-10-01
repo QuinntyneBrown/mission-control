@@ -46,10 +46,14 @@ class Sprint {
   +endDate: DateOnly
   +status: SprintStatus
   +startedAtUtc: DateTimeOffset?
+  +startedByUserId: Guid?
+  +startedByName: string?
   +closedAtUtc: DateTimeOffset?
+  +closedByUserId: Guid?
+  +closedByName: string?
   +version: long
-  +start(at: DateTimeOffset): void
-  +changeScope(storyIds: Guid[], actorId: Guid): void
+  +start(at: DateTimeOffset, actorId: Guid): void
+  +changeScope(add: Guid[], remove: Guid[], at: DateTimeOffset, actorId: Guid): SprintScopeChange[]
 }
 interface IMissionControlDataSession {
   +query(specification): Task<ReadResult>
@@ -101,6 +105,16 @@ class SprintStoryOutcome {
   +recordedDestinationId: Guid?
   +recordedDestinationName: string?
 }
+class SprintScopeChange {
+  +sprintId: Guid
+  +storyId: Guid
+  +storyTitle: string
+  +kind: ScopeChangeKind
+  +actorId: Guid
+  +actorName: string
+  +atUtc: DateTimeOffset
+}
 Sprint "1" *-- "*" SprintStoryOutcome : immutable outcomes at closure
+Sprint "1" *-- "*" SprintScopeChange : actor-attributed changes after start
 Sprint ..> OpenSprintMembership : live allocation / historical source
 @enduml

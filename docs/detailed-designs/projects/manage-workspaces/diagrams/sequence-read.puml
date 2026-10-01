@@ -14,9 +14,9 @@ skinparam package {
   BackgroundColor #F9FAFB
 }
 title Behavior - Read workspace list and overview
-actor "Authorized user" as actor
+actor "Signed-in user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "ProjectListPage / WorkspaceView" as page
+  participant "ProjectListPage or ProjectOverviewPage\nWorkspaceView" as page
   participant "IWorkspaceService / WorkspaceService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -25,47 +25,73 @@ box "Backend - MissionControl.Api" #D1FADF
 end box
 box "Backend - MissionControl.Application and Domain" #ECFDF3
   participant "ValidationBehavior" as validation
-  participant "GetWorkspaceQueryHandler" as handler
-  participant "Workspace" as entity
+  participant "GetWorkspacesQueryHandler\nGetWorkspaceQueryHandler" as handler
 end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Read workspace list and overview
-page -> client : Build typed GetWorkspaceQuery
-client -> access : GET /api/workspaces[/{id}]
+actor -> page : Open Projects or a project overview
+page -> page : Show skeleton; announce "Loading projects" / "Loading project"
+page -> client : list(GetWorkspacesQuery page, pageSize 25) or read(GetWorkspaceQuery id)
+client -> access : GET /api/workspaces?page=&pageSize= or GET /api/workspaces/{id}
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
-else Authorized
+alt Missing, invalid, or expired JWT; inactive account
+  access --> client : 401; audit denial without payloads
+  client --> page : Clear in-memory session; show login; restore this route after sign-in
+else Signed in (profile P: both roles read workspaces)
   access -> ctrl : Authorized request
-ctrl -> validation : Send GetWorkspaceQuery through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
-alt Invalid request
-  validation --> ctrl : 400 field errors; no business mutation
-  ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
-else Valid request
-  validation -> handler : Handle GetWorkspaceQuery
-  handler -> db : Read workspace page or details and persisted type/status totals
-  db --> handler : SQL result / current records
-  handler -> entity : Project workspace mode and responsible lead
-  entity --> handler : Workspace view
-  alt Missing workspace / invalid paging
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    db --> handler : Bounded persisted projection; full matching count
-    handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+  ctrl -> validation : Send query through MediatR 12.5.0
+  validation -> validation : L2-045 page >= 1; pageSize 1-100
+  alt Page size zero, negative, or above 100
+    validation --> ctrl : 400 page-size field message; nothing read
+    ctrl --> client : Validation ProblemDetails
+    client --> page : Show load-failed state with the page-size message; no partial list
+  else Valid list query
+    validation -> handler : Handle GetWorkspacesQuery
+    handler -> db : One page ordered by name then ID; total matching count
+    handler -> db : Per listed workspace: persisted story done/total
+    handler -> db : Active sprint name and end date, or kept-sprint presence in Kanban mode
+    db --> handler : Bounded rows and counts from persisted records
+    handler --> ctrl : WorkspaceList (items, totalCount, page, pageSize)
+    ctrl --> client : 200
+    client --> page : Update signal state
+    alt No workspaces
+      page --> actor : Empty state: administrators get New project; collaborators learn who can add one
+    else Total above page size
+      page --> actor : Cards, "Showing 1-25 of N", Previous/Next and page links
+    else Single page
+      page --> actor : Cards with mode, lead, story progress, and sprint summary
+    end
+  else Valid overview query
+    validation -> handler : Handle GetWorkspaceQuery
+    handler -> db : Load workspace settings, version, and responsible lead
+    alt Workspace missing (deleted or mistyped link)
+      db --> handler : No row
+      handler --> ctrl : 404; nothing else read
+      ctrl --> client : NotFound ProblemDetails
+      client --> page : Show "Project not found" with Back to projects; focus the heading
+    else Workspace found
+      handler -> db : Type-by-status counts over every persisted work item
+      alt Scrum mode
+        handler -> db : Active sprint (name, goal, dates, done/total stories)
+        handler -> db : Next planned sprint; latest closed sprint's recorded outcome
+      else Kanban mode
+        handler -> db : Kept planned and closed sprints, newest first, at most 25
+        handler -> handler : Flag each kept sprint paused
+      end
+      db --> handler : Persisted projection
+      handler --> ctrl : WorkspaceDetail
+      ctrl --> client : 200
+      client --> page : Update signal state
+      page --> actor : Header, settings, counts linked to filtered work, and the sprint or board summary
+    end
   end
 end
+opt Unexpected failure (network, SQL, or server)
+  client --> page : 500 or no response with correlation ID
+  page --> actor : Load-failed state with reference ID, Copy, and Try again; no empty layout
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).

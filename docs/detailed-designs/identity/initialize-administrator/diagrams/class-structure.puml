@@ -14,36 +14,71 @@ skinparam package {
   BackgroundColor #F9FAFB
 }
 title Class structure - Initialize and protect the administrator
-class InitializationState {
-  +schemaCompatible: bool
-  +administratorReady: bool
-  +sqlAvailable: bool
-  +ready(): bool
+interface IHostedService <<Microsoft.Extensions.Hosting>> {
+  +startAsync(token: CancellationToken): Task
+  +stopAsync(token: CancellationToken): Task
 }
-class InitializationClient {
-  +run(configuration: OperationConfiguration): InitializationState
+class DatabaseInitializer <<Infrastructure>> {
+  +startAsync(token: CancellationToken): Task
 }
-class OperationConfiguration {
-  +environment: string
-  +sqlProvider: string
-  +externalSecretsAvailable: bool
+class InitializationOptions <<Options>> {
+  +designatedEmail: string
+  +firstName: string
+  +lastName: string
+  +initialPassword: string?
 }
-InitializationClient ..> OperationConfiguration : consumes
-InitializationClient --> InitializationState : records outcome
-class DatabaseInitializer {
-  +initialize(): Task<InitializationState>
+interface IInitializationLock {
+  +acquire(token: CancellationToken): Task<IAsyncDisposable>
 }
 interface IMigrationRunner {
   +migrate(): Task<void>
 }
+class EnsureAdministratorCommand {
+  +email: string
+  +firstName: string
+  +lastName: string
+  +initialPassword: string?
+}
 class EnsureAdministratorCommandHandler {
-  +handle(): Task<UserAccount>
+  +handle(request: EnsureAdministratorCommand): Task<UserAccount>
+}
+class EnsureCityLeadCommand {
+  +email: string
+  +firstName: string
+  +lastName: string
 }
 class EnsureCityLeadCommandHandler {
-  +handle(): Task<LeadContact>
+  +handle(request: EnsureCityLeadCommand): Task<LeadContact>
+}
+class InitializationState {
+  +phase: InitializationPhase
+  +schemaCompatible: bool
+  +administratorReady: bool
+  +correlationId: string?
+  +ready(): bool
+}
+enum InitializationPhase {
+  Initializing
+  Ready
+  Failed
+}
+class InitializationStatus <<Application singleton>> {
+  +current: InitializationState
+  +record(state: InitializationState): void
+}
+class HealthController <<MissionControl.Api.Controllers>> {
+  -sender: ISender
+  +live(): IActionResult
+  +ready(): Task<IActionResult>
+}
+class GetReadinessQuery
+class GetReadinessQueryHandler {
+  +handle(request: GetReadinessQuery): Task<ReadinessResult>
 }
 class UserAccount {
   +id: Guid
+  +firstName: string
+  +lastName: string
   +passwordHash: string
   +credentialVersion: long
   +active: bool
@@ -55,10 +90,20 @@ class LeadContact {
   +category: LeadCategory
   +phone: string?
 }
+IHostedService <|.. DatabaseInitializer
+DatabaseInitializer ..> InitializationOptions : binds
+DatabaseInitializer ..> IInitializationLock : holds for the run
 DatabaseInitializer ..> IMigrationRunner : migration
-DatabaseInitializer ..> EnsureAdministratorCommandHandler : dispatch
-DatabaseInitializer ..> EnsureCityLeadCommandHandler : dispatch
+DatabaseInitializer ..> EnsureAdministratorCommand : sends
+DatabaseInitializer ..> EnsureCityLeadCommand : sends
+DatabaseInitializer --> InitializationStatus : records outcome
+EnsureAdministratorCommandHandler ..> EnsureAdministratorCommand : handles
+EnsureCityLeadCommandHandler ..> EnsureCityLeadCommand : handles
 EnsureAdministratorCommandHandler --> UserAccount : creates / repairs
 EnsureCityLeadCommandHandler --> LeadContact : creates / adopts once
-DatabaseInitializer --> InitializationState : readiness result
+InitializationStatus --> InitializationState
+InitializationState --> InitializationPhase
+HealthController ..> GetReadinessQuery : dispatches
+GetReadinessQueryHandler ..> GetReadinessQuery : handles
+GetReadinessQueryHandler ..> InitializationStatus : reads
 @enduml

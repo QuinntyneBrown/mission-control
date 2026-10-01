@@ -45,9 +45,13 @@ class Sprint {
   +endDate: DateOnly
   +status: SprintStatus
   +startedAtUtc: DateTimeOffset?
+  +startedByUserId: Guid?
+  +startedByName: string?
   +closedAtUtc: DateTimeOffset?
+  +closedByUserId: Guid?
+  +closedByName: string?
   +version: long
-  +close(dispositions: StoryDisposition[], at: DateTimeOffset): SprintSnapshot
+  +close(dispositions: StoryDisposition[], at: DateTimeOffset, actorId: Guid): SprintSnapshot
 }
 interface IMissionControlDataSession {
   +query(specification): Task<ReadResult>
@@ -86,6 +90,34 @@ class SprintStoryOutcome {
   +recordedDestinationId: Guid?
   +recordedDestinationName: string?
 }
-Sprint "1" *-- "*" SprintStoryOutcome : immutable outcomes at closure
+class SprintSnapshot {
+  +sprintId: Guid
+  +name: string
+  +goal: string
+  +plannedStart: DateOnly
+  +plannedEnd: DateOnly
+  +startedAtUtc: DateTimeOffset
+  +startedByUserId: Guid
+  +startedByName: string
+  +closedAtUtc: DateTimeOffset
+  +closedByUserId: Guid
+  +closedByName: string
+  +initialScopeIds: Guid[]
+  +finalScopeIds: Guid[]
+  +scopeChanges: SprintScopeChange[]
+  +outcomes: SprintStoryOutcome[]
+}
+class SprintScopeChange {
+  +sprintId: Guid
+  +storyId: Guid
+  +storyTitle: string
+  +kind: ScopeChangeKind
+  +actorId: Guid
+  +actorName: string
+  +atUtc: DateTimeOffset
+}
+Sprint "1" --> "0..1" SprintSnapshot : records at closure
+SprintSnapshot "1" *-- "*" SprintStoryOutcome : immutable outcomes at closure
+SprintSnapshot "1" *-- "*" SprintScopeChange : scope log with actor and instant
 Sprint ..> OpenSprintMembership : live allocation / historical source
 @enduml

@@ -31,7 +31,7 @@
 
   <div class="mock-notes">
     <p class="mock-note" data-when="default">The accessible alternative to dragging, opened from any card's Move button on Kanban and sprint boards (shown here from the Sprint 8 board). It opens on the card's current column and position; here the user has chosen In Progress, position 2. Focus starts on the column choice, Escape or Cancel returns focus to the Move button, and below 576px it fills the screen.</p>
-    <p class="mock-note" data-when="to-done" hidden>Shown for "Volunteers can join a build team", which has 3 of 5 tasks unfinished. Choosing Done changes the primary action to Continue, which opens the unfinished-tasks confirmation before anything is saved.</p>
+    <p class="mock-note" data-when="to-done" hidden>Shown for "Volunteers can join a build team", which has 3 of 5 tasks unfinished. Choosing Done changes the primary action to Continue. Continue sends the move; the server refuses it with the current unfinished count (409), nothing is saved, and the board opens the unfinished-tasks confirmation in place of this dialog.</p>
     <p class="mock-note" data-when="saving" hidden>One request; the button shows progress and repeat clicks are ignored. On success the dialog closes, focus returns to the card's Move button, and a toast confirms "Moved to In Progress — "Mentors can see team needs" is position 2 of 3."</p>
     <p class="mock-note" data-when="failed" hidden>Nothing moved: the card keeps its last saved place. The choices are kept, so Move story retries the same move.</p>
   </div>

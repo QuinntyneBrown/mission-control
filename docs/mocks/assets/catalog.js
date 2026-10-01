@@ -275,6 +275,10 @@ window.MOCK_CATALOG = [
         "label": "Edit conflict"
       },
       {
+        "id": "conflict-reloaded",
+        "label": "Conflict · latest loaded"
+      },
+      {
         "id": "deleted",
         "label": "Lead deleted meanwhile"
       }
@@ -319,6 +323,10 @@ window.MOCK_CATALOG = [
       {
         "id": "collaborator",
         "label": "Collaborator"
+      },
+      {
+        "id": "many",
+        "label": "Many projects (page 1 of 3)"
       },
       {
         "id": "empty-admin",
@@ -417,6 +425,10 @@ window.MOCK_CATALOG = [
       {
         "id": "conflict",
         "label": "Edit conflict"
+      },
+      {
+        "id": "conflict-reloaded",
+        "label": "Conflict · latest loaded"
       }
     ]
   },
@@ -432,6 +444,14 @@ window.MOCK_CATALOG = [
       {
         "id": "to-scrum",
         "label": "Kanban to Scrum"
+      },
+      {
+        "id": "to-scrum-empty",
+        "label": "Kanban to Scrum (no sprints)"
+      },
+      {
+        "id": "to-kanban-empty",
+        "label": "Scrum to Kanban (new project)"
       },
       {
         "id": "blocked",
@@ -459,6 +479,10 @@ window.MOCK_CATALOG = [
       {
         "id": "blocked",
         "label": "Blocked by work and history"
+      },
+      {
+        "id": "blocked-work",
+        "label": "Blocked by work only"
       },
       {
         "id": "deleting",
@@ -605,6 +629,10 @@ window.MOCK_CATALOG = [
         "label": "Edit story"
       },
       {
+        "id": "edit-inactive-assignee",
+        "label": "Edit story · inactive assignee kept"
+      },
+      {
         "id": "validation",
         "label": "Validation errors"
       },
@@ -627,6 +655,10 @@ window.MOCK_CATALOG = [
       {
         "id": "conflict",
         "label": "Edit conflict"
+      },
+      {
+        "id": "conflict-reloaded",
+        "label": "Conflict · latest loaded"
       }
     ]
   },
@@ -642,6 +674,10 @@ window.MOCK_CATALOG = [
       {
         "id": "rejected",
         "label": "Target no longer valid"
+      },
+      {
+        "id": "conflict",
+        "label": "Story changed meanwhile"
       },
       {
         "id": "saving",
@@ -669,6 +705,10 @@ window.MOCK_CATALOG = [
       {
         "id": "out-of-range",
         "label": "Position out of range"
+      },
+      {
+        "id": "conflict",
+        "label": "Order changed meanwhile"
       },
       {
         "id": "failed",
@@ -733,12 +773,20 @@ window.MOCK_CATALOG = [
         "label": "Collaborator"
       },
       {
+        "id": "paged",
+        "label": "Large backlog, page 2"
+      },
+      {
         "id": "empty",
         "label": "Empty"
       },
       {
         "id": "reorder-failed",
         "label": "Reorder failed"
+      },
+      {
+        "id": "reorder-conflict",
+        "label": "Order changed meanwhile"
       },
       {
         "id": "loading",
@@ -848,6 +896,10 @@ window.MOCK_CATALOG = [
       {
         "id": "saving",
         "label": "Saving"
+      },
+      {
+        "id": "failed",
+        "label": "Save failed"
       }
     ]
   },
@@ -861,8 +913,8 @@ window.MOCK_CATALOG = [
         "label": "Active, planned, and history"
       },
       {
-        "id": "no-sprints",
-        "label": "No sprints yet"
+        "id": "empty",
+        "label": "New project, no sprints"
       },
       {
         "id": "kanban-paused",
@@ -906,6 +958,10 @@ window.MOCK_CATALOG = [
       {
         "id": "conflict",
         "label": "Edit conflict"
+      },
+      {
+        "id": "conflict-reloaded",
+        "label": "Conflict · latest loaded"
       }
     ]
   },
@@ -987,6 +1043,10 @@ window.MOCK_CATALOG = [
       {
         "id": "no-active",
         "label": "No active sprint"
+      },
+      {
+        "id": "no-sprints",
+        "label": "New project, no sprints"
       },
       {
         "id": "move-failed",
@@ -1181,6 +1241,10 @@ window.MOCK_CATALOG = [
       {
         "id": "conflict",
         "label": "Edit conflict"
+      },
+      {
+        "id": "conflict-reloaded",
+        "label": "Conflict · latest loaded"
       }
     ]
   },
@@ -1208,6 +1272,10 @@ window.MOCK_CATALOG = [
       {
         "id": "failed",
         "label": "Save failed"
+      },
+      {
+        "id": "stale",
+        "label": "Account changed (409)"
       }
     ]
   },
@@ -1235,6 +1303,10 @@ window.MOCK_CATALOG = [
       {
         "id": "failed",
         "label": "Deactivation failed"
+      },
+      {
+        "id": "stale",
+        "label": "Account changed (409)"
       }
     ]
   },

@@ -2,16 +2,31 @@
 !include <C4/C4_Component>
 LAYOUT_WITH_LEGEND()
 title Components - Measure release workflow performance
-Container_Boundary(release, "Mission Control release operations") {
-  Component(procedure, "PerformanceHarness", "Release procedure / harness", "Measure release workflow performance")
-  Component(manifest, "PerformanceResult", "Operational record", "Captures configuration, times and outcomes")
-  Component(verification, "API acceptance / Chromium page objects", "Behavior verification", "Checks restored data or measured views")
+Container_Boundary(ops, "backend/src/MissionControl.Operations") {
+  Component(console, "OperationsConsole", "Entry point / Microsoft.Extensions Hosting", "Binds PerformanceOptions; runs one verb")
+  Component(fixture, "SeedPerformanceFixtureOperation", "fixture verb", "Builds the fixture through existing endpoints")
+  Component(load, "MeasureApiLoadOperation", "load verb", "Workload mix, Server-Timing aggregation, invariant reads")
 }
-Container(api, "MissionControl.Api", ".NET", "Existing protected feature endpoints")
-ContainerDb(db, "Isolated SQL target", "Selected SQL provider", "Recovered records / load fixture")
-Rel(procedure, manifest, "Records exact run and results")
-Rel(procedure, db, "Provider command / fixture setup")
-Rel(procedure, verification, "Runs behavior checks")
-Rel(verification, api, "Calls existing endpoints", "HTTPS")
-Rel(api, db, "Reads / commits behavior", "SQL")
+Container_Boundary(e2e, "e2e/performance") {
+  Component(cold, "MeasureColdViewsOperation", "Playwright library script", "Fresh context per run; p95 usable time per view")
+  Component(po, "Page objects", "Shared from e2e/page-objects", "Sign-in and view-usable interactions")
+}
+Container_Boundary(apiBoundary, "backend/src/MissionControl.Api") {
+  Component(timing, "ServerTimingMiddleware", "Outermost middleware / ServerTimingOptions", "Server-Timing app;dur from pipeline entry to response start")
+  Component(endpoints, "Existing feature endpoints", "Thin controllers / MediatR 12.5.0", "Reads and permitted writes")
+}
+Container(web, "Mission Control web app", "Angular production build", "HTTP adapters")
+ContainerDb(db, "Isolated SQL target", "Selected SQL provider", "L2-046 fixture")
+Container(records, "docs/operations/performance", "JSON", "EnvironmentManifest and results")
+Rel(console, fixture, "fixture")
+Rel(console, load, "load")
+Rel(fixture, timing, "Creates fixture records", "HTTPS")
+Rel(load, timing, "Workload and invariant reads", "HTTPS")
+Rel(timing, endpoints, "Times the pipeline")
+Rel(endpoints, db, "Parameterized SQL")
+Rel(cold, po, "Opens view; signs in; waits until usable")
+Rel(po, web, "Chromium interactions", "HTTPS")
+Rel(web, timing, "Production HTTP adapters", "HTTPS")
+Rel(load, records, "PerformanceResult")
+Rel(cold, records, "ColdViewResult")
 @enduml

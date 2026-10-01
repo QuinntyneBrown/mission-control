@@ -16,7 +16,7 @@ skinparam package {
 title Behavior - Move item to another valid parent
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "WorkItemDetailPage / WorkItemView" as page
+  participant "WorkItemDetailPage / ReparentDialog / WorkItemView" as page
   participant "IWorkItemService / WorkItemService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,51 +31,66 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Move item to another valid parent
-page -> client : Build typed ReparentWorkItemCommand
+actor -> page : Choose "Move to another parent" on an epic, story, or task
+page -> page : Show current path; offer only same-level parents in this workspace; current parent unavailable
+actor -> page : Pick a target, review the path preview, and confirm
+page -> page : Disable Move while pending (L2-031)
+page -> client : Build typed ReparentWorkItemCommand (target parent, expected item version)
 client -> access : PUT /api/workspaces/{id}/work-items/{itemId}/parent
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
+alt Missing, invalid or expired JWT; deactivated account
+  access --> client : 401; audit denial without payloads
+  client --> page : Clear session; sign in with the item as return route
+else Authenticated without permission to update work
+  access --> client : 403; audit denial without payloads
+  client --> page : Keep the choice; explain that moving work is not permitted
 else Authorized
   access -> ctrl : Authorized request
-ctrl -> validation : Send ReparentWorkItemCommand through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
-alt Invalid request
-  validation --> ctrl : 400 field errors; no business mutation
-  ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
-else Valid request
-  validation -> handler : Handle ReparentWorkItemCommand
-  handler -> db : Lock workspace ordering; load item, source/target siblings and parent
-  db --> handler : Current valid same-workspace parent state
-  handler -> entity : L2-016 append under correct target level; preserve descendants and sprint IDs
-  entity --> handler : New parent link and sibling position
-  alt Invalid/deleted target or stale item/order version
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    handler -> db : L2-039 / L2-040 commit business state and success audit together
-    alt Commit fails
-      db --> handler : Roll back business state and success audit
-      handler --> ctrl : Generic 500 with correlation ID
-      ctrl --> client : Failure; no successful-save claim
-      client --> page : Keep draft / restore saved placement
-    else Commit succeeds
-      db --> handler : New committed version
-    handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+  ctrl -> validation : Send ReparentWorkItemCommand through MediatR 12.5.0
+  validation -> validation : Item and target identifiers present and well formed
+  alt Malformed request
+    validation --> ctrl : 400 field errors; nothing read or changed
+    ctrl --> client : Validation ProblemDetails
+    client --> page : Keep the dialog open with the message
+  else Valid request
+    validation -> handler : Handle ReparentWorkItemCommand
+    handler -> db : Lock workspace; load item and version, target parent, source and target sibling sets
+    db --> handler : Current hierarchy state
+    alt Workspace or item not found
+      handler --> ctrl : 404; nothing changed
+      ctrl --> client : ProblemDetails (not found)
+      client --> page : Close the dialog; reload the outline without the item and announce that it no longer exists
+    else Stale item version (L2-041)
+      handler --> ctrl : 409 stale version; nothing changed
+      ctrl --> client : ProblemDetails (changed)
+      client --> page : Keep the dialog; "This story changed" alert; Reload story reads the current parent and targets without resending (conflict state)
+    else Target missing or deleted, wrong level, current parent, initiative item, or other workspace (L2-016.4)
+      handler --> ctrl : 400 invalid target; old hierarchy intact
+      ctrl --> client : Validation ProblemDetails (target field)
+      client --> page : Keep the dialog; drop a deleted target; target field error (rejected state)
+    else Move permitted
+      handler -> entity : L2-016 change only the parent link; append after the target's existing children
+      entity --> handler : Same IDs, fields, descendants, and sprint membership under the new path
+      handler -> db : L2-039 / L2-040 update item, compact source siblings, append target sibling, bump both sibling-order versions, success audit
+      alt Commit fails
+        db --> handler : Roll back business state and success audit
+        handler --> ctrl : Generic 500 with correlation ID
+        ctrl --> client : Failure; no successful-save claim
+        client --> page : Nothing moved; show reference ID; Move retries the same request (failed state)
+      else Commit succeeds
+        db --> handler : New item version and sibling-order versions
+        handler --> ctrl : Moved item with new path
+        ctrl --> client : 200
+        client --> page : Close the dialog; update hierarchy and detail signal state
+        page --> actor : Announce the new path; focus returns to the item's actions
+      end
     end
   end
 end
-end
 note over ctrl, db
+All rejection checks run under the lock before any write.
 Unexpected failures return generic 500 plus correlation ID (L2-043).
 Diagnostics exclude secrets and contact payloads.
 end note

@@ -14,9 +14,9 @@ skinparam package {
   BackgroundColor #F9FAFB
 }
 title Behavior - Delete empty workspace
-actor "Authorized user" as actor
+actor "Administrator" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "ProjectListPage / WorkspaceView" as page
+  participant "ProjectOverviewPage\nProjectDeleteDialog / WorkspaceView" as page
   participant "IWorkspaceService / WorkspaceService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,52 +31,65 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Delete empty workspace
-page -> client : Build typed DeleteWorkspaceCommand
-client -> access : DELETE /api/workspaces/{id}
-access -> access : L2-002 validate signature, issuer, audience, subject, expiry
-access -> db : Read current status, role and credential version
-db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
-else Authorized
-  access -> ctrl : Authorized request
-ctrl -> validation : Send DeleteWorkspaceCommand through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
-alt Invalid request
-  validation --> ctrl : 400 field errors; no business mutation
-  ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
-else Valid request
-  validation -> handler : Handle DeleteWorkspaceCommand
-  handler -> db : Load workspace and check all work and sprint references
-  db --> handler : Content presence
-  handler -> entity : L2-014 refuse nonempty workspace deletion
-  entity --> handler : Empty workspace deletion permitted
-  handler -> db : Delete workspace under restrictive child foreign keys
-  db --> handler : SQL result / current records
-
-  alt Workspace contains work or any sprint record
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    handler -> db : L2-039 / L2-040 commit business state and success audit together
-    alt Commit fails
-      db --> handler : Roll back business state and success audit
-      handler --> ctrl : Generic 500 with correlation ID
-      ctrl --> client : Failure; no successful-save claim
-      client --> page : Keep draft / restore saved placement
-    else Commit succeeds
-      db --> handler : New committed version
-    handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+actor -> page : Project actions > Delete project
+page --> actor : Open ProjectDeleteDialog naming the project; focus Cancel
+alt Cancel or Escape
+  page --> actor : Close dialog; no request; focus returns to Project actions
+else Confirm
+  page -> page : Disable repeat confirmation; show deleting progress
+  page -> client : Build typed DeleteWorkspaceCommand (workspace ID only; no version)
+  client -> access : DELETE /api/workspaces/{id}
+  access -> access : L2-002 validate signature, issuer, audience, subject, expiry
+  access -> db : Read current status, role and credential version
+  db --> access : Current account access
+  alt Missing, invalid, or expired JWT; inactive account
+    access --> client : 401; audit denial without payloads
+    client --> page : Clear in-memory session; require login; nothing deleted
+  else Collaborator (profile P: no workspace deletion)
+    access --> client : 403; audit denial without payloads
+    client --> page : Close dialog; explain that only administrators delete projects; nothing deleted
+  else Administrator
+    access -> ctrl : Authorized request
+    ctrl -> validation : Send DeleteWorkspaceCommand through MediatR 12.5.0
+    validation -> handler : Handle DeleteWorkspaceCommand
+    handler -> db : Begin transaction; lock workspace row
+    db --> handler : Workspace row or none
+    alt Workspace missing (already deleted)
+      handler --> ctrl : 404; nothing deleted
+      ctrl --> client : NotFound ProblemDetails
+      client --> page : Close dialog; reload Projects without it; announce it was already deleted
+    else Workspace found
+      handler -> db : Count every work item by type and every sprint (planned, active, closed)
+      db --> handler : Content counts and newest sprints
+      handler -> entity : L2-014 checkDeletion(work items, sprints)
+      alt Work items or sprints exist
+        entity --> handler : Rejected: workspace has content
+        handler --> ctrl : 409 with work-item counts by type and sprints; nothing deleted or cascaded
+        ctrl --> client : Conflict ProblemDetails
+        client --> page : Switch to blocked explanation (counts and sprints); Close only; no retry
+      else Empty workspace
+        entity --> handler : Deletion permitted
+        handler -> db : L2-039 / L2-040 delete workspace row with success audit; one transaction
+        alt Restrictive child FK rejects a racing work item or sprint
+          db --> handler : Roll back delete and audit; recount content
+          handler --> ctrl : Same 409 with counts; nothing deleted
+          ctrl --> client : Conflict ProblemDetails
+          client --> page : Switch to blocked explanation; Close only; no retry
+        else Commit fails unexpectedly
+          db --> handler : Roll back delete and audit
+          handler --> ctrl : Generic 500 with correlation ID
+          ctrl --> client : Failure; nothing deleted
+          client --> page : Keep dialog open; show reference ID; Delete project retries
+        else Commit succeeds
+          db --> handler : Workspace removed
+          handler --> ctrl : 204 No Content
+          ctrl --> client : Success response
+          client --> page : Close dialog; open Projects without the workspace
+          page --> actor : "Project deleted" toast; focus the Projects heading
+        end
+      end
     end
   end
-end
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).

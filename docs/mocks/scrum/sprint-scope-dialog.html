@@ -32,7 +32,7 @@
 
   <div class="mock-notes">
     <p class="mock-note" data-when="add">Lists unfinished stories that aren't in another open sprint. Each addition is recorded in the sprint's history with the person and time; the initial scope stays recorded. Collaborators can change scope too.</p>
-    <p class="mock-note" data-when="remove" hidden>Opens from a story's Remove from sprint action on the board. The story returns to the backlog with its status and tasks unchanged.</p>
+    <p class="mock-note" data-when="remove" hidden>Opens from Remove on an unfinished story's sprint board card, or from "Remove from Sprint 8" when a story can't be deleted while it's in the sprint. The story returns to the backlog with its status, estimate, and any tasks unchanged. Done stories can't be removed; they stay with the sprint's outcomes. Focus starts on Cancel.</p>
     <p class="mock-note" data-when="closed" hidden>A closed sprint's scope can't change, so the API returns 409 and history is untouched.</p>
     <p class="mock-note" data-when="saving" hidden>The button shows progress and ignores repeat clicks.</p>
     <p class="mock-note" data-when="failed" hidden>Nothing changed and the selection is kept. Add retries.</p>
@@ -174,19 +174,19 @@
                   </li>
                   <li class="mc-list__item">
                     <label class="mc-check mc-w-full">
-                      <input type="checkbox" name="stories" value="HCK-131" data-attr-saving="disabled">
+                      <input type="checkbox" name="stories" value="HCK-110" data-attr-saving="disabled">
                       <span class="mc-list__main">
                         <span class="mc-list__title">Mentor matching survey</span>
-                        <span class="mc-list__meta"><span>HCK-131</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span><span>3 pts</span></span>
+                        <span class="mc-list__meta"><span>HCK-110</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span><span>3 pts</span></span>
                       </span>
                     </label>
                   </li>
                   <li class="mc-list__item">
                     <label class="mc-check mc-w-full">
-                      <input type="checkbox" name="stories" value="HCK-132" data-attr-saving="disabled">
+                      <input type="checkbox" name="stories" value="HCK-129" data-attr-saving="disabled">
                       <span class="mc-list__main">
                         <span class="mc-list__title">Venue floor plan with accessible routes</span>
-                        <span class="mc-list__meta"><span>HCK-132</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span><span>3 pts</span></span>
+                        <span class="mc-list__meta"><span>HCK-129</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span><span>3 pts</span></span>
                       </span>
                     </label>
                   </li>
@@ -194,11 +194,11 @@
             </fieldset>
 
             <div class="mc-stack" data-when="remove" hidden>
-              <p>"Book AV for demo day" (HCK-121) goes back to the backlog. It stays In Progress, and its tasks go with it.</p>
+              <p>"Mentors can see team needs" (HCK-118) goes back to the backlog. It stays To Do and keeps its 3-point estimate.</p>
               <dl class="mc-dl">
-                <dt>Status</dt><dd><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></dd>
+                <dt>Status</dt><dd><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span></dd>
                 <dt>Assignee</dt><dd><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span></dd>
-                <dt>Tasks</dt><dd>1 of 3 done</dd>
+                <dt>Tasks</dt><dd>No tasks</dd>
               </dl>
               <div class="mc-alert mc-alert--neutral">
                 <span class="mc-icon mc-icon--history" aria-hidden="true"></span>
@@ -224,7 +224,6 @@
           </footer>
         </form>
       </section>
-    </div>
     </div>
   </div>
 </body>

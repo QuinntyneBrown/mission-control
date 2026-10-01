@@ -3,10 +3,12 @@
 LAYOUT_WITH_LEGEND()
 title Components - Review the standalone design language
 Container_Boundary(site, "design-system/ static artifact") {
-  Component(catalog, "Catalog / viewer", "HTML / JavaScript", "Names available specimens or workflow states")
+  Component(catalog, "ArtifactCatalog", "HTML / JavaScript", "Names available token families and specimens")
   Component(examples, "Controls and responsive examples", "HTML / CSS", "Renders compact through expanded layouts")
-  Component(tokens, "--mc- token stylesheet", "CSS custom properties", "Authoritative in design-system; provisional in current mocks")
+  Component(tokens, "--mc- token stylesheet", "CSS custom properties", "Authoritative in design-system; mirrored by frontend and mocks")
+  Component(breakpoints, "Named breakpoint source", "Sass mixins (mc-bp)", "Only place literal widths appear: xs-xl and short")
 }
-Rel(catalog, examples, "Opens named example or state")
+Rel(catalog, examples, "Opens named example")
 Rel(examples, tokens, "Consumes visual roles")
+Rel(examples, breakpoints, "Switches layout by name")
 @enduml

@@ -31,44 +31,48 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Read bounded backlog and full priority count
-page -> client : Build typed ListBacklogQuery
+actor -> page : Open the Backlog tab, change page, or Reload backlog
+page -> page : Show skeleton rows (loading state)
+page -> client : Build typed ListBacklogQuery (page, page size)
 client -> access : GET /api/workspaces/{id}/backlog
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
-else Authorized
+alt Missing, invalid or expired JWT; deactivated account
+  access --> client : 401; audit denial without payloads
+  client --> page : Clear session; sign in with the backlog as return route
+else Authenticated (every role may read the backlog)
   access -> ctrl : Authorized request
-ctrl -> validation : Send ListBacklogQuery through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
-alt Invalid request
-  validation --> ctrl : 400 field errors; no business mutation
-  ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
-else Valid request
-  validation -> handler : Handle ListBacklogQuery
-  handler -> db : L2-045 read bounded priority page and full count
-  db --> handler : SQL result / current records
-  handler -> entity : Project stories, current sprint labels, and eligibility
-  entity --> handler : Backlog page
-  alt Invalid paging or missing workspace
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    db --> handler : Bounded persisted projection; full matching count
-    handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+  ctrl -> validation : Send ListBacklogQuery through MediatR 12.5.0
+  validation -> validation : L2-045 page of 1 or more; page size 1-100, default 25
+  alt Zero, negative, or over-100 page size
+    validation --> ctrl : 400 page-size message; nothing read
+    ctrl --> client : Validation ProblemDetails
+    client --> page : Fall back to 25 per page and show the message
+  else Valid request
+    validation -> handler : Handle ListBacklogQuery
+    handler -> db : L2-045 read one page ordered by priority then ID; count every story; read the order version
+    db --> handler : Bounded rows, full count, status totals, version
+    alt Workspace not found
+      handler --> ctrl : 404
+      ctrl --> client : ProblemDetails (not found)
+      client --> page : Not-found state linking to Projects
+    else Rows read
+      handler -> entity : Project ranks, current sprint labels, and Add to sprint eligibility for the delivery mode
+      entity --> handler : Backlog page with absolute ranks
+      handler --> ctrl : Typed result with items, total count, page, page size, and order version
+      ctrl --> client : 200
+      client --> page : Update signal state; zero stories shows the empty state with Add initiative
+      page --> actor : Present the page, totals for all stories, and the pager when there is more than one page
+    end
   end
 end
+opt Read fails unexpectedly (500 with correlation ID or no response)
+  client --> page : Error state with reference ID and Try again; no stale rows shown as current
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).
+Totals come from persisted records, never from the loaded page.
 Diagnostics exclude secrets and contact payloads.
 end note
 @enduml

@@ -2,7 +2,7 @@
 !include <C4/C4_Context>
 LAYOUT_WITH_LEGEND()
 title System context - Initialize and protect the administrator
-Person(actor, "Deployment operator", "Initialize and protect the administrator")
-System(ops, "Mission Control initialization", "Repeatable operations against isolated or deployed SQL")
-Rel(actor, ops, "Initialize and protect the administrator")
+Person(actor, "Deployment operator", "Supplies configuration, starts instances, and probes health")
+System(mc, "Mission Control", "MissionControl.Api initializes its database at startup before reporting ready")
+Rel(actor, mc, "Deploys and starts; reads liveness and readiness")
 @enduml

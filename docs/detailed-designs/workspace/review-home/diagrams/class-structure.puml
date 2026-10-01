@@ -21,11 +21,30 @@ skinparam class {
 }
 class HomePage {
   +routeContext: Signal<RouteContext>
-  +openDialog(): void
+  +openNewProject(): void
 }
-class HomeView {
-  +state: Signal<FeatureState>
-  +submit(): void
+class LeadCoverageView {
+  +state: Signal<SectionState<LeadCoverage>>
+  +retry(): void
+}
+class WorkspaceProgressView {
+  +state: Signal<SectionState<WorkspaceProgressPage>>
+  +retry(): void
+}
+class ActiveSprintSummaryView {
+  +state: Signal<SectionState<ActiveSprintSummaryPage>>
+  +retry(): void
+}
+class "SectionState<T>" as SectionState {
+  +status: SectionStatus
+  +value: T?
+  +referenceId: string?
+}
+enum SectionStatus {
+  Loading
+  Ready
+  Empty
+  Failed
 }
 interface IHomeService {
   +leads(request: GetLeadCoverageQuery): Promise<FeatureResult>
@@ -38,12 +57,6 @@ class HomeService {
 class HomeController {
   -sender: ISender
 }
-class HomeSummary {
-  +leadCounts: CategoryCount[]
-  +projects: WorkspaceProgress[]
-  +activeSprints: ActiveSprintSummary[]
-  +loadedAtUtc: DateTimeOffset
-}
 interface IMissionControlDataSession {
   +query(specification): Task<ReadResult>
   +commit(expectedVersion: long): Task<void>
@@ -51,41 +64,111 @@ interface IMissionControlDataSession {
 class MissionControlDataSession {
   -connection: DbConnection
 }
-HomePage --> HomeView : composes
-HomeView ..> IHomeService : inject token
+HomePage --> LeadCoverageView : composes
+HomePage --> WorkspaceProgressView : composes
+HomePage --> ActiveSprintSummaryView : composes
+LeadCoverageView ..> IHomeService : inject HOME_SERVICE
+WorkspaceProgressView ..> IHomeService : inject HOME_SERVICE
+ActiveSprintSummaryView ..> IHomeService : inject HOME_SERVICE
+LeadCoverageView --> SectionState
+WorkspaceProgressView --> SectionState
+ActiveSprintSummaryView --> SectionState
+SectionState --> SectionStatus
 IHomeService <|.. HomeService
 IMissionControlDataSession <|.. MissionControlDataSession
-class GetLeadCoverageQuery {
-  +includeZeroCategories: bool
-}
+
+class GetLeadCoverageQuery
+note right of GetLeadCoverageQuery
+  No parameters: always returns all five
+  categories, zero counts included (L2-028.1).
+end note
 class GetLeadCoverageQueryHandler {
-  +handle(request: GetLeadCoverageQuery): Task<FeatureResult>
+  +handle(request: GetLeadCoverageQuery): Task<LeadCoverage>
+}
+class LeadCoverage {
+  +categories: CategoryCount[]
+}
+class CategoryCount {
+  +category: LeadCategory
+  +count: int
 }
 HomeController ..> GetLeadCoverageQuery : dispatches
 GetLeadCoverageQueryHandler ..> GetLeadCoverageQuery : handles
-GetLeadCoverageQueryHandler --> HomeSummary : loads / applies
+GetLeadCoverageQueryHandler --> LeadCoverage : projects
 GetLeadCoverageQueryHandler ..> IMissionControlDataSession : uses
+LeadCoverage *-- "5" CategoryCount
+
 class GetWorkspaceProgressQuery {
   +page: int
   +pageSize: int
 }
 class GetWorkspaceProgressQueryHandler {
-  +handle(request: GetWorkspaceProgressQuery): Task<FeatureResult>
+  +handle(request: GetWorkspaceProgressQuery): Task<WorkspaceProgressPage>
+}
+class WorkspaceProgressPage {
+  +items: WorkspaceProgress[]
+  +totalCount: int
+}
+class WorkspaceProgress {
+  +workspaceId: Guid
+  +name: string
+  +mode: DeliveryMode
+  +description: string?
+  +responsibleLeadId: Guid?
+  +responsibleLeadName: string?
+  +activeSprint: SprintReference?
+  +nextPlannedSprint: SprintReference?
+  +counts: TypeStatusCount[]
+}
+class TypeStatusCount {
+  +type: WorkItemType
+  +status: WorkStatus
+  +count: int
+}
+class SprintReference {
+  +sprintId: Guid
+  +name: string
+  +startDate: DateOnly
+  +endDate: DateOnly
 }
 HomeController ..> GetWorkspaceProgressQuery : dispatches
 GetWorkspaceProgressQueryHandler ..> GetWorkspaceProgressQuery : handles
-GetWorkspaceProgressQueryHandler --> HomeSummary : loads / applies
+GetWorkspaceProgressQueryHandler --> WorkspaceProgressPage : projects
 GetWorkspaceProgressQueryHandler ..> IMissionControlDataSession : uses
+WorkspaceProgressPage *-- WorkspaceProgress
+WorkspaceProgress *-- "12" TypeStatusCount
+WorkspaceProgress --> SprintReference
+
 class GetActiveSprintSummaryQuery {
   +page: int
   +pageSize: int
 }
 class GetActiveSprintSummaryQueryHandler {
-  +handle(request: GetActiveSprintSummaryQuery): Task<FeatureResult>
+  +handle(request: GetActiveSprintSummaryQuery): Task<ActiveSprintSummaryPage>
+}
+class ActiveSprintSummaryPage {
+  +items: ActiveSprintSummary[]
+  +totalCount: int
+}
+class ActiveSprintSummary {
+  +sprintId: Guid
+  +name: string
+  +workspaceId: Guid
+  +workspaceName: string
+  +goal: string?
+  +startDate: DateOnly
+  +endDate: DateOnly
+  +storyCounts: StatusCount[]
+}
+class StatusCount {
+  +status: WorkStatus
+  +count: int
 }
 HomeController ..> GetActiveSprintSummaryQuery : dispatches
 GetActiveSprintSummaryQueryHandler ..> GetActiveSprintSummaryQuery : handles
-GetActiveSprintSummaryQueryHandler --> HomeSummary : loads / applies
+GetActiveSprintSummaryQueryHandler --> ActiveSprintSummaryPage : projects
 GetActiveSprintSummaryQueryHandler ..> IMissionControlDataSession : uses
+ActiveSprintSummaryPage *-- ActiveSprintSummary
+ActiveSprintSummary *-- "3" StatusCount
 
 @enduml

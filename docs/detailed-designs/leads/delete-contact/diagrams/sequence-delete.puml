@@ -16,7 +16,7 @@ skinparam package {
 title Behavior - Confirm and delete a lead
 actor "Administrator" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "LeadDetailPage / LeadView" as page
+  participant "LeadDetailPage or LeadDirectoryPage\nLeadDeleteDialog / LeadView" as page
   participant "ILeadService / LeadService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,52 +31,67 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Confirm and delete a lead
-page -> client : Build typed DeleteLeadCommand
-client -> access : DELETE /api/leads/{id}
-access -> access : L2-002 validate signature, issuer, audience, subject, expiry
-access -> db : Read current status, role and credential version
-db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
-else Authorized
-  access -> ctrl : Authorized request
-ctrl -> validation : Send DeleteLeadCommand through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
-alt Invalid request
-  validation --> ctrl : 400 field errors; no business mutation
-  ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
-else Valid request
-  validation -> handler : Handle DeleteLeadCommand
-  handler -> db : Load lead at expected version and referencing workspaces
-  db --> handler : Current contact and ownership references
-  handler -> entity : L2-012 refuse deletion while referenced
-  entity --> handler : Deletion permitted
-  handler -> db : Delete only contact; restrictive FK prevents racing owner assignment
-  db --> handler : SQL result / current records
-
-  alt Referenced lead or stale version
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    handler -> db : L2-039 / L2-040 commit business state and success audit together
-    alt Commit fails
-      db --> handler : Roll back business state and success audit
-      handler --> ctrl : Generic 500 with correlation ID
-      ctrl --> client : Failure; no successful-save claim
-      client --> page : Keep draft / restore saved placement
-    else Commit succeeds
-      db --> handler : New committed version
-    handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+actor -> page : Select Delete on lead details or a directory row
+alt Loaded lead details already list responsible workspaces
+  page --> actor : Open blocked explanation with project links; no request; no delete or retry
+else No known reference
+  page --> actor : Open LeadDeleteDialog naming the lead and category; focus Cancel
+  alt Cancel or Escape
+    page --> actor : Close dialog; no request; focus returns to Delete
+  else Confirm
+    page -> page : Disable repeat confirmation; show deleting progress
+    page -> client : Build typed DeleteLeadCommand (lead ID only)
+    client -> access : DELETE /api/leads/{id}
+    access -> access : L2-002 validate signature, issuer, audience, subject, expiry
+    access -> db : Read current status, role and credential version
+    db --> access : Current account access
+    alt Missing, invalid, or expired JWT; inactive account
+      access --> client : 401; audit denial without payloads
+      client --> page : Clear in-memory session; require login; nothing deleted
+    else Collaborator (no contact mutation in profile P)
+      access --> client : 403; audit denial without payloads
+      client --> page : Close dialog; show that only administrators can delete leads; nothing deleted
+    else Administrator
+      access -> ctrl : Authorized request
+      ctrl -> validation : Send DeleteLeadCommand through MediatR 12.5.0
+      validation -> handler : Handle DeleteLeadCommand
+      handler -> db : Begin transaction; load lead and workspaces naming it responsible (ID, name)
+      db --> handler : Contact or none; referencing workspaces
+      alt Lead missing (already deleted)
+        handler --> ctrl : 404; nothing deleted
+        ctrl --> client : NotFound ProblemDetails
+        client --> page : Close dialog; reload directory without the lead; announce it was already deleted
+      else Lead found
+        handler -> entity : L2-012 checkDeletion(referencing workspaces)
+        alt Workspaces reference the lead
+          entity --> handler : Rejected: still responsible
+          handler --> ctrl : 409 listing referencing workspaces (ID, name) with reassignment guidance; nothing deleted
+          ctrl --> client : Conflict ProblemDetails
+          client --> page : Switch to blocked explanation with project links; no delete or retry
+        else Unreferenced
+          entity --> handler : Deletion permitted
+          handler -> db : L2-039 / L2-040 delete only the contact row and append success audit; one transaction
+          alt Restrictive FK rejects a racing owner assignment
+            db --> handler : Roll back delete and audit; read the new referencing workspaces
+            handler --> ctrl : 409 listing referencing workspaces; nothing deleted
+            ctrl --> client : Conflict ProblemDetails
+            client --> page : Switch to blocked explanation with project links; no delete or retry
+          else Commit fails unexpectedly
+            db --> handler : Roll back delete and audit
+            handler --> ctrl : Generic 500 with correlation ID
+            ctrl --> client : Failure; nothing deleted
+            client --> page : Keep dialog open; show reference ID; Delete lead retries
+          else Commit succeeds
+            db --> handler : Contact row removed; accounts, work, and sprint history untouched
+            handler --> ctrl : 204 No Content
+            ctrl --> client : Success response
+            client --> page : Close dialog; reload directory and counts without the lead; announce deletion
+            page --> actor : Focus moves to the directory heading
+          end
+        end
+      end
     end
   end
-end
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).

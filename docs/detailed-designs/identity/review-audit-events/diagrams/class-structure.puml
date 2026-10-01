@@ -46,6 +46,26 @@ class AuditEvent {
   +outcome: AuditOutcome
   +correlationId: string
 }
+enum AuditOutcome {
+  Succeeded
+  Rejected
+  Denied
+  Throttled
+}
+note right of AuditOutcome
+  Succeeded: committed with its business transaction.
+  Rejected: 409 protected-identity change.
+  Denied: 401 / 403 access or failed login.
+  Throttled: 429 login attempt.
+  The last three use the restricted append.
+end note
+interface IAuditEventWriter {
+  +addToTransaction(event: AuditEvent): void
+  +appendRestricted(event: AuditEvent): Task<void>
+}
+class AuditEventWriter {
+  -connection: DbConnection
+}
 interface IMissionControlDataSession {
   +query(specification): Task<ReadResult>
   +commit(expectedVersion: long): Task<void>
@@ -57,6 +77,9 @@ AuditLogPage --> AuditEventView : composes
 AuditEventView ..> IAuditEventService : inject token
 IAuditEventService <|.. AuditEventService
 IMissionControlDataSession <|.. MissionControlDataSession
+IAuditEventWriter <|.. AuditEventWriter
+AuditEvent --> AuditOutcome : outcome
+AuditEventWriter ..> AuditEvent : inserts only
 class ListAuditEventsQuery {
   +actorId: Guid?
   +area: string?
@@ -73,5 +96,6 @@ AuditEventsController ..> ListAuditEventsQuery : dispatches
 ListAuditEventsQueryHandler ..> ListAuditEventsQuery : handles
 ListAuditEventsQueryHandler --> AuditEvent : loads / applies
 ListAuditEventsQueryHandler ..> IMissionControlDataSession : uses
+ListAuditEventsQuery --> AuditOutcome : filter
 
 @enduml

@@ -14,9 +14,9 @@ skinparam package {
   BackgroundColor #F9FAFB
 }
 title Behavior - Create workspace
-actor "Authorized user" as actor
+actor "Administrator" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "ProjectListPage / WorkspaceView" as page
+  participant "ProjectListPage\nProjectFormDialog / WorkspaceView" as page
   participant "IWorkspaceService / WorkspaceService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,49 +31,58 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Create workspace
+actor -> page : New project; enter name, description, mode, optional lead
+page -> page : Disable repeat submission; show saving progress
 page -> client : Build typed CreateWorkspaceCommand
 client -> access : POST /api/workspaces
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
-else Authorized
+alt Missing, invalid, or expired JWT; inactive account
+  access --> client : 401; audit denial without payloads
+  client --> page : Clear in-memory session; require login; nothing created
+else Collaborator (profile P: no workspace creation)
+  access --> client : 403; audit denial without payloads
+  client --> page : Close dialog; explain that only administrators add projects; nothing created
+else Administrator
   access -> ctrl : Authorized request
-ctrl -> validation : Send CreateWorkspaceCommand through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
-alt Invalid request
-  validation --> ctrl : 400 field errors; no business mutation
-  ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
-else Valid request
-  validation -> handler : Handle CreateWorkspaceCommand
-  handler -> db : Check optional responsible lead exists
-  db --> handler : Reference validity
-  handler -> entity : L2-014 create workspace with required initial mode
-  entity --> handler : New workspace
-  alt Selected lead disappeared
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    handler -> db : L2-039 / L2-040 commit business state and success audit together
-    alt Commit fails
-      db --> handler : Roll back business state and success audit
-      handler --> ctrl : Generic 500 with correlation ID
-      ctrl --> client : Failure; no successful-save claim
-      client --> page : Keep draft / restore saved placement
-    else Commit succeeds
-      db --> handler : New committed version
-    handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+  ctrl -> validation : Send CreateWorkspaceCommand through MediatR 12.5.0
+  validation -> validation : Validation V: trimmed name 1-200; description <= 10,000; mode Kanban or Scrum
+  alt Invalid fields
+    validation --> ctrl : 400 field errors; nothing created
+    ctrl --> client : Validation ProblemDetails
+    client --> page : Show field errors and summary; focus the summary; keep valid input
+  else Valid request
+    validation -> handler : Handle CreateWorkspaceCommand
+    handler -> db : Begin transaction; check optional responsible lead still exists
+    db --> handler : Lead row or none
+    alt Selected lead no longer exists
+      handler --> ctrl : 400 responsibleLeadId field error; nothing created
+      ctrl --> client : Validation ProblemDetails
+      client --> page : Show missing-lead alert and field error; keep every other value
+    else Lead exists or none chosen
+      handler -> entity : L2-014 create workspace with required initial mode
+      entity --> handler : New workspace, version 1
+      handler -> db : L2-039 / L2-040 insert workspace and success audit; one transaction
+      alt Restrictive lead FK rejects a racing lead deletion
+        db --> handler : Roll back insert and audit
+        handler --> ctrl : Same 400 responsibleLeadId field error; nothing created
+        ctrl --> client : Validation ProblemDetails
+        client --> page : Show missing-lead alert and field error; keep every other value
+      else Commit fails unexpectedly
+        db --> handler : Roll back insert and audit
+        handler --> ctrl : Generic 500 with correlation ID
+        ctrl --> client : Failure; no successful-save claim
+        client --> page : Show save-failed alert with reference ID; keep every value; Save project retries
+      else Commit succeeds
+        db --> handler : Workspace ID and version
+        handler --> ctrl : 201 Created with ID
+        ctrl --> client : Success response
+        client --> page : Close dialog; open the new overview
+        page --> actor : Empty overview, "Project created" toast; focus the project heading
+      end
     end
   end
-end
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).

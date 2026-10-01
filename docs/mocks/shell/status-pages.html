@@ -35,7 +35,7 @@
     <p class="mock-note" data-when="not-found">Shown for an unknown route or a record that no longer exists (the API returned 404). The shell stays, so every permitted destination is one step away. Focus moves to the heading.</p>
     <p class="mock-note" data-when="access-denied" hidden>A collaborator opened a direct link to Accounts or the Audit log. Nothing protected was requested or shown. The same page appears if a permission was removed mid-session (API 403).</p>
     <p class="mock-note" data-when="error" hidden>The API returned 500. The reference ID is the correlation ID of the server's diagnostic record; no stack traces or internal details are shown.</p>
-    <p class="mock-note" data-when="offline" hidden>The browser couldn't reach the API. What's already on screen stays; Try again repeats the request.</p>
+    <p class="mock-note" data-when="offline" hidden>Shown when a page's first request can't reach the API, so there is nothing saved to show yet. If content is already on screen it stays, and the offline banner (Notifications › Offline banner) appears instead. Try again repeats the request.</p>
   </div>
 
   <div class="mc-app">

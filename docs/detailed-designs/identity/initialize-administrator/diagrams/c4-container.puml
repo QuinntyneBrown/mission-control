@@ -2,14 +2,14 @@
 !include <C4/C4_Container>
 LAYOUT_WITH_LEGEND()
 title Containers - Initialize and protect the administrator
-Person(actor, "Deployment operator", "Runs documented release procedure")
-System_Boundary(mc, "Mission Control operations") {
-  Container(runner, "Initialization runtime", ".NET / Microsoft.Extensions", "Migrations, required seeds, and readiness")
-  Container(api, "MissionControl.Api", ".NET", "Health status and behavioral verification")
-  ContainerDb(db, "Mission Control SQL", "SQL - provider <TO SUPPLY>", "Durable accounts, work, and sprint snapshots")
+Person(actor, "Deployment operator", "Supplies configuration, starts instances, probes health")
+System_Boundary(mc, "Mission Control") {
+  Container(api, "MissionControl.Api", ".NET / Microsoft.Extensions hosting", "DatabaseInitializer hosted service runs migrations and required seeds at startup; health endpoints")
+  ContainerDb(db, "Mission Control SQL", "SQL - provider <TO SUPPLY>", "Schema, accounts, contacts, seed marker, initialization lock")
 }
-Rel(actor, runner, "Starts / configures")
-Rel(runner, db, "Initializes / verifies", "SQL")
-Rel(actor, api, "Observes health or verifies behavior", "HTTPS")
-Rel(api, db, "Checks or reads restored data", "Parameterized SQL")
+System_Ext(config, "External configuration", "Secret facility <TO SUPPLY>: bootstrap identity, initial password, signing material")
+Rel(actor, config, "Supplies values")
+Rel(actor, api, "Starts instances; GET /health/live and /health/ready", "HTTPS")
+Rel(api, config, "Binds InitializationOptions and JwtOptions at startup")
+Rel(api, db, "Locks, migrates, seeds, and checks readiness", "Parameterized SQL")
 @enduml

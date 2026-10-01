@@ -16,7 +16,7 @@ skinparam package {
 title Behavior - Provision account
 actor "Administrator" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "AccountsPage / AccountView" as page
+  participant "AccountFormDialog / AccountView" as page
   participant "IAccountService / AccountService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -29,52 +29,63 @@ box "Backend - MissionControl.Application and Domain" #ECFDF3
   participant "UserAccount" as entity
 end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
+  participant "IAuditEventWriter" as audit
   database "Mission Control SQL" as db
 end box
-actor -> page : Provision account
+actor -> page : Enter names, email, initial password and role; Add account
+page -> page : Disable repeat submission; show saving progress
 page -> client : Build typed ProvisionAccountCommand
 client -> access : POST /api/accounts
-access -> access : L2-002 validate signature, issuer, audience, subject, expiry
+access -> access : L2-002 validate signature, issuer, audience, subject, expiry (zero clock skew)
 access -> db : Read current status, role and credential version
 db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
-else Authorized
+alt Missing, invalid or expired JWT; inactive or missing account; credential version changed
+  access -> audit : Append Denied audit (restricted append; no payload)
+  access --> client : 401
+  client --> page : Clear in-memory session; open login (session-unsaved); no account was added
+else Authenticated Collaborator (profile P: no account management)
+  access -> audit : Append Denied audit (restricted append; no payload)
+  access --> client : 403
+  client --> page : Show access-denied page; no account was added
+else Administrator
   access -> ctrl : Authorized request
-ctrl -> validation : Send ProvisionAccountCommand through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
-alt Invalid request
-  validation --> ctrl : 400 field errors; no business mutation
-  ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
-else Valid request
-  validation -> handler : Handle ProvisionAccountCommand
-  handler -> entity : L2-004 create active account with salted hash
-  entity --> handler : New account
-  handler -> db : Insert under unique normalized-email constraint
-  db --> handler : SQL result / current records
-
-  alt Duplicate normalized email
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    handler -> db : L2-039 / L2-040 commit business state and success audit together
-    alt Commit fails
-      db --> handler : Roll back business state and success audit
-      handler --> ctrl : Generic 500 with correlation ID
-      ctrl --> client : Failure; no successful-save claim
-      client --> page : Keep draft / restore saved placement
-    else Commit succeeds
-      db --> handler : New committed version
-    handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+  ctrl -> validation : Send ProvisionAccountCommand through MediatR 12.5.0
+  validation -> validation : L2-004 trim names (1-100); email syntax (at most 254); known role; password 12-128, untrimmed
+  alt Invalid request
+    validation --> ctrl : 400 field errors; no business mutation
+    ctrl --> client : Validation ProblemDetails
+    client --> page : validation state: keep valid input; focus linked error summary
+  else Valid request
+    validation -> handler : Handle ProvisionAccountCommand
+    handler -> db : Find account with the normalized email
+    db --> handler : Existing account or none
+    alt Normalized email already used
+      handler --> ctrl : 409 duplicate with the existing account ID and name; nothing created
+      ctrl --> client : Conflict ProblemDetails (duplicate)
+      client --> page : duplicate state: keep every value including the password; flag email; link the existing account
+    else Email available
+      handler -> entity : L2-004 / L2-036 create active account; salted hash of the exact password
+      entity --> handler : New account (version 1, credential version 1)
+      handler -> db : L2-039 / L2-040 insert account and success audit in one transaction
+      alt Unique index rejects the email (racing provision)
+        db --> handler : Roll back insert and audit
+        handler --> ctrl : 409 duplicate, as above
+        ctrl --> client : Conflict ProblemDetails (duplicate)
+        client --> page : Same handling as the duplicate branch above
+      else Commit fails unexpectedly
+        db --> handler : Roll back business state and success audit
+        handler --> ctrl : Generic 500 with correlation ID
+        ctrl --> client : Failure; no successful-save claim
+        client --> page : failed state: keep every value; reference ID; Add account retries
+      else Commit succeeds
+        db --> handler : Committed account
+        handler --> ctrl : 201 with safe summary; never the password or hash
+        ctrl --> client : Success response
+        client --> page : created state: share the password directly; it is not shown again
+        page --> actor : New row appears in Accounts; no lead contact created (L2-005.2)
+      end
     end
   end
-end
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).

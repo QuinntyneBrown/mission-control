@@ -4,7 +4,7 @@
 
 Application navigation keeps users oriented and protects unfinished form work.
 
-- **Route context** — current workspace, record, and ancestor path represented by the application URL
+- **Route context** — current workspace, record, and ancestor path represented by the application URL and held client-side in the `RouteContext` signal
 - **Dirty form** — local draft that differs from its last loaded or committed values
 
 Navigation exposes permitted destinations, restores safe direct routes after login, and distinguishes missing records, denied access, and request failure.
@@ -17,34 +17,51 @@ All named production types are proposed; the repository currently contains requi
 
 | Part | Responsibility and architectural home |
 | --- | --- |
-| `ApplicationShell` | Routed page or dialog owned by `frontend/projects/mission-control`; composes the domain library and presentational components. |
-| `SessionView` | Domain component in `frontend/projects/domain`; injects `SESSION_SERVICE` and holds feature state in signals. |
-| `ISessionService`, `SESSION_SERVICE` | Interface and token in `frontend/projects/api/session.service.contract.ts`; the consumer imports the contract only. |
-| `SessionService` | Production HTTP adapter in `api`; owns HTTP calls and observable-to-signal conversion. Composition binds a mock adapter for Chromium Playwright. |
+| `ApplicationShell` | Application shell owned by `frontend/projects/mission-control`; owns primary navigation, the compact menu, Router outlets, the skip link, and the `RouteContext` signal. |
+| `RouteContext` | Application-project signal model in `frontend/projects/mission-control`: `requestedPath`, `workspaceId`, `ancestorIds`. `ApplicationShell` and the guards own it; it never reaches the API. |
+| `AuthenticationGuard`, `PermissionGuard` | Route guards in `frontend/projects/mission-control`; both call `check_access` through `SESSION_SERVICE`. |
+| `UnsavedChangesGuard`, `FormDraft`, `UnsavedChangesDialog` | Application-project guard, form-state contract, and dialog. Every form page and dialog exposes `FormDraft` (`dirty`, `pending`, `canLeave()`). |
+| `UserMenuView` | Domain component in `frontend/projects/domain`; injects `SESSION_SERVICE`, renders the signed-in name and role, and emits Sign out to the shell. |
+| `ISessionService`, `SESSION_SERVICE` | Interface and token in `frontend/projects/api/session.service.contract.ts`, shared with the sign-in slice; navigation calls `check_access` only. |
+| `SessionService` | Production HTTP adapter in `api`; holds the token and `CurrentSession` in memory, owns the session generation counter, HTTP calls, and observable-to-signal conversion. Composition binds a mock adapter for Chromium Playwright. |
 | `SessionsController` | Thin controller under `backend/src/MissionControl.Api/Controllers`, namespace `MissionControl.Api.Controllers`; binds, dispatches, and returns. |
-| `RouteContext` | Domain entity or Application read projection described below; Domain has no external project dependency. |
+| `CurrentSession` | Application read projection: account ID, display name, role, capability summary; no contact data. |
 | `IMissionControlDataSession` | Application data port; the Infrastructure adapter runs parameterized queries and transaction commits. |
 
 Commands, queries, handlers, and request validators live in Application feature folders. Each type has its own file; folders and namespaces agree.
 MediatR remains pinned to `12.5.0`. Microsoft.Extensions supplies dependency injection, Options, and Configuration.
 
 `ApplicationShell` owns primary navigation, compact menu, Router outlets, and the skip link.
-`AuthenticationGuard` reads the in-memory session through `SESSION_SERVICE`; `PermissionGuard` uses the current safe SQL-derived capability summary.
+Route context is client state only: the URL plus the `RouteContext` signal. No navigation API exists.
+`AuthenticationGuard` and `PermissionGuard` call `check_access` through `SESSION_SERVICE`.
+With no token in memory, `SessionService` answers unauthenticated without sending a request.
+Otherwise it returns the `CurrentSession` read from `GET /api/session` for the current session generation.
+A `403` from any endpoint discards that summary, so the next guard check reads current capabilities again.
 The backend still enforces every operation independently. `/accounts` and `/audit` are administrator-only destinations.
-The guard checks authentication before requesting record data. A direct protected URL stores an internal return path and displays login without naming the record.
-After login the permitted route restores; route-specific services read the actual record and report `404` or `403` as appropriate.
-The session endpoint below refreshes capabilities; record lookup reuses the relevant lead/workspace/work/sprint query, with no dedicated navigation API.
+The guard checks authentication before requesting record data. A direct protected URL stores an internal return path in `RouteContext.requestedPath`.
+Only internal application paths are stored. Sign-in opens in its `deep-link` state without naming the record.
+After `LoginCommand` succeeds, `check_access` reads `GET /api/session` for the role and capability summary.
+`PermissionGuard` then checks the stored path; a route the role cannot use shows the access-denied page without requesting the record.
+A permitted route opens, and its existing lead, workspace, work, or sprint query reads the record.
+A `200` renders the page, fills `workspaceId` and `ancestorIds`, and focuses the heading.
+A `404` shows the not-found page offering Home, Projects, and Leads; a `403` shows the access-denied page with permitted destinations.
+A `401` during any request clears the in-memory session, stores the current path, and opens sign-in with the session-ended message.
 
 `UnsavedChangesGuard` and application-owned `UnsavedChangesDialog` protect in-app route changes, dialog cancellation, and logout.
+Each form exposes `FormDraft`; the guard reads `dirty` and `pending` and asks `canLeave()` before the change proceeds.
 Stay retains session and input; Discard navigates or closes without save. A browser unload prompt covers reload/tab close when supported.
-The primary save control suppresses duplicate submissions while pending and shows progress. Success alone updates the saved baseline and closes the dialog.
+The primary save control suppresses duplicate submissions while pending and shows progress. Cancel and Close stay disabled until the save resolves.
+A route change requested during a pending save waits for its result; a failed save keeps the draft and opens the dialog.
+Success alone updates the saved baseline and closes the dialog.
 Validation focuses the linked error summary. Save failure retains valid input; conflict retains draft beside a separately fetched latest record.
-Session expiry clears protected caches and explains unpersisted input; it does not display a success toast.
-Late responses from an earlier session generation are ignored. Password fields clear on authentication failure and successful completion.
+Session expiry clears protected caches and explains unpersisted input; it does not display a success toast or the unsaved-changes dialog.
+`SessionService` ignores late responses from an earlier session generation. Password fields clear on authentication failure and successful completion.
 
 The compact menu exposes every permitted destination, closes after selection, and moves focus to the new heading.
 Modal focus starts on the first field or safe Cancel action, stays inside, and returns to the trigger or a surviving contextual control.
-The shell keeps navigation available on not-found and access-denied screens. Offline errors keep committed content and offer retry.
+The shell keeps navigation available on not-found, access-denied, error, and offline pages.
+A request that cannot reach the API keeps any content already on screen and shows the offline banner with Try again.
+A page whose first request cannot reach the API shows the offline page instead, because nothing is saved to show yet.
 Toasts announce success politely and errors as alerts without taking focus. The mock's maximum three-toast stack is a proposed display choice.
 All view states use `--mc-` tokens, non-color status cues, named icon buttons, at least 44×44 primary touch targets, and the stated contrast ratios.
 The proposed WCAG target remains unconfirmed; its concrete keyboard, labeling, zoom, and touch criteria remain the design baseline.
@@ -101,7 +118,7 @@ The container view separates the client, .NET API, and durable SQL records.
 
 ![Navigate with context and preserve form input: c4 container](diagrams/c4-container.png)
 
-The component view locates request dispatch, domain behavior, and persistence within the feature.
+The component view locates request dispatch, the `CurrentSession` read projection, and persistence; route context stays in the web client.
 
 ![Navigate with context and preserve form input: c4 component](diagrams/c4-component.png)
 
@@ -109,11 +126,13 @@ The class view shows proposed typed requests, interface consumption, and relatio
 
 ![Navigate with context and preserve form input: class structure](diagrams/class-structure.png)
 
-Check session and restore a permitted route follows the sequence below. The flow traces its enforcing steps to `L2-029` and includes rejection or recovery paths.
+Check session and restore a permitted route follows the sequence below. The flow traces its enforcing steps to `L2-029`.
+It covers the stored return path, sign-in, the capability refresh, and the record's `200`, `401`, `403`, and `404` outcomes.
 
 ![Check session and restore a permitted route](diagrams/sequence-restore-route.png)
 
 Confirm navigation away from unsaved input remains a client-side behavior with no mutation request for discarded input.
+It covers clean, pending, and dirty drafts, and a session that ends while a draft is dirty.
 
 ![Confirm navigation away from unsaved input](diagrams/sequence-leave-dirty-form.png)
 

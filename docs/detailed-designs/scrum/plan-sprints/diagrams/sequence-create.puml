@@ -16,7 +16,7 @@ skinparam package {
 title Behavior - Create planned sprint
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "SprintPlanningPage / SprintView" as page
+  participant "SprintsPage / SprintFormDialog / SprintView" as page
   participant "ISprintService / SprintService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,49 +31,56 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Create planned sprint
+actor -> page : Plan sprint with name, goal, and Toronto start and end dates
 page -> client : Build typed CreateSprintCommand
 client -> access : POST /api/workspaces/{id}/sprints
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
+alt Missing, invalid or expired JWT; deactivated account
+  access --> client : 401; audit denial without payloads
+  client --> page : Clear session; sign in with the Sprints tab as return route
+else Authenticated without the required permission
+  access --> client : 403; audit denial without payloads
+  client --> page : Keep input; explain that planning sprints is not permitted
 else Authorized
   access -> ctrl : Authorized request
-ctrl -> validation : Send CreateSprintCommand through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
-alt Invalid request
-  validation --> ctrl : 400 field errors; no business mutation
-  ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
-else Valid request
-  validation -> handler : Handle CreateSprintCommand
-  handler -> db : Lock/read workspace mode
-  db --> handler : Scrum mode
-  handler -> entity : L2-022 create Planned sprint with valid Toronto dates
-  entity --> handler : New sprint
-  alt Kanban mode or invalid fields
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    handler -> db : L2-039 / L2-040 commit business state and success audit together
-    alt Commit fails
-      db --> handler : Roll back business state and success audit
-      handler --> ctrl : Generic 500 with correlation ID
-      ctrl --> client : Failure; no successful-save claim
-      client --> page : Keep draft / restore saved placement
-    else Commit succeeds
-      db --> handler : New committed version
-    handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+  ctrl -> validation : Send CreateSprintCommand through MediatR 12.5.0
+  validation -> validation : L2-022 trim; name 1-200, goal 1-2,000, valid dates, end on or after start
+  alt Missing, over-limit or malformed fields; end before start
+    validation --> ctrl : 400 field errors; nothing read or changed
+    ctrl --> client : Validation ProblemDetails
+    client --> page : Keep all input; focus the linked error summary
+  else Valid request
+    validation -> handler : Handle CreateSprintCommand
+    handler -> db : Lock workspace; read existence and delivery mode
+    db --> handler : Workspace and mode
+    alt Workspace not found
+      handler --> ctrl : 404; nothing created
+      ctrl --> client : ProblemDetails (not found)
+      client --> page : Close dialog; project not-found state linking to Projects
+    else Workspace in Kanban mode (L2-027.3)
+      handler --> ctrl : 409 sprints paused; nothing created
+      ctrl --> client : ProblemDetails (sprints paused)
+      client --> page : Keep input; explain that sprints are paused in Kanban mode; no retry
+    else Scrum mode
+      handler -> entity : L2-022 create Planned sprint with Toronto dates and version 1
+      entity --> handler : New planned sprint
+      handler -> db : L2-039 / L2-040 insert sprint and success audit in one transaction
+      alt Commit fails
+        db --> handler : Roll back sprint and success audit
+        handler --> ctrl : Generic 500 with correlation ID
+        ctrl --> client : Failure; no successful-save claim
+        client --> page : Keep all input; failed state shows the reference ID; Save retries
+      else Commit succeeds
+        db --> handler : New sprint ID and version
+        handler --> ctrl : Created sprint
+        ctrl --> client : 201 with sprint ID and version
+        client --> page : Update signal state
+        page --> actor : Announce the planned sprint; open sprint planning to choose stories
+      end
     end
   end
-end
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).

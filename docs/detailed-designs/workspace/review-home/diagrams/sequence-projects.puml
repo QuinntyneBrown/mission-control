@@ -16,59 +16,69 @@ skinparam package {
 title Behavior - Read workspace progress summaries
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "HomePage / HomeView" as page
+  participant "HomePage / WorkspaceProgressView" as page
   participant "IHomeService / HomeService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
   participant "CurrentAccountAuthorization" as access
   participant "HomeController" as ctrl
 end box
-box "Backend - MissionControl.Application and Domain" #ECFDF3
+box "Backend - MissionControl.Application" #ECFDF3
   participant "ValidationBehavior" as validation
   participant "GetWorkspaceProgressQueryHandler" as handler
-  participant "HomeSummary" as entity
+  participant "WorkspaceProgressPage" as projection
 end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Read workspace progress summaries
-page -> client : Build typed GetWorkspaceProgressQuery
-client -> access : GET /api/home/projects
+actor -> page : Open /home, or Retry in Projects
+page -> page : state = Loading; section keeps its shape with skeletons (L2-032.1)
+page -> client : projects(GetWorkspaceProgressQuery page 1, pageSize 25)
+client -> access : GET /api/home/projects?page=1&pageSize=25
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
-else Authorized
-  access -> ctrl : Authorized request
-ctrl -> validation : Send GetWorkspaceProgressQuery through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
-alt Invalid request
-  validation --> ctrl : 400 field errors; no business mutation
-  ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
-else Valid request
-  validation -> handler : Handle GetWorkspaceProgressQuery
-  handler -> db : L2-028 bounded project list and full per-project type/status aggregates
-  db --> handler : SQL result / current records
-  handler -> entity : Project mode, name, counts and filtered record links
-  entity --> handler : Workspace summaries
-  alt Invalid paging / request unavailable
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    db --> handler : Bounded persisted projection; full matching count
-    handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+alt 401: token absent, invalid or expired; account deactivated or credential version changed
+  access --> client : 401 ProblemDetails; denial audited without payloads
+  client -> client : Clear in-memory session and protected caches (L2-003)
+  client --> page : Unauthenticated
+  page --> actor : AuthenticationGuard stores /home; sign-in shows "Your session ended"
+else Authenticated (profile P: every active role reads workspaces and work, so no 403 path)
+  access -> ctrl : Authenticated request
+  ctrl -> validation : Send GetWorkspaceProgressQuery through MediatR 12.5.0
+  validation -> validation : L2-045 page at least 1; pageSize 1 to 100 (default 25)
+  alt 400: page or pageSize out of range
+    validation --> ctrl : Field errors with page-size message; nothing read (L2-045.2)
+    ctrl --> client : 400 Validation ProblemDetails
+    client --> page : state = Failed
+    page --> actor : Section alert with Retry (HomePage itself always sends pageSize 25)
+  else Valid request
+    validation -> handler : Handle GetWorkspaceProgressQuery
+    handler -> db : L2-028 one read transaction: workspace page ordered by name then ID, total workspace count, and work items of those workspaces counted by type and status
+    alt SQL unavailable or unexpected failure
+      db --> handler : Exception
+      handler --> ctrl : Unhandled failure
+      ctrl --> client : 500 with correlation ID; diagnostic record written (L2-043)
+      client --> page : state = Failed(referenceId)
+      page --> actor : "We couldn't load projects" with reference ID and Retry; Leads and Sprints stay (section-error)
+    else Page and counts read
+      db --> handler : Workspaces, total count, grouped counts (each item counted once)
+      handler -> projection : Fill absent type and status pairs with 0; attach active and next planned sprint
+      projection --> handler : WorkspaceProgressPage
+      handler --> ctrl : WorkspaceProgressPage
+      ctrl --> client : 200 WorkspaceProgressPage
+      alt totalCount = 0
+        client --> page : state = Empty
+        page --> actor : "No projects yet"; New project for administrators, explanation for collaborators (L2-032.2)
+      else Workspaces exist
+        client --> page : state = Ready(WorkspaceProgressPage)
+        page --> actor : Name, mode and count table per project; counts open the filtered work list (L2-028.2)
+      end
+    end
   end
 end
-end
-note over ctrl, db
-Unexpected failures return generic 500 plus correlation ID (L2-043).
-Diagnostics exclude secrets and contact payloads.
+note over page, db
+Counts cover every persisted work item, not the loaded page (L2-028.1, L2-045).
+The section hint shows totalCount; View all projects reaches workspaces beyond the first page.
 end note
 @enduml

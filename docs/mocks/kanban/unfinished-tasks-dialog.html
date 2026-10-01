@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Unfinished tasks confirmation · Mission Control mock</title>
-  <meta name="description" content="Confirmation shown before marking a story Done while it still has unfinished tasks, including a refreshed count from the server and a saving state.">
+  <meta name="description" content="Confirmation shown before marking a story Done while it still has unfinished tasks, showing the unfinished count returned by the server, a refreshed count after tasks change, and saving and failed states.">
   <meta name="mock-area" content="Kanban">
-  <meta name="mock-requirements" content="L2-021, L2-024.3, L2-033.2, L2-034, L2-035">
+  <meta name="mock-requirements" content="L2-021, L2-024.3, L2-031.3, L2-033.2, L2-034, L2-035, L2-043.4">
   <link rel="stylesheet" href="../assets/tokens.css">
   <link rel="stylesheet" href="../assets/mocks.css">
   <script src="../assets/mocks.js" defer></script>
@@ -22,6 +22,7 @@
           <option value="default">Confirm with 3 unfinished tasks</option>
           <option value="server-count">Tasks changed (409)</option>
           <option value="saving">Saving</option>
+          <option value="failed">Save failed</option>
         </select>
       </label>
       <a href="../index.html">All mocks</a>
@@ -29,9 +30,10 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">Shown whenever a story with unfinished tasks is marked Done: by dragging, the Move dialog, a card menu, or the story's status field, on Kanban and sprint boards alike. Focus starts on "Keep in progress". Keeping it leaves the status unchanged, and a dragged card snaps back to its last saved place.</p>
-    <p class="mock-note" data-when="server-count" hidden>Tasks changed after the dialog opened, so the server refused with the current count (409). Nothing changed; the person confirms again with the new number.</p>
+    <p class="mock-note" data-when="default">Opens when the server refuses a Done change because tasks are unfinished (409) and returns their count: after dragging, the Move dialog, a card menu, or the story's status field, on Kanban and sprint boards alike. It shows the count only. Focus starts on "Keep in progress". Keeping it sends nothing and leaves the status unchanged; a dragged card snaps back to its last saved place. "Mark story Done" resends the same move or status change with the returned completion condition.</p>
+    <p class="mock-note" data-when="server-count" hidden>Tasks changed after the dialog opened, so the server refused the confirmation with the current count (409). Nothing changed; the person confirms again with the new number.</p>
     <p class="mock-note" data-when="saving" hidden>Only the story status changes; task statuses stay as they are. On success a toast says "Story marked Done — "Volunteers can join a build team" still has 3 open tasks."</p>
+    <p class="mock-note" data-when="failed" hidden>An unexpected server error (500): nothing changed and the story is still In Progress. The dialog stays open with the same count, so "Mark story Done" retries the same confirmed request; "Keep in progress" closes it and restores the saved view. The reference ID matches the server's diagnostic record.</p>
   </div>
 
   <div class="mock-screen">
@@ -138,31 +140,24 @@
               <span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>
               <div class="mc-alert__body">
                 <p class="mc-alert__title">The tasks changed</p>
-                <p class="mc-alert__text">Mateo Silva reopened "Write confirmation message copy" while you were deciding. Nothing was saved. Check the new count and confirm again.</p>
+                <p class="mc-alert__text">A task changed while you were deciding. Nothing was saved. Check the new count and confirm again.</p>
+              </div>
+            </div>
+            <div class="mc-alert mc-alert--danger" data-when="failed" hidden>
+              <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+              <div class="mc-alert__body">
+                <p class="mc-alert__title">We couldn't mark this story Done</p>
+                <p class="mc-alert__text">Nothing changed. It's still In Progress and its tasks keep their status. Try again.</p>
+                <p class="mc-ref">Reference ID <code>5c2a-91e7-d40f</code>
+                  <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="5c2a-91e7-d40f"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                </p>
               </div>
             </div>
           </div>
 
           <div class="mc-stack mc-stack--sm" id="unfinished-desc">
-            <p><strong><span data-unless="server-count">3 of 5 tasks aren't done</span><span data-when="server-count" hidden>4 of 5 tasks aren't done</span></strong>. Tasks keep their current status.</p>
-            <ul class="mc-list" aria-label="Unfinished tasks">
-                <li class="mc-list__item" data-when="server-count" hidden>
-                  <div class="mc-list__main"><span class="mc-list__title">Write confirmation message copy</span></div>
-                  <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span>
-                </li>
-                <li class="mc-list__item">
-                  <div class="mc-list__main"><span class="mc-list__title">Add team capacity limits</span></div>
-                  <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span>
-                </li>
-                <li class="mc-list__item">
-                  <div class="mc-list__main"><span class="mc-list__title">Review accessibility of the sign-up flow</span></div>
-                  <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
-                </li>
-                <li class="mc-list__item">
-                  <div class="mc-list__main"><span class="mc-list__title">Publish team list for mentors</span></div>
-                  <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
-                </li>
-            </ul>
+            <p><strong><span data-unless="server-count">3 tasks aren't done</span><span data-when="server-count" hidden>4 tasks aren't done</span></strong>.</p>
+            <p>Only the story is marked Done. Its tasks keep their current status.</p>
           </div>
         </div>
 

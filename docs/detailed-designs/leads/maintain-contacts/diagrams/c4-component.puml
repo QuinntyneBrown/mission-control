@@ -2,7 +2,7 @@
 !include <C4/C4_Component>
 LAYOUT_WITH_LEGEND()
 title Components - Create and edit lead contacts
-Container(web, "Mission Control web client", "Angular", "LeadDirectoryPage / LeadView")
+Container(web, "Mission Control web client", "Angular", "LeadDirectoryPage, LeadFormDialog / LeadView")
 ContainerDb(db, "Mission Control database", "SQL", "Versioned feature records and audit events")
 Container_Boundary(api, "MissionControl.Api runtime") {
   Component(ctrl, "LeadsController", "API boundary", "Binds request and dispatches through MediatR 12.5.0")

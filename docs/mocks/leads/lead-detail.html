@@ -35,8 +35,8 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">Quinntyne Brown's City contact is seeded separately from the administrator account. The missing phone reads "Not provided"; no number is invented. Email and phone open the viewer's own mail or phone app; Mission Control sends nothing.</p>
-    <p class="mock-note" data-when="lead" hidden>Grace Mensah is the responsible lead for Prayer Wall App, so Delete opens the blocked explanation until that project is reassigned.</p>
+    <p class="mock-note" data-when="default">Quinntyne Brown's City contact is seeded separately from the administrator account. "City Lead" marks the City contact whose email is the configured designated email; it is a contact label, never an account role. The missing phone reads "Not provided"; no number is invented. Email and phone open the viewer's own mail or phone app; Mission Control sends nothing.</p>
+    <p class="mock-note" data-when="lead" hidden>The lead's details include the projects that name Grace Mensah as responsible lead. Because Prayer Wall App is listed, Delete opens the blocked explanation directly, without a delete request, until that project is reassigned.</p>
     <p class="mock-note" data-when="saved" hidden>After a successful edit the dialog closes, this view shows the saved values, focus returns to Edit, and the toast is announced politely.</p>
     <p class="mock-note" data-when="collaborator" hidden>Collaborators can read every contact detail. Edit and Delete are absent and the notice explains why; the API also refuses those changes.</p>
     <p class="mock-note" data-when="not-found" hidden>A deleted or mistyped lead link (API 404) shows this page with a way back, never an empty layout.</p>
@@ -125,7 +125,7 @@
               <h1 class="mc-page-header__title" tabindex="-1"><span data-when="default">Quinntyne Brown</span><span data-when="lead saved collaborator" hidden>Grace Mensah</span></h1>
               <div class="mc-page-header__meta">
                 <span data-when="default"><span class="mc-pill mc-pill--city"><span class="mc-icon mc-icon--category-city" aria-hidden="true"></span>City</span></span>
-                <span data-when="default"><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span>City Lead</span></span>
+                <span data-when="default"><span class="mc-pill mc-pill--city"><span class="mc-icon mc-icon--category-city" aria-hidden="true"></span>City Lead</span></span>
                 <span data-when="lead saved collaborator" hidden><span class="mc-pill mc-pill--prayer"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer</span></span>
               </div>
             </div>

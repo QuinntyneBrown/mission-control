@@ -18,16 +18,19 @@ The first seven contain user-facing vertical slices; operations cover initializa
 | `backend/src/MissionControl.Application` | Per-feature commands, queries, MediatR `12.5.0` handlers, validators, and data/security ports; references Domain. |
 | `backend/src/MissionControl.Infrastructure` | SQL adapters, hashing, token issuance, initialization, and diagnostics; implements Application ports. |
 | `backend/src/MissionControl.Api` | Composition, authentication/authorization middleware, thin controllers, ProblemDetails, and health endpoints; no business logic in controllers. |
+| `backend/src/MissionControl.Operations`, `e2e/performance` | Release tooling, not acceptance suites. The .NET console (Microsoft.Extensions DI, Options, Configuration) captures and restores backups and measures API load over HTTP; it references no other Mission Control project. The Playwright-library script times cold Chromium views against the production build. Records go to `docs/operations/`. |
 | `backend/tests` | API integration acceptance checks against the selected SQL provider; initialization and concurrency checks use real transactional SQL. |
-| `frontend/projects/api` | Singular `I<Entity>Service` contracts and tokens together in `<entity>.service.contract.ts`; separate unprefixed HTTP implementations. |
+| `frontend/projects/api` | Singular `I<Entity>Service` contracts and tokens together in `<entity>.service.contract.ts`; separate unprefixed HTTP implementations and `<entity>.service.mock.ts` mock adapters. |
 | `frontend/projects/domain` | Service-consuming rendering components inject tokens and hold state in signals; no HTTP calls. |
 | `frontend/projects/components` | Presentational inputs/outputs only; no application services or imports from sibling projects. |
 | `frontend/projects/mission-control` | Routed pages, guards, application dialogs, and composition. Dependencies run application → domain → api; presentational components remain independent. |
 | `design-system/` | Independent package/build/static deployment and authoritative `--mc-` token copy; no application runtime dependency. |
-| `e2e/page-objects`, `e2e/specs` | Chromium-only Playwright acceptance workflows; page objects own selectors and interactions. |
+| `e2e/page-objects`, `e2e/specs` | Chromium-only Playwright acceptance workflows against the `e2e` mock build; page objects own selectors and interactions. |
 
 Every backend type has its own matching file and namespace. Frontend component class, template, and stylesheet remain separate.
-Production composition alone imports concrete service adapters; consumers inject interface tokens. Test composition binds mocks through those same tokens.
+Consumers inject interface tokens only. Each HTTP adapter (`<entity>.service.ts`) and its mock adapter (`<entity>.service.mock.ts`) are separate files in `frontend/projects/api`; no consumer imports either.
+The application's providers file binds every token to its HTTP adapter. An `e2e` Angular build configuration replaces that file through `fileReplacements` with one binding each token to its mock.
+Playwright acceptance specs in `e2e/specs` run only against the `e2e` build, so a spec never reaches a real adapter.
 HTTP and observable-to-signal conversion stay in `api`; domain state uses signals. Microsoft.Extensions provides DI, Options, and Configuration.
 
 The request path is API middleware → bound controller request → MediatR validation → feature handler → domain/data port → Infrastructure SQL.
@@ -57,14 +60,23 @@ Client feature-state variants distinguish loading, ready, empty, failed, and pen
 
 Application data ports expose bounded query specifications and transactional changes; Infrastructure owns SQL parameterization and constraint-error translation.
 Versioned writes use `WHERE Id = ... AND Version = expectedVersion` or equivalent provider-native conditions and return `409` when stale.
+Edit forms submit the version they opened. On a stale-version `409` the form keeps the attempted values and reads the latest version once (no resubmission).
+Reload latest adopts the latest values and version while the "Your edit" / "Latest saved" comparison stays visible. Conflict copy is neutral, without person or time attribution.
+Deletes carry no expected version; L2-041 versions edits. Delete handlers re-check the L2 rules (children, open sprint membership, references, history) inside the workspace or record transaction before deleting.
+A delete of a missing record returns `404`; the UI closes the dialog, reloads the list without the record, and announces that it was already deleted.
+Marking a story Done with unfinished tasks returns `409` with category `unfinished-tasks` and the current unfinished count.
+Any board or the story detail then opens `UnfinishedTasksDialog`, an application dialog in `frontend/projects/mission-control` that shows the count only.
+Mark story Done resubmits the same command with the returned `StoryCompletionCondition`; Keep restores the saved view and sends nothing.
 Workspace mutations acquire the same workspace transaction lock before hierarchy/order, board, mode, or sprint state changes.
 The lock provides a simple initial correctness boundary; L2-046 measurement evaluates its performance under the proposed workload.
 Multi-record changes include their success audit before commit. Expected constraint races translate to validation/conflict results, and failed transactions leave no successful audit.
-Audit denials/throttles append separately without secret or contact payloads. Diagnostics are restricted operational data.
+Denials, throttles, and rejected protected or permission changes append a `Rejected` audit event through the restricted append operation, outside any rolled-back business transaction.
+Those events carry no secret or contact payloads. Diagnostics are restricted operational data.
 
 Pagination defaults to 25 and caps at 100. Board/hierarchy batches cap at 100; full counts precede paging.
 Stable ID tie-breakers avoid ambiguous ordering under unchanged data. Filter changes reset the first page; adapters ignore superseded read responses.
-Optimistic moves keep a saved snapshot. Conflicts reload before another explicit mutation; uncertain transport failures read persisted state before retry.
+Optimistic moves keep a saved snapshot. Stale-version and rule conflicts reload persisted state before another explicit mutation; the unfinished-tasks `409` instead opens its confirmation.
+Uncertain transport failures read persisted state before retry.
 There is no automatic mutation retry that claims a failed request did not commit.
 
 Responsive profile R covers seven widths from 320 through 1920 CSS pixels at 800 pixels high.
@@ -78,7 +90,8 @@ The mocks provide static state/interaction evidence; backend constraints and API
 | SQL provider and versions of .NET, Angular, SQL, and tooling | `<TO SUPPLY>` before dependent implementation. |
 | Hosting topology, production HTTPS, configured CORS origins, signing algorithm/key source, secret-management facility | `<TO SUPPLY>` before authentication/deployment implementation. |
 | Hash adapter algorithm parameters and provider-specific migration/order/transaction locking | `<TO SUPPLY>` before security/persistence implementation. |
-| Backup commands, storage access, schedule, retention, responsible operator, restore commands, and latest rehearsal | `<TO SUPPLY>` before release. |
+| Backup commands, storage access, schedule, retention, responsible operator, restore commands, and latest rehearsal | `<TO SUPPLY>` in `docs/operations/recovery-runbook.md` before release. |
+| Release measurement composition | L2-046.2 cold-view runs use the production HTTP composition against the isolated fixture, kept separate from `e2e/specs`; all acceptance specs keep the mock composition. |
 | Design-system build/hosting commands and maintainer | `<TO SUPPLY>` before independent artifact delivery. |
 | Project-local display keys such as `HCK-112` | Mock representation; allocation policy `<TO SUPPLY>`, separate from stable required IDs. |
 | City seed completion marker, all-account email immutability, preserved Kanban Sprints tab | Explicit design proposals explained in the relevant feature pages; no silent specification amendment. |

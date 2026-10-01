@@ -29,12 +29,17 @@ MediatR remains pinned to `12.5.0`. Microsoft.Extensions supplies dependency inj
 
 `AuditEventWriter` in Infrastructure implements the Application `IAuditEventWriter` port.
 Mutation handlers include success audit inserts in their business transaction, so rollback removes both.
-Authentication and authorization record denied/throttled outcomes through a separate restricted append operation with no successful-business claim.
+Authentication, authorization, and protected-identity checks record denied, rejected (409 protected-identity), and throttled outcomes through a separate restricted append operation.
+That append runs outside any business transaction, so a rolled-back mutation never removes it, and it makes no successful-business claim.
+`AuditOutcome` is `Succeeded`, `Rejected`, `Denied`, or `Throttled`; the audit-log outcome filter offers exactly these four.
 Logs and audit records omit passwords, hashes, tokens, signing keys, connection strings, and contact payloads.
 Optional actor ID remains null for unknown callers; email is not substituted for identity.
 
 `AuditLogPage` uses `/audit` and requests actor, area, outcome, and Toronto calendar-date filters combined with AND.
 These filter controls and Toronto time display come from the audit-log mock. SQL stores UTC; boundary conversion uses `America/Toronto` and half-open UTC intervals.
+The actor filter lists accounts only. Events without a known actor display Unknown and appear when no actor filter is set.
+Each row shows the entity type with its ID shortened to the first eight characters; events without an entity ID name the attempt instead.
+Invalid filters, an inverted date range, or a page size above 100 return `400`; the page keeps the filters and shows the field message.
 Records sort by timestamp descending then stable ID and default to 25 per page, capped at 100.
 The view is read-only; no audit edit/delete endpoint exists. Production logs remain restricted operational data, separate from this administrative audit view.
 Changing filters resets page one and announces the matching count; zero matches offer clear filters.

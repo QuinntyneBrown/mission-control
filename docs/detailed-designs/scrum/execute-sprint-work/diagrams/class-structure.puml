@@ -29,6 +29,7 @@ class BoardView {
 }
 interface IBoardService {
   +read(request: GetActiveSprintBoardQuery): Promise<FeatureResult>
+  +move(request: MoveStoryCommand): Promise<FeatureResult>
 }
 class BoardService {
   -http: HttpClient
@@ -69,5 +70,28 @@ BoardsController ..> GetActiveSprintBoardQuery : dispatches
 GetActiveSprintBoardQueryHandler ..> GetActiveSprintBoardQuery : handles
 GetActiveSprintBoardQueryHandler --> SprintBoardCard : loads / applies
 GetActiveSprintBoardQueryHandler ..> IMissionControlDataSession : uses
+class MoveStoryCommand {
+  +workspaceId: Guid
+  +storyId: Guid
+  +sprintBoardId: Guid?
+  +destination: WorkStatus
+  +targetPosition: int
+  +expectedStoryVersion: long
+  +expectedBoardVersion: long
+  +completionCondition: StoryCompletionCondition?
+}
+class MoveStoryDialog {
+  +destination: Signal<WorkStatus>
+}
+class UnfinishedTasksDialog {
+  +unfinishedCount: Signal<int>
+}
+class SprintScopeDialog {
+  +selection: Signal<Guid[]>
+}
+IBoardService ..> MoveStoryCommand : sends with sprintBoardId
+SprintBoardPage ..> MoveStoryDialog : opens from Move (kanban move-story-cards)
+SprintBoardPage ..> UnfinishedTasksDialog : opens on 409 unfinished-tasks (kanban confirm-story-completion)
+SprintBoardPage ..> SprintScopeDialog : opens from Remove or Change scope (start-and-adjust-sprint)
 
 @enduml

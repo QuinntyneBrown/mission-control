@@ -19,6 +19,8 @@ All named production types are proposed; the repository currently contains requi
 | Part | Responsibility and architectural home |
 | --- | --- |
 | `BacklogPage` | Routed page or dialog owned by `frontend/projects/mission-control`; composes the domain library and presentational components. |
+| `WorkHierarchyPage`, `WorkItemDetailPage` | Routed pages in `frontend/projects/mission-control` that also compose `WorkOrderView` for sibling moves. |
+| `MovePositionDialog` | Application dialog in `frontend/projects/mission-control` for absolute sibling or backlog positions; uses `WorkOrderView`. |
 | `WorkOrderView` | Domain component in `frontend/projects/domain`; injects `WORK_ORDER_SERVICE` and holds feature state in signals. |
 | `IWorkOrderService`, `WORK_ORDER_SERVICE` | Interface and token in `frontend/projects/api/work-order.service.contract.ts`; the consumer imports the contract only. |
 | `WorkOrderService` | Production HTTP adapter in `api`; owns HTTP calls and observable-to-signal conversion. Composition binds a mock adapter for Chromium Playwright. |
@@ -33,15 +35,23 @@ MediatR remains pinned to `12.5.0`. Microsoft.Extensions supplies dependency inj
 Each story has a `StoryBacklogPosition` row independent of its WorkItem sibling position and board placement.
 Backlog pages default to 25, ordered by priority then ID. New stories append; deletion removes their live ordering rows.
 Move up/down, pointer dragging, and absolute Move to position all dispatch typed move commands.
+Below `768px` Move up and Move down sit in each row's menu, marked unavailable at either end of the order.
 Absolute positions refer to the full ordered set, so an item can move to a position on an unloaded page.
+Ranks are absolute across pages: Move up on the first row of page 2 moves the story to rank 25 on page 1 and announces the new position (`paged` mock state).
+Dragging stays within the visible page; Move to position reaches any rank. Totals always count every story, not the loaded page.
 The API validates the destination against the persisted set rather than the visible page.
 
-`ReorderSiblingCommandHandler` and `PrioritizeStoryCommandHandler` lock the workspace order row and compare `expectedOrderVersion`.
+`ReorderSiblingCommandHandler` and `PrioritizeStoryCommandHandler` take the workspace transaction lock and compare `expectedOrderVersion` with the affected order set.
+An order set is either the siblings under one parent or the workspace story backlog.
 The simple design rewrites only the affected contiguous position interval in one transaction.
 Unique keys protect `(WorkspaceId, ParentId, Type, SiblingPosition)` and `(WorkspaceId, BacklogPosition)`.
 The SQL adapter uses temporary positions or equivalent provider-safe deferred ordering during interval updates; the provider-specific strategy is `<TO SUPPLY>`.
-The aggregate order version increments after reorder, insert, delete, or reparent; stale moves return `409`.
-Cross-workspace IDs and invalid positions return `400`. Failed optimistic moves restore the last saved order and retain focus; conflicts require reload before another move.
+Each order set's version increments after any reorder, insert, delete, or reparent that touches it.
+Cross-workspace IDs and positions outside 1 to the full count return `400` with a position message (`out-of-range` mock state).
+A missing item or workspace returns `404`; the view reloads without the item and announces that it no longer exists.
+A failed save returns `500`; the view restores the last saved order, keeps focus on the move control, and Try again resends the same move (`reorder-failed` and `failed` mock states).
+A stale `expectedOrderVersion` returns `409` and nothing is applied. The view restores the order it showed and offers only Reload (`reorder-conflict` and `conflict` mock states).
+It never resends the move, because a position chosen from an outdated order could land somewhere unintended.
 
 Kanban backlog omits sprint actions; preserved sprint memberships remain readable in paused Kanban mode.
 In Scrum, Add to sprint delegates to sprint planning or explicit active-scope change; Done and already-allocated stories show eligibility reasons.
@@ -64,8 +74,8 @@ Field errors connect to inputs; asynchronous results use status or alert announc
 
 Mock input and review references:
 
-- [Backlog · Mission Control mock](../../../mocks/backlog/backlog.html); review states: `default`, `add-to-sprint`, `kanban`, `kanban-preserved`, `collaborator`, `empty`, `reorder-failed`, `loading`, `error`.
-- [Move to position · Mission Control mock](../../../mocks/work/move-position-dialog.html); review states: `default`, `backlog`, `out-of-range`, `failed`.
+- [Backlog · Mission Control mock](../../../mocks/backlog/backlog.html); review states: `default`, `add-to-sprint`, `kanban`, `kanban-preserved`, `collaborator`, `paged`, `empty`, `reorder-failed`, `reorder-conflict`, `loading`, `error`.
+- [Move to position · Mission Control mock](../../../mocks/work/move-position-dialog.html); review states: `default`, `backlog`, `out-of-range`, `conflict`, `failed`.
 - [Work hierarchy · Mission Control mock](../../../mocks/work/work-hierarchy.html); review states: `default`, `move-menu`, `collaborator`, `empty`, `large`, `batch-error`, `loading`, `error`.
 
 Implementation proceeds one behavior at a time using the linked Given-When-Then criteria. An API integration acceptance check first fails for the expected missing behavior.

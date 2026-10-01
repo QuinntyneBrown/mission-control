@@ -16,7 +16,7 @@ skinparam package {
 title Behavior - Edit planned fields and story scope
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "SprintPlanningPage / SprintView" as page
+  participant "SprintPlanningPage / SprintFormDialog / SprintView" as page
   participant "ISprintService / SprintService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,52 +31,78 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Edit planned fields and story scope
-page -> client : Build typed SaveSprintPlanCommand
+actor -> page : Save planned fields (SprintFormDialog) or story selection (SprintPlanningPage)
+page -> client : Build typed SaveSprintPlanCommand with expected sprint version
 client -> access : PUT /api/workspaces/{id}/sprints/{sprintId}/plan
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
+alt Missing, invalid or expired JWT; deactivated account
+  access --> client : 401; audit denial without payloads
+  client --> page : Clear session; sign in with the planning page as return route
+else Authenticated without the required permission
+  access --> client : 403; audit denial without payloads
+  client --> page : Keep input; explain that planning sprints is not permitted
 else Authorized
   access -> ctrl : Authorized request
-ctrl -> validation : Send SaveSprintPlanCommand through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
-alt Invalid request
-  validation --> ctrl : 400 field errors; no business mutation
-  ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
-else Valid request
-  validation -> handler : Handle SaveSprintPlanCommand
-  handler -> db : Lock workspace; read sprint/version and all selected stories/memberships
-  db --> handler : Current eligibility and exclusive allocation
-  handler -> entity : L2-022 reject new Done/foreign stories; replace planned scope
-  entity --> handler : Valid whole plan
-  handler -> db : Save fields and open membership together; tasks derive scope
-  db --> handler : SQL result / current records
-
-  alt Already allocated story, nonplanned sprint, or stale version
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    handler -> db : L2-039 / L2-040 commit business state and success audit together
-    alt Commit fails
-      db --> handler : Roll back business state and success audit
-      handler --> ctrl : Generic 500 with correlation ID
-      ctrl --> client : Failure; no successful-save claim
-      client --> page : Keep draft / restore saved placement
-    else Commit succeeds
-      db --> handler : New committed version
-    handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+  ctrl -> validation : Send SaveSprintPlanCommand through MediatR 12.5.0
+  validation -> validation : L2-022 trim; field limits, valid dates, end on or after start, distinct story IDs
+  alt Missing, over-limit or malformed fields; end before start
+    validation --> ctrl : 400 field errors; nothing read or changed
+    ctrl --> client : Validation ProblemDetails
+    client --> page : Keep all input; focus the linked error summary
+  else Valid request
+    validation -> handler : Handle SaveSprintPlanCommand
+    handler -> db : Lock workspace; read mode, sprint state and version, selected stories and their open memberships
+    db --> handler : Current mode, plan, story statuses and allocations
+    alt Workspace or sprint not found (or sprint in another workspace)
+      handler --> ctrl : 404; nothing changed
+      ctrl --> client : ProblemDetails (not found)
+      client --> page : Sprint not found state with Back to sprints
+    else Newly selected Done story or foreign-workspace story (L2-022.2)
+      handler --> ctrl : 400 identifying each story; nothing changed
+      ctrl --> client : Validation ProblemDetails per story
+      client --> page : Keep selection; mark each rejected story with its reason
+    else Workspace in Kanban mode (L2-027.3)
+      handler --> ctrl : 409 sprints paused; nothing changed
+      ctrl --> client : ProblemDetails (sprints paused)
+      client --> page : Explain the pause; plans stay readable; no retry
+    else Story already in another planned or active sprint (L2-022.3)
+      handler --> ctrl : 409 naming each allocated story and its sprint; nothing changed
+      ctrl --> client : ProblemDetails (already allocated)
+      client --> page : Keep selection; mark the story; save again after removing it
+    else Sprint no longer Planned
+      handler --> ctrl : 409 sprint started or closed; nothing changed
+      ctrl --> client : ProblemDetails (not planned)
+      client --> page : Explain that only planned sprints change here; link to its board or history
+    else Stale sprint version (L2-041.1)
+      handler --> ctrl : 409 changed since opened; nothing changed
+      ctrl --> client : ProblemDetails (stale version)
+      client --> page : Keep attempted values; read the latest version once; show the comparison; no resubmission
+      page --> actor : Reload latest adopts latest values and version; comparison stays visible
+    else Plan accepted
+      handler -> entity : L2-022 editPlan and setScope; keep selected stories that became Done
+      entity --> handler : Valid whole plan
+      handler -> db : L2-039 / L2-040 save fields, replace open membership, success audit in one transaction
+      alt Unique open-membership violation (concurrent allocation, L2-041.2)
+        db --> handler : Roll back fields, membership and audit
+        handler --> ctrl : 409 naming the story; nothing changed
+        ctrl --> client : ProblemDetails (already allocated)
+        client --> page : Keep selection; mark the story
+      else Commit fails
+        db --> handler : Roll back business state and success audit
+        handler --> ctrl : Generic 500 with correlation ID
+        ctrl --> client : Failure; no successful-save claim
+        client --> page : Keep values and selection; show the reference ID; Save retries
+      else Commit succeeds
+        db --> handler : New sprint version
+        handler --> ctrl : Saved plan
+        ctrl --> client : 200 with plan and version
+        client --> page : Update signals; removed stories return to the unallocated backlog
+        page --> actor : Announce the saved plan
+      end
     end
   end
-end
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).

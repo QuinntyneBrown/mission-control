@@ -31,44 +31,47 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Search and filter the directory
+actor -> page : Type search text or choose a category
+page -> page : Write search and category to route query; reset to page 1; show loading skeleton
 page -> client : Build typed ListLeadsQuery
-client -> access : GET /api/leads
+client -> access : GET /api/leads?search&category&page&pageSize
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
-else Authorized
+alt Missing, invalid, or expired JWT; inactive account
+  access --> client : 401; audit denial without payloads
+  client --> page : Clear in-memory session; require login; restore the directory route after login
+else Authenticated (every role reads contacts in profile P)
   access -> ctrl : Authorized request
 ctrl -> validation : Send ListLeadsQuery through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
-alt Invalid request
-  validation --> ctrl : 400 field errors; no business mutation
+validation -> validation : L2-045 page size 1-100; known category
+alt Page size outside 1-100 or unknown category
+  validation --> ctrl : 400 page-size or category message; nothing read
   ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
+  client --> page : Show load-error state with the readable message; Try again reloads page 1 at 25 per page
 else Valid request
   validation -> handler : Handle ListLeadsQuery
-  handler -> db : L2-010 parameterized substring search AND category; stable ordering
-  db --> handler : SQL result / current records
-  handler -> entity : Project safe contact list
-  entity --> handler : Contact rows and full matching count
-  alt Invalid category / page size
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    db --> handler : Bounded persisted projection; full matching count
-    handler --> ctrl : Typed result
-    ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+  handler -> db : L2-010 parameterized, escaped substring search AND category; order last name, first name, ID; one page
+  db --> handler : Page rows, total matching count, five category totals
+  handler -> entity : Project safe contact rows; isCityLead from category and designated email
+  entity --> handler : LeadDirectoryResult
+  handler --> ctrl : Typed result
+  ctrl --> client : 200 items, totalCount, categoryTotals
+  alt A newer search started meanwhile
+    client -> client : Discard this older response
+  else Latest search
+    alt Zero matches
+      client --> page : Show zero-result message with Clear filter; announce "No <category> leads found"
+    else Matches
+      client --> page : Render rows, pagination, and chip counts; announce "N leads found"
+    end
+    page --> actor : Results, counts, and controls stay reachable at every width
   end
 end
 end
 note over ctrl, db
-Unexpected failures return generic 500 plus correlation ID (L2-043).
+Unexpected failures return generic 500 plus correlation ID (L2-043);
+the page shows its load-error state with the reference ID and Try again.
 Diagnostics exclude secrets and contact payloads.
 end note
 @enduml

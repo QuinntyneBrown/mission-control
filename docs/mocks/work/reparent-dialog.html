@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Move to another parent · Mission Control mock</title>
-  <meta name="description" content="Reparent dialog that moves a story to another epic in the same project with a path preview, rejection, saving, and failure states.">
+  <meta name="description" content="Reparent dialog that moves a story to another epic in the same project with a path preview, deleted-target rejection, edit conflict, saving, and failure states.">
   <meta name="mock-area" content="Work hierarchy">
   <meta name="mock-requirements" content="L2-016.3, L2-016.4, L2-031, L2-033.2, L2-040.2">
   <link rel="stylesheet" href="../assets/tokens.css">
@@ -21,6 +21,7 @@
         <select data-mock-state>
           <option value="default">Choose a new parent</option>
           <option value="rejected">Target no longer valid</option>
+          <option value="conflict">Story changed meanwhile</option>
           <option value="saving">Moving</option>
           <option value="failed">Move failed</option>
         </select>
@@ -31,7 +32,8 @@
 
   <div class="mock-notes">
     <p class="mock-note" data-when="default">Only epics in this project are offered; the current parent is shown but can't be chosen. The preview shows the new path before anything changes. The search filters the list as you type.</p>
-    <p class="mock-note" data-when="rejected" hidden>The server refused the move because the chosen epic was deleted meanwhile. The hierarchy is unchanged.</p>
+    <p class="mock-note" data-when="rejected" hidden>Sponsor outreach had no stories, so an administrator could delete it while this dialog was open. The server refused the move to a parent that no longer exists, and the hierarchy is unchanged. The list keeps the person's choice marked invalid until another epic is chosen.</p>
+    <p class="mock-note" data-when="conflict" hidden>The story was changed or moved after this dialog opened, so its version no longer matched and the API answered 409. Nothing moved and the request is never resent; Move story stays unavailable until the reload. "Reload story" reads the story's current parent and the valid epics again, keeping the dialog open so a new choice can be made.</p>
     <p class="mock-note" data-when="saving" hidden>The move is one request; the story and its tasks change parent together or not at all.</p>
     <p class="mock-note" data-when="failed" hidden>Nothing moved. "Move story" retries the same request.</p>
   </div>
@@ -129,7 +131,17 @@
                 <span class="mc-icon mc-icon--x-circle" aria-hidden="true"></span>
                 <div class="mc-alert__body">
                   <p class="mc-alert__title">That epic can't be used</p>
-                  <p class="mc-alert__text">Judging and feedback was deleted while you were choosing. Nothing changed: the story is still under Venue and logistics. Choose another epic.</p>
+                  <p class="mc-alert__text">Sponsor outreach was deleted while you were choosing. Nothing changed: the story is still under Venue and logistics. Choose another epic.</p>
+                </div>
+              </div>
+              <div class="mc-alert mc-alert--warning" data-when="conflict" hidden>
+                <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">This story changed after you opened it</p>
+                  <p class="mc-alert__text">Nothing was moved. Reload the story to see its current parent, then choose again.</p>
+                  <div class="mc-alert__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-goto-state="default"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Reload story</button>
+                  </div>
                 </div>
               </div>
               <div class="mc-alert mc-alert--danger" data-when="failed" hidden>
@@ -161,7 +173,7 @@
                   data-attr-rejected="aria-invalid=true"
                   data-attr-saving="disabled">
               <legend>New parent epic</legend>
-              <p class="mc-field-error" id="move-choice-error" data-when="rejected" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Judging and feedback no longer exists. Choose another epic.</p>
+              <p class="mc-field-error" id="move-choice-error" data-when="rejected" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Sponsor outreach no longer exists. Choose another epic.</p>
               <div class="mc-choice-group__options">
                   <label class="mc-choice">
                     <input type="radio" name="parent" checked data-attr-saving="checked" data-attr-rejected="!checked" data-attr-failed="!checked">
@@ -178,10 +190,17 @@
                     </span>
                   </label>
                   <label class="mc-choice">
-                    <input type="radio" name="parent" data-attr-rejected="checked" data-attr-failed="checked">
+                    <input type="radio" name="parent" data-attr-failed="checked">
                     <span class="mc-choice__body">
                       <span class="mc-choice__title"><span class="mc-icon mc-icon--epic" aria-hidden="true"></span>Judging and feedback</span>
                       <span class="mc-choice__text">In Demo day showcase · 4 stories</span>
+                    </span>
+                  </label>
+                  <label class="mc-choice">
+                    <input type="radio" name="parent" data-attr-rejected="checked">
+                    <span class="mc-choice__body">
+                      <span class="mc-choice__title"><span class="mc-icon mc-icon--epic" aria-hidden="true"></span>Sponsor outreach</span>
+                      <span class="mc-choice__text">In Demo day showcase · No stories</span>
                     </span>
                   </label>
               </div>
@@ -192,14 +211,15 @@
               <div class="mc-alert__body">
                 <p class="mc-alert__title">New path</p>
                 <p class="mc-alert__text" data-unless="rejected failed">Grow Toronto's builder community › Hackathon team formation › Confirm venue accessibility checklist</p>
-                <p class="mc-alert__text" data-when="rejected failed" hidden>Demo day showcase › Judging and feedback › Confirm venue accessibility checklist</p>
+                <p class="mc-alert__text" data-when="failed" hidden>Demo day showcase › Judging and feedback › Confirm venue accessibility checklist</p>
+                <p class="mc-alert__text" data-when="rejected" hidden>No new path yet. The current path stays Grow Toronto's builder community › Venue and logistics › Confirm venue accessibility checklist until another epic is chosen.</p>
                 <p class="mc-alert__text mc-muted">It keeps its ID, tasks, and sprint membership and goes to the end of its new parent's list.</p>
               </div>
             </div>
           </div>
           <footer class="mc-dialog__footer">
             <button class="mc-button" type="button" data-nav="work-hierarchy.html" data-attr-saving="disabled">Cancel</button>
-            <button class="mc-button mc-button--primary" type="submit" data-attr-saving="aria-busy=true|aria-disabled=true">
+            <button class="mc-button mc-button--primary" type="submit" data-attr-saving="aria-busy=true|aria-disabled=true" data-attr-conflict="aria-disabled=true">
               <span class="mc-spinner" aria-hidden="true" data-when="saving" hidden></span>
               <span data-unless="saving">Move story</span>
               <span data-when="saving" hidden>Moving…</span>

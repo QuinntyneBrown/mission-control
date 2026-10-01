@@ -47,7 +47,11 @@ class Sprint {
   +endDate: DateOnly
   +status: SprintStatus
   +startedAtUtc: DateTimeOffset?
+  +startedByUserId: Guid?
+  +startedByName: string?
   +closedAtUtc: DateTimeOffset?
+  +closedByUserId: Guid?
+  +closedByName: string?
   +version: long
   +editPlan(name: string, goal: string, dates: DateRange): void
   +setScope(storyIds: Guid[]): void

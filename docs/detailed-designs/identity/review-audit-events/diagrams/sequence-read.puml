@@ -29,46 +29,52 @@ box "Backend - MissionControl.Application and Domain" #ECFDF3
   participant "AuditEvent" as entity
 end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
+  participant "IAuditEventWriter" as audit
   database "Mission Control SQL" as db
 end box
-actor -> page : Read and filter immutable audit events
-page -> client : Build typed ListAuditEventsQuery
+actor -> page : Open /audit or change a filter or page
+page -> page : Reset to page 1 on filter change; show loading skeleton
+page -> client : Build typed ListAuditEventsQuery (actor, area, outcome, Toronto dates, page)
 client -> access : GET /api/audit-events
-access -> access : L2-002 validate signature, issuer, audience, subject, expiry
+access -> access : L2-002 validate signature, issuer, audience, subject, expiry (zero clock skew)
 access -> db : Read current status, role and credential version
 db --> access : Current account access
-alt Missing / invalid account or JWT; forbidden capability
-  access --> client : 401 / 403; audit denial without payloads
-  client --> page : Clear session on 401 / show denied state on 403
-else Authorized
+alt Missing, invalid or expired JWT; inactive or missing account; credential version changed
+  access -> audit : Append Denied audit (restricted append; no payload)
+  access --> client : 401
+  client --> page : Clear in-memory session; open login (session-ended) with /audit to return to
+else Authenticated Collaborator (L2-039: administrators only)
+  access -> audit : Append Denied audit (restricted append; no payload)
+  access --> client : 403
+  client --> page : Show access-denied page; no audit data shown
+else Administrator
   access -> ctrl : Authorized request
-ctrl -> validation : Send ListAuditEventsQuery through MediatR 12.5.0
-validation -> validation : Validate request fields and bounds
-alt Invalid request
-  validation --> ctrl : 400 field errors; no business mutation
-  ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
-else Valid request
-  validation -> handler : Handle ListAuditEventsQuery
-  handler -> db : L2-039 bounded read of immutable event metadata; AND filters
-  db --> handler : SQL result / current records
-  handler -> entity : Project timestamp, actor ID, operation, target, outcome, correlation
-  entity --> handler : Safe audit rows; no secret or contact payload
-  alt Invalid filter / date range
-    handler --> ctrl : Typed failure for stated category; no partial mutation
-    ctrl --> client : ProblemDetails with readable category
-    client --> page : Preserve input / saved view; offer reload or retry
-  else Behavior succeeds
-    db --> handler : Bounded persisted projection; full matching count
-    handler --> ctrl : Typed result
+  ctrl -> validation : Send ListAuditEventsQuery through MediatR 12.5.0
+  validation -> validation : L2-045 page size 1-100; known outcome and area; from not after to
+  alt Invalid filter, date range or page size
+    validation --> ctrl : 400 field errors; nothing read
+    ctrl --> client : Validation ProblemDetails
+    client --> page : Keep the filters; show the field message beside the invalid filter
+  else Valid request
+    validation -> handler : Handle ListAuditEventsQuery
+    handler -> handler : Convert Toronto dates to half-open UTC interval
+    handler -> db : L2-039 bounded read of immutable event metadata; AND filters; newest first, then ID
+    db --> handler : Page of events and full matching count
+    handler -> entity : Project timestamp, actor ID, operation, entity type and ID, outcome, correlation ID
+    entity --> handler : Safe audit rows; no secret or contact payload
+    handler --> ctrl : 200 with rows and total count
     ctrl --> client : Success response
-    client --> page : Update signal state and announce outcome
-    page --> actor : Present persisted result / operational status
+    alt No matching events
+      client --> page : filtered-zero state: announce 0 events; offer Clear filters
+    else Events found
+      client --> page : Update signals; announce the matching count
+      page --> actor : Toronto time with UTC beneath; Unknown for events without an actor
+    end
   end
 end
-end
 note over ctrl, db
-Unexpected failures return generic 500 plus correlation ID (L2-043).
-Diagnostics exclude secrets and contact payloads.
+Unexpected failures return generic 500 plus correlation ID (L2-043);
+the page shows its error state with the reference ID and Try again.
+Viewing never changes the audit log; no edit or delete endpoint exists.
 end note
 @enduml

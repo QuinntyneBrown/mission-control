@@ -4,7 +4,7 @@
 
 Administrators provision login accounts privately and manage their current access.
 
-- **Designated administrator** — Quinntyne Brown account whose identity and highest capabilities remain protected
+- **Designated administrator** — Quinntyne Brown account whose name, email, active status, and highest capabilities remain protected
 - **Credential version** — counter that invalidates tokens issued before a password replacement
 
 Accounts remain separate from similarly named or emailed lead contacts. Deactivation preserves assignments and audit identity; account deletion is outside the baseline.
@@ -23,7 +23,9 @@ All named production types are proposed; the repository currently contains requi
 | `AccountService` | Production HTTP adapter in `api`; owns HTTP calls and observable-to-signal conversion. Composition binds a mock adapter for Chromium Playwright. |
 | `AccountsController` | Thin controller under `backend/src/MissionControl.Api/Controllers`, namespace `MissionControl.Api.Controllers`; binds, dispatches, and returns. |
 | `UserAccount` | Domain entity or Application read projection described below; Domain has no external project dependency. |
+| `DesignatedAdministratorPolicy` | Domain policy; decides protected-identity rejections before any mutation. |
 | `IMissionControlDataSession` | Application data port; the Infrastructure adapter runs parameterized queries and transaction commits. |
+| `IAuditEventWriter` | Application audit port; the Infrastructure adapter adds success events to the business transaction and appends `Rejected` or `Denied` events through the restricted append operation. |
 
 Commands, queries, handlers, and request validators live in Application feature folders. Each type has its own file; folders and namespaces agree.
 MediatR remains pinned to `12.5.0`. Microsoft.Extensions supplies dependency injection, Options, and Configuration.
@@ -35,15 +37,31 @@ New account names measure 1–100 characters; email measures at most 254 and nor
 Proposed passwords measure 12–128 characters without trimming. Role selection defaults to Collaborator in the mock.
 
 `ProvisionAccountCommandValidator` checks fields; a SQL unique index protects normalized email under concurrent provisioning.
+A duplicate normalized email returns `409`; the form keeps every value, including the password, and marks the email field.
+
+`UpdateAccountCommand` carries names, role, `expectedVersion`, and an optional `email`; active status is not part of it.
+The optional email exists only so that a changed email is rejected rather than silently dropped.
+When its normalized value differs from the stored email, the handler returns `409`. L2-008 protects the designated email; the proposed rule makes every other account email immutable too.
+That broader rule matches the account-form mock and remains a design proposal; L2 explicitly protects the designated email only.
+`ChangeAccountStatusCommand` carries `id`, `active`, and `expectedVersion` and serves the account-status dialog.
 Account edits carry `expectedVersion`; SQL updates compare that version and increment it atomically.
-The proposed design treats every existing account email as immutable, matching the account-form mock; L2 explicitly protects the designated email only.
-The broader immutability rule remains a design proposal. Forged designated-email or demotion requests return `409`.
-`DesignatedAdministratorPolicy` compares protected identity and rejects deactivation or loss of administrator access.
+
+`DesignatedAdministratorPolicy` rejects an email change, a first- or last-name change, demotion, or deactivation of the designated account.
+Its name stays Quinntyne Brown, as L2-006 requires after every initialization. The account form shows every designated field locked and offers only Close.
+A rejected designated-administrator change returns `409` and appends a `Rejected` audit event through the restricted append operation.
+That append runs outside the business transaction, so the rejection stays recorded while no business record changes. A rejected email change on any other account is recorded the same way.
+These protected-identity checks run before the version check, so a protected change is reported as protected even when it is also stale.
 Administrator capability evaluation includes all capabilities, including later additions, rather than relying on a fixed seeded grant list.
+
+On a stale-version `409` the form keeps the attempted values and reads the latest version once (no resubmission); Reload latest adopts the latest values and version while the comparison stays visible.
+A stale status change returns `409`; the status dialog reports that nothing changed and offers the latest account details without resubmitting.
+A stale password replacement returns `409`; the dialog keeps the typed password, reads the latest version once, and sends nothing until Replace password is chosen again.
+A missing account returns `404`; the detail page shows its not-found state with a link back to Accounts.
 
 Password replacement hashes the exact supplied value, increments `credentialVersion`, and commits both values with an audit event.
 Replacing the caller's own password clears that session immediately after success. Other prior tokens fail on their next request.
-Deactivation keeps the password and all assignments; only active accounts appear for new work assignments.
+Deactivation keeps the password and all assignments; the account's existing tokens return `401` on their next request.
+Only active accounts appear for new work assignments.
 Reactivation restores login using the existing password and role. No public registration or account-delete endpoint exists.
 
 The authenticated API evaluates current SQL permissions before feature dispatch. Validation V maps invalid fields to `400`, absent authentication to `401`, forbidden access to `403`, missing records to `404`, and conflicts to `409`.
@@ -59,16 +77,17 @@ Field errors connect to inputs; asynchronous results use status or alert announc
 | --- | --- | --- |
 | Read account directory and details | `GET /api/accounts[/{id}]` | `GetAccountQuery` / `GetAccountQueryHandler` |
 | Provision account | `POST /api/accounts` | `ProvisionAccountCommand` / `ProvisionAccountCommandHandler` |
-| Edit names, role, or active status | `PUT /api/accounts/{id}; PUT /api/accounts/{id}/status` | `UpdateAccountCommand` / `UpdateAccountCommandHandler` |
+| Edit names or role | `PUT /api/accounts/{id}` | `UpdateAccountCommand` / `UpdateAccountCommandHandler` |
+| Deactivate or reactivate account | `PUT /api/accounts/{id}/status` | `ChangeAccountStatusCommand` / `ChangeAccountStatusCommandHandler` |
 | Replace account password | `PUT /api/accounts/{id}/password` | `ReplacePasswordCommand` / `ReplacePasswordCommandHandler` |
 
 Mock input and review references:
 
 - [Accounts · Mission Control mock](../../../mocks/admin/accounts.html); review states: `default`, `loading`, `error`.
 - [Account details · Mission Control mock](../../../mocks/admin/account-detail.html); review states: `default`, `designated`, `inactive`, `not-found`, `loading`.
-- [Add or edit account · Mission Control mock](../../../mocks/admin/account-form-dialog.html); review states: `create`, `validation`, `duplicate`, `saving`, `failed`, `created`, `edit`, `designated`, `conflict`.
-- [Deactivate or reactivate account · Mission Control mock](../../../mocks/admin/account-status-dialog.html); review states: `deactivate`, `reactivate`, `blocked`, `saving`, `failed`.
-- [Replace password · Mission Control mock](../../../mocks/admin/replace-password-dialog.html); review states: `default`, `own`, `validation`, `saving`, `failed`.
+- [Add or edit account · Mission Control mock](../../../mocks/admin/account-form-dialog.html); review states: `create`, `validation`, `duplicate`, `saving`, `failed`, `created`, `edit`, `designated`, `conflict`, `conflict-reloaded`.
+- [Deactivate or reactivate account · Mission Control mock](../../../mocks/admin/account-status-dialog.html); review states: `deactivate`, `reactivate`, `blocked`, `saving`, `failed`, `stale`.
+- [Replace password · Mission Control mock](../../../mocks/admin/replace-password-dialog.html); review states: `default`, `own`, `validation`, `saving`, `failed`, `stale`.
 
 Implementation proceeds one behavior at a time using the linked Given-When-Then criteria. An API integration acceptance check first fails for the expected missing behavior.
 A Chromium Playwright check uses one page object per screen and a mock service bound through the same token. Tests express intent; page objects own selectors.
@@ -114,9 +133,13 @@ Provision account follows the sequence below. The flow traces its enforcing step
 
 ![Provision account](diagrams/sequence-provision.png)
 
-Edit names, role, or active status follows the sequence below. The flow traces its enforcing steps to `L2-004` and includes rejection or recovery paths.
+Edit names or role follows the sequence below. The flow traces its enforcing steps to `L2-004` and `L2-008` and includes rejection or recovery paths.
 
-![Edit names, role, or active status](diagrams/sequence-change-access.png)
+![Edit names or role](diagrams/sequence-change-access.png)
+
+Deactivate or reactivate account follows the sequence below. The flow traces its enforcing steps to `L2-004` and `L2-008` and includes rejection or recovery paths.
+
+![Deactivate or reactivate account](diagrams/sequence-change-status.png)
 
 Replace account password follows the sequence below. The flow traces its enforcing steps to `L2-004` and includes rejection or recovery paths.
 

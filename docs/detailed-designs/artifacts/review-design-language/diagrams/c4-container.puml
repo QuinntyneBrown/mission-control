@@ -2,7 +2,7 @@
 !include <C4/C4_Container>
 LAYOUT_WITH_LEGEND()
 title Containers - Review the standalone design language
-Person(reviewer, "Design reviewer", "Reviews at stated viewport widths")
+Person(reviewer, "Design reviewer", "Reviews at profile R widths (320-1920)")
 System_Boundary(artifact, "Review the standalone design language") {
   Container(source, "design-system/", "HTML / CSS / JavaScript", "Static sources and token values")
   Container(site, "Independent static review site", "Browser", "Catalog, examples, and review states")

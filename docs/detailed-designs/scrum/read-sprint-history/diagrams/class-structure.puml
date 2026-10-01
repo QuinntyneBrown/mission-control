@@ -43,9 +43,14 @@ class SprintSnapshot {
   +plannedStart: DateOnly
   +plannedEnd: DateOnly
   +startedAtUtc: DateTimeOffset
+  +startedByUserId: Guid
+  +startedByName: string
   +closedAtUtc: DateTimeOffset
+  +closedByUserId: Guid
+  +closedByName: string
   +initialScopeIds: Guid[]
   +finalScopeIds: Guid[]
+  +scopeChanges: SprintScopeChange[]
   +outcomes: SprintStoryOutcome[]
 }
 interface IMissionControlDataSession {
@@ -85,6 +90,16 @@ class SprintStoryOutcome {
   +recordedDestinationId: Guid?
   +recordedDestinationName: string?
 }
+class SprintScopeChange {
+  +sprintId: Guid
+  +storyId: Guid
+  +storyTitle: string
+  +kind: ScopeChangeKind
+  +actorId: Guid
+  +actorName: string
+  +atUtc: DateTimeOffset
+}
 SprintSnapshot "1" *-- "*" SprintStoryOutcome : immutable outcomes at closure
+SprintSnapshot "1" *-- "*" SprintScopeChange : scope log with actor and instant
 SprintSnapshot ..> OpenSprintMembership : live allocation / historical source
 @enduml

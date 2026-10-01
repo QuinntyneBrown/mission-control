@@ -17,6 +17,7 @@ All named production types are proposed; the repository currently contains requi
 | Part | Responsibility and architectural home |
 | --- | --- |
 | `LeadDirectoryPage` | Routed page or dialog owned by `frontend/projects/mission-control`; composes the domain library and presentational components. |
+| `LeadDetailPage` | Routed page for `/leads/:id` in `frontend/projects/mission-control`; composes `LeadView` and owns the not-found and load-error states. |
 | `LeadView` | Domain component in `frontend/projects/domain`; injects `LEAD_SERVICE` and holds feature state in signals. |
 | `ILeadService`, `LEAD_SERVICE` | Interface and token in `frontend/projects/api/lead.service.contract.ts`; the consumer imports the contract only. |
 | `LeadService` | Production HTTP adapter in `api`; owns HTTP calls and observable-to-signal conversion. Composition binds a mock adapter for Chromium Playwright. |
@@ -30,11 +31,17 @@ MediatR remains pinned to `12.5.0`. Microsoft.Extensions supplies dependency inj
 `GET /api/leads` applies trimmed case-insensitive substring search to first name, last name, combined full name, email, and phone.
 Category and search combine with AND before counting or paging. Literal wildcard characters are escaped for SQL substring matching; parameters remain data.
 The stable order is last name, first name, then ID. Pages default to 25 and cap at 100; invalid sizes return `400`.
+`ListLeadsQuery` results carry the page, the total matching count, and five zero-filled `categoryTotals` over all persisted leads.
+Search and category never change `categoryTotals`, so category chip counts stay stable while filtering. Loading and error states show no counts.
 Search/filter state uses route query parameters so home category links preserve context. Every change resets page one.
 The adapter ignores older search responses after a newer search begins.
+A loaded result is announced in the status region, including zero results such as "No Event leads found". Zero results offer Clear filter.
 
 `LeadDetailPage` owns `/leads/:id` and displays saved values, explicit Not provided phone text, and City Lead identity.
-The City badge follows the contact identity/category, not the user's authorization role.
+`GetLeadQuery` also returns `responsibleWorkspaces` (ID, name, and mode) for the Responsible for card. An empty list reads as no project responsibility.
+A nonexistent or malformed lead ID returns `404`; the page shows "Lead not found" with Back to leads.
+A contact is labeled City Lead when its category is City and its normalized email equals the configured designated email (`InitializationOptions`); the unique email/category index guarantees at most one.
+Read projections expose `isCityLead`; the label never reflects any account's role. It uses the City category styling, not a role or permission badge.
 Email/phone links open local `mailto:` / `tel:` clients; Mission Control sends no messages.
 Below `768px` directory rows become labeled cards. Initial loading skeletons differ from empty data, zero results, and request errors.
 Collaborators retain read access while contact mutation controls remain unavailable with a readable explanation.
