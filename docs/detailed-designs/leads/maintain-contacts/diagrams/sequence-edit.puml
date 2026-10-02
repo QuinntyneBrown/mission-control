@@ -4,6 +4,7 @@ skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
 skinparam ArrowColor #344054
+skinparam maxMessageSize 300
 skinparam rectangle {
   BorderColor #344054
   FontColor #101828
@@ -16,7 +17,7 @@ skinparam package {
 title Behavior - Edit a lead
 actor "Administrator" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "LeadFormDialog / LeadView" as page
+  participant "LeadFormDialog / LeadForm" as page
   participant "ILeadService / LeadService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,19 +32,37 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
+actor -> page : Edit a lead (shown only with leads.manage); LeadFormDialog opens; fields and Save disabled; announce "Loading lead"
+page -> client : LeadForm's leadResource reads GetLeadQuery (GET /api/leads/{id}, authorized like any contact read)
+alt Read 404 (lead deleted after the list or details loaded)
+  client --> page : Resource status error (404)
+  page --> actor : edit-not-found: fields and Save stay disabled; alert "This lead no longer exists" is announced; focus Back to leads; no reference ID or Try again
+  actor -> page : Back to leads
+  page -> page : LeadForm emits notFound; the dialog closes with NotFound; LeadDirectoryPage increments refresh, or LeadDetailPage navigates to /leads, which reads afresh
+else Read fails (500 with correlation ID, or no response)
+  client --> page : Resource status error
+  page --> actor : edit-load-failed: fields and Save stay disabled; alert announced, with the reference ID for a 500 (no response: none, and the shell's offline banner appears); focus Try again, which calls reload(); Cancel closes
+else Read resolves
+  client --> page : LeadDetailResult with its version; the draft starts from it; focus First name
+end
+note right of page
+  Only a resolved read continues below.
+end note
 actor -> page : Change lead details and save
-page -> page : Disable repeat submission; show saving progress
-page -> client : Build typed UpdateLeadCommand with expectedVersion
+page -> page : Disable repeat submission; show saving progress; draftChange reports dirty and pending
+page -> client : edit(UpdateLeadCommand with the opened expectedVersion) returns a promise
 client -> access : PUT /api/leads/{id}
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid, or expired JWT; inactive account
   access --> client : 401; audit denial without payloads
-  client --> page : Clear in-memory session; require login; explain edits were not saved (L2-003.4)
+  client -> client : sessionInterceptor: a 401 for the current session generation calls SessionService.end(Unauthorized) once
+  client --> page : The promise rejects with the 401; sign-in explains edits were not saved (L2-003.4)
 else Collaborator (no contact mutation in profile P)
   access --> client : 403; audit denial without payloads
-  client --> page : Keep input; show that only administrators can edit leads; nothing saved
+  client -> client : sessionInterceptor calls SessionService.refreshCapabilities() (one in flight)
+  client --> page : The promise rejects with the 403; forbidden state: keep the dialog and every value; show that only administrators can edit leads; Save changes unavailable, so focus moves to the alert; no reference ID; nothing saved; controls follow currentSession
 else Administrator
   access -> ctrl : Authorized request
 ctrl -> validation : Send UpdateLeadCommand through MediatR 12.5.0
@@ -51,37 +70,38 @@ validation -> validation : L2-009 trim; field limits, valid email, known categor
 alt Invalid request
   validation --> ctrl : 400 field errors; no business mutation
   ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
+  client --> page : The promise rejects; keep valid input; no Retry or reference ID; one field error focuses that field, which reads its error; several focus the linked error summary
 else Valid request
   validation -> handler : Handle UpdateLeadCommand
-  handler -> db : Load lead by ID
+  handler -> db : LoadLeadAsync: lead by ID
   db --> handler : Current contact or none
   alt Lead missing or deleted
     handler --> ctrl : 404; nothing changed
     ctrl --> client : NotFound ProblemDetails
-    client --> page : Disable fields and Save; offer Back to leads
+    client --> page : The promise rejects; deleted state: keep the attempted values; disable fields and Save; announce the alert; focus Back to leads; no reference ID or Try again; Back to leads emits notFound; the dialog closes with NotFound; the directory reloads, or the detail page navigates to /leads
   else Stored version differs from expectedVersion
     handler --> ctrl : 409 stale version; nothing changed
     ctrl --> client : Conflict ProblemDetails
-    client -> ctrl : GET /api/leads/{id} once (authorized as above)
-    ctrl --> client : Latest saved values and version
-    client --> page : Keep attempted values; show Your edit vs Latest saved; offer Reload latest; no resubmission
+    client --> page : The promise rejects with the stale 409
+    page -> client : LeadForm calls reload() on its lead resource once (GET /api/leads/{id}, authorized as above)
+    client --> page : Resource resolves with the latest saved values and version
+    page -> page : Keep attempted values; show Your edit vs Latest saved; Reload latest replaces Save and receives focus; announce the alert; no resubmission
     note right of page
-      L2-041.3: Reload latest adopts the latest values
-      and version without a request; the comparison
+      L2-041.3: Reload latest adopts the reloaded values
+      and version without another request; the comparison
       stays visible until the edits are re-applied and saved.
     end note
   else Current version
-    handler -> db : Find another contact with the normalized email and category
+    handler -> db : LoadLeadByEmailAndCategoryAsync: another contact with the normalized email and category
     db --> handler : Existing contact or none
     alt Pair used by another contact
       handler --> ctrl : 409 duplicate with existing contact ID, name, category; nothing changed
       ctrl --> client : Conflict ProblemDetails
-      client --> page : Keep input; flag email and category; name and link the existing lead
+      client --> page : The promise rejects; keep input; flag email and category; name and link the existing lead; focus Email, which reads its error
     else Pair available
-      handler -> entity : L2-011 edit fields and category; no account changes
+      handler -> entity : L2-011 edit fields and category; L2-013 no account changes, even for the City contact
       entity --> handler : Updated contact
-      handler -> db : L2-039 / L2-040 update where version matches; append success audit; one transaction
+      handler -> db : L2-039 / L2-040 SaveChangesAsync: update where the tracked expectedVersion matches; append success audit; one transaction
       alt Racing save changed the version, or unique index rejects the pair
         db --> handler : Roll back update and audit
         handler --> ctrl : 409 stale version or 409 duplicate, as above
@@ -91,17 +111,21 @@ else Valid request
         db --> handler : Roll back business state and success audit
         handler --> ctrl : Generic 500 with correlation ID
         ctrl --> client : Failure; no successful-save claim
-        client --> page : Keep input; show reference ID; Save changes retries
+        client --> page : The promise rejects; failed state: keep input; announce the alert with the reference ID; Save changes keeps focus and retries only when pressed
       else Commit succeeds
         db --> handler : New committed version
-        handler --> ctrl : 200 with the saved lead and version
+        handler --> ctrl : 200 with SavedLeadResult (id, new version, first and last name, category)
         ctrl --> client : Success response
-        client --> page : Close dialog; show saved values; announce Changes saved
+        client --> page : The promise resolves with SavedLeadResult; LeadForm emits saved; the dialog closes with Saved(SavedLeadResult)
+        page -> page : The opening page increments refresh, so its directory or detail view reloads its resource, and shows the "Changes saved" toast naming the lead through TOAST_SERVICE
         page --> actor : Saved lead shown; focus returns to Edit
       end
     end
   end
 end
+end
+opt No response to the save (timeout or network failure)
+  client --> page : The save may have committed: keep the attempted values; the failed alert reads "We couldn't confirm whether your changes were saved" without a reference ID; LeadForm calls reload() on its lead resource once and emits unconfirmed, which the dialog relays, so the opening page increments refresh and its view rereads at once; Save changes resends only when pressed, and a save that did commit makes it meet the stale-version 409 and its comparison, headed "The latest saved version is shown beside your entries" without "Your edits haven't been saved"; a 404 from the reread or the repeat shows the deleted alert without "Your edits weren't saved"
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).

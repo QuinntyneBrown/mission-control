@@ -4,6 +4,7 @@ skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
 skinparam ArrowColor #344054
+skinparam maxMessageSize 300
 skinparam rectangle {
   BorderColor #344054
   FontColor #101828
@@ -16,7 +17,7 @@ skinparam package {
 title Behavior - Move item to another valid parent
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "WorkItemDetailPage / ReparentDialog / WorkItemView" as page
+  participant "WorkItemDetailPage or WorkHierarchyPage / ReparentDialog / ReparentForm" as page
   participant "IWorkItemService / WorkItemService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,8 +32,22 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Choose "Move to another parent" on an epic, story, or task
-page -> page : Show current path; offer only same-level parents in this workspace; current parent unavailable
+actor -> page : Choose "Move to another parent" on an epic, story, or task (the view's actionRequested with its WorkItemTarget)
+page -> client : ReparentForm's workItemResource reads GetWorkItemQuery for the current path and version; Move stays disabled (loading)
+alt Read fails (500 or 503 with correlation ID, or no response)
+  client --> page : Move stays disabled; alert with Try again = reload(), Cancel, and the reference ID only when the server answered; focus moves to Try again (load-failed)
+else Read 404: the item was deleted after the page loaded
+  client --> page : "No longer exists" with Back to work, no reference ID or Try again (not-found); Back to work emits notFound; the dialog closes with NotFound; the page calls the layout's refresh(), and the detail page opens the work outline
+else Item read
+  client --> page : Show the current path from its ancestors; the expected version comes from it
+end
+page -> page : Targets read GetWorkItemsQuery for the required parent type and search text matching a title or parent title (debounced about 250 ms, older read cancelled), bounded pages; each target shows its parent's title and child count; a status region announces the match count, zero matches show "No epics match" with Clear search (no-match state); current parent unavailable
+opt Targets read fails (500, 503, or no response)
+  page -> page : Field-level alert under the search with Retry = targets reload(), and the reference ID only when the server answered; the current path, any chosen target, and its path preview stay, so Move remains available (targets-failed state)
+end
+opt Cancel, Close, or Escape after choosing a target
+  page -> page : The chosen target is a dirty draft: UnsavedChangesDialog asks first; Discard closes and sends nothing
+end
 actor -> page : Pick a target, review the path preview, and confirm
 page -> page : Disable Move while pending (L2-031)
 page -> client : Build typed ReparentWorkItemCommand (target parent, expected item version)
@@ -42,54 +57,60 @@ access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid or expired JWT; deactivated account
   access --> client : 401; audit denial without payloads
-  client --> page : Clear session; sign in with the item as return route
-else Authenticated without permission to update work
-  access --> client : 403; audit denial without payloads
-  client --> page : Keep the choice; explain that moving work is not permitted
-else Authorized
+  client --> page : sessionInterceptor calls SessionService.end(Unauthorized) once for this generation; the promise rejects with its 401 (nothing written); sign-in shows session-unsaved when a draft was dirty, then returns to the item
+else Authenticated active account (profile P: moving work needs no capability beyond an active session)
   access -> ctrl : Authorized request
   ctrl -> validation : Send ReparentWorkItemCommand through MediatR 12.5.0
-  validation -> validation : Item and target identifiers present and well formed
+  validation -> validation : Target identifier present and well formed (a malformed path ID matches no route and returns 404)
   alt Malformed request
     validation --> ctrl : 400 field errors; nothing read or changed
     ctrl --> client : Validation ProblemDetails
-    client --> page : Keep the dialog open with the message
+    client --> page : Keep the dialog open; focus moves to the target choices, which read the field message; no Retry or reference ID
   else Valid request
     validation -> handler : Handle ReparentWorkItemCommand
-    handler -> db : Lock workspace; load item and version, target parent, source and target sibling sets
-    db --> handler : Current hierarchy state
-    alt Workspace or item not found
+    handler -> db : BeginWorkspaceTransactionAsync takes the workspace lock first; then LoadWorkItemAsync for the item, target, and (for a task) source story; LoadSiblingOrderAsync for the source and target sibling orders
+    db --> handler : Current hierarchy state, or lock-wait timeout
+    alt Workspace lock wait times out
+      handler --> ctrl : 503 with Retry-After; nothing read or changed
+      ctrl --> client : ProblemDetails (unavailable)
+      client --> page : Unavailable save, as for a 500: nothing moved; keep the choice; alert with reference ID; focus stays on Move, which resends only when chosen (failed state)
+    else Workspace or item not found
       handler --> ctrl : 404; nothing changed
       ctrl --> client : ProblemDetails (not found)
-      client --> page : Close the dialog; reload the outline without the item and announce that it no longer exists
+      client --> page : The not-found presentation, whose Back to work emits notFound; the dialog closes with NotFound; the page calls the layout's refresh(), and the detail page opens the work outline
     else Stale item version (L2-041)
       handler --> ctrl : 409 stale version; nothing changed
       ctrl --> client : ProblemDetails (changed)
-      client --> page : Keep the dialog; "This story changed" alert; Reload story reads the current parent and targets without resending (conflict state)
+      client --> page : Keep the dialog; "This story changed" alert; Move becomes unavailable, so focus moves to Reload story, which calls reload() on the item and target resources, reading the current parent, version, and targets without resending (conflict state)
     else Target missing or deleted, wrong level, current parent, initiative item, or other workspace (L2-016.4)
       handler --> ctrl : 400 invalid target; old hierarchy intact
       ctrl --> client : Validation ProblemDetails (target field)
-      client --> page : Keep the dialog; drop a deleted target; target field error (rejected state)
+      client --> page : Keep the dialog; drop a deleted target from the choices and clear the selection; focus moves to the target choices, which read the field error; no Retry or reference ID (rejected state)
     else Move permitted
       handler -> entity : L2-016 change only the parent link; append after the target's existing children
       entity --> handler : Same IDs, fields, descendants, and sprint membership under the new path
-      handler -> db : L2-039 / L2-040 update item, compact source siblings, append target sibling, bump both sibling-order versions, success audit
+      handler -> db : L2-039 / L2-040 AddAuditEvent, then SaveChangesAsync: update item, compact source siblings, append target sibling, bump both sibling-order versions, for a task increment both stories' task revisions only (their versions and sprint versions unchanged), success audit
       alt Commit fails
         db --> handler : Roll back business state and success audit
         handler --> ctrl : Generic 500 with correlation ID
         ctrl --> client : Failure; no successful-save claim
-        client --> page : Nothing moved; show reference ID; Move retries the same request (failed state)
+        client --> page : Nothing moved; keep the choice; alert with reference ID; focus stays on Move, which retries the same request only when chosen (failed state)
       else Commit succeeds
         db --> handler : New item version and sibling-order versions
         handler --> ctrl : Moved item with new path
         ctrl --> client : 200
-        client --> page : Close the dialog; update hierarchy and detail signal state
-        page --> actor : Announce the new path; focus returns to the item's actions
+        client --> page : ReparentForm emits moved; the dialog closes with Moved(moved, title)
+        page -> page : The page increments its refresh counter: every expanded branch rereads, including the source and target parents, or the detail rereads with its new path
+        page --> actor : The "Moved" toast names the item and its new parent; focus returns to the item's actions, or to the source parent's row when the item left the loaded outline
       end
     end
   end
 end
+opt No response to the move (timeout or network failure)
+  client --> page : The move may have committed: keep the chosen target; the failed alert reads "We couldn't confirm whether the story moved" without a reference ID; ReparentForm calls reload() on the item and target resources once, so the current path shows whether it moved, and emits unconfirmed, which the dialog relays so the page rereads its view at once; when the reread shows the item already under the chosen target, that target is its current parent and can't be chosen, so the selection clears and Move stays unavailable; nothing says the story didn't move; otherwise Move resends only when pressed
+end
 note over ctrl, db
+An unexpected 403 moves nothing; ReparentForm keeps the choice and emits forbidden, ReparentDialog relays it, and the routed page shows the "Your access changed" toast through TOAST_SERVICE, without Retry or reference ID; the capability refresh still runs.
 All rejection checks run under the lock before any write.
 Unexpected failures return generic 500 plus correlation ID (L2-043).
 Diagnostics exclude secrets and contact payloads.

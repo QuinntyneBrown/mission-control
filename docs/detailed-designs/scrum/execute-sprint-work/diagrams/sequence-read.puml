@@ -3,6 +3,7 @@ skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
+skinparam maxMessageSize 300
 skinparam ArrowColor #344054
 skinparam rectangle {
   BorderColor #344054
@@ -26,62 +27,86 @@ end box
 box "Backend - MissionControl.Application and Domain" #ECFDF3
   participant "ValidationBehavior" as validation
   participant "GetActiveSprintBoardQueryHandler" as handler
-  participant "SprintBoardCard" as entity
 end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Open the Board tab of a Scrum project
-page -> client : Build typed GetActiveSprintBoardQuery with status batch and size
+actor -> page : Open the Board tab of a Scrum project (BoardModeGuard matched SprintBoardPage)
+page -> client : activeSprintBoardResource(ActiveSprintBoardQuery: status batch, size, generation);\nsent as GetActiveSprintBoardQuery; the generation stays in the client and stamps the result
 client -> access : GET /api/workspaces/{id}/active-sprint/board
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid or expired JWT; deactivated account
   access --> client : 401; audit denial without payloads
-  client --> page : Clear session; sign in with the board as return route
-else Authenticated without the required permission
-  access --> client : 403; audit denial without payloads
-  client --> page : Access-denied state; nothing loaded
-else Authorized
+  client --> page : SessionService.end(Unauthorized) once; sign in with the board as return route
+else Authenticated (profile P: every active role reads sprints)
   access -> ctrl : Authorized request
   ctrl -> validation : Send GetActiveSprintBoardQuery through MediatR 12.5.0
   validation -> validation : L2-045 batch size 1-100; known status
   alt Invalid batch size or status
     validation --> ctrl : 400 field errors; nothing read
     ctrl --> client : Validation ProblemDetails
-    client --> page : Load-failed state with Try again
+    client --> page : The board shows the message with Reload board, without Try again or reference ID;\nsprintLoaded emits null
   else Valid request
     validation -> handler : Handle GetActiveSprintBoardQuery
-    handler -> db : Read workspace mode, active sprint, and planned sprint summary
+    handler -> db : LoadActiveSprintBoardAsync: workspace mode, active sprint, and next planned sprint
     db --> handler : Mode and sprint summary
     alt Workspace not found
       handler --> ctrl : 404
       ctrl --> client : ProblemDetails (not found)
-      client --> page : Project not-found state linking to Projects
+      client --> page : BoardView shows Project not found with Back to projects (no Try again or reference ID)\nand emits notFound; on the first one SprintBoardPage calls the layout's refresh()
     else Workspace in Kanban mode (L2-027.3)
-      handler --> ctrl : 409 sprints paused
-      ctrl --> client : ProblemDetails (sprints paused)
-      client --> page : Route to the workspace Kanban board; sprint plans stay on the Sprints tab
+      handler --> ctrl : 409 mode-changed
+      ctrl --> client : ProblemDetails (mode changed)
+      client --> page : BoardView emits modeChanged; SprintBoardPage calls ProjectLayoutPage.modeChanged():\nthe header reloads and BoardModeGuard re-matches KanbanBoardPage; sprint plans stay on the Sprints tab
     else No active sprint
-      handler --> ctrl : No-active view with the next planned sprint, or none
+      handler --> ctrl : No-active view: the next planned sprint (SprintPeriod), else the latest closed sprint\n(SprintReference, latest closure then ID), or neither; the workspace story total
       ctrl --> client : 200 without board columns
-      client --> page : Planned sprint: Start and Plan sprint; no sprints: Plan sprint and Open Work
+      client --> page : BoardView emits sprintLoaded (sprintId null); the page renders Start for nextPlannedSprint\nand Plan sprint; with none planned, Plan sprint and a router link to latestClosedSprint's history;\nwith no sprints, Plan sprint and Open Work; Add initiative replaces Add story while the story total is 0
     else Active sprint
-      handler -> db : L2-024 read current open membership in bounded status batches of at most 100
+      handler -> db : L2-024 read current open membership in bounded status batches of at most 100;\nfull column totals and set-based task counts in the same read; no descriptions
       db --> handler : Cards, shared story status, task counts, full column totals
-      handler -> entity : Project one SprintBoardCard per allocated story in its status column
-      entity --> handler : Active sprint board
-      handler --> ctrl : Board with goal, dates, start actor, scope log, versions
+      handler --> ctrl : ActiveSprintBoardResult: sprint ID, name, version, goal, dates, start instant and actor,\ninitial scope and scope-change counts, story, Done and point totals, workspace story total,\nboard and versions
       ctrl --> client : 200 with board and versions
-      client --> page : Update signals; an empty sprint keeps all three columns and Add stories
-      page --> actor : Columns with Move on every card and Remove on unfinished cards
+      client --> page : Discard if the board ID or generation is no longer current; otherwise it becomes\nthe latest acknowledged board and BoardView emits sprintLoaded with the header;\nthe page registers Add story, or Add initiative while the workspace story total is 0
+      page -> page : SprintBoardPage keeps the header; renders the header card and its actions;\npasses the sprint ID to SprintScopeLogView and the scope and close dialogs;\nan empty sprint keeps all three columns and Add stories
+      page --> actor : Columns with Move and the card menu on every card and Remove on unfinished cards
     end
   end
 end
+group Load more and the reread after a move (kanban move rules)
+  actor -> page : Load more in one column, or a move that the server confirmed
+  page -> client : Next batch of that column; after a confirmed move, the loaded window\nof the source and destination columns in batches of at most 100
+  client --> page : Results with an older generation or another board are discarded; the reread becomes\nthe latest acknowledged board and BoardView emits sprintLoaded with its header, never null in between,\nso the progress totals follow each confirmed move; a failed batch or reread keeps the last header
+  note over page
+    While a move is pending: other Move controls, card-menu moves, drag and Load more are unavailable;
+    "Saving move..." is announced. A rejected move restores the latest acknowledged
+    board; an uncertain outcome rereads the affected columns before another move.
+    A 500 or 503 ends Failed with the reference ID: an open move or unfinished-tasks dialog
+    shows its failed state and no toast appears; with no dialog open, the move-failed toast
+    shows the ID and Retry, sent only when chosen. A 404 ends Settled; a removed focused
+    card moves focus to the board region.
+    A 400 ends Settled: the "Your move wasn't applied" page alert shows the reason with
+    Reload board, no Retry and no reference ID (Kanban rule).
+    A board-changed 409 shows the page alert on the board (no toast) with Reload board.
+    An unexpected 403 restores the acknowledged board and ends Forbidden: any open dialog
+    closes and the page shows the "Your access changed" toast without Retry.
+    A 409 unfinished-tasks opens UnfinishedTasksDialog instead. A mode-changed 409 restores
+    the acknowledged board, ends the move, shows no alert and emits modeChanged.
+  end note
+end
+opt Try again after a failed first batch
+  actor -> page : Choose Try again
+  page -> page : BoardView emits retryRequested; SprintBoardPage calls ProjectLayoutPage.refresh(), so the header\nand the board reread together
+end
+opt A committed dialog outcome, an open dialog's unconfirmed, or a layout revision
+  page -> page : SprintBoardPage increments its counter; the refresh input of BoardView and SprintScopeLogView\nchanges; the board rereads its first batch with a new generation (sprintLoaded null until it resolves)
+end
 note over ctrl, db
-Unexpected failures return generic 500 plus correlation ID (L2-043); the page shows Load failed with Try again.
-Moves send MoveStoryCommand with sprintBoardId; a 409 unfinished-tasks opens UnfinishedTasksDialog.
+Unexpected failures return generic 500 plus correlation ID (L2-043); a failed first-batch read
+shows Load failed with Try again (the reference ID only after a 500 or 503; none when the read got
+no response); sprintLoaded emits null, so no header actions show.
 Diagnostics exclude secrets and contact payloads.
 end note
 @enduml

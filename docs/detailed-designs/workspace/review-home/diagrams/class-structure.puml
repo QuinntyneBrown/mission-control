@@ -14,27 +14,96 @@ skinparam package {
   BackgroundColor #F9FAFB
 }
 title Class structure - Review home coverage and progress
+left to right direction
 skinparam class {
   BorderColor #344054
   FontColor #101828
   BackgroundColor #F9FAFB
 }
 class HomePage {
-  +routeContext: Signal<RouteContext>
+  +canCreateProject: Signal<bool>
+  +draft: Signal<DraftState>
+  -refresh: WritableSignal<number>
   +openNewProject(): void
 }
+note right of HomePage
+  canCreateProject = computed from
+  SESSION_SERVICE currentSession capabilities
+  (workspaces.manage); shows the header New project,
+  or the collaborator notice, and feeds
+  WorkspaceProgressView. refresh feeds every
+  section view's refresh input.
+  openNewProject(): ProjectFormDialog without a
+  workspace ID. Saved(SavedWorkspaceResult):
+  "Project created" toast naming it, then
+  /projects/:workspaceId; no result: nothing.
+  The dialog's unconfirmed (still open):
+  refresh + 1 at once, so WorkspaceProgressView
+  rereads Projects before the project is
+  saved again.
+  FormDraft: draft delegates to the open dialog
+  (clean when none); /home registers
+  UnsavedChangesGuard. No section state is held:
+  each view shows its own loading and error.
+end note
+class ProjectFormDialog {
+  +workspaceId: InputSignal<Guid?>
+  +draft: Signal<DraftState>
+  +unconfirmed: OutputEmitterRef<void>
+  +close(result: ProjectFormOutcome?): void
+}
+note right of ProjectFormDialog
+  Application dialog owned by
+  projects/manage-workspaces. Home opens it
+  for a create and reacts to Saved and to
+  unconfirmed. A 403 shows the dialog's own
+  forbidden state; no forbidden output.
+end note
+class SavedWorkspaceResult {
+  +id: Guid
+  +version: long
+  +name: string
+}
+interface IToastService {
+  +show(toast: Toast): void
+}
 class LeadCoverageView {
+  +refresh: InputSignal<number>
+  -coverage: ResourceRef<LeadCoverage>
   +state: Signal<SectionState<LeadCoverage>>
   +retry(): void
 }
 class WorkspaceProgressView {
+  +refresh: InputSignal<number>
+  +canCreateProject: InputSignal<bool>
+  +newProjectRequested: OutputEmitterRef<void>
+  -progress: ResourceRef<WorkspaceProgressPage>
   +state: Signal<SectionState<WorkspaceProgressPage>>
   +retry(): void
 }
 class ActiveSprintSummaryView {
+  +refresh: InputSignal<number>
+  -sprints: ResourceRef<ActiveSprintSummaryPage>
   +state: Signal<SectionState<ActiveSprintSummaryPage>>
   +retry(): void
 }
+note bottom of LeadCoverageView
+  Each view instance owns its resource; state is computed
+  from it. The resource reads on creation (every /home
+  activation) and on a refresh change, retry() calls
+  reload(), and destroy aborts.
+  No cross-view cache. Stale responses change nothing.
+end note
+interface "ResourceRef<T>" as ResourceRef {
+  +value: Signal<T | undefined>
+  +status: Signal<'loading' | 'resolved' | 'error'>
+  +error: Signal<unknown>
+  +reload(): void
+}
+note right of ResourceRef
+  Shared type, defined once in api;
+  shown here for reference only.
+end note
 class "SectionState<T>" as SectionState {
   +status: SectionStatus
   +value: T?
@@ -47,25 +116,35 @@ enum SectionStatus {
   Failed
 }
 interface IHomeService {
-  +leads(request: GetLeadCoverageQuery): Promise<FeatureResult>
-  +projects(request: GetWorkspaceProgressQuery): Promise<FeatureResult>
-  +sprints(request: GetActiveSprintSummaryQuery): Promise<FeatureResult>
+  +leadCoverageResource(query: () => GetLeadCoverageQuery | undefined): ResourceRef<LeadCoverage>
+  +workspaceProgressResource(query: () => GetWorkspaceProgressQuery | undefined): ResourceRef<WorkspaceProgressPage>
+  +activeSprintSummaryResource(query: () => GetActiveSprintSummaryQuery | undefined): ResourceRef<ActiveSprintSummaryPage>
 }
 class HomeService {
   -http: HttpClient
 }
+note right of HomeService
+  No shared results: each call creates a resource in
+  the caller's injection context; HTTP and the
+  observable-to-signal conversion stay inside.
+end note
 class HomeController {
   -sender: ISender
 }
 interface IMissionControlDataSession {
-  +query(specification): Task<ReadResult>
-  +commit(expectedVersion: long): Task<void>
+  +LoadLeadCoverageAsync(ct: CancellationToken): Task<LeadCoverage>
+  +ListWorkspaceProgressAsync(page: int, pageSize: int, ct: CancellationToken): Task<WorkspaceProgressPage>
+  +ListActiveSprintSummariesAsync(page: int, pageSize: int, ct: CancellationToken): Task<ActiveSprintSummaryPage>
 }
-class MissionControlDataSession {
-  -connection: DbConnection
-}
+note right of IMissionControlDataSession
+  Each read: one statement (window count for the total)
+  or one explicit snapshot-isolation read transaction.
+end note
 HomePage --> LeadCoverageView : composes
-HomePage --> WorkspaceProgressView : composes
+HomePage --> WorkspaceProgressView : composes; canCreateProject in, newProjectRequested out
+HomePage --> ProjectFormDialog : opens (create); Saved and unconfirmed
+ProjectFormDialog ..> SavedWorkspaceResult : Saved carries
+HomePage ..> IToastService : inject TOAST_SERVICE; Project created toast
 HomePage --> ActiveSprintSummaryView : composes
 LeadCoverageView ..> IHomeService : inject HOME_SERVICE
 WorkspaceProgressView ..> IHomeService : inject HOME_SERVICE
@@ -73,9 +152,11 @@ ActiveSprintSummaryView ..> IHomeService : inject HOME_SERVICE
 LeadCoverageView --> SectionState
 WorkspaceProgressView --> SectionState
 ActiveSprintSummaryView --> SectionState
+LeadCoverageView --> ResourceRef : owns
+WorkspaceProgressView --> ResourceRef : owns
+ActiveSprintSummaryView --> ResourceRef : owns
 SectionState --> SectionStatus
 IHomeService <|.. HomeService
-IMissionControlDataSession <|.. MissionControlDataSession
 
 class GetLeadCoverageQuery
 note right of GetLeadCoverageQuery
@@ -83,10 +164,11 @@ note right of GetLeadCoverageQuery
   categories, zero counts included (L2-028.1).
 end note
 class GetLeadCoverageQueryHandler {
-  +handle(request: GetLeadCoverageQuery): Task<LeadCoverage>
+  +handle(request: GetLeadCoverageQuery, ct: CancellationToken): Task<LeadCoverage>
 }
 class LeadCoverage {
   +categories: CategoryCount[]
+  +totalCount: int
 }
 class CategoryCount {
   +category: LeadCategory
@@ -103,7 +185,7 @@ class GetWorkspaceProgressQuery {
   +pageSize: int
 }
 class GetWorkspaceProgressQueryHandler {
-  +handle(request: GetWorkspaceProgressQuery): Task<WorkspaceProgressPage>
+  +handle(request: GetWorkspaceProgressQuery, ct: CancellationToken): Task<WorkspaceProgressPage>
 }
 class WorkspaceProgressPage {
   +items: WorkspaceProgress[]
@@ -113,11 +195,11 @@ class WorkspaceProgress {
   +workspaceId: Guid
   +name: string
   +mode: DeliveryMode
-  +description: string?
   +responsibleLeadId: Guid?
   +responsibleLeadName: string?
-  +activeSprint: SprintReference?
-  +nextPlannedSprint: SprintReference?
+  +activeSprint: SprintPeriod?
+  +nextPlannedSprint: SprintPeriod?
+  +workItemTotal: int
   +counts: TypeStatusCount[]
 }
 class TypeStatusCount {
@@ -125,7 +207,7 @@ class TypeStatusCount {
   +status: WorkStatus
   +count: int
 }
-class SprintReference {
+class SprintPeriod {
   +sprintId: Guid
   +name: string
   +startDate: DateOnly
@@ -137,14 +219,14 @@ GetWorkspaceProgressQueryHandler --> WorkspaceProgressPage : projects
 GetWorkspaceProgressQueryHandler ..> IMissionControlDataSession : uses
 WorkspaceProgressPage *-- WorkspaceProgress
 WorkspaceProgress *-- "12" TypeStatusCount
-WorkspaceProgress --> SprintReference
+WorkspaceProgress --> SprintPeriod
 
 class GetActiveSprintSummaryQuery {
   +page: int
   +pageSize: int
 }
 class GetActiveSprintSummaryQueryHandler {
-  +handle(request: GetActiveSprintSummaryQuery): Task<ActiveSprintSummaryPage>
+  +handle(request: GetActiveSprintSummaryQuery, ct: CancellationToken): Task<ActiveSprintSummaryPage>
 }
 class ActiveSprintSummaryPage {
   +items: ActiveSprintSummary[]
@@ -158,6 +240,7 @@ class ActiveSprintSummary {
   +goal: string?
   +startDate: DateOnly
   +endDate: DateOnly
+  +storiesTotal: int
   +storyCounts: StatusCount[]
 }
 class StatusCount {

@@ -15,13 +15,10 @@ skinparam package {
 }
 title Manual review - Review workflow mock artifacts
 actor "Design reviewer" as reviewer
-box "Frontend - Standalone static artifact" #E0F2FE
+box "docs/mocks/ offline static site" #E0F2FE
   participant "ArtifactCatalog\n(index.html / viewer.html)" as catalog
   participant "MockScreen / MockState" as example
-  participant "--mc- token stylesheet" as tokens
-end box
-box "Backend - Application runtime excluded" #D1FADF
-  participant "No API or SQL dependency" as excluded
+  participant "Mirrored --mc- tokens\nand breakpoints" as tokens
 end box
 reviewer -> catalog : ReviewWorkflowMocks: open index.html offline
 catalog -> example : Select a mock and #state=<id> in the viewer
@@ -41,6 +38,9 @@ else MOCK label missing, non-fictitious data, or a live send or write
 else Empty, loading, validation, failure, or success state missing
   reviewer -> catalog : Record L2-048.4 gap
   catalog --> reviewer : State option, data-when markup, and design note added
+else Mirrored tokens differ from design-system after resync, or a media-query width differs from the breakpoints
+  reviewer -> tokens : Record drift; discard hand edits
+  tokens --> reviewer : sync-tokens.mjs rewrites the mirror; mocks.css widths corrected
 else Tests or ATDD introduced for the mocks
   reviewer -> catalog : Record L2-048.5 issue; remove them
   catalog --> reviewer : Mocks remain manual-review only
@@ -48,7 +48,8 @@ else Review criteria satisfied
   reviewer -> catalog : Record manual review outcome
   catalog --> reviewer : Artifact remains static; no ATDD or tests
 end
-note over catalog, excluded
-No authentication, network mutation, or application database persistence occurs.
+note over catalog, tokens
+No authentication, API or SQL dependency, network mutation,
+or application database persistence occurs.
 end note
 @enduml

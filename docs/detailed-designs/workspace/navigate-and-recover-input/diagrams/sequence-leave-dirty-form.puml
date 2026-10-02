@@ -3,6 +3,7 @@ skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
+skinparam maxMessageSize 300
 skinparam ArrowColor #344054
 skinparam rectangle {
   BorderColor #344054
@@ -16,26 +17,30 @@ skinparam package {
 title Behavior - Confirm navigation away from unsaved input
 actor "Account holder" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "Form page or dialog\n(FormDraft)" as page
+  participant "Domain form" as form
+  participant "Routed page or form dialog\n(FormDraft)" as page
   participant "UnsavedChangesGuard" as guard
   participant "UnsavedChangesDialog" as dialog
-  participant "Router / focus management" as router
+  participant "ApplicationShell /\nRouter / focus" as router
   participant "ISessionService /\nSessionService" as session
 end box
 box "Backend - MissionControl.Api" #D1FADF
   participant "Protected API" as api
 end box
 
-== Leave, cancel, or sign out with a draft (L2-031.4) ==
-actor -> page : Choose another destination, Cancel / Close / Escape, or Sign out
-page -> guard : canDeactivate(FormDraft)
-guard -> page : Read pending and dirty (draft compared with saved baseline)
+== Draft state (L2-031.4) ==
+form -> page : draftChange(DraftState { dirty, pending, unconfirmed, summary }) on every change
+page -> page : A form dialog or routed form page keeps the latest DraftState as draft(); a routed page hosting form dialogs delegates draft() to its open dialog, clean when none is open; a routed form page that also hosts form dialogs (the sprint plan) combines its own draft with its open dialog's: dirty, pending or unconfirmed when either is, with a summary naming both; a ProjectLayoutPage child page falls back to the layout's open dialog
+
+== Route change with a draft: another destination, a router link inside a dialog, browser Back, or Sign out (L2-031.4) ==
+actor -> router : Choose another destination, a router link inside an open dialog (such as View existing lead), Back, or Sign out
+router -> guard : canDeactivate(page), registered on every route whose page is a form or hosts form dialogs
+guard -> page : Read draft(): pending, unconfirmed and dirty
+guard -> guard : reason = SignOut when the destination is /login (Sign out navigates with replaceUrl and state { signOut: true }, which the /login guard lets through while the session is still held), otherwise Navigate
 alt Clean draft
-  page --> guard : canLeave() = true
-  guard -> router : Proceed: open destination, close dialog, or sign out
-  router --> actor : Focus destination heading or the dialog's trigger (L2-033.2, L2-033.4)
+  guard -> router : Proceed: open the destination or sign out
+  router --> actor : Focus destination heading (L2-033.4)
 else Save pending
-  page --> guard : pending = true
   note right of page
     Save shows progress and ignores repeat clicks;
     Cancel and Close are disabled while it is pending (L2-031.2).
@@ -46,37 +51,91 @@ else Save pending
     guard -> router : Proceed to the destination
     router --> actor : Saved result announced; focus destination heading
   else Save rejected or fails
-    page --> guard : Draft kept with field errors or the save error
-    guard -> dialog : Open as for a dirty draft
+    page --> guard : Draft kept with field errors (one error focuses its field, several the error summary) or the save error; still dirty
+    guard -> dialog : Continue as for a dirty draft
   end
 else Dirty draft, not pending
-  page --> guard : dirty = true; canLeave() = false
-  guard -> dialog : confirm(item name)
+  guard -> dialog : confirm(reason, draft().summary)
   dialog -> router : Trap focus; start on the safe choice (L2-033.2)
-  router --> actor : Dialog names what would be lost
+  router --> actor : Title and choices follow the reason; the dialog names what would be lost when the form supplies a summary, otherwise generic copy
   alt Stay or Escape
-    actor -> dialog : Stay on this page / Keep editing / Stay signed in
-    dialog --> guard : Stay
-    guard --> page : Cancel the route change
-    page -> router : Restore focus to the trigger
-    router --> actor : Draft intact, session kept
+    actor -> dialog : Stay on this page / Stay signed in, or Escape
+    dialog --> guard : close(Stay), or close() with no result, which counts as Stay
+    guard --> router : Cancel the route change
+    router --> actor : Restore focus to the trigger; draft intact, session kept
   else Discard
-    actor -> dialog : Leave without saving / Discard changes / Sign out without saving
-    dialog --> guard : Discard
-    guard -> page : Drop draft; no save request
-    page --> guard : Saved record unchanged
-    guard -> router : Navigate, close the form, or sign out
-    router --> actor : Focus destination heading or surviving trigger; sign-out opens sign-in with "You've signed out"
+    actor -> dialog : Leave without saving / Sign out without saving
+    dialog --> guard : close(Discard)
+    guard -> router : Allow; the draft is dropped with its page and no save request is sent
+    opt reason SignOut
+      router -> session : ApplicationShell calls end(SignedOut); loginNotice = signed-out
+    end
+    router --> actor : Focus destination heading; sign-out opens sign-in with "You've signed out"
+  end
+end
+note right of router
+  Once a navigation completes that deactivates the page
+  hosting an open application dialog, the dialog closes
+  with no result (dismissed), so its opener changes
+  nothing; a cancelled navigation leaves it open with
+  its draft. A query-only Back or Forward that reuses
+  the hosting page runs no canDeactivate and leaves the
+  dialog open with its draft. ProjectLayoutPage defers
+  its own re-navigation until its dialog closes.
+end note
+
+== Cancel, Close, or Escape in a form dialog (L2-031.4) ==
+actor -> page : Cancel, Close, or Escape (disabled while a save is pending)
+page -> page : Read its own draft(); the guard is not involved
+alt Clean draft
+  page -> router : Close the dialog
+  router --> actor : Focus returns to the dialog's trigger (L2-033.2)
+else Dirty draft
+  page -> dialog : confirm(CancelForm, draft().summary)
+  dialog -> router : Trap focus; start on Keep editing
+  router --> actor : "Discard your changes?"; names what would be lost when the form supplies a summary, otherwise generic copy
+  alt Keep editing or Escape
+    dialog --> page : close(Stay), or no result (Escape): Stay
+    page --> actor : Focus back in the form; every value intact
+  else Discard changes
+    dialog --> page : close(Discard)
+    page -> page : Close without a save request: no result (dismissed), or Outdated when the form had reported its page out of date; the discard changes no saved record
+    page -> router : Focus the trigger or a surviving contextual control
   end
 end
 
-== Session ends while the draft is dirty (L2-003.4) ==
-page -> api : Any protected request after token expiry or deactivation
-api --> session : 401
-session -> session : Clear token and protected caches; ignore late responses from the earlier session generation
-session --> page : Unauthenticated
-page -> router : Store requestedPath; no unsaved-changes dialog (nothing can be saved without a session)
-router --> actor : Sign-in shows "Your session ended before your changes were saved"; nothing reported as saved
+== Session ends while a draft is dirty or a save is pending or unconfirmed (L2-003.4) ==
+alt Proactive expiry at the token's exp
+  session -> session : end(Expired)
+else Any protected request answered 401 at the current generation N
+  api --> session : 401 through sessionInterceptor
+  session -> session : end(Unauthorized), once for generation N
+  session --> page : A save answered 401 rejects with it: not saved, pending false; a dirty draft stays dirty, and a form with no input (status change, confirmation) is never dirty
+end
+session -> session : Generation N+1; token and capability summary cleared; in-flight requests aborted; ToastService clears its toasts
+note right of session
+  An aborted save may still have committed;
+  cancellation never implies that it did not.
+end note
+session --> router : endReason changed; ApplicationShell stores requestedPath, sets loginNotice session-ended, navigates to /login with replaceUrl
+router -> guard : canDeactivate(page)
+guard -> page : Read draft(): pending, unconfirmed and dirty (a hosting page reads its open dialog's draft)
+guard -> guard : endReason set: no unsaved-changes dialog (nothing can be saved without a session)
+alt A save was aborted: its promise rejects with SessionEndedError, so pending stays true, or the last save got no response and is still unconfirmed
+  guard -> router : loginNotice = session-save-unknown; leave
+  router --> actor : Sign-in shows "Your session ended while a save was in progress"; check the record after signing in
+else Dirty draft, never sent or answered 401 at generation N (not SessionEndedError)
+  guard -> router : loginNotice = session-unsaved; leave
+  router --> actor : Sign-in shows "Your session ended before your changes were saved"
+else Clean draft: no FormDraft reports a pending or unconfirmed save (a board move, reorder, status control, or other mutation without a FormDraft may have been in flight)
+  guard -> router : loginNotice stays session-ended; leave
+  router --> actor : Sign-in shows "Your session ended"; after sign-in the restored view rereads, showing whether that mutation committed
+end
+router -> router : Leaving the shell destroys the form, its dialog and page, and route-scoped providers
+note over router, api
+Late responses of generation N are discarded: no state update and no second session end.
+Neither notice reports a successful save.
+end note
 
 note over page, api
 Cancellation and discarded input send no mutation request.

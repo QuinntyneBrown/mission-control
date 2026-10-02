@@ -20,16 +20,13 @@ box "Release tooling - e2e/performance" #E0F2FE
   participant "Page objects\n(e2e/page-objects)" as po
 end box
 box "Browser" #F2F4F7
-  participant "Chromium\n(fresh context per run)" as browser
+  participant "Chromium\n(fresh contexts)" as browser
 end box
 box "Frontend - production build" #EEF4FF
   participant "Mission Control web app\n(production build, HTTP adapters)" as app
 end box
 box "Backend - MissionControl.Api (performance instance)" #D1FADF
   participant "Existing feature endpoints" as api
-end box
-box "Selected SQL provider" #FFF4E5
-  database "Isolated SQL target\n(L2-046 fixture)" as db
 end box
 box "Release records" #ECFDF3
   participant "ColdViewResult" as result
@@ -42,39 +39,51 @@ break Readiness 503
   runner --> actor : Restore the fixture and restart the API
 end
 loop 4 views x 30 runs
-  runner -> browser : New context: empty cache and storage; 20 Mbps / 40 ms profile
-  runner -> po : Open the view's direct route
-  po -> browser : Navigate
-  browser -> app : Load app shell (uncached)
-  app --> browser : Sign-in page (no in-memory session)
-  runner -> po : Sign in with a session account; timer starts at submission
-  po -> browser : Fill and submit
-  browser -> app : Submit sign-in
-  app -> api : POST /api/sessions
-  api -> db : Read account
-  db --> api : Account
-  api --> app : Access token (memory only)
-  app -> app : Route to the view; load its bundle (uncached)
-  app -> api : View queries (page size 25; board batches up to 100)
-  api -> db : Parameterized reads
-  db --> api : Rows and total counts
-  api --> app : Typed results
-  app --> browser : Render content and controls
-  runner -> po : Wait until essential content and controls are usable
-  po -> browser : Check view-specific content and enabled controls
-  alt Usable within 30 seconds
-    po --> runner : Usable; timer stops
-  else Error state, sign-in failure, or not usable within 30 seconds
-    po --> runner : Failed run; recorded, never dropped
+  group Context A - fresh context, empty cache and storage, 20 Mbps / 40 ms profile
+    runner -> po : Open the start view's URL; AuthenticationGuard stores it as requestedPath and redirects to /login (deep-link)
+    po -> browser : Navigate (document navigation start)
+    browser -> app : Load the eager shell (uncached)
+    po --> runner : Interval 1 ends: sign-in form interactive
+    runner -> po : Sign in with a session account; interval 2 starts at submission
+    po -> browser : Fill and submit
+    app -> api : POST /api/sessions
+    api --> app : Access token (memory only)
+    po --> runner : Interval 2 ends: authenticated shell shows the start view route
+    runner -> po : Wait until the start view is usable
+    runner -> browser : DevTools protocol: clear HTTP cache; no reload; session stays in memory
+    runner -> po : Navigate in-app to the target view; interval 3 starts
+    app -> app : Load the target route bundle (uncached)
+    app -> api : Target view queries (page size 25; board batches up to 100)
+    api --> app : Typed results with full totals
+    po -> browser : Check fixture content visible and essential actions enabled
+    note right of po
+    Skeletons, spinners, and network
+    idleness never count as usable.
+    end note
+    alt Usable within 30 seconds
+      po --> runner : Interval 3 ends (L2-046.2 gate interval)
+    else Error state, sign-in failure, or not usable within 30 seconds
+      po --> runner : Failed run; recorded, never dropped
+    end
+  end
+  group Context B - fresh context, empty cache and storage
+    runner -> po : Open the target direct route; sign in; wait until usable
+    po -> browser : Navigate, submit, check readiness
+    browser -> app : Shell, sign-in, target bundle and queries (uncached)
+    alt Usable within 30 seconds
+      po --> runner : Full fresh-context journey time (reported, no gate)
+    else Error state, sign-in failure, or not usable within 30 seconds
+      po --> runner : Failed run; recorded, never dropped
+    end
   end
 end
-runner -> runner : Per view: runs, failed runs, p95 usable milliseconds
-runner -> result : L2-046.2 ColdViewResult per view with manifest
-alt Any failed run or any view p95 > 2.5 seconds
+runner -> runner : Per view: runs, failed runs, nearest-rank p95 of intervals 1-3 and journey (performance.now clock)
+runner -> result : ColdViewResult per view with start view, gate interpretation, and manifest
+alt Any failed run or any view interval 3 p95 > 2.5 seconds
   runner --> actor : Outcome Failed; views named; no passing claim
 else Manifest differs from the L2-046 profile
   runner --> actor : Outcome OtherEnvironment; never labeled passing
-else Every view within 2.5 seconds at p95
-  runner --> actor : Outcome Passed for this run
+else Every view interval 3 within 2.5 seconds at p95
+  runner --> actor : Outcome Passed under the recorded interpretation; intervals 1-2 and journey reported alongside
 end
 @enduml

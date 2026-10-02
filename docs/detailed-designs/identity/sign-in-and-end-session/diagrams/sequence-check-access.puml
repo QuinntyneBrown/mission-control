@@ -14,64 +14,91 @@ skinparam package {
   BackgroundColor #F9FAFB
 }
 title Behavior - Check current access
+skinparam maxMessageSize 300
 actor "Account holder" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "Guards / SessionView" as page
-  participant "ISessionService / SessionService" as client
+  participant "AuthenticationGuard /\nPermissionGuard" as guard
+  participant "ISessionService /\nSessionService" as session
+  participant "sessionInterceptor" as icpt
+  participant "Any protected adapter" as adapter
 end box
 box "Backend - MissionControl.Api" #D1FADF
   participant "CurrentAccountAuthorization" as access
   participant "SessionsController" as ctrl
 end box
-box "Backend - MissionControl.Application and Domain" #ECFDF3
+box "Backend - MissionControl.Application" #ECFDF3
   participant "GetCurrentSessionQueryHandler" as handler
-  participant "CurrentSession" as entity
 end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   participant "IAuditEventWriter" as audit
   database "Mission Control SQL" as db
 end box
-actor -> page : Open a protected route after sign-in
-alt No token in memory (reload or never signed in)
-  page --> actor : Open login (deep-link or session-ended); no request sent; no protected data shown
+
+== Primary-route activation refreshes the capability summary (L2-002, L2-029) ==
+actor -> guard : Open Home, Leads, Projects, Accounts, or Audit log
+guard -> session : AuthenticationGuard reads signedIn()
+alt No token in memory (reload, never signed in, or session ended)
+  guard --> actor : Store requestedPath; redirect to /login with replaceUrl (session-ended after a reload, otherwise deep-link); no request sent
 else Token held in memory
-  page -> client : Build GetCurrentSessionQuery for this session generation
-  client -> access : GET /api/session with bearer token
-  access -> access : L2-002 validate signature, issuer, audience, subject, expiry (zero clock skew)
-  alt Absent, malformed, tampered, wrong issuer or audience, or at or after exp
-    access -> audit : Append Denied audit (restricted append; no payload)
-    access --> client : 401; no data
-    client -> client : Clear token and protected caches; increment session generation
-    client --> page : Open login (session-ended; session-unsaved if a form was dirty)
-  else Token valid
-    access -> db : Read current status, role and credential version
-    db --> access : Current account access or none
-    alt Account inactive, missing, or credential version changed (L2-002.3, L2-004.4)
-      access -> audit : Append Denied audit (restricted append; no payload)
-      access --> client : 401; no data
-      client -> client : Clear token and protected caches; increment session generation
-      client --> page : Open login (session-ended; session-unsaved if a form was dirty)
+  guard -> session : PermissionGuard awaits refreshCapabilities()
+  alt A refresh is already in flight
+    session --> session : Share that promise; no second request
+  else No refresh in flight
+    session -> icpt : GET /api/session
+    icpt -> icpt : Attach bearer token; capture generation N
+    icpt -> access : GET /api/session
+    access -> access : L2-002 validate signature, issuer, audience, subject, expiry (zero clock skew)
+    opt Token valid
+      access -> db : LoadAccountAccessAsync: current status, role and credential version
+      db --> access : AccountAccess or none
+    end
+    alt 401: invalid or expired token; inactive or missing account; credential version changed (L2-002.2, L2-002.3, L2-004.4)
+      access -> audit : AppendRestrictedAsync(Denied); no payload
+      access --> icpt : 401; no data
+      alt Generation is still N
+        icpt -> session : end(Unauthorized): generation N+1; token, summary and timer cleared; in-flight requests aborted
+        session --> guard : The refresh rejects with its 401 (not SessionEndedError); no route opens
+        guard --> actor : ApplicationShell opens /login with replaceUrl (session-ended) with the requested path stored
+      else Generation already moved on (session ended or replaced)
+        icpt --> session : Discard: SessionEndedError; no second session end
+      end
+    else 500 or API unreachable
+      access --> icpt : Failure (a 500 carries the reference ID in X-Correlation-ID)
+      icpt --> session : Error; currentSession unchanged
+      session --> guard : Refresh failed
+      alt A summary is already held
+        guard --> actor : Decide with the held summary; the API still enforces every operation
+      else No summary held yet
+        guard --> actor : Capability route: RouteContext.status = Error (reference ID) or Offline and return false, so ShellStatusView shows it and Try again re-navigates; any other route opens and its own reads report failures
+      end
     else Active account at the token's credential version
       access -> ctrl : Authenticated request (subject from token)
       ctrl -> handler : Send GetCurrentSessionQuery through MediatR 12.5.0
-      handler -> db : Read names, role and current capabilities
+      handler -> db : LoadCurrentSessionAsync: names, account email, role and current capabilities
       db --> handler : Current SQL authority
-      handler -> entity : Project account ID, display name, role, capability summary
-      entity --> handler : CurrentSession; no contact data or credential fields
-      handler --> ctrl : 200 CurrentSession
-      ctrl --> client : Success response
-      alt Response belongs to an earlier session generation
-        client -> client : Ignore late response
-      else Current generation
-        client --> page : Update session signal; guards evaluate capabilities
-        page --> actor : Open the route, or the access-denied page if not permitted
+      handler --> ctrl : CurrentSession; no contact data or credential fields
+      ctrl --> icpt : 200 CurrentSession
+      alt Generation no longer N
+        icpt --> session : Discard: SessionEndedError; summary not updated
+      else Generation is still N
+        icpt --> session : CurrentSession
+        session -> session : currentSession = summary; navigation and controls follow it
+        session --> guard : CurrentSession
+        guard --> actor : Open the route if permits(); otherwise RouteContext.status = AccessDenied and return false, so ShellStatusView shows the access-denied page and no record is requested
       end
     end
   end
 end
-note over ctrl, db
-Unexpected failures return generic 500 plus correlation ID (L2-043);
-the page shows the service-error page with the reference ID and Try again.
-Diagnostics exclude secrets and contact payloads.
-end note
+
+== Any protected request answered 403 (L2-002.4) ==
+adapter -> icpt : Protected request sent at generation N
+icpt -> access : Request with bearer token
+access -> audit : AppendRestrictedAsync(Denied); no payload
+access --> icpt : 403; nothing changed
+alt Generation is still N
+  icpt -> session : refreshCapabilities(); shares any refresh in flight
+  icpt --> adapter : 403 passes on to its caller: a capability-route view (accounts, audit) emits forbidden and its page calls showStatus(AccessDenied); an administrator-only dialog shows its own 403 explanation; an operation that needs only an active session restores its saved state, and its routed page shows the "Your access changed" toast through TOAST_SERVICE, without Retry
+else Generation already moved on
+  icpt --> adapter : Discard: a resource keeps its state, a mutation promise rejects with SessionEndedError; no refresh
+end
 @enduml

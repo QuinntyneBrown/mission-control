@@ -4,6 +4,7 @@ skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
 skinparam ArrowColor #344054
+skinparam maxMessageSize 300
 skinparam rectangle {
   BorderColor #344054
   FontColor #101828
@@ -16,7 +17,7 @@ skinparam package {
 title Behavior - Create a lead
 actor "Administrator" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "LeadFormDialog / LeadView" as page
+  participant "LeadFormDialog / LeadForm" as page
   participant "ILeadService / LeadService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,19 +32,21 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Enter lead details and save
-page -> page : Disable repeat submission; show saving progress
-page -> client : Build typed CreateLeadCommand
+actor -> page : Add lead (shown only with leads.manage); enter lead details and save
+page -> page : Disable repeat submission; show saving progress; draftChange reports pending
+page -> client : create(CreateLeadCommand) returns a promise
 client -> access : POST /api/leads
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid, or expired JWT; inactive account
   access --> client : 401; audit denial without payloads
-  client --> page : Clear in-memory session; require login; explain the lead was not saved (L2-003.4)
+  client -> client : sessionInterceptor: a 401 for the current session generation calls SessionService.end(Unauthorized) once
+  client --> page : The promise rejects with the 401; sign-in explains the lead was not saved (L2-003.4)
 else Collaborator (no contact mutation in profile P)
   access --> client : 403; audit denial without payloads
-  client --> page : Keep input; show that only administrators can add leads; nothing saved
+  client -> client : sessionInterceptor calls SessionService.refreshCapabilities() (one in flight)
+  client --> page : The promise rejects with the 403; forbidden state: keep the dialog and every value; show that only administrators can add leads; Save lead unavailable, so focus moves to the alert; no reference ID; nothing saved; controls follow currentSession
 else Administrator
   access -> ctrl : Authorized request
 ctrl -> validation : Send CreateLeadCommand through MediatR 12.5.0
@@ -51,38 +54,42 @@ validation -> validation : L2-009 trim; names 1-100, email 1-254 and valid, phon
 alt Invalid request
   validation --> ctrl : 400 field errors; no business mutation
   ctrl --> client : Validation ProblemDetails
-  client --> page : Keep valid input; focus linked error summary
+  client --> page : The promise rejects; keep valid input; no Retry or reference ID; one field error focuses that field, which reads its error; several focus the linked error summary
 else Valid request
   validation -> handler : Handle CreateLeadCommand
-  handler -> db : Find contact with the normalized email and category
+  handler -> db : LoadLeadByEmailAndCategoryAsync: contact with the normalized email and category
   db --> handler : Existing contact or none
   alt Normalized email/category already used
     handler --> ctrl : 409 duplicate with existing contact ID, name, category; nothing written
     ctrl --> client : Conflict ProblemDetails
-    client --> page : Keep input; flag email and category; name and link the existing lead
+    client --> page : The promise rejects; keep input; flag email and category; name and link the existing lead; focus Email, which reads its error
   else Pair available
     handler -> entity : L2-009 create independent contact; preserve phone text
     entity --> handler : New lead
-    handler -> db : L2-039 / L2-040 insert lead and success audit in one transaction
+    handler -> db : L2-039 / L2-040 SaveChangesAsync: insert lead and success audit in one transaction
     alt Unique index rejects a racing duplicate
       db --> handler : Roll back insert and audit
       handler --> ctrl : 409 duplicate with the winning contact's ID, name, category
       ctrl --> client : Conflict ProblemDetails
-      client --> page : Keep input; flag email and category; name and link the existing lead
+      client --> page : The promise rejects; keep input; flag email and category; name and link the existing lead; focus Email, which reads its error
     else Commit fails unexpectedly
       db --> handler : Roll back business state and success audit
       handler --> ctrl : Generic 500 with correlation ID
       ctrl --> client : Failure; no successful-save claim
-      client --> page : Keep input; show reference ID; Save lead retries
+      client --> page : The promise rejects; failed state: keep input; announce the alert with the reference ID; Save lead keeps focus and retries only when pressed
     else Commit succeeds
       db --> handler : New lead ID and version
-      handler --> ctrl : 201 Created with the saved lead
+      handler --> ctrl : 201 Created with SavedLeadResult (id, version, first and last name, category)
       ctrl --> client : Success response
-      client --> page : Close dialog; refresh directory; announce the saved lead
+      client --> page : The promise resolves with SavedLeadResult; LeadForm emits saved; the dialog closes with Saved(SavedLeadResult)
+      page -> page : LeadDirectoryPage increments refresh, so LeadDirectoryView reloads its leadsResource, and shows the "Lead added" toast naming the lead through TOAST_SERVICE
       page --> actor : New lead listed; focus returns to Add lead
     end
   end
 end
+end
+opt No response to the create (timeout or network failure)
+  client --> page : The create may have committed: keep every value; the failed alert reads "We couldn't confirm whether Oliver Hughes was added" without a reference ID; LeadForm emits unconfirmed, which the dialog relays, so LeadDirectoryPage increments refresh and the directory rereads at once; Save lead resends only when pressed, and a create that did commit makes it meet the duplicate 409 naming that lead
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).

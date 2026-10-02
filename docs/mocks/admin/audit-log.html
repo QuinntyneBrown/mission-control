@@ -22,7 +22,10 @@
       <label class="mock-bar__state">State
         <select data-mock-state>
           <option value="default">Recent events</option>
+          <option value="actor-search">Searching for an actor</option>
+          <option value="actor-failed">Actor search failed</option>
           <option value="filtered-zero">No matching events</option>
+          <option value="invalid-range">To date before From (400)</option>
           <option value="loading">Loading</option>
           <option value="error">Load failed</option>
         </select>
@@ -32,10 +35,13 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">Administrator-only; collaborators who open this URL get the <a href="../shell/status-pages.html#state=access-denied">access-denied page</a>, and the API returns 403. Entries identify what changed by entity type and ID only, with the ID shortened to its first eight characters. They never contain names, emails, or phone numbers from contacts, and never passwords or tokens. Outcomes are Succeeded, Rejected (a protected change refused with 409), Denied, and Throttled. The Actor filter lists accounts; events with no known actor show Unknown and appear when the filter is Anyone. Newest first, 25 per page. Times are Toronto time, with the recorded UTC time beneath.</p>
+    <p class="mock-note" data-when="default">Administrator-only; signed-in collaborators who open this URL get the <a href="../shell/status-pages.html#state=access-denied">access-denied page</a>, and the API returns 403. Entries identify what changed by entity type and ID only, with the ID shortened to its first eight characters. They never contain names, emails, or phone numbers from contacts, and never passwords or tokens. Outcomes are Succeeded, Rejected (a protected change refused with 409), Denied, and Throttled. Every event is stored with one of the seven areas in the Area filter. A denied request is recorded before anything is read, with the area, operation, and entity type its endpoint declares, so Mateo Silva's denied delete names a Work item rather than a Story or Task. Startup seeding records its own changes, such as "Administrator access restored", with no actor, so they show Unknown. The Actor filter searches every account, inactive ones included; events with no known actor show Unknown and appear only while the filter is Anyone. Newest first, 25 per page. Times are Toronto time, with the recorded UTC time beneath.</p>
+    <p class="mock-note" data-when="actor-search" hidden>Actor is a searchable combobox, the same pattern as the project form's lead picker, because there can be many accounts. Typing "an" searches about 250 ms after the last keystroke, and a newer search cancels the request still in flight. Matches come from every account, inactive ones included (Jordan Reyes is inactive), as display names only, ordered by name, 25 at a time. "Anyone" is always first and clears the filter. Arrow keys move through the list, Enter picks, Escape closes it and keeps the current filter; the match count is announced politely. If the search fails, the Actor field shows its own message instead (see "Actor search failed").</p>
+    <p class="mock-note" data-when="actor-failed" hidden>The actor search failed, so only the Actor field shows the problem, with Retry, which repeats the same search. This one is a 500, so the message carries a reference ID that matches the server's diagnostic record; a search that got no response shows the message and Retry without a reference ID. The current actor filter, the other filters, and the events already shown all stay, and the log can still be filtered and paged. The message is announced as an alert; focus stays in Actor, which reads the message through aria-describedby.</p>
     <p class="mock-note" data-when="filtered-zero" hidden>Filters combine with AND. Changing a filter resets to page 1 and screen readers hear the result count. Clear filters restores the full log.</p>
+    <p class="mock-note" data-when="invalid-range" hidden>From is Sep 30, 2026 and To is Sep 1, 2026, so the API answered 400 and nothing new was read. Every filter keeps its value and the rows already shown stay; To is marked invalid with its message, which is announced as an alert while focus stays on To. Correcting either date reads again.</p>
     <p class="mock-note" data-when="loading" hidden>A skeleton holds the table's shape. Screen readers hear "Loading audit events".</p>
-    <p class="mock-note" data-when="error" hidden>The request failed. Try again repeats it. The audit log itself is never changed by viewing it.</p>
+    <p class="mock-note" data-when="error" hidden>The request failed with a 500, shown with its reference ID, which matches the server's diagnostic record; a request that got no response reads "Check your connection and try again." without one. Try again repeats it in both cases. The audit log itself is never changed by viewing it.</p>
   </div>
 
   <div class="mc-app">
@@ -124,16 +130,39 @@
         <form class="mc-toolbar" aria-label="Filter audit events">
           <div class="mc-field mc-toolbar__field">
             <label class="mc-label" for="audit-actor">Actor</label>
-            <span class="mc-select-wrap">
-              <select class="mc-select" id="audit-actor">
-                <option selected data-attr-filtered-zero="!selected">Anyone</option>
-                <option>Quinntyne Brown</option>
-                <option>Priya Raman</option>
-                <option>Ada Okafor</option>
-                <option>Mateo Silva</option>
-                <option data-attr-filtered-zero="selected">Jordan Reyes</option>
-              </select>
-            </span>
+            <div class="mc-combobox">
+              <div class="mc-search">
+                <span class="mc-icon mc-icon--search" aria-hidden="true"></span>
+                <input class="mc-input" id="audit-actor" name="actor" type="text" role="combobox" autocomplete="off"
+                  aria-autocomplete="list" aria-expanded="false" aria-controls="audit-actor-options"
+                  placeholder="Anyone"
+                  data-attr-actor-search="value=an|aria-expanded=true|aria-activedescendant=actor-option-jordan"
+                  data-attr-actor-failed="value=an|aria-describedby=audit-actor-error"
+                  data-attr-filtered-zero="value=Jordan Reyes">
+              </div>
+              <ul class="mc-listbox" id="audit-actor-options" role="listbox" aria-label="Matching people" data-when="actor-search" hidden>
+                <li class="mc-listbox__option" id="actor-option-anyone" role="option" aria-selected="false">
+                  <span>Anyone</span>
+                  <span class="mc-listbox__hint">Clear the actor filter</span>
+                </li>
+                <li class="mc-listbox__option" id="actor-option-jordan" role="option" aria-selected="true">
+                  <span>Jordan Reyes</span>
+                </li>
+                <li class="mc-listbox__option" id="actor-option-priya" role="option" aria-selected="false">
+                  <span>Priya Raman</span>
+                </li>
+              </ul>
+            </div>
+            <div class="mc-live" role="status" aria-live="polite"><p class="mc-visually-hidden" data-when="actor-search" hidden>2 people found</p></div>
+            <div class="mc-live" role="alert">
+              <div class="mc-stack mc-stack--xs" data-when="actor-failed" hidden>
+                <p class="mc-field-error" id="audit-actor-error"><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>We couldn't search accounts.</p>
+                <p class="mc-ref">Reference ID <code>3d81-f0a6-52ce</code>
+                  <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="3d81-f0a6-52ce"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                </p>
+                <div><button class="mc-button mc-button--sm" type="button" data-goto-state="actor-search"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Retry</button></div>
+              </div>
+            </div>
           </div>
           <div class="mc-field mc-toolbar__field">
             <label class="mc-label" for="audit-area">Area</label>
@@ -164,16 +193,17 @@
           </div>
           <div class="mc-field mc-toolbar__field">
             <label class="mc-label" for="audit-from">From</label>
-            <input class="mc-input" id="audit-from" type="date" data-attr-filtered-zero="value=2026-09-01">
+            <input class="mc-input" id="audit-from" type="date" data-attr-filtered-zero="value=2026-09-01" data-attr-invalid-range="value=2026-09-30">
           </div>
           <div class="mc-field mc-toolbar__field">
             <label class="mc-label" for="audit-to">To</label>
-            <input class="mc-input" id="audit-to" type="date" data-attr-filtered-zero="value=2026-09-30">
+            <input class="mc-input" id="audit-to" type="date" data-attr-filtered-zero="value=2026-09-30" data-attr-invalid-range="value=2026-09-01|aria-invalid=true|aria-describedby=audit-to-error">
+            <p class="mc-field-error" id="audit-to-error" data-when="invalid-range" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Choose a To date on or after Sep 30, 2026</p>
           </div>
         </form>
 
         <div class="mc-live" role="status" aria-live="polite">
-          <div class="mc-results-meta" data-when="default">
+          <div class="mc-results-meta" data-when="default actor-search actor-failed invalid-range">
             <span>Showing 1–25 of 1,284 events</span><span>Newest first</span>
           </div>
           <div class="mc-results-meta" data-when="filtered-zero" hidden>
@@ -182,9 +212,12 @@
           </div>
           <p class="mc-visually-hidden" data-when="loading" hidden>Loading audit events</p>
         </div>
+        <div class="mc-live" role="alert">
+          <p class="mc-visually-hidden" data-when="invalid-range" hidden>Choose a To date on or after Sep 30, 2026</p>
+        </div>
 
         <!-- Events -->
-        <div class="mc-table-wrap" data-when="default">
+        <div class="mc-table-wrap" data-when="default actor-search actor-failed invalid-range">
           <table class="mc-table mc-table--stack mc-table--stack-md">
             <caption class="mc-visually-hidden">Audit events, newest first</caption>
             <thead>
@@ -255,6 +288,38 @@
                 <td data-label="Reference"><span class="mc-mono">f5a6-afe8-bb51</span></td>
               </tr>
               <tr>
+                <td class="mc-table__primary"><time datetime="2026-09-30T14:15:00Z">Sep 30, 2026, 10:15 a.m.</time><span class="mc-table__secondary">14:15 UTC</span></td>
+                <td data-label="Actor"><span class="mc-unset">Unknown</span></td>
+                <td data-label="Operation">Sign-in failed</td>
+                <td data-label="Entity">Sign-in attempt <span class="mc-unset">· no account identified</span></td>
+                <td data-label="Outcome"><span class="mc-pill mc-pill--danger"><span class="mc-icon mc-icon--ban" aria-hidden="true"></span>Denied</span></td>
+                <td data-label="Reference"><span class="mc-mono">2b7d-90e4-c318</span></td>
+              </tr>
+              <tr>
+                <td class="mc-table__primary"><time datetime="2026-09-30T14:14:00Z">Sep 30, 2026, 10:14 a.m.</time><span class="mc-table__secondary">14:14 UTC</span></td>
+                <td data-label="Actor"><span class="mc-unset">Unknown</span></td>
+                <td data-label="Operation">Sign-in failed</td>
+                <td data-label="Entity">Sign-in attempt <span class="mc-unset">· no account identified</span></td>
+                <td data-label="Outcome"><span class="mc-pill mc-pill--danger"><span class="mc-icon mc-icon--ban" aria-hidden="true"></span>Denied</span></td>
+                <td data-label="Reference"><span class="mc-mono">e04a-17cf-6d92</span></td>
+              </tr>
+              <tr>
+                <td class="mc-table__primary"><time datetime="2026-09-30T14:13:00Z">Sep 30, 2026, 10:13 a.m.</time><span class="mc-table__secondary">14:13 UTC</span></td>
+                <td data-label="Actor"><span class="mc-unset">Unknown</span></td>
+                <td data-label="Operation">Sign-in failed</td>
+                <td data-label="Entity">Sign-in attempt <span class="mc-unset">· no account identified</span></td>
+                <td data-label="Outcome"><span class="mc-pill mc-pill--danger"><span class="mc-icon mc-icon--ban" aria-hidden="true"></span>Denied</span></td>
+                <td data-label="Reference"><span class="mc-mono">71c8-b3a5-04fe</span></td>
+              </tr>
+              <tr>
+                <td class="mc-table__primary"><time datetime="2026-09-30T14:12:00Z">Sep 30, 2026, 10:12 a.m.</time><span class="mc-table__secondary">14:12 UTC</span></td>
+                <td data-label="Actor"><span class="mc-unset">Unknown</span></td>
+                <td data-label="Operation">Sign-in failed</td>
+                <td data-label="Entity">Sign-in attempt <span class="mc-unset">· no account identified</span></td>
+                <td data-label="Outcome"><span class="mc-pill mc-pill--danger"><span class="mc-icon mc-icon--ban" aria-hidden="true"></span>Denied</span></td>
+                <td data-label="Reference"><span class="mc-mono">5fd3-6e21-a9b7</span></td>
+              </tr>
+              <tr>
                 <td class="mc-table__primary"><time datetime="2026-09-30T14:02:00Z">Sep 30, 2026, 10:02 a.m.</time><span class="mc-table__secondary">14:02 UTC</span></td>
                 <td data-label="Actor">Mateo Silva</td>
                 <td data-label="Operation">Sign-in succeeded</td>
@@ -279,14 +344,6 @@
                 <td data-label="Reference"><span class="mc-mono">0990-728e-ff75</span></td>
               </tr>
               <tr>
-                <td class="mc-table__primary"><time datetime="2026-09-30T13:15:00Z">Sep 30, 2026, 9:15 a.m.</time><span class="mc-table__secondary">13:15 UTC</span></td>
-                <td data-label="Actor">Ada Okafor</td>
-                <td data-label="Operation">Task updated</td>
-                <td data-label="Entity">Task <span class="mc-mono">2e95a7c1…</span></td>
-                <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
-                <td data-label="Reference"><span class="mc-mono">d604-21e9-05ba</span></td>
-              </tr>
-              <tr>
                 <td class="mc-table__primary"><time datetime="2026-09-30T13:02:00Z">Sep 30, 2026, 9:02 a.m.</time><span class="mc-table__secondary">13:02 UTC</span></td>
                 <td data-label="Actor">Ada Okafor</td>
                 <td data-label="Operation">Sign-in succeeded</td>
@@ -303,14 +360,6 @@
                 <td data-label="Reference"><span class="mc-mono">9894-aa6b-3ccd</span></td>
               </tr>
               <tr>
-                <td class="mc-table__primary"><time datetime="2026-09-29T20:47:00Z">Sep 29, 2026, 4:47 p.m.</time><span class="mc-table__secondary">20:47 UTC</span></td>
-                <td data-label="Actor">Priya Raman</td>
-                <td data-label="Operation">Story updated</td>
-                <td data-label="Entity">Story <span class="mc-mono">91ad2b6e…</span></td>
-                <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
-                <td data-label="Reference"><span class="mc-mono">373c-6b8e-2fe9</span></td>
-              </tr>
-              <tr>
                 <td class="mc-table__primary"><time datetime="2026-09-29T18:10:00Z">Sep 29, 2026, 2:10 p.m.</time><span class="mc-table__secondary">18:10 UTC</span></td>
                 <td data-label="Actor">Ada Okafor</td>
                 <td data-label="Operation">Sprint scope changed</td>
@@ -322,7 +371,7 @@
                 <td class="mc-table__primary"><time datetime="2026-09-29T17:55:00Z">Sep 29, 2026, 1:55 p.m.</time><span class="mc-table__secondary">17:55 UTC</span></td>
                 <td data-label="Actor">Mateo Silva</td>
                 <td data-label="Operation">Delete denied</td>
-                <td data-label="Entity">Story <span class="mc-mono">48f7d05c…</span></td>
+                <td data-label="Entity">Work item <span class="mc-mono">48f7d05c…</span></td>
                 <td data-label="Outcome"><span class="mc-pill mc-pill--danger"><span class="mc-icon mc-icon--ban" aria-hidden="true"></span>Denied</span></td>
                 <td data-label="Reference"><span class="mc-mono">e781-2dc3-72ea</span></td>
               </tr>
@@ -333,14 +382,6 @@
                 <td data-label="Entity">Lead <span class="mc-mono">5a82c0d9…</span></td>
                 <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
                 <td data-label="Reference"><span class="mc-mono">8954-60bd-7390</span></td>
-              </tr>
-              <tr>
-                <td class="mc-table__primary"><time datetime="2026-09-29T15:22:00Z">Sep 29, 2026, 11:22 a.m.</time><span class="mc-table__secondary">15:22 UTC</span></td>
-                <td data-label="Actor">Quinntyne Brown</td>
-                <td data-label="Operation">Project updated</td>
-                <td data-label="Entity">Project <span class="mc-mono">1fa9e3c6…</span></td>
-                <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
-                <td data-label="Reference"><span class="mc-mono">9117-3ae2-161e</span></td>
               </tr>
               <tr>
                 <td class="mc-table__primary"><time datetime="2026-09-29T13:30:00Z">Sep 29, 2026, 9:30 a.m.</time><span class="mc-table__secondary">13:30 UTC</span></td>
@@ -390,19 +431,11 @@
                 <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
                 <td data-label="Reference"><span class="mc-mono">74b8-a8ed-f6db</span></td>
               </tr>
-              <tr>
-                <td class="mc-table__primary"><time datetime="2026-09-25T20:45:00Z">Sep 25, 2026, 4:45 p.m.</time><span class="mc-table__secondary">20:45 UTC</span></td>
-                <td data-label="Actor">Priya Raman</td>
-                <td data-label="Operation">Sprint scope changed</td>
-                <td data-label="Entity">Sprint <span class="mc-mono">8e0f6b17…</span></td>
-                <td data-label="Outcome"><span class="mc-pill mc-pill--success"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Succeeded</span></td>
-                <td data-label="Reference"><span class="mc-mono">febc-cee7-8598</span></td>
-              </tr>
             </tbody>
           </table>
         </div>
 
-        <nav class="mc-pagination" aria-label="Audit log pages" data-when="default">
+        <nav class="mc-pagination" aria-label="Audit log pages" data-when="default actor-search actor-failed invalid-range">
           <span class="mc-show-compact">Page 1 of 52</span>
           <span class="mc-hide-compact">25 per page</span>
           <div class="mc-cluster mc-cluster--sm">
@@ -448,7 +481,7 @@
         <div class="mc-empty mc-empty--error" role="alert" data-when="error" hidden>
           <span class="mc-empty__icon"><span class="mc-icon mc-icon--alert-circle mc-icon--lg" aria-hidden="true"></span></span>
           <h2 class="mc-empty__title">We couldn't load the audit log</h2>
-          <p class="mc-empty__text">Check your connection and try again. If it keeps happening, share the reference ID with whoever supports Mission Control.</p>
+          <p class="mc-empty__text">Something went wrong on our side. Try again, and if it keeps happening, share the reference ID with whoever supports Mission Control.</p>
           <p class="mc-ref">Reference ID <code>b5d9-0e42-7c13</code>
             <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="b5d9-0e42-7c13"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
           </p>

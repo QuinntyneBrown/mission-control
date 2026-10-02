@@ -46,6 +46,7 @@
   --mc-color-danger-subtle: #fdecea;
   --mc-color-info: #3b4fd8;
   --mc-color-info-subtle: #eef0fd;
+  --mc-color-alert-border-mix: 35%; /* share of the tone colour in alert borders */
 
   /* Colour: work status (always paired with an icon and text) */
   --mc-color-status-todo: #5a6478;

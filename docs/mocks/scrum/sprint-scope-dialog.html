@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Change sprint scope · Mission Control mock</title>
-  <meta name="description" content="Active sprint scope dialog for adding or removing stories, with a closed-meanwhile conflict, saving, and failure.">
+  <meta name="description" content="Active sprint scope dialog for adding or removing stories: search and page the stories that can be added, a story preselected from the backlog (covered by the add state), loading and load-failed reads, changed-meanwhile, already-allocated, and closed-meanwhile conflicts, saving, failure, and re-reads after an unconfirmed change that find a chosen story already added or the sprint closed.">
   <meta name="mock-area" content="Scrum sprints">
   <meta name="mock-requirements" content="L2-022.3, L2-023.3, L2-023.4, L2-031, L2-033.2, L2-043.4">
   <link rel="stylesheet" href="../assets/tokens.css">
@@ -20,10 +20,17 @@
       <label class="mock-bar__state">State
         <select data-mock-state>
           <option value="add">Add stories</option>
+          <option value="paged">Many stories, page 2</option>
           <option value="remove">Remove a story</option>
+          <option value="loading">Loading sprint</option>
+          <option value="load-failed">Couldn't load sprint</option>
+          <option value="stale">Sprint changed meanwhile</option>
+          <option value="allocated">Story already in another sprint</option>
           <option value="closed">Sprint closed meanwhile</option>
           <option value="saving">Saving</option>
           <option value="failed">Save failed</option>
+          <option value="unconfirmed-added">Change unconfirmed · already added</option>
+          <option value="unconfirmed-closed">Change unconfirmed · now closed</option>
         </select>
       </label>
       <a href="../index.html">All mocks</a>
@@ -31,11 +38,18 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="add">Lists unfinished stories that aren't in another open sprint. Each addition is recorded in the sprint's history with the person and time; the initial scope stays recorded. Collaborators can change scope too.</p>
+    <p class="mock-note" data-when="add">Opens from Change scope on the sprint board or the Sprints tab. Lists only stories that can be added: unfinished and not in another open sprint (the read asks for eligible stories only, so nothing here is disabled), in backlog priority, then story ID. Search waits for a pause in typing and starts again at page 1; 25 stories per page, with a pager once there's more than one page. Chosen stories stay chosen across search and pages. Each addition is recorded in the sprint's history with the person and time; the initial scope stays recorded. Collaborators can change scope too. Choosing a story is an unsaved change, so Cancel, Close, or Escape asks before discarding it (here HCK-130 is chosen). From a backlog row's Add to sprint › Sprint 8 · Active, the dialog opens the same way with that story already chosen, as HCK-130 is here, once its own read of that story confirms it can still be added; a story that became Done or joined an open sprint meanwhile isn't chosen, and the dialog opens with nothing chosen. That preselected story alone isn't an unsaved change, so Cancel then closes without asking and returns to the backlog. Below 576px the dialog fills the screen with the actions pinned to the bottom.</p>
+    <p class="mock-note" data-when="paged" hidden>Shown with a larger dataset (the 350-story backlog): 198 stories can be added, 25 per page, so this is page 2 of 8; the list is abbreviated. The backlog's first 50 ranks hold fewer than 26 of them, so this page starts with stories ranked after the backlog's page 2. HCK-130, chosen on page 1, stays chosen, and HCK-267 is chosen here, so Add counts 2 stories. Previous, Next, and page numbers load at once; a new search starts again at page 1. Screen readers hear the updated "Showing" line.</p>
     <p class="mock-note" data-when="remove" hidden>Opens from Remove on an unfinished story's sprint board card, or from "Remove from Sprint 8" when a story can't be deleted while it's in the sprint. The story returns to the backlog with its status, estimate, and any tasks unchanged. Done stories can't be removed; they stay with the sprint's outcomes. Focus starts on Cancel.</p>
-    <p class="mock-note" data-when="closed" hidden>A closed sprint's scope can't change, so the API returns 409 and history is untouched.</p>
-    <p class="mock-note" data-when="saving" hidden>The button shows progress and ignores repeat clicks.</p>
-    <p class="mock-note" data-when="failed" hidden>Nothing changed and the selection is kept. Add retries.</p>
+    <p class="mock-note" data-when="loading" hidden>The dialog reads Sprint 8 first for its title, dates, and version, so Add and Return to backlog stay disabled until it arrives; in add mode the eligible stories load alongside. Cancel closes without sending anything. Screen readers hear "Loading sprint…"; focus stays on Cancel. A read that answers 404 closes the dialog, and the page that opened it reloads and shows its own state, with no reference ID or Try again.</p>
+    <p class="mock-note" data-when="load-failed" hidden>The read failed, so no stories are shown, Add stays disabled, and nothing was changed. Try again repeats the read. A server error (500) shows the reference ID, which matches the server's diagnostic record; a read that gets no response shows the same alert without a reference ID and asks you to check your connection. The alert is announced and focus moves to Try again; Cancel closes without sending anything. Remove mode loads and fails the same way, with Return to backlog disabled.</p>
+    <p class="mock-note" data-when="stale" hidden>Sprint 8 changed after this dialog opened (here HCK-110 joined it), so the API returns 409 and nothing is added. The dialog reads Sprint 8 and the list once and adopts the new version: HCK-110 is no longer offered and HCK-130 stays chosen. Nothing is sent again until Add is pressed. A chosen story that joined Sprint 8 meanwhile leaves the selection and is named instead, as in the Change unconfirmed · already added state. The message names no person or time; screen readers hear the alert, and the dialog's description now points to that explanation. Add stays available, so focus stays on it. In remove mode the alert reads "Sprint 8 changed after you opened this. Nothing was removed; check the story, then return it to the backlog again." and the story stays shown.</p>
+    <p class="mock-note" data-when="allocated" hidden>HCK-128 and HCK-130 were chosen, but HCK-128 joined Sprint 9 while this dialog was open, so the API returns 409 naming the story and its sprint, and nothing is added. HCK-128 is marked and can't be chosen; HCK-130 stays chosen for another try. The message names the sprint, not who moved the story or when; screen readers hear the alert, and the dialog's description now points to that explanation. HCK-128 can't be chosen, so focus moves to its checkbox, which stays focusable but unavailable (aria-disabled) and reads its error. The same presentation covers a 400 naming stories: a chosen story that became Done meanwhile is marked "Now Done, so it can't be added", and a chosen story that is already in Sprint 8 is marked "Already in Sprint 8". Nothing changes and the rest of the selection is kept. In remove mode, a story that already left the sprint is named with neutral copy instead (Change unconfirmed · already added). None of these refusals offers Try again or a reference ID.</p>
+    <p class="mock-note" data-when="closed" hidden>A closed sprint's scope can't change, so the API returns 409 with the recorded closing actor and time, and history is untouched. View sprints opens the Sprints tab, where closed sprints are listed under History; it appears only when the dialog opens from a page other than the Sprints tab, such as this board, so opened from the Sprints tab, Close is the first action and takes focus. Close returns the dialog's outdated result, so the page that opened it reads again; the board then shows No active sprint. A sprint that hasn't started yet gets the same presentation: "Sprint 9 hasn't started, so its stories change in Plan stories." The explanation sits in the dialog's alert region, so it is announced and becomes the dialog's description. Add (or Return to backlog in remove mode) is gone, so focus moves to View sprints, the first action offered. After a change that got no response, a sprint found closed is named with neutral copy instead (Change unconfirmed · now closed).</p>
+    <p class="mock-note" data-when="saving" hidden>The button shows progress and ignores repeat clicks. Once the change is saved, the dialog closes, the page that opened it reads again, and the "Scope updated" toast names the change, for example "“Volunteer check-in list” was added to Sprint 8 and recorded in its history."</p>
+    <p class="mock-note" data-when="unconfirmed-added" hidden>Add got no response, so the dialog read Sprint 8 and the stories that can be added again. HCK-130 is in Sprint 8 now; the dialog can't tell whether this change or another one added it, so it says only that, never that nothing was added, and names no person or time. HCK-130 leaves the selection and the list, which now shows 5 eligible stories; any other chosen story would stay chosen for Add. The page behind already read again when the change went unconfirmed. The same presentation covers a changed-meanwhile 409 whose re-read finds a chosen story already added. In remove mode, a story that already left the sprint is named the same way, "HCK-118 is no longer in Sprint 8.", and Return to backlog becomes unavailable; a Return to backlog refused with 400 because the story already left the sprint shows this too. A sprint found closed on the re-read shows Change unconfirmed · now closed instead. With nothing chosen, Add is unavailable, so focus moves to the alert, which is announced and becomes the dialog's description. Nothing is unsaved now, so Cancel closes without asking.</p>
+    <p class="mock-note" data-when="unconfirmed-closed" hidden>Add got no response, so the dialog read Sprint 8 again and found it closed. It can't tell whether this change went through before the sprint closed, so it says only what is true now, never that nothing was changed, and names no person or time; the sprint's history shows its final scope and every scope change. The page behind already read again when the change went unconfirmed. View sprints opens the Sprints tab, where Sprint 8 is listed under History; it appears only when the dialog opens from a page other than the Sprints tab, such as this board, and opened from the Sprints tab, Close is the first action and takes focus. Close returns the dialog's outdated result, so the page that opened it reads again; the board then shows No active sprint. Remove mode reads the same way. The explanation sits in the dialog's alert region, so it is announced and the dialog's description now points to it. Add is gone, so focus moves to View sprints, the first action offered.</p>
+    <p class="mock-note" data-when="failed" hidden>Nothing changed and the selection is kept. This covers a server error (500) and a busy project (503 with Retry-After). Add sends again only when pressed; the reference ID matches the server's diagnostic record. A change that gets no response reuses this alert with "We couldn't confirm whether Sprint 8's scope changed." and no reference ID, never saying that nothing changed; the selection stays, the page behind reads again at once, and the dialog reads Sprint 8 and the eligible stories again before Add is offered again. A chosen story that is in Sprint 8 by then leaves the selection and is named with neutral copy (Change unconfirmed · already added); the rest stay chosen. A sprint that is closed by then is named with neutral copy too (Change unconfirmed · now closed). In remove mode the alert reads "We couldn't return the story to the backlog. Nothing changed in Sprint 8." and Return to backlog sends again only when pressed. The alert is announced and focus stays on the button. An empty or contradictory change is refused with 400 and reuses this alert with the server's reason instead, with no Try again and no reference ID, since sending the same change again would be refused again; nothing changed, the selection stays so it can be corrected, the alert is announced, and focus stays on Add (or Return to backlog), which is still offered. If the account's access changed (an unexpected 403), nothing changes, the dialog keeps the selection, and the page shows the "Your access changed" toast instead, without Retry.</p>
   </div>
 
   <div class="mock-screen">
@@ -86,31 +100,84 @@
     </div>
 
     <div class="mc-backdrop">
-      <section class="mc-dialog mc-dialog--sheet" role="dialog" aria-modal="true" aria-labelledby="scope-title" aria-describedby="scope-note">
+      <section class="mc-dialog mc-dialog--sheet" role="dialog" aria-modal="true" aria-labelledby="scope-title" aria-describedby="scope-note"
+        data-attr-stale="aria-describedby=scope-stale-title scope-stale-text"
+        data-attr-allocated="aria-describedby=scope-allocated-title scope-allocated-text"
+        data-attr-closed="aria-describedby=scope-closed-title scope-closed-text"
+        data-attr-unconfirmed-added="aria-describedby=scope-added-title scope-added-text"
+        data-attr-unconfirmed-closed="aria-describedby=scope-closed-now-title scope-closed-now-text">
         <header class="mc-dialog__header">
           <div class="mc-dialog__heading">
             <h2 class="mc-dialog__title" id="scope-title">
-              <span data-unless="remove">Add stories to Sprint 8</span>
+              <span data-unless="remove loading load-failed">Add stories to Sprint 8</span>
+              <span data-when="loading load-failed" hidden>Change sprint scope</span>
               <span data-when="remove" hidden>Remove a story from Sprint 8</span>
             </h2>
-            <p class="mc-dialog__subtitle" id="scope-note">Active · Sep 28 – Oct 9, 2026</p>
+            <p class="mc-dialog__subtitle" id="scope-note"><span data-unless="loading load-failed unconfirmed-closed">Active · Sep 28 – Oct 9, 2026</span><span data-when="unconfirmed-closed" hidden>Closed · Sep 28 – Oct 9, 2026</span><span data-when="loading" hidden>Loading the sprint's details</span><span data-when="load-failed" hidden>Sprint details unavailable</span></p>
           </div>
-          <button class="mc-button mc-button--quiet mc-button--icon" type="button" aria-label="Close" data-nav="sprint-board.html" data-attr-saving="disabled">
+          <button class="mc-button mc-button--quiet mc-button--icon" type="button" aria-label="Close" data-nav="../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-remove="data-nav=sprint-board.html" data-attr-loading="data-nav=sprint-board.html" data-attr-load-failed="data-nav=sprint-board.html" data-attr-closed="data-nav=sprint-board.html#state=no-active" data-attr-unconfirmed-closed="data-nav=sprint-board.html#state=no-active" data-attr-unconfirmed-added="data-nav=sprint-board.html" data-attr-saving="disabled">
             <span class="mc-icon mc-icon--close" aria-hidden="true"></span>
           </button>
         </header>
 
         <form class="mc-dialog__form" novalidate data-goto-state="saving">
           <div class="mc-dialog__body">
+            <div class="mc-live" role="status" aria-live="polite">
+              <div class="mc-loading-inline" data-when="loading" hidden><span class="mc-spinner" aria-hidden="true"></span>Loading sprint…</div>
+            </div>
             <div class="mc-live" role="alert">
+              <div class="mc-alert mc-alert--danger" data-when="load-failed" hidden>
+                <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">We couldn't load this sprint</p>
+                  <p class="mc-alert__text">Nothing was changed. Try again.</p>
+                  <p class="mc-ref">Reference ID <code>c58f-2b17-e904</code>
+                    <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="c58f-2b17-e904"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                  </p>
+                  <div class="mc-alert__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-goto-state="add"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again</button>
+                  </div>
+                </div>
+              </div>
               <div class="mc-alert mc-alert--danger" data-when="closed" hidden>
                 <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
                 <div class="mc-alert__body">
-                  <p class="mc-alert__title">Sprint 8 is closed</p>
-                  <p class="mc-alert__text">Priya Raman closed Sprint 8 at 11:05 a.m. A closed sprint's scope can't change, so nothing was changed.</p>
+                  <p class="mc-alert__title" id="scope-closed-title">Sprint 8 is closed</p>
+                  <p class="mc-alert__text" id="scope-closed-text">Priya Raman closed Sprint 8 at 11:05 a.m. A closed sprint's scope can't change, so nothing was changed.</p>
                   <div class="mc-alert__actions">
-                    <a class="mc-button mc-button--sm" href="sprint-history.html">View sprint history</a>
+                    <a class="mc-button mc-button--sm" href="sprints.html"><span class="mc-icon mc-icon--history" aria-hidden="true"></span>View sprints</a>
                   </div>
+                </div>
+              </div>
+              <div class="mc-alert" data-when="unconfirmed-closed" hidden>
+                <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title" id="scope-closed-now-title">Sprint 8 is closed now.</p>
+                  <p class="mc-alert__text" id="scope-closed-now-text">Its history shows its final scope and every scope change.</p>
+                  <div class="mc-alert__actions">
+                    <a class="mc-button mc-button--sm" href="sprints.html"><span class="mc-icon mc-icon--history" aria-hidden="true"></span>View sprints</a>
+                  </div>
+                </div>
+              </div>
+              <div class="mc-alert mc-alert--warning" data-when="stale" hidden>
+                <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title" id="scope-stale-title">Sprint 8 changed after you opened this</p>
+                  <p class="mc-alert__text" id="scope-stale-text">Nothing was added. The stories that can be added have been updated, and your choice is kept. Check it, then add again.</p>
+                </div>
+              </div>
+              <div class="mc-alert" tabindex="-1" data-when="unconfirmed-added" hidden>
+                <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title" id="scope-added-title">HCK-130 is already in Sprint 8</p>
+                  <p class="mc-alert__text" id="scope-added-text">It's no longer chosen, and the stories that can be added have been updated. Choose another story to add, or close.</p>
+                </div>
+              </div>
+              <div class="mc-alert mc-alert--danger" data-when="allocated" hidden>
+                <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title" id="scope-allocated-title">HCK-128 is already in Sprint 9</p>
+                  <p class="mc-alert__text" id="scope-allocated-text">A story can be in only one open sprint, so nothing was added. Your other choice is kept.</p>
                 </div>
               </div>
               <div class="mc-alert mc-alert--danger" data-when="failed" hidden>
@@ -125,59 +192,46 @@
               </div>
             </div>
 
-            <div class="mc-alert mc-alert--neutral" data-unless="remove closed">
+            <div class="mc-alert mc-alert--neutral" data-unless="remove closed unconfirmed-closed loading load-failed">
               <span class="mc-icon mc-icon--history" aria-hidden="true"></span>
               <div class="mc-alert__body">
                 <p class="mc-alert__text">Recorded in Sprint 8's history with your name and the time.</p>
               </div>
             </div>
 
-            <fieldset class="mc-choice-group" data-unless="remove closed">
-              <legend>Eligible stories</legend>
-              <p class="mc-hint">Unfinished stories that aren't in another open sprint. Their tasks come with them.</p>
-              <ul class="mc-list">
+            <div class="mc-field" data-unless="remove closed unconfirmed-closed loading load-failed">
+              <label class="mc-label" for="scope-search">Find a story</label>
+              <div class="mc-search">
+                <span class="mc-icon mc-icon--search" aria-hidden="true"></span>
+                <input class="mc-input" id="scope-search" type="search" autocomplete="off" placeholder="Story key or title" data-attr-saving="disabled">
+              </div>
+            </div>
+
+            <fieldset class="mc-choice-group" data-unless="remove closed unconfirmed-closed loading load-failed">
+              <legend>Stories that can be added</legend>
+              <p class="mc-hint">Only unfinished stories that aren't in another open sprint are listed. Their tasks come with them.</p>
+              <div class="mc-live" role="status" aria-live="polite">
+                <div class="mc-results-meta">
+                  <span><span data-unless="paged stale unconfirmed-added">Showing 1–6 of 6 eligible</span><span data-when="stale unconfirmed-added" hidden>Showing 1–5 of 5 eligible</span><span data-when="paged" hidden>Showing 26–50 of 198 eligible</span></span>
+                  <span><span data-unless="paged unconfirmed-added">1 chosen</span><span data-when="unconfirmed-added" hidden>0 chosen</span><span data-when="paged" hidden>2 chosen · 1 on another page</span></span>
+                </div>
+              </div>
+              <ul class="mc-list" data-unless="paged">
+                  <li class="mc-list__item" data-unless="stale">
+                    <label class="mc-check mc-w-full">
+                      <input type="checkbox" name="stories" value="HCK-110" data-attr-saving="disabled">
+                      <span class="mc-list__main">
+                        <span class="mc-list__title">Mentor matching survey</span>
+                        <span class="mc-list__meta"><span>HCK-110</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span><span>3 pts</span></span>
+                      </span>
+                    </label>
+                  </li>
                   <li class="mc-list__item">
                     <label class="mc-check mc-w-full">
                       <input type="checkbox" name="stories" value="HCK-120" data-attr-saving="disabled">
                       <span class="mc-list__main">
                         <span class="mc-list__title">Confirm venue accessibility checklist</span>
                         <span class="mc-list__meta"><span>HCK-120</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true"><span class="mc-icon mc-icon--user mc-icon--sm"></span></span>Unassigned</span><span><span class="mc-unset">Not estimated</span></span></span>
-                      </span>
-                    </label>
-                  </li>
-                  <li class="mc-list__item">
-                    <label class="mc-check mc-w-full">
-                      <input type="checkbox" name="stories" value="HCK-123" data-attr-saving="disabled">
-                      <span class="mc-list__main">
-                        <span class="mc-list__title">&lt;script&gt;alert(1)&lt;/script&gt; feedback form</span>
-                        <span class="mc-list__meta"><span>HCK-123</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true">JR</span>Jordan Reyes (inactive)</span><span>1 pt</span></span>
-                      </span>
-                    </label>
-                  </li>
-                  <li class="mc-list__item">
-                    <label class="mc-check mc-w-full">
-                      <input type="checkbox" name="stories" value="HCK-128" data-attr-saving="disabled">
-                      <span class="mc-list__main">
-                        <span class="mc-list__title">Dietary needs survey for attendees</span>
-                        <span class="mc-list__meta"><span>HCK-128</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span><span>1 pt</span></span>
-                      </span>
-                    </label>
-                  </li>
-                  <li class="mc-list__item">
-                    <label class="mc-check mc-w-full">
-                      <input type="checkbox" name="stories" value="HCK-130" data-attr-add="checked" data-attr-saving="checked" data-attr-failed="checked" data-attr-saving="disabled">
-                      <span class="mc-list__main">
-                        <span class="mc-list__title">Volunteer thank-you notes</span>
-                        <span class="mc-list__meta"><span>HCK-130</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true">?</span>Unassigned</span><span>1 pt</span></span>
-                      </span>
-                    </label>
-                  </li>
-                  <li class="mc-list__item">
-                    <label class="mc-check mc-w-full">
-                      <input type="checkbox" name="stories" value="HCK-110" data-attr-saving="disabled">
-                      <span class="mc-list__main">
-                        <span class="mc-list__title">Mentor matching survey</span>
-                        <span class="mc-list__meta"><span>HCK-110</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span><span>3 pts</span></span>
                       </span>
                     </label>
                   </li>
@@ -190,7 +244,101 @@
                       </span>
                     </label>
                   </li>
+                  <li class="mc-list__item" data-attr-allocated="class=mc-list__item mc-list__item--invalid">
+                    <label class="mc-check mc-w-full">
+                      <input type="checkbox" name="stories" value="HCK-128" data-attr-saving="disabled" data-attr-allocated="aria-disabled=true|aria-describedby=scope-128-error">
+                      <span class="mc-list__main">
+                        <span class="mc-list__title">Dietary needs survey for attendees</span>
+                        <span class="mc-list__meta"><span>HCK-128</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span><span>1 pt</span></span>
+                        <span class="mc-field-error" id="scope-128-error" data-when="allocated" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Now in Sprint 9, so it can't be added.</span>
+                      </span>
+                    </label>
+                  </li>
+                  <li class="mc-list__item">
+                    <label class="mc-check mc-w-full">
+                      <input type="checkbox" name="stories" value="HCK-123" data-attr-saving="disabled">
+                      <span class="mc-list__main">
+                        <span class="mc-list__title">&lt;script&gt;alert(1)&lt;/script&gt; feedback form</span>
+                        <span class="mc-list__meta"><span>HCK-123</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true">JR</span>Jordan Reyes (inactive)</span><span><span class="mc-unset">Not estimated</span></span></span>
+                      </span>
+                    </label>
+                  </li>
+                  <li class="mc-list__item" data-unless="unconfirmed-added">
+                    <label class="mc-check mc-w-full">
+                      <input type="checkbox" name="stories" value="HCK-130" checked data-attr-saving="disabled">
+                      <span class="mc-list__main">
+                        <span class="mc-list__title">Volunteer thank-you notes</span>
+                        <span class="mc-list__meta"><span>HCK-130</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true">?</span>Unassigned</span><span>1 pt</span></span>
+                      </span>
+                    </label>
+                  </li>
               </ul>
+              <ul class="mc-list" data-when="paged" hidden>
+                  <li class="mc-list__item">
+                    <label class="mc-check mc-w-full">
+                      <input type="checkbox" name="stories" value="HCK-265">
+                      <span class="mc-list__main">
+                        <span class="mc-list__title">Team charter template</span>
+                        <span class="mc-list__meta"><span>HCK-265</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true"><span class="mc-icon mc-icon--user mc-icon--sm"></span></span>Unassigned</span><span>1 pt</span></span>
+                      </span>
+                    </label>
+                  </li>
+                  <li class="mc-list__item">
+                    <label class="mc-check mc-w-full">
+                      <input type="checkbox" name="stories" value="HCK-266">
+                      <span class="mc-list__main">
+                        <span class="mc-list__title">Mentor check-in reminders</span>
+                        <span class="mc-list__meta"><span>HCK-266</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span><span>3 pts</span></span>
+                      </span>
+                    </label>
+                  </li>
+                  <li class="mc-list__item">
+                    <label class="mc-check mc-w-full">
+                      <input type="checkbox" name="stories" value="HCK-267" checked>
+                      <span class="mc-list__main">
+                        <span class="mc-list__title">Demo day run sheet</span>
+                        <span class="mc-list__meta"><span>HCK-267</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">QB</span>Quinntyne Brown</span><span>1 pt</span></span>
+                      </span>
+                    </label>
+                  </li>
+                  <li class="mc-list__item">
+                    <label class="mc-check mc-w-full">
+                      <input type="checkbox" name="stories" value="HCK-268">
+                      <span class="mc-list__main">
+                        <span class="mc-list__title">Judging rubric handout</span>
+                        <span class="mc-list__meta"><span>HCK-268</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true"><span class="mc-icon mc-icon--user mc-icon--sm"></span></span>Unassigned</span><span><span class="mc-unset">Not estimated</span></span></span>
+                      </span>
+                    </label>
+                  </li>
+                  <li class="mc-list__item">
+                    <label class="mc-check mc-w-full">
+                      <input type="checkbox" name="stories" value="HCK-269">
+                      <span class="mc-list__main">
+                        <span class="mc-list__title">Quiet room signage</span>
+                        <span class="mc-list__meta"><span>HCK-269</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span><span>5 pts</span></span>
+                      </span>
+                    </label>
+                  </li>
+              </ul>
+              <nav class="mc-pagination" aria-label="Pages of stories that can be added" data-when="paged" hidden>
+                <span class="mc-show-compact">Page 2 of 8</span>
+                <span class="mc-hide-compact">25 per page · choices are kept on every page</span>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--sm" type="button" data-goto-state="paged">
+                    <span class="mc-icon mc-icon--chevron-left" aria-hidden="true"></span>Previous
+                  </button>
+                  <ol class="mc-pagination__pages mc-hide-compact">
+                    <li><a class="mc-pagination__page" href="#state=paged" aria-label="Page 1">1</a></li>
+                    <li><a class="mc-pagination__page" href="#state=paged" aria-current="page" aria-label="Page 2">2</a></li>
+                    <li><a class="mc-pagination__page" href="#state=paged" aria-label="Page 3">3</a></li>
+                    <li class="mc-muted" aria-hidden="true">…</li>
+                    <li><a class="mc-pagination__page" href="#state=paged" aria-label="Page 8">8</a></li>
+                  </ol>
+                  <button class="mc-button mc-button--sm" type="button" data-goto-state="paged">
+                    Next<span class="mc-icon mc-icon--chevron-right" aria-hidden="true"></span>
+                  </button>
+                </div>
+              </nav>
             </fieldset>
 
             <div class="mc-stack" data-when="remove" hidden>
@@ -210,16 +358,21 @@
           </div>
 
           <footer class="mc-dialog__footer">
-            <button class="mc-button" type="button" data-nav="sprint-board.html" data-unless="closed" data-attr-saving="disabled">Cancel</button>
-            <button class="mc-button mc-button--primary" type="button" data-nav="sprint-board.html" data-when="closed" hidden>Close</button>
+            <button class="mc-button" type="button" data-nav="../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-remove="data-nav=sprint-board.html" data-attr-loading="data-nav=sprint-board.html" data-attr-load-failed="data-nav=sprint-board.html" data-attr-unconfirmed-added="data-nav=sprint-board.html" data-unless="closed unconfirmed-closed" data-attr-saving="disabled">Cancel</button>
+            <button class="mc-button mc-button--primary" type="button" data-nav="sprint-board.html#state=no-active" data-when="closed unconfirmed-closed" hidden>Close</button>
             <button class="mc-button mc-button--primary" type="button" data-nav="sprint-board.html" data-when="remove" hidden>
               <span class="mc-icon mc-icon--undo" aria-hidden="true"></span>Return to backlog
             </button>
-            <button class="mc-button mc-button--primary" type="submit" data-unless="remove closed"
-              data-attr-saving="aria-busy=true|aria-disabled=true">
+            <button class="mc-button mc-button--primary" type="submit" data-unless="remove closed unconfirmed-closed"
+              data-attr-saving="aria-busy=true|aria-disabled=true"
+              data-attr-loading="disabled"
+              data-attr-load-failed="disabled"
+              data-attr-unconfirmed-added="disabled">
               <span class="mc-spinner" aria-hidden="true" data-when="saving" hidden></span>
               <span data-when="saving" hidden>Adding…</span>
-              <span data-unless="saving">Add 1 story</span>
+              <span data-unless="saving paged loading load-failed unconfirmed-added">Add 1 story</span>
+              <span data-when="loading load-failed unconfirmed-added" hidden>Add stories</span>
+              <span data-when="paged" hidden>Add 2 stories</span>
             </button>
           </footer>
         </form>

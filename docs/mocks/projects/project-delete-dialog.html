@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Delete project · Mission Control mock</title>
-  <meta name="description" content="Delete-project confirmation naming the project, with the blocks for projects that have work and sprints or work alone, progress, and failure.">
+  <meta name="description" content="Delete-project confirmation naming the project, with the blocks for projects that have work and sprints, work and paused sprints, or work alone, progress, and failure.">
   <meta name="mock-area" content="Projects">
-  <meta name="mock-requirements" content="L2-005, L2-014.3, L2-031.5, L2-033.2, L2-040.3, L2-043.4">
+  <meta name="mock-requirements" content="L2-005, L2-014.3, L2-031.5, L2-033.2, L2-043.4">
   <link rel="stylesheet" href="../assets/tokens.css">
   <link rel="stylesheet" href="../assets/mocks.css">
   <script src="../assets/mocks.js" defer></script>
@@ -21,6 +21,7 @@
         <select data-mock-state>
           <option value="default">Confirm (empty project)</option>
           <option value="blocked">Blocked by work and history</option>
+          <option value="blocked-paused">Blocked by work and paused sprints</option>
           <option value="blocked-work">Blocked by work only</option>
           <option value="deleting">Deleting</option>
           <option value="failed">Delete failed</option>
@@ -31,11 +32,12 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">Administrator-only. Only a project with no work and no sprints can be deleted. Focus starts on Cancel; Escape closes without changes. Success returns to Projects with "Project deleted — Youth Coding Night was removed." If the project was already deleted (404), the dialog closes, Projects reloads without it, and the change is announced.</p>
-    <p class="mock-note" data-when="blocked" hidden>The API answers 409 with the work-item counts by type and the project's sprints, and nothing is deleted or cascaded. Every sprint counts, including active and planned ones. There is no destructive button or retry, only Close.</p>
-    <p class="mock-note" data-when="blocked-work" hidden>Church Website Refresh has never had sprints, but its 60 work items are enough to block deletion: the API answers 409, nothing is deleted or cascaded, and the dialog offers only Close.</p>
+    <p class="mock-note" data-when="default">Administrator-only. Only a project with no work and no sprints can be deleted. Focus starts on Cancel; Escape closes without changes. Success returns to Projects with "Project deleted — Youth Coding Night was removed." If the project was already deleted (404), the dialog closes, Projects reloads without it, and an info toast says Youth Coding Night was already deleted.</p>
+    <p class="mock-note" data-when="blocked" hidden>Delete project opens the confirmation; confirming returns 409 and shows this explanation. The API answers 409 with counts only: work items by type and sprints by status. It sends no lists of items or sprints, so the response stays small however large the project is. Nothing is deleted or cascaded. Every sprint counts, including active and planned ones. There is no destructive button or retry, only Close. Focus moves to Close and screen readers hear the explanation as an alert; the dialog's description now points to that explanation.</p>
+    <p class="mock-note" data-when="blocked-paused" hidden>Prayer Wall App uses Kanban with its sprints paused. Delete project from any of its tabs opens the confirmation; confirming returns 409 and shows this explanation. The kept Sprint 3 plan and the closed Sprints 1 and 2 count as content just like its 43 work items: the API answers 409 with counts only, nothing is deleted or cascaded, and the dialog offers only Close. Focus moves to Close and screen readers hear the explanation as an alert; the dialog's description now points to that explanation.</p>
+    <p class="mock-note" data-when="blocked-work" hidden>Church Website Refresh has never had sprints, but its 60 work items are enough to block deletion. Delete project opens the confirmation; confirming returns 409 with the counts and shows this explanation. Nothing is deleted or cascaded, and the dialog offers only Close. Focus moves to Close and screen readers hear the explanation as an alert; the dialog's description now points to that explanation.</p>
     <p class="mock-note" data-when="deleting" hidden>The delete button shows progress and ignores repeat clicks; Cancel waits.</p>
-    <p class="mock-note" data-when="failed" hidden>Nothing was deleted. "Delete project" tries again; the reference ID matches the server's diagnostic record.</p>
+    <p class="mock-note" data-when="failed" hidden>Nothing was deleted. This state covers an unexpected 500 and a 503 returned when another change held the project's lock too long (the API waited, gave up, and changed nothing). Nothing retries automatically: "Delete project" tries again only when chosen, and the reference ID matches the server's diagnostic record. If the role changed while the dialog was open, the API answers 403 instead: the dialog stays open, this alert says "Only administrators can delete projects" with no reference ID, and "Delete project" stays unavailable, so focus moves to the alert; the dialog's description now points to that explanation. After a 500 or 503, "Delete project" keeps focus and screen readers hear the alert. A delete that gets no response may have gone through, so this alert instead reads "We couldn't confirm whether Youth Coding Night was deleted", with no reference ID and no claim that nothing was deleted; the project's header and tab reread at once, and "Delete project" sends again only when chosen, which finds the project gone if the first request went through: the dialog closes onto Projects with the neutral info toast "Youth Coding Night has been deleted." rather than saying it was already deleted, since the first request may have deleted it.</p>
   </div>
 
   <div class="mock-screen">
@@ -62,7 +64,7 @@
         </div>
         <div class="mc-main">
           <div class="mc-page">
-            <div data-unless="blocked blocked-work">
+            <div data-unless="blocked blocked-paused blocked-work">
             <div class="mc-breadcrumbs"><ol><li><span>Projects</span></li><li><span aria-current="page">Youth Coding Night</span></li></ol></div>
             <div class="mc-page-header">
               <div class="mc-page-header__main">
@@ -76,6 +78,7 @@
               <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</span></li>
               <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</span></li>
               <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</span></li>
             </ul>
             <div class="mc-split">
               <div class="mc-card mc-stack mc-stack--sm"><p class="mc-h3">About this project</p><span class="mc-skeleton mc-w-80"></span><span class="mc-skeleton mc-w-60"></span></div>
@@ -96,6 +99,28 @@
               <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</span></li>
               <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</span></li>
               <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</span></li>
+            </ul>
+            <div class="mc-split">
+              <div class="mc-card mc-stack mc-stack--sm"><p class="mc-h3">About this project</p><span class="mc-skeleton mc-w-80"></span><span class="mc-skeleton mc-w-60"></span></div>
+              <div class="mc-card mc-stack mc-stack--sm"><p class="mc-h3">Delivery</p><span class="mc-skeleton mc-w-60"></span><span class="mc-skeleton mc-w-40"></span></div>
+            </div>
+            </div>
+            <div data-when="blocked-paused" hidden>
+            <div class="mc-breadcrumbs"><ol><li><span>Projects</span></li><li><span aria-current="page">Prayer Wall App</span></li></ol></div>
+            <div class="mc-page-header">
+              <div class="mc-page-header__main">
+                <p class="mc-h1">Prayer Wall App</p>
+                <div class="mc-page-header__meta"><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span><span>Responsible lead: Grace Mensah</span></div>
+              </div>
+              <div class="mc-page-header__actions"><span class="mc-button">Project actions<span class="mc-icon mc-icon--chevron-down mc-icon--sm" aria-hidden="true"></span></span></div>
+            </div>
+            <ul class="mc-tabs">
+              <li><span class="mc-tabs__link" aria-current="page"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</span></li>
             </ul>
             <div class="mc-split">
               <div class="mc-card mc-stack mc-stack--sm"><p class="mc-h3">About this project</p><span class="mc-skeleton mc-w-80"></span><span class="mc-skeleton mc-w-60"></span></div>
@@ -128,14 +153,16 @@
     </div>
 
     <div class="mc-backdrop">
-      <section class="mc-dialog mc-dialog--sm" role="alertdialog" aria-modal="true" aria-labelledby="delete-title" aria-describedby="delete-text">
+      <section class="mc-dialog mc-dialog--sm" role="alertdialog" aria-modal="true" aria-labelledby="delete-title" aria-describedby="delete-text"
+        data-attr-blocked="aria-describedby=delete-blocked-text" data-attr-blocked-paused="aria-describedby=delete-blocked-text" data-attr-blocked-work="aria-describedby=delete-blocked-text">
         <header class="mc-dialog__header">
-          <span class="mc-dialog__icon mc-dialog__icon--danger" data-unless="blocked blocked-work"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></span>
-          <span class="mc-dialog__icon mc-dialog__icon--warning" data-when="blocked blocked-work" hidden><span class="mc-icon mc-icon--lock" aria-hidden="true"></span></span>
+          <span class="mc-dialog__icon mc-dialog__icon--danger" data-unless="blocked blocked-paused blocked-work"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></span>
+          <span class="mc-dialog__icon mc-dialog__icon--warning" data-when="blocked blocked-paused blocked-work" hidden><span class="mc-icon mc-icon--lock" aria-hidden="true"></span></span>
           <div class="mc-dialog__heading">
             <h2 class="mc-dialog__title" id="delete-title">
-              <span data-unless="blocked blocked-work">Delete Youth Coding Night?</span>
+              <span data-unless="blocked blocked-paused blocked-work">Delete Youth Coding Night?</span>
               <span data-when="blocked" hidden>Community Hackathon 2026 can't be deleted</span>
+              <span data-when="blocked-paused" hidden>Prayer Wall App can't be deleted</span>
               <span data-when="blocked-work" hidden>Church Website Refresh can't be deleted</span>
             </h2>
           </div>
@@ -143,7 +170,7 @@
 
         <div class="mc-dialog__body">
           <div class="mc-live" role="alert">
-            <div class="mc-alert mc-alert--danger" data-when="failed" hidden>
+            <div class="mc-alert mc-alert--danger" tabindex="-1" data-when="failed" hidden>
               <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
               <div class="mc-alert__body">
                 <p class="mc-alert__title">We couldn't delete this project</p>
@@ -153,17 +180,25 @@
                 </p>
               </div>
             </div>
+            <div id="delete-blocked-text" class="mc-stack mc-stack--sm" data-when="blocked blocked-paused blocked-work" hidden>
+              <p data-when="blocked" hidden>It has 85 work items and 4 sprints, including 2 closed sprints of history. Projects with work or sprints are kept, so nothing is lost.</p>
+              <p data-when="blocked-paused" hidden>It has 43 work items and 3 sprints, including 2 closed sprints of history. Projects with work or sprints are kept, so nothing is lost.</p>
+              <p data-when="blocked-work" hidden>It has 60 work items. Projects with work or sprints are kept, so nothing is lost.</p>
+            </div>
           </div>
 
-          <div id="delete-text" class="mc-stack mc-stack--sm">
-            <p data-unless="blocked blocked-work">Youth Coding Night has no work or sprint history. It will be removed from Projects. This can't be undone.</p>
-            <p data-when="blocked" hidden>It has 85 work items and 4 sprints, including 2 closed sprints of history. Projects with work or sprints are kept, so nothing is lost.</p>
-            <p data-when="blocked-work" hidden>It has 60 work items. Projects with work or sprints are kept, so nothing is lost.</p>
+          <div id="delete-text" class="mc-stack mc-stack--sm" data-unless="blocked blocked-paused blocked-work">
+            <p>Youth Coding Night has no work or sprint history. It will be removed from Projects. This can't be undone.</p>
           </div>
 
           <dl class="mc-dl mc-text-sm" data-when="blocked" hidden>
             <dt>Work items</dt><dd>85 (2 initiatives, 4 epics, 24 stories, 55 tasks)</dd>
-            <dt>Sprints</dt><dd>Sprint 8 (active), Sprint 9 (planned), Sprint 6 and Sprint 7 (closed)</dd>
+            <dt>Sprints</dt><dd>4 (1 active, 1 planned, 2 closed)</dd>
+          </dl>
+
+          <dl class="mc-dl mc-text-sm" data-when="blocked-paused" hidden>
+            <dt>Work items</dt><dd>43 (1 initiative, 2 epics, 12 stories, 28 tasks)</dd>
+            <dt>Sprints</dt><dd>3 (1 planned, 2 closed)</dd>
           </dl>
 
           <dl class="mc-dl mc-text-sm" data-when="blocked-work" hidden>
@@ -173,14 +208,15 @@
         </div>
 
         <footer class="mc-dialog__footer">
-          <button class="mc-button" type="button" data-unless="blocked blocked-work" data-nav="project-overview.html#state=new-empty" data-attr-deleting="disabled">Cancel</button>
-          <button class="mc-button mc-button--danger" type="button" data-unless="blocked blocked-work" data-goto-state="deleting"
+          <button class="mc-button" type="button" data-unless="blocked blocked-paused blocked-work" data-nav="project-overview.html#state=new-empty" data-attr-deleting="disabled">Cancel</button>
+          <button class="mc-button mc-button--danger" type="button" data-unless="blocked blocked-paused blocked-work" data-goto-state="deleting"
             data-attr-deleting="aria-busy=true|aria-disabled=true">
             <span class="mc-spinner" aria-hidden="true" data-when="deleting" hidden></span>
             <span data-unless="deleting">Delete project</span>
             <span data-when="deleting" hidden>Deleting…</span>
           </button>
           <button class="mc-button mc-button--primary" type="button" data-when="blocked" hidden data-nav="project-overview.html">Close</button>
+          <button class="mc-button mc-button--primary" type="button" data-when="blocked-paused" hidden data-nav="project-overview.html#state=kanban-preserved">Close</button>
           <button class="mc-button mc-button--primary" type="button" data-when="blocked-work" hidden data-nav="project-overview.html#state=kanban">Close</button>
         </footer>
       </section>

@@ -14,92 +14,210 @@ skinparam package {
   BackgroundColor #F9FAFB
 }
 title Class structure - Read immutable sprint history
+left to right direction
 skinparam class {
   BorderColor #344054
   FontColor #101828
   BackgroundColor #F9FAFB
 }
 class SprintHistoryPage {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
+  +sprintId: Signal<Guid>
+  -workspace: ResourceRef<WorkspaceDetail>
+  -refreshCount: WritableSignal<number>
 }
-class SprintView {
-  +state: Signal<FeatureState>
-  +submit(): void
+note bottom of SprintHistoryPage
+Outside ProjectLayoutPage: workspace =
+workspaceResource(() => GetWorkspaceQuery) for the
+breadcrumb and the view's workspaceName; a workspace
+404 shows Project not found with Back to projects.
+SprintHistoryView.refresh = refreshCount(); opens no
+dialogs. retryRequested -> workspace.reload() and
+refreshCount + 1.
+end note
+class SprintHistoryView {
+  +sprintId: InputSignal<Guid>
+  +workspaceName: InputSignal<string>
+  +refresh: InputSignal<number>
+  +retryRequested: OutputEmitterRef<void>
+  -header: ResourceRef<SprintHistoryHeader>
+  -outcomes: ResourceRef<SprintOutcomePage>
+  -scopeChanges: ResourceRef<SprintScopeChangePage>
+  -outcomePage: WritableSignal<int>
+  -scopeChangePage: WritableSignal<int>
 }
+interface IWorkspaceService {
+  +workspaceResource(query: () => GetWorkspaceQuery | undefined): ResourceRef<WorkspaceDetail>
+}
+note bottom of IWorkspaceService
+Defined by projects manage-workspaces.
+end note
 interface ISprintService {
-  +read(request: GetSprintHistoryQuery): Promise<FeatureResult>
+  +sprintHistoryResource(query: () => GetSprintHistoryQuery | undefined): ResourceRef<SprintHistoryHeader>
+  +sprintOutcomesResource(query: () => GetSprintOutcomesQuery | undefined): ResourceRef<SprintOutcomePage>
+  +sprintScopeChangesResource(query: () => GetSprintScopeChangesQuery | undefined): ResourceRef<SprintScopeChangePage>
 }
+note right of ISprintService
+Caller-owned signal resources created in the consumer's
+injection context; each aborts a superseded request.
+No RxJS type crosses api.
+end note
 class SprintService {
   -http: HttpClient
 }
 class SprintsController {
   -sender: ISender
 }
-class SprintSnapshot {
-  +sprintId: Guid
-  +name: string
-  +goal: string
-  +plannedStart: DateOnly
-  +plannedEnd: DateOnly
-  +startedAtUtc: DateTimeOffset
-  +startedByUserId: Guid
-  +startedByName: string
-  +closedAtUtc: DateTimeOffset
-  +closedByUserId: Guid
-  +closedByName: string
-  +initialScopeIds: Guid[]
-  +finalScopeIds: Guid[]
-  +scopeChanges: SprintScopeChange[]
-  +outcomes: SprintStoryOutcome[]
-}
-interface IMissionControlDataSession {
-  +query(specification): Task<ReadResult>
-  +commit(expectedVersion: long): Task<void>
-}
-class MissionControlDataSession {
-  -connection: DbConnection
-}
-SprintHistoryPage --> SprintView : composes
-SprintView ..> ISprintService : inject token
+SprintHistoryPage --> SprintHistoryView : composes; refresh, workspaceName
+SprintHistoryPage ..> IWorkspaceService : inject token; workspaceResource
+SprintHistoryView ..> ISprintService : inject token
 ISprintService <|.. SprintService
-IMissionControlDataSession <|.. MissionControlDataSession
+
 class GetSprintHistoryQuery {
+  +workspaceId: Guid
+  +sprintId: Guid
+}
+class GetSprintOutcomesQuery {
+  +workspaceId: Guid
+  +sprintId: Guid
+  +page: int
+  +pageSize: int
+}
+class GetSprintScopeChangesQuery {
   +workspaceId: Guid
   +sprintId: Guid
   +page: int
   +pageSize: int
 }
 class GetSprintHistoryQueryHandler {
-  +handle(request: GetSprintHistoryQuery): Task<FeatureResult>
+  +handle(request: GetSprintHistoryQuery, ct: CancellationToken): Task<SprintHistoryHeader>
+}
+class GetSprintOutcomesQueryHandler {
+  +handle(request: GetSprintOutcomesQuery, ct: CancellationToken): Task<SprintOutcomePage>
+}
+class GetSprintScopeChangesQueryHandler {
+  +handle(request: GetSprintScopeChangesQuery, ct: CancellationToken): Task<SprintScopeChangePage>
 }
 SprintsController ..> GetSprintHistoryQuery : dispatches
+SprintsController ..> GetSprintOutcomesQuery : dispatches
+SprintsController ..> GetSprintScopeChangesQuery : dispatches
 GetSprintHistoryQueryHandler ..> GetSprintHistoryQuery : handles
-GetSprintHistoryQueryHandler --> SprintSnapshot : loads / applies
-GetSprintHistoryQueryHandler ..> IMissionControlDataSession : uses
+GetSprintOutcomesQueryHandler ..> GetSprintOutcomesQuery : handles
+GetSprintScopeChangesQueryHandler ..> GetSprintScopeChangesQuery : handles
 
-class OpenSprintMembership {
-  +workspaceId: Guid
-  +storyId: Guid
-  +sprintId: Guid
+package "Read models" {
+  class SprintHistoryHeader {
+    +sprintId: Guid
+    +name: string
+    +goal: string
+    +plannedStart: DateOnly
+    +plannedEnd: DateOnly
+    +startedAtUtc: DateTimeOffset
+    +startedByName: string
+    +closedAtUtc: DateTimeOffset
+    +closedByName: string
+    +initialScopeCount: int
+    +finalScopeCount: int
+    +completedCount: int
+    +carriedOverCount: int
+    +returnedCount: int
+  }
+  class SprintOutcomePage {
+    +items: SprintOutcomeRow[]
+    +total: int
+    +page: int
+    +pageSize: int
+  }
+  class SprintOutcomeRow {
+    +recordedStoryId: Guid
+    +recordedKey: string
+    +recordedTitle: string
+    +statusAtClosure: WorkStatus
+    +recordedDestination: SprintReference?
+    +liveExists: bool
+    +currentTitle: string?
+  }
+  class SprintReference {
+    +sprintId: Guid
+    +name: string
+  }
+  class SprintScopeChangePage {
+    +items: SprintScopeChangeRow[]
+    +total: int
+    +page: int
+    +pageSize: int
+  }
+  class SprintScopeChangeRow {
+    +storyId: Guid
+    +storyKey: string
+    +storyTitle: string
+    +kind: ScopeChangeKind
+    +actorName: string
+    +atUtc: DateTimeOffset
+  }
 }
-class SprintStoryOutcome {
-  +recordedStoryId: Guid
-  +recordedTitle: string
-  +statusAtClosure: WorkStatus
-  +recordedDestinationId: Guid?
-  +recordedDestinationName: string?
+SprintOutcomePage *-- SprintOutcomeRow
+SprintOutcomeRow --> SprintReference : recorded destination
+SprintScopeChangePage *-- SprintScopeChangeRow
+GetSprintHistoryQueryHandler --> SprintHistoryHeader : returns
+GetSprintOutcomesQueryHandler --> SprintOutcomePage : returns
+GetSprintScopeChangesQueryHandler --> SprintScopeChangePage : returns
+
+package "Recorded during the sprint (written by start-and-adjust-sprint)" {
+  class Sprint {
+    +id: Guid
+    +initialScopeStoryIds: Guid[]
+  }
+  class SprintScopeChange {
+    +storyId: Guid
+    +storyKey: string
+    +storyTitle: string
+    +kind: ScopeChangeKind
+    +actorName: string
+    +atUtc: DateTimeOffset
+  }
 }
-class SprintScopeChange {
-  +sprintId: Guid
-  +storyId: Guid
-  +storyTitle: string
-  +kind: ScopeChangeKind
-  +actorId: Guid
-  +actorName: string
-  +atUtc: DateTimeOffset
+package "Persisted closure snapshot (written by close-sprint)" {
+  class SprintSnapshot {
+    +sprintId: Guid
+    +name: string
+    +goal: string
+    +plannedStart: DateOnly
+    +plannedEnd: DateOnly
+    +startedAtUtc: DateTimeOffset
+    +startedByName: string
+    +closedAtUtc: DateTimeOffset
+    +closedByName: string
+  }
+  class SprintStoryOutcome {
+    +recordedStoryId: Guid
+    +recordedKey: string
+    +recordedTitle: string
+    +statusAtClosure: WorkStatus
+    +recordedDestination: SprintReference?
+  }
 }
-SprintSnapshot "1" *-- "*" SprintStoryOutcome : immutable outcomes at closure
-SprintSnapshot "1" *-- "*" SprintScopeChange : scope log with actor and instant
-SprintSnapshot ..> OpenSprintMembership : live allocation / historical source
+Sprint "1" *-- "*" SprintScopeChange : scope log, immutable once recorded
+Sprint "1" *-- "0..1" SprintSnapshot : recorded at closure
+SprintSnapshot "1" *-- "*" SprintStoryOutcome : outcomes = final scope
+note bottom of Sprint
+initialScopeStoryIds are child rows recorded at start;
+closure references them and the scope log and copies nothing.
+end note
+
+interface IMissionControlDataSession {
+  +LoadSprintHistoryHeaderAsync(query: GetSprintHistoryQuery, ct: CancellationToken): Task<SprintHistoryHeader?>
+  +ListSprintOutcomesAsync(query: GetSprintOutcomesQuery, ct: CancellationToken): Task<SprintOutcomePage?>
+  +ListSprintScopeChangesAsync(query: GetSprintScopeChangesQuery, ct: CancellationToken): Task<SprintScopeChangePage?>
+}
+note right of IMissionControlDataSession
+Scoped view of the shared port defined in the overview; read-only.
+ListSprintOutcomesAsync resolves liveExists and currentTitle for the
+whole page in one batched lookup by recorded story ID, never per row.
+end note
+GetSprintHistoryQueryHandler ..> IMissionControlDataSession : LoadSprintHistoryHeaderAsync
+GetSprintOutcomesQueryHandler ..> IMissionControlDataSession : ListSprintOutcomesAsync
+GetSprintScopeChangesQueryHandler ..> IMissionControlDataSession : ListSprintScopeChangesAsync
+IMissionControlDataSession ..> SprintSnapshot : reads
+IMissionControlDataSession ..> SprintScopeChange : reads
+IMissionControlDataSession ..> Sprint : counts initial scope
 @enduml

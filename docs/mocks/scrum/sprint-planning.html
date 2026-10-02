@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Plan sprint stories · Mission Control mock</title>
-  <meta name="description" content="Sprint planning page for Sprint 9: add and remove eligible backlog stories, with Done-story, conflicting-allocation, saving, not-found, and loading states.">
+  <meta name="description" content="Sprint planning page for Sprint 9: search and page eligible backlog stories and sprint members, add and remove stories as pending changes saved together, with paged (including stories pre-marked on arrival), Done-story, conflicting-allocation, changed-meanwhile, saving, save-failed, unconfirmed-save (latest plan shown, or the sprint now active), Kanban read-only, not-planned, not-found, loading, and load-failed states.">
   <meta name="mock-area" content="Scrum sprints">
-  <meta name="mock-requirements" content="L2-017, L2-022, L2-023.2, L2-030, L2-031, L2-032, L2-041.2">
+  <meta name="mock-requirements" content="L2-017, L2-022, L2-023.2, L2-027.3, L2-029.4, L2-030, L2-031, L2-032, L2-041.2, L2-045">
   <link rel="stylesheet" href="../assets/tokens.css">
   <link rel="stylesheet" href="../assets/mocks.css">
   <script src="../assets/mocks.js" defer></script>
@@ -22,11 +22,20 @@
       <label class="mock-bar__state">State
         <select data-mock-state>
           <option value="default">Planned sprint</option>
+          <option value="paged">Large plan, page 2</option>
           <option value="done-story">Done story not allowed</option>
           <option value="allocated-conflict">Story already in another sprint</option>
+          <option value="stale">Plan changed meanwhile</option>
           <option value="saving">Saving plan</option>
+          <option value="failed">Save failed</option>
+          <option value="unconfirmed-changed">Save unconfirmed · latest plan shown</option>
+          <option value="unconfirmed-active">Save unconfirmed · now active</option>
+          <option value="paused">Kanban mode (read-only)</option>
+          <option value="not-planned">Sprint no longer planned</option>
           <option value="not-found">Sprint not found</option>
+          <option value="project-not-found">Project not found</option>
           <option value="loading">Loading</option>
+          <option value="error">Load failed</option>
         </select>
       </label>
       <a href="../index.html">All mocks</a>
@@ -34,12 +43,21 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">Only unfinished stories that aren't in another open sprint can be added; tasks follow their story. Removing a story returns it to the unallocated backlog. Save plan saves all membership changes together. Below 992px the two lists stack.</p>
+    <p class="mock-note" data-when="default">Edit details opens Sprint 9's form, and a saved edit reads the plan's header again with the "Changes saved" toast. Start sprint opens the start dialog on its confirmation; while Sprint 8 is active, pressing Start sprint there is answered with 409 and the dialog offers to review and close Sprint 8 (this click-through lands on that outcome). Only unfinished stories that aren't in another open sprint can be added; tasks follow their story. Add lists a story under Sprint 9 marked "To add", and Remove marks a saved story "To remove"; Undo clears either mark. Nothing changes until Save plan, which saves just those additions and removals together and confirms with the "Sprint planned" toast ("Sprint 9 has 3 stories."). Stories already in the sprint stay, even after they're Done, unless you remove them. Removing a story returns it to the unallocated backlog. Search waits for a pause in typing. Both lists follow backlog priority, then story ID: stories that can be added come first, then the ones that can't, and pending To add stories lead the sprint's list. The "Not available" list is abbreviated here. Below 992px the two lists stack.</p>
+    <p class="mock-note" data-when="paged" hidden>Shown with a larger dataset (the 350-story backlog): 319 stories are outside Sprint 9, 25 per page, so the available list is on page 2 of 13; Sprint 9's 31 saved stories page separately. 198 of the 319 can be added, and the hint counts 196 because the two marked To add have moved under Sprint 9. Stories that can be added come first, and the backlog's first 50 ranks hold fewer than 26 of them, so this page starts with stories ranked after the backlog's page 2. The two stories marked To add (HCK-128 and HCK-130, both on page 1) and the one marked To remove stay pending while you search or change pages, and the summary keeps counting them. Previous, Next, and page numbers load at once; a new search starts again at page 1. Only these pages are drawn and both lists are abbreviated, so the other page links stay here. Arriving from a work item's "Change Sprint 9's plan" (<code>?remove=</code>) opens this page with that story already marked To remove, as HCK-126 is here, once the page's own read of Sprint 9's stories confirms it is still a member; otherwise nothing is marked. Arriving from a backlog row's Add to sprint › Sprint 9 · Planned (<code>?add=</code>) opens it with that story already marked To add, as HCK-130 is here, once the page's own read of that story confirms it can be added; a story that is already in Sprint 9, Done, or in another open sprint isn't marked, and its row shows why. A malformed <code>add</code> or <code>remove</code> value is ignored, so nothing is marked. Nothing is saved until Save plan, and leaving with marks pending asks first.</p>
     <p class="mock-note" data-when="done-story" hidden>Done stories stay visible so people can see why they're missing, but they can't be added. Reopening the story makes it eligible again.</p>
-    <p class="mock-note" data-when="allocated-conflict" hidden>Plans save all-or-nothing. Because HCK-120 joined Sprint 8 while this plan was open, no membership changed. The story is marked, and the rest of the selection is kept for another try. Screen readers hear the alert.</p>
+    <p class="mock-note" data-when="allocated-conflict" hidden>Plans save all-or-nothing. HCK-120 joined Sprint 8 while this plan was open, so the API returns 409 naming the story and its sprint, and no membership changed. The story is marked, and the other pending changes are kept for another try. The message names the sprint, not who moved the story or when. Screen readers hear the alert. The same presentation covers a save answered with 400 for a story to add that became Done meanwhile, marked "Now Done, so it can't be added"; nothing is saved and the other pending changes are kept. When the 400 names a story to remove that already left the sprint, that story is dropped from the selection and named "No longer in Sprint 9" with neutral copy ("HCK-126 is no longer in Sprint 9, so it isn't removed."), and the rest stays marked, so Save plan can send it.</p>
+    <p class="mock-note" data-when="stale" hidden>Sprint 9 was saved again after this page opened (here HCK-128 joined it), so the API returns 409 and nothing in this plan was saved. The page re-reads the plan and both lists once. HCK-128 is now a saved story, listed in its backlog-priority place among Sprint 9's stories, so its "To add" mark no longer applies: it is dropped and listed in the message. HCK-120 is still marked "To add". Nothing is sent again until Save plan is pressed. The message names no person or time. Screen readers hear the alert.</p>
     <p class="mock-note" data-when="saving" hidden>Save plan shows progress and ignores repeat clicks.</p>
-    <p class="mock-note" data-when="not-found" hidden>The link is wrong or names a sprint from another project (the API returns 404). The page offers a way back to the project's sprints.</p>
-    <p class="mock-note" data-when="loading" hidden>Placeholders keep both lists in place while the plan loads.</p>
+    <p class="mock-note" data-when="failed" hidden>Nothing in the plan was saved. This covers a server error (500) and a busy workspace (503 with Retry-After). The pending changes stay marked and the summary still counts them; Save plan sends them again only when pressed. The reference ID matches the server's diagnostic record. Screen readers hear the alert, and focus stays on Save plan. A save that gets no response reuses this alert with "We couldn't confirm whether Sprint 9's plan was saved." and no reference ID, never saying that nothing changed; the marks stay, and the page reads the plan and both lists again, dropping marks that no longer apply under neutral copy (Save unconfirmed · latest plan shown), before Save plan is offered again; a sprint that started meanwhile is named with neutral copy instead (Save unconfirmed · now active). If the account's access changed (an unexpected 403), nothing is saved, the marks stay, and the page shows the "Your access changed" toast instead, without Retry.</p>
+    <p class="mock-note" data-when="unconfirmed-changed" hidden>Save plan got no response, so the page read Sprint 9's plan and both lists again. HCK-128 is a saved story now, so its "To add" mark no longer applies: it is dropped and listed in the message. The page can't tell whether this save or another one changed the plan, so the message says only what the latest plan shows, never that your changes weren't saved, and names no person or time. HCK-120 is still marked "To add", and nothing is sent again until Save plan is pressed. Screen readers hear the alert. If the re-read finds the sprint no longer planned, the page shows Save unconfirmed · now active instead.</p>
+    <p class="mock-note" data-when="unconfirmed-active" hidden>Save plan got no response, so the page read Sprint 9's plan again and found it active: it started meanwhile. The page can't tell whether this save went through before the start, so the explanation states only what is true now, never that nothing was changed, and names no person or time; a sprint found closed reads "Sprint 9 is closed now." with a link to its history instead. Only planned sprints change here, so the explanation replaces the lists, Open board leads to Sprint 9's board, and Back to sprints to the Sprints tab. The explanation is an alert, so it is announced; Save plan is gone, so focus moves to the explanation.</p>
+    <p class="mock-note" data-when="paused" hidden>Prayer Wall App switched to Kanban with Sprint 3 planned, so its plan is kept but read-only: Add, Remove, Edit details, Start sprint, and Save plan are unavailable, and the notice explains the pause. View plan on the paused Sprints tab opens this. If the project switches to Kanban while a plan is open, Save plan is answered with 409, nothing is saved, and the page shows this same read-only view with the notice; there's nothing to retry until an administrator switches the project back to Scrum. The notice sits in the page's alert region, so it is announced; after that 409 Save plan is unavailable, so focus moves to the notice.</p>
+    <p class="mock-note" data-when="not-planned" hidden>Only planned sprints change here. An old link to closed Sprint 7's plan shows this explanation instead of the lists, with a way to its history; an active sprint links to the sprint board instead. If the sprint starts while its plan is open, Save plan is answered with 409, nothing in the plan is saved, and the page shows the same explanation for that sprint. There's nothing to retry. The explanation is an alert, so it is announced; after that 409 Save plan is gone, so focus moves to the explanation. After a save that got no response, a sprint found no longer planned is named with neutral copy instead, without "Nothing was changed" (Save unconfirmed · now active).</p>
+    <p class="mock-note" data-when="not-found" hidden>The link is wrong or names a sprint from another project (the API returns 404). The page offers a way back to the project's sprints; the message names the project from the page's own read of it.</p>
+    <p class="mock-note" data-when="project-not-found" hidden>The project itself is missing: it was deleted, or the link is incomplete. The page reads the project for its breadcrumb and name, and that read's 404 shows this message with Back to projects, whatever the plan's own reads return; no Try again or reference ID. The breadcrumb keeps only Projects, and focus moves to the heading.</p>
+    <p class="mock-note" data-when="loading" hidden>Placeholders keep both lists in place while the plan loads. A status region that is always on the page announces "Loading Sprint 9" to screen readers.</p>
+    <p class="mock-note" data-when="error" hidden>The plan or one of its lists didn't load, so nothing is shown that could be out of date. Nothing was changed. Try again reads the project and the plan again together. A server error (500) shows the reference ID, which matches the server's diagnostic record; a read that gets no response shows the same message without a reference ID and asks you to check your connection. Screen readers hear the alert.</p>
   </div>
 
   <div class="mc-app">
@@ -110,7 +128,7 @@
 
     <main class="mc-main" id="main" tabindex="-1">
       <div class="mc-page">
-        <nav class="mc-breadcrumbs" aria-label="Breadcrumb" data-unless="not-found">
+        <nav class="mc-breadcrumbs" aria-label="Breadcrumb" data-unless="not-found project-not-found">
           <ol>
             <li><a href="../projects/project-list.html">Projects</a></li>
             <li class="mc-breadcrumbs__overflow">
@@ -119,34 +137,36 @@
                   <span class="mc-icon mc-icon--more-horizontal" aria-hidden="true"></span>
                 </button>
                 <div class="mc-menu mc-menu--start" id="crumb-menu">
-                  <button class="mc-menu__item" type="button" data-nav="../projects/project-overview.html">Community Hackathon 2026</button>
-                  <button class="mc-menu__item" type="button" data-nav="sprints.html">Sprints</button>
+                  <button class="mc-menu__item" type="button" data-nav="../projects/project-overview.html" data-attr-paused="data-nav=../projects/project-overview.html#state=kanban-preserved"><span data-unless="paused">Community Hackathon 2026</span><span data-when="paused" hidden>Prayer Wall App</span></button>
+                  <button class="mc-menu__item" type="button" data-nav="sprints.html" data-attr-paused="data-nav=sprints.html#state=kanban-paused">Sprints</button>
                 </div>
               </div>
             </li>
-            <li class="mc-breadcrumbs__collapsible"><a href="../projects/project-overview.html">Community Hackathon 2026</a></li>
-            <li class="mc-breadcrumbs__collapsible"><a href="sprints.html">Sprints</a></li>
-            <li><span aria-current="page">Sprint 9</span></li>
+            <li class="mc-breadcrumbs__collapsible"><a href="../projects/project-overview.html" data-attr-paused="href=../projects/project-overview.html#state=kanban-preserved"><span data-unless="paused">Community Hackathon 2026</span><span data-when="paused" hidden>Prayer Wall App</span></a></li>
+            <li class="mc-breadcrumbs__collapsible"><a href="sprints.html" data-attr-paused="href=sprints.html#state=kanban-paused">Sprints</a></li>
+            <li><span aria-current="page"><span data-unless="paused not-planned">Sprint 9</span><span data-when="paused" hidden>Sprint 3</span><span data-when="not-planned" hidden>Sprint 7</span></span></li>
           </ol>
         </nav>
 
-        <header class="mc-page-header" data-unless="not-found loading">
+        <header class="mc-page-header" data-unless="not-found project-not-found not-planned unconfirmed-active loading error">
           <div class="mc-page-header__main">
-            <h1 class="mc-page-header__title" tabindex="-1">Plan Sprint 9</h1>
+            <h1 class="mc-page-header__title" tabindex="-1">Plan <span data-unless="paused">Sprint 9</span><span data-when="paused" hidden>Sprint 3</span></h1>
             <div class="mc-page-header__meta">
               <span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--calendar" aria-hidden="true"></span>Planned</span>
-              <span>Oct 13 – Oct 23, 2026 (Toronto)</span>
-              <span>Goal: Demo day judging flow ready</span>
+              <span data-unless="paused">Oct 13 – Oct 23, 2026 (Toronto)</span>
+              <span data-when="paused" hidden>Jun 1 – Jun 12, 2026 (Toronto)</span>
+              <span data-unless="paused">Goal: Demo day judging flow ready</span>
+              <span data-when="paused" hidden>Goal: Moderation tools for shared requests</span>
             </div>
           </div>
           <div class="mc-page-header__actions">
-            <button class="mc-button" type="button" data-nav="sprint-form-dialog.html#state=edit" data-attr-saving="disabled">
+            <button class="mc-button" type="button" data-nav="sprint-form-dialog.html#state=edit" data-attr-saving="disabled" data-attr-paused="disabled">
               <span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit details
             </button>
-            <button class="mc-button" type="button" data-nav="start-sprint-dialog.html#state=blocked-active" data-attr-saving="disabled">
+            <button class="mc-button" type="button" data-nav="start-sprint-dialog.html#state=blocked-active" data-attr-saving="disabled" data-attr-paused="disabled">
               <span class="mc-icon mc-icon--play" aria-hidden="true"></span>Start sprint
             </button>
-            <button class="mc-button mc-button--primary" type="button" data-goto-state="saving" data-attr-saving="aria-busy=true|aria-disabled=true">
+            <button class="mc-button mc-button--primary" type="button" data-goto-state="saving" data-attr-saving="aria-busy=true|aria-disabled=true" data-attr-paused="disabled">
               <span class="mc-spinner" aria-hidden="true" data-when="saving" hidden></span>
               <span data-when="saving" hidden>Saving…</span>
               <span data-unless="saving">Save plan</span>
@@ -159,7 +179,44 @@
             <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
             <div class="mc-alert__body">
               <p class="mc-alert__title">Sprint 9's plan wasn't saved</p>
-              <p class="mc-alert__text">Ada Okafor added HCK-120 "Confirm venue accessibility checklist" to Sprint 8 at 11:20 a.m. A story can be in only one open sprint, so nothing in this plan was saved. Remove it from Sprint 9, then save again.</p>
+              <p class="mc-alert__text">HCK-120 "Confirm venue accessibility checklist" is now in Sprint 8. A story can be in only one open sprint, so nothing in this plan was saved. Undo adding it, then save again.</p>
+            </div>
+          </div>
+          <div class="mc-alert mc-alert--danger mc-alert--page" data-when="failed" hidden>
+            <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">Sprint 9's plan wasn't saved</p>
+              <p class="mc-alert__text">Nothing in this plan changed, and your pending changes are still marked. Save the plan to try again.</p>
+              <p class="mc-ref">Reference ID <code>e04b-7c19-3a6d</code>
+                <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="e04b-7c19-3a6d"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+              </p>
+            </div>
+          </div>
+          <div class="mc-alert mc-alert--warning mc-alert--page" data-when="stale unconfirmed-changed" hidden>
+            <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title"><span data-unless="unconfirmed-changed">Sprint 9 changed after you opened it.</span><span data-when="unconfirmed-changed" hidden>The latest plan is shown below</span></p>
+              <p class="mc-alert__text"><span data-unless="unconfirmed-changed">Your changes haven't been saved, and nothing was sent again. The latest plan is shown below. This mark no longer applies:</span><span data-when="unconfirmed-changed" hidden>We couldn't confirm your save, so the plan was read again. This mark no longer applies:</span></p>
+              <ul class="mc-alert__list">
+                <li>HCK-128 "Dietary needs survey for attendees" is already in Sprint 9, so its "To add" mark was dropped.</li>
+              </ul>
+              <p class="mc-alert__text">Review your remaining change, then save the plan.</p>
+            </div>
+          </div>
+          <div class="mc-alert mc-alert--warning mc-alert--page" tabindex="-1" data-when="paused" hidden>
+            <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">Sprints are paused while Prayer Wall App uses Kanban</p>
+              <p class="mc-alert__text">Sprint 3's plan is kept but can't change. An administrator can switch the project back to Scrum to change or start it.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="mc-live" role="status" aria-live="polite">
+          <div class="mc-alert mc-alert--neutral mc-alert--page" data-when="paged allocated-conflict stale unconfirmed-changed failed" hidden>
+            <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__text"><strong><span data-when="paged" hidden>2 to add · 1 to remove</span><span data-when="allocated-conflict stale unconfirmed-changed failed" hidden>1 to add</span></strong> — saved when you save the plan</p>
             </div>
           </div>
         </div>
@@ -172,49 +229,26 @@
           </div>
         </div>
 
-        <div class="mc-split mc-split--even" data-unless="not-found loading">
+
+        <div class="mc-split mc-split--even" data-unless="not-found project-not-found not-planned unconfirmed-active loading error">
           <section aria-labelledby="available-heading">
             <div class="mc-section__header">
               <h2 class="mc-section__title" id="available-heading">Available stories</h2>
-              <span class="mc-section__hint"><span data-unless="allocated-conflict">6 unfinished</span><span data-when="allocated-conflict" hidden>5 unfinished</span></span>
+              <span class="mc-section__hint"><span data-unless="allocated-conflict failed stale unconfirmed-changed paged paused">6 can be added</span><span data-when="allocated-conflict failed" hidden>5 can be added</span><span data-when="paused" hidden>Adding is paused</span><span data-when="stale unconfirmed-changed" hidden>4 can be added</span><span data-when="paged" hidden>196 can be added</span></span>
             </div>
-            <ul class="mc-list">
-                <li class="mc-list__item" data-unless="allocated-conflict">
-                  <div class="mc-list__main">
-                    <a class="mc-list__title" href="../work/work-item-detail.html">Confirm venue accessibility checklist</a>
-                    <div class="mc-list__meta"><span>HCK-120</span><span>Venue and logistics</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true"><span class="mc-icon mc-icon--user mc-icon--sm"></span></span>Unassigned</span><span><span class="mc-unset">Not estimated</span></span></div>
-                  </div>
-                  <div class="mc-list__aside">
-                    <button class="mc-button mc-button--sm" type="button" aria-label="Add Confirm venue accessibility checklist to Sprint 9"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add</button>
-                  </div>
-                </li>
-                <li class="mc-list__item">
-                  <div class="mc-list__main">
-                    <a class="mc-list__title" href="../work/work-item-detail.html#state=inactive-assignee">&lt;script&gt;alert(1)&lt;/script&gt; feedback form</a>
-                    <div class="mc-list__meta"><span>HCK-123</span><span>Judging and feedback</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true">JR</span>Jordan Reyes (inactive)</span><span>1 pt</span></div>
-                  </div>
-                  <div class="mc-list__aside">
-                    <button class="mc-button mc-button--sm" type="button" aria-label="Add &lt;script&gt;alert(1)&lt;/script&gt; feedback form to Sprint 9"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add</button>
-                  </div>
-                </li>
-                <li class="mc-list__item">
-                  <div class="mc-list__main">
-                    <a class="mc-list__title" href="../work/work-item-detail.html">Dietary needs survey for attendees</a>
-                    <div class="mc-list__meta"><span>HCK-128</span><span>Venue and logistics</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span><span>1 pt</span></div>
-                  </div>
-                  <div class="mc-list__aside">
-                    <button class="mc-button mc-button--sm" type="button" aria-label="Add Dietary needs survey for attendees to Sprint 9"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add</button>
-                  </div>
-                </li>
-                <li class="mc-list__item">
-                  <div class="mc-list__main">
-                    <a class="mc-list__title" href="../work/work-item-detail.html">Volunteer thank-you notes</a>
-                    <div class="mc-list__meta"><span>HCK-130</span><span>Hackathon team formation</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true">?</span>Unassigned</span><span>1 pt</span></div>
-                  </div>
-                  <div class="mc-list__aside">
-                    <button class="mc-button mc-button--sm" type="button" aria-label="Add Volunteer thank-you notes to Sprint 9"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add</button>
-                  </div>
-                </li>
+            <div class="mc-field mc-mb-4">
+              <label class="mc-label" for="story-search">Find a story</label>
+              <div class="mc-search">
+                <span class="mc-icon mc-icon--search" aria-hidden="true"></span>
+                <input class="mc-input" id="story-search" type="search" autocomplete="off" placeholder="Story key or title">
+              </div>
+            </div>
+            <div class="mc-live" role="status" aria-live="polite">
+              <div class="mc-results-meta" data-when="paged" hidden>
+                <span>Showing 26–50 of 319</span><span>Backlog priority</span>
+              </div>
+            </div>
+            <ul class="mc-list" data-unless="paged paused">
                 <li class="mc-list__item">
                   <div class="mc-list__main">
                     <a class="mc-list__title" href="../work/work-item-detail.html">Mentor matching survey</a>
@@ -222,6 +256,15 @@
                   </div>
                   <div class="mc-list__aside">
                     <button class="mc-button mc-button--sm" type="button" aria-label="Add Mentor matching survey to Sprint 9"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add</button>
+                  </div>
+                </li>
+                <li class="mc-list__item" data-unless="allocated-conflict failed stale unconfirmed-changed">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Confirm venue accessibility checklist</a>
+                    <div class="mc-list__meta"><span>HCK-120</span><span>Venue and logistics</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true"><span class="mc-icon mc-icon--user mc-icon--sm"></span></span>Unassigned</span><span><span class="mc-unset">Not estimated</span></span></div>
+                  </div>
+                  <div class="mc-list__aside">
+                    <button class="mc-button mc-button--sm" type="button" aria-label="Add Confirm venue accessibility checklist to Sprint 9"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add</button>
                   </div>
                 </li>
                 <li class="mc-list__item">
@@ -233,10 +276,152 @@
                     <button class="mc-button mc-button--sm" type="button" aria-label="Add Venue floor plan with accessible routes to Sprint 9"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add</button>
                   </div>
                 </li>
+                <li class="mc-list__item" data-unless="stale unconfirmed-changed">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Dietary needs survey for attendees</a>
+                    <div class="mc-list__meta"><span>HCK-128</span><span>Venue and logistics</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span><span>1 pt</span></div>
+                  </div>
+                  <div class="mc-list__aside">
+                    <button class="mc-button mc-button--sm" type="button" aria-label="Add Dietary needs survey for attendees to Sprint 9"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add</button>
+                  </div>
+                </li>
+                <li class="mc-list__item">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html#state=inactive-assignee">&lt;script&gt;alert(1)&lt;/script&gt; feedback form</a>
+                    <div class="mc-list__meta"><span>HCK-123</span><span>Judging and feedback</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true">JR</span>Jordan Reyes (inactive)</span><span><span class="mc-unset">Not estimated</span></span></div>
+                  </div>
+                  <div class="mc-list__aside">
+                    <button class="mc-button mc-button--sm" type="button" aria-label="Add &lt;script&gt;alert(1)&lt;/script&gt; feedback form to Sprint 9"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add</button>
+                  </div>
+                </li>
+                <li class="mc-list__item">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Volunteer thank-you notes</a>
+                    <div class="mc-list__meta"><span>HCK-130</span><span>Hackathon team formation</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true">?</span>Unassigned</span><span>1 pt</span></div>
+                  </div>
+                  <div class="mc-list__aside">
+                    <button class="mc-button mc-button--sm" type="button" aria-label="Add Volunteer thank-you notes to Sprint 9"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add</button>
+                  </div>
+                </li>
             </ul>
 
-            <h3 class="mc-h4 mc-mt-8 mc-mb-4" id="unavailable-heading">Not available</h3>
-            <ul class="mc-list" aria-labelledby="unavailable-heading">
+            <ul class="mc-list" data-when="paused" hidden>
+                <li class="mc-list__item">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Mark a prayer as answered</a>
+                    <div class="mc-list__meta"><span>PRW-112</span><span>Sharing prayer needs</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span><span>2 pts</span></div>
+                  </div>
+                  <div class="mc-list__aside">
+                    <button class="mc-button mc-button--sm" type="button" disabled aria-label="Add Mark a prayer as answered to Sprint 3"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add</button>
+                  </div>
+                </li>
+                <li class="mc-list__item">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Prayer post character limit</a>
+                    <div class="mc-list__meta"><span>PRW-113</span><span>Sharing prayer needs</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span><span>1 pt</span></div>
+                  </div>
+                  <div class="mc-list__aside">
+                    <button class="mc-button mc-button--sm" type="button" disabled aria-label="Add Prayer post character limit to Sprint 3"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add</button>
+                  </div>
+                </li>
+                <li class="mc-list__item">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Anonymous posting option</a>
+                    <div class="mc-list__meta"><span>PRW-116</span><span>Sharing prayer needs</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span><span><span class="mc-unset">Not estimated</span></span></div>
+                  </div>
+                  <div class="mc-list__aside">
+                    <button class="mc-button mc-button--sm" type="button" disabled aria-label="Add Anonymous posting option to Sprint 3"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add</button>
+                  </div>
+                </li>
+                <li class="mc-list__item">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Daily digest settings</a>
+                    <div class="mc-list__meta"><span>PRW-117</span><span>Sharing prayer needs</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true"><span class="mc-icon mc-icon--user mc-icon--sm"></span></span>Unassigned</span><span><span class="mc-unset">Not estimated</span></span></div>
+                  </div>
+                  <div class="mc-list__aside">
+                    <button class="mc-button mc-button--sm" type="button" disabled aria-label="Add Daily digest settings to Sprint 3"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add</button>
+                  </div>
+                </li>
+            </ul>
+
+            <ul class="mc-list" data-when="paged" hidden>
+                <li class="mc-list__item">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Team charter template</a>
+                    <div class="mc-list__meta"><span>HCK-265</span><span>Hackathon team formation</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true"><span class="mc-icon mc-icon--user mc-icon--sm"></span></span>Unassigned</span><span>1 pt</span></div>
+                  </div>
+                  <div class="mc-list__aside">
+                    <button class="mc-button mc-button--sm" type="button" aria-label="Add Team charter template to Sprint 9"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add</button>
+                  </div>
+                </li>
+                <li class="mc-list__item">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Mentor check-in reminders</a>
+                    <div class="mc-list__meta"><span>HCK-266</span><span>Hackathon team formation</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span><span>3 pts</span></div>
+                  </div>
+                  <div class="mc-list__aside">
+                    <button class="mc-button mc-button--sm" type="button" aria-label="Add Mentor check-in reminders to Sprint 9"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add</button>
+                  </div>
+                </li>
+                <li class="mc-list__item">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Demo day run sheet</a>
+                    <div class="mc-list__meta"><span>HCK-267</span><span>Judging and feedback</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">QB</span>Quinntyne Brown</span><span>1 pt</span></div>
+                  </div>
+                  <div class="mc-list__aside">
+                    <button class="mc-button mc-button--sm" type="button" aria-label="Add Demo day run sheet to Sprint 9"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add</button>
+                  </div>
+                </li>
+                <li class="mc-list__item">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Judging rubric handout</a>
+                    <div class="mc-list__meta"><span>HCK-268</span><span>Judging and feedback</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true"><span class="mc-icon mc-icon--user mc-icon--sm"></span></span>Unassigned</span><span><span class="mc-unset">Not estimated</span></span></div>
+                  </div>
+                  <div class="mc-list__aside">
+                    <button class="mc-button mc-button--sm" type="button" aria-label="Add Judging rubric handout to Sprint 9"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add</button>
+                  </div>
+                </li>
+                <li class="mc-list__item">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Quiet room signage</a>
+                    <div class="mc-list__meta"><span>HCK-269</span><span>Venue and logistics</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span><span>5 pts</span></div>
+                  </div>
+                  <div class="mc-list__aside">
+                    <button class="mc-button mc-button--sm" type="button" aria-label="Add Quiet room signage to Sprint 9"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add</button>
+                  </div>
+                </li>
+            </ul>
+            <nav class="mc-pagination" aria-label="Available story pages" data-when="paged" hidden>
+              <span class="mc-show-compact">Page 2 of 13</span>
+              <span class="mc-hide-compact">25 per page</span>
+              <div class="mc-cluster mc-cluster--sm">
+                <button class="mc-button mc-button--sm" type="button" data-goto-state="paged">
+                  <span class="mc-icon mc-icon--chevron-left" aria-hidden="true"></span>Previous
+                </button>
+                <ol class="mc-pagination__pages mc-hide-compact">
+                  <li><a class="mc-pagination__page" href="#state=paged" aria-label="Page 1">1</a></li>
+                  <li><a class="mc-pagination__page" href="#state=paged" aria-current="page" aria-label="Page 2">2</a></li>
+                  <li><a class="mc-pagination__page" href="#state=paged" aria-label="Page 3">3</a></li>
+                  <li class="mc-muted" aria-hidden="true">…</li>
+                  <li><a class="mc-pagination__page" href="#state=paged" aria-label="Page 13">13</a></li>
+                </ol>
+                <button class="mc-button mc-button--sm" type="button" data-goto-state="paged">
+                  Next<span class="mc-icon mc-icon--chevron-right" aria-hidden="true"></span>
+                </button>
+              </div>
+            </nav>
+
+            <h3 class="mc-h4 mc-mt-8 mc-mb-4" id="unavailable-heading" data-unless="paged paused">Not available</h3>
+            <ul class="mc-list" aria-labelledby="unavailable-heading" data-unless="paged paused">
+                <li class="mc-list__item mc-list__item--disabled">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Mentors can see team needs</a>
+                    <div class="mc-list__meta"><span>HCK-118</span><span>Hackathon team formation</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span></div>
+                  </div>
+                  <div class="mc-list__aside">
+                    <span class="mc-reason"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span>In Sprint 8</span>
+                  </div>
+                </li>
                 <li class="mc-list__item mc-list__item--disabled">
                   <div class="mc-list__main">
                     <a class="mc-list__title" href="../work/work-item-detail.html">Teams can register a project idea</a>
@@ -255,33 +440,130 @@
                     <span class="mc-reason"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span>Done stories can't be added</span>
                   </div>
                 </li>
-                <li class="mc-list__item mc-list__item--disabled">
-                  <div class="mc-list__main">
-                    <a class="mc-list__title" href="../work/work-item-detail.html">Mentors can see team needs</a>
-                    <div class="mc-list__meta"><span>HCK-118</span><span>Hackathon team formation</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span></div>
-                  </div>
-                  <div class="mc-list__aside">
-                    <span class="mc-reason"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span>In Sprint 8</span>
-                  </div>
-                </li>
             </ul>
-            <p class="mc-text-sm mc-muted mc-mt-4">9 Done stories and the 6 stories in Sprint 8 can't be added. 3 are shown.</p>
+            <p class="mc-text-sm mc-muted mc-mt-4" data-unless="paged paused">15 stories can't be added.</p>
           </section>
 
           <section aria-labelledby="sprint-heading">
             <div class="mc-section__header">
-              <h2 class="mc-section__title" id="sprint-heading">In Sprint 9 (<span data-unless="allocated-conflict">3</span><span data-when="allocated-conflict" hidden>4</span>)</h2>
-              <span class="mc-section__hint"><span data-unless="allocated-conflict">10 points</span><span data-when="allocated-conflict" hidden>10 points + 1 not estimated</span></span>
+              <h2 class="mc-section__title" id="sprint-heading">In <span data-unless="paused">Sprint 9</span><span data-when="paused" hidden>Sprint 3</span> (<span data-unless="allocated-conflict failed stale unconfirmed-changed paged">3</span><span data-when="allocated-conflict failed" hidden>4</span><span data-when="stale unconfirmed-changed" hidden>5</span><span data-when="paged" hidden>32</span>)</h2>
+              <span class="mc-section__hint"><span data-unless="allocated-conflict failed stale unconfirmed-changed paged paused">10 points</span><span data-when="allocated-conflict failed" hidden>10 points + 1 not estimated</span><span data-when="paused" hidden>6 points</span><span data-when="stale unconfirmed-changed" hidden>11 points + 1 not estimated</span><span data-when="paged" hidden>After saving</span></span>
             </div>
-            <ul class="mc-list">
-                <li class="mc-list__item mc-list__item--invalid" data-when="allocated-conflict" hidden>
+            <div class="mc-live" role="status" aria-live="polite">
+              <div class="mc-results-meta" data-when="paged" hidden>
+                <span>2 to add · Showing 1–25 of 31 saved</span><span>Backlog priority</span>
+              </div>
+            </div>
+            <ul class="mc-list" data-when="paged" hidden>
+                <li class="mc-list__item mc-list__item--selected">
                   <div class="mc-list__main">
-                    <a class="mc-list__title" href="../work/work-item-detail.html">Confirm venue accessibility checklist</a>
-                    <div class="mc-list__meta"><span>HCK-120</span><span>Venue and logistics</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true"><span class="mc-icon mc-icon--user mc-icon--sm"></span></span>Unassigned</span><span><span class="mc-unset">Not estimated</span></span></div>
-                    <p class="mc-field-error"><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Now in Sprint 8. Remove it to save this plan.</p>
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Dietary needs survey for attendees</a>
+                    <div class="mc-list__meta"><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>To add</span><span>HCK-128</span><span>Venue and logistics</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span><span>1 pt</span></div>
                   </div>
                   <div class="mc-list__aside">
-                    <button class="mc-button mc-button--sm" type="button" aria-label="Remove Confirm venue accessibility checklist from Sprint 9"><span class="mc-icon mc-icon--minus" aria-hidden="true"></span>Remove</button>
+                    <button class="mc-button mc-button--sm" type="button" aria-label="Undo adding Dietary needs survey for attendees"><span class="mc-icon mc-icon--undo" aria-hidden="true"></span>Undo</button>
+                  </div>
+                </li>
+                <li class="mc-list__item mc-list__item--selected">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Volunteer thank-you notes</a>
+                    <div class="mc-list__meta"><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>To add</span><span>HCK-130</span><span>Hackathon team formation</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true">?</span>Unassigned</span><span>1 pt</span></div>
+                  </div>
+                  <div class="mc-list__aside">
+                    <button class="mc-button mc-button--sm" type="button" aria-label="Undo adding Volunteer thank-you notes"><span class="mc-icon mc-icon--undo" aria-hidden="true"></span>Undo</button>
+                  </div>
+                </li>
+                <li class="mc-list__item">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Judges can score demos</a>
+                    <div class="mc-list__meta"><span>HCK-122</span><span>Judging and feedback</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span><span>5 pts</span></div>
+                  </div>
+                  <div class="mc-list__aside">
+                    <button class="mc-button mc-button--sm" type="button" aria-label="Remove Judges can score demos from Sprint 9"><span class="mc-icon mc-icon--minus" aria-hidden="true"></span>Remove</button>
+                  </div>
+                </li>
+                <li class="mc-list__item mc-list__item--selected">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Demo order and timing schedule</a>
+                    <div class="mc-list__meta"><span class="mc-pill mc-pill--warning"><span class="mc-icon mc-icon--minus" aria-hidden="true"></span>To remove</span><span>HCK-126</span><span>Judging and feedback</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true">?</span>Unassigned</span><span>3 pts</span></div>
+                  </div>
+                  <div class="mc-list__aside">
+                    <button class="mc-button mc-button--sm" type="button" aria-label="Undo removing Demo order and timing schedule"><span class="mc-icon mc-icon--undo" aria-hidden="true"></span>Undo</button>
+                  </div>
+                </li>
+                <li class="mc-list__item">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Team size limits shown at sign-up</a>
+                    <div class="mc-list__meta"><span>HCK-240</span><span>Hackathon team formation</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span><span>2 pts</span></div>
+                  </div>
+                  <div class="mc-list__aside">
+                    <button class="mc-button mc-button--sm" type="button" aria-label="Remove Team size limits shown at sign-up from Sprint 9"><span class="mc-icon mc-icon--minus" aria-hidden="true"></span>Remove</button>
+                  </div>
+                </li>
+                <li class="mc-list__item">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Waitlist for full teams</a>
+                    <div class="mc-list__meta"><span>HCK-241</span><span>Hackathon team formation</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span><span>3 pts</span></div>
+                  </div>
+                  <div class="mc-list__aside">
+                    <button class="mc-button mc-button--sm" type="button" aria-label="Remove Waitlist for full teams from Sprint 9"><span class="mc-icon mc-icon--minus" aria-hidden="true"></span>Remove</button>
+                  </div>
+                </li>
+            </ul>
+            <nav class="mc-pagination" aria-label="Sprint 9 story pages" data-when="paged" hidden>
+              <span class="mc-show-compact">Page 1 of 2</span>
+              <span class="mc-hide-compact">25 per page</span>
+              <div class="mc-cluster mc-cluster--sm">
+                <button class="mc-button mc-button--sm" type="button" disabled>
+                  <span class="mc-icon mc-icon--chevron-left" aria-hidden="true"></span>Previous
+                </button>
+                <ol class="mc-pagination__pages mc-hide-compact">
+                  <li><a class="mc-pagination__page" href="#state=paged" aria-current="page" aria-label="Page 1">1</a></li>
+                  <li><a class="mc-pagination__page" href="#state=paged" aria-label="Page 2">2</a></li>
+                </ol>
+                <button class="mc-button mc-button--sm" type="button" data-goto-state="paged">
+                  Next<span class="mc-icon mc-icon--chevron-right" aria-hidden="true"></span>
+                </button>
+              </div>
+            </nav>
+            <ul class="mc-list" data-when="paused" hidden>
+                <li class="mc-list__item">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Report a post for review</a>
+                    <div class="mc-list__meta"><span>PRW-114</span><span>Moderation</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true"><span class="mc-icon mc-icon--user mc-icon--sm"></span></span>Unassigned</span><span>2 pts</span></div>
+                  </div>
+                  <div class="mc-list__aside">
+                    <button class="mc-button mc-button--sm" type="button" disabled aria-label="Remove Report a post for review from Sprint 3"><span class="mc-icon mc-icon--minus" aria-hidden="true"></span>Remove</button>
+                  </div>
+                </li>
+                <li class="mc-list__item">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Moderator queue</a>
+                    <div class="mc-list__meta"><span>PRW-115</span><span>Moderation</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span><span>3 pts</span></div>
+                  </div>
+                  <div class="mc-list__aside">
+                    <button class="mc-button mc-button--sm" type="button" disabled aria-label="Remove Moderator queue from Sprint 3"><span class="mc-icon mc-icon--minus" aria-hidden="true"></span>Remove</button>
+                  </div>
+                </li>
+                <li class="mc-list__item">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Plain-language community guidelines</a>
+                    <div class="mc-list__meta"><span>PRW-118</span><span>Moderation</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span><span>1 pt</span></div>
+                  </div>
+                  <div class="mc-list__aside">
+                    <button class="mc-button mc-button--sm" type="button" disabled aria-label="Remove Plain-language community guidelines from Sprint 3"><span class="mc-icon mc-icon--minus" aria-hidden="true"></span>Remove</button>
+                  </div>
+                </li>
+            </ul>
+            <ul class="mc-list" data-unless="paged paused">
+                <li class="mc-list__item mc-list__item--invalid" data-when="allocated-conflict failed stale unconfirmed-changed" hidden data-attr-failed="class=mc-list__item mc-list__item--selected" data-attr-stale="class=mc-list__item mc-list__item--selected" data-attr-unconfirmed-changed="class=mc-list__item mc-list__item--selected">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Confirm venue accessibility checklist</a>
+                    <div class="mc-list__meta"><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>To add</span><span>HCK-120</span><span>Venue and logistics</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm mc-avatar--muted" aria-hidden="true"><span class="mc-icon mc-icon--user mc-icon--sm"></span></span>Unassigned</span><span><span class="mc-unset">Not estimated</span></span></div>
+                    <p class="mc-field-error" data-when="allocated-conflict" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Now in Sprint 8. Undo adding it to save this plan.</p>
+                  </div>
+                  <div class="mc-list__aside">
+                    <button class="mc-button mc-button--sm" type="button" aria-label="Undo adding Confirm venue accessibility checklist"><span class="mc-icon mc-icon--undo" aria-hidden="true"></span>Undo</button>
                   </div>
                 </li>
                 <li class="mc-list__item">
@@ -311,9 +593,46 @@
                     <button class="mc-button mc-button--sm" type="button" aria-label="Remove Feedback form for teams after demos from Sprint 9"><span class="mc-icon mc-icon--minus" aria-hidden="true"></span>Remove</button>
                   </div>
                 </li>
+                <li class="mc-list__item" data-when="stale unconfirmed-changed" hidden>
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Dietary needs survey for attendees</a>
+                    <div class="mc-list__meta"><span>HCK-128</span><span>Venue and logistics</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span><span>1 pt</span></div>
+                  </div>
+                  <div class="mc-list__aside">
+                    <button class="mc-button mc-button--sm" type="button" aria-label="Remove Dietary needs survey for attendees from Sprint 9"><span class="mc-icon mc-icon--minus" aria-hidden="true"></span>Remove</button>
+                  </div>
+                </li>
             </ul>
-            <p class="mc-text-sm mc-muted mc-mt-4">Removing a story returns it to the backlog. Its status doesn't change.</p>
+            <p class="mc-text-sm mc-muted mc-mt-4" data-unless="paused">Removing a story returns it to the backlog when you save. Its status doesn't change, and stories that are Done stay unless you remove them.</p>
           </section>
+        </div>
+
+        <div class="mc-empty mc-empty--page" role="alert" tabindex="-1" data-when="not-planned" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--lock mc-icon--lg" aria-hidden="true"></span></span>
+          <h1 class="mc-empty__title" tabindex="-1">Sprint 7 is closed</h1>
+          <p class="mc-empty__text">Only planned sprints change here, and a closed sprint's history can't be edited. Nothing was changed.</p>
+          <div class="mc-empty__actions">
+            <button class="mc-button" type="button" data-nav="sprints.html">
+              <span class="mc-icon mc-icon--arrow-left" aria-hidden="true"></span>Back to sprints
+            </button>
+            <button class="mc-button mc-button--primary" type="button" data-nav="sprint-history.html">
+              <span class="mc-icon mc-icon--history" aria-hidden="true"></span>View Sprint 7 history
+            </button>
+          </div>
+        </div>
+
+        <div class="mc-empty mc-empty--page" role="alert" tabindex="-1" data-when="unconfirmed-active" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--play mc-icon--lg" aria-hidden="true"></span></span>
+          <h1 class="mc-empty__title" tabindex="-1">Sprint 9 is active now.</h1>
+          <p class="mc-empty__text">Only planned sprints change here. Sprint 9's stories are on its sprint board.</p>
+          <div class="mc-empty__actions">
+            <button class="mc-button" type="button" data-nav="sprints.html">
+              <span class="mc-icon mc-icon--arrow-left" aria-hidden="true"></span>Back to sprints
+            </button>
+            <button class="mc-button mc-button--primary" type="button" data-nav="sprint-board.html">
+              <span class="mc-icon mc-icon--board" aria-hidden="true"></span>Open board
+            </button>
+          </div>
         </div>
 
         <div class="mc-empty mc-empty--page" data-when="not-found" hidden>
@@ -327,8 +646,22 @@
           </div>
         </div>
 
+        <div data-when="project-not-found" hidden>
+          <nav class="mc-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../projects/project-list.html">Projects</a></li></ol></nav>
+          <div class="mc-empty mc-empty--page mc-empty--neutral">
+            <span class="mc-empty__icon"><span class="mc-icon mc-icon--compass mc-icon--lg" aria-hidden="true"></span></span>
+            <h1 class="mc-empty__title" tabindex="-1">Project not found</h1>
+            <p class="mc-empty__text">This project may have been deleted, or the link may be incomplete.</p>
+            <div class="mc-empty__actions">
+              <button class="mc-button mc-button--primary" type="button" data-nav="../projects/project-list.html"><span class="mc-icon mc-icon--arrow-left" aria-hidden="true"></span>Back to projects</button>
+            </div>
+          </div>
+        </div>
+
         <h1 class="mc-visually-hidden" data-when="loading" hidden>Plan Sprint 9</h1>
-        <p class="mc-visually-hidden" role="status" data-when="loading" hidden>Loading Sprint 9</p>
+        <div class="mc-live" role="status" aria-live="polite">
+          <p class="mc-visually-hidden" data-when="loading" hidden>Loading Sprint 9</p>
+        </div>
         <div class="mc-stack mc-stack--lg" data-when="loading" hidden aria-hidden="true">
           <div class="mc-stack">
             <span class="mc-skeleton mc-skeleton--title"></span>
@@ -344,6 +677,23 @@
               <div class="mc-loading-row"><span class="mc-skeleton mc-w-60"></span><span class="mc-skeleton mc-skeleton--pill"></span></div>
               <div class="mc-loading-row"><span class="mc-skeleton mc-w-60"></span><span class="mc-skeleton mc-skeleton--pill"></span></div>
             </div>
+          </div>
+        </div>
+
+        <div class="mc-empty mc-empty--error" role="alert" data-when="error" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--alert-circle mc-icon--lg" aria-hidden="true"></span></span>
+          <h1 class="mc-empty__title" tabindex="-1">We couldn't load Sprint 9's plan</h1>
+          <p class="mc-empty__text">Nothing was changed. Try again, and if it keeps happening share the reference ID with your administrator.</p>
+          <p class="mc-ref">Reference ID <code>71c3-a2f8-904e</code>
+            <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="71c3-a2f8-904e"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+          </p>
+          <div class="mc-empty__actions">
+            <button class="mc-button" type="button" data-nav="sprints.html">
+              <span class="mc-icon mc-icon--arrow-left" aria-hidden="true"></span>Back to sprints
+            </button>
+            <button class="mc-button mc-button--primary" type="button" data-goto-state="loading">
+              <span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again
+            </button>
           </div>
         </div>
       </div>

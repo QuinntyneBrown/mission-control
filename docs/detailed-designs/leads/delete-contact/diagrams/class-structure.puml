@@ -20,25 +20,103 @@ skinparam class {
   BackgroundColor #F9FAFB
 }
 class LeadDetailPage {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
+  +leadId: Signal<Guid>
+  +canManageLeads: Signal<boolean>
+  +draft: Signal<DraftState>
+  +openDelete(lead: LeadDetailResult): void
 }
 class LeadDirectoryPage {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
+  +canManageLeads: Signal<boolean>
+  +draft: Signal<DraftState>
+  -refresh: WritableSignal<number>
+  +openDelete(lead: LeadSummary): void
+}
+note right of LeadDirectoryPage
+  canManageLeads = leads.manage in
+  currentSession.capabilities; Delete appears
+  only when it is true (deleteRequested).
+  LeadDeleteOutcome reactions:
+  Deleted -> the directory: refresh + 1,
+  LeadDetailPage: navigate to /leads; then
+  the Lead deleted toast naming the lead.
+  AlreadyDeleted -> the same, with an info
+  toast that it was already deleted, or, when
+  the dialog relayed unconfirmed before it
+  closed, the neutral info toast "Hana Kim
+  has been deleted."
+  No result -> nothing. The dialog's unconfirmed
+  (still open) -> the page's view refresh + 1.
+  Both pages implement FormDraft by
+  delegating to the open dialog.
+end note
+interface IToastService {
+  +show(toast: Toast): void
+}
+interface FormDraft {
+  +draft: Signal<DraftState>
+}
+class DraftState {
+  +dirty: bool
+  +pending: bool
+  +unconfirmed: bool
+  +summary: string?
 }
 class LeadDeleteDialog {
-  +lead: LeadSummary
-  +blockingWorkspaces: Signal<ReferencingWorkspace[]>
-  +confirm(): void
-  +cancel(): void
+  +target: InputSignal<LeadDeleteTarget>
+  +draft: Signal<DraftState>
+  +unconfirmed: OutputEmitterRef<void>
+  +close(result: LeadDeleteOutcome?): void
 }
-class LeadView {
-  +state: Signal<FeatureState>
-  +submit(): void
+class LeadDeleteOutcome {
+  +kind: Deleted | AlreadyDeleted
 }
+note right of LeadDeleteOutcome
+  Deleted on deleted, AlreadyDeleted on
+  alreadyDeleted; no result on Cancel,
+  Close, or Escape, or once a navigation
+  completes that deactivates its hosting
+  page, such as a blocked explanation's
+  project link (dismissed). A query-only
+  Back or Forward on the directory leaves
+  it open.
+end note
+class LeadDeleteForm {
+  +target: InputSignal<LeadDeleteTarget>
+  +deleted: OutputEmitterRef<Guid>
+  +alreadyDeleted: OutputEmitterRef<Guid>
+  +unconfirmed: OutputEmitterRef<void>
+  +draftChange: OutputEmitterRef<DraftState>
+  -submit: WritableSignal<FeatureState>
+  -blocked: WritableSignal<LeadReferencedProblem?>
+  +confirm(): Promise<void>
+}
+note right of LeadDeleteForm
+  Blocked: the count, the listed projects, and
+  View all to /projects?responsibleLeadId={id},
+  a route built from the lead ID. No delete or retry.
+  Starts blocked when the target's count is above 0.
+  Opening or switching to blocked focuses Close and
+  announces the explanation as an alert. A 403 keeps
+  the dialog open; Delete lead unavailable, so focus
+  moves to the alert. A 500 keeps focus on Delete lead.
+  No response: "We couldn't confirm whether Hana Kim
+  was deleted" (no reference ID); emit unconfirmed.
+end note
+class LeadDeleteTarget {
+  +id: Guid
+  +name: string
+  +category: LeadCategory
+  +isCityLead: bool
+  +responsibleWorkspaceCount: int?
+  +responsibleWorkspaces: ResponsibleWorkspace[0..10]
+}
+note bottom of LeadDeleteTarget
+  From the directory row or the loaded details.
+  isCityLead selects the City contact copy
+  (the administrator account doesn't change).
+end note
 interface ILeadService {
-  +delete(request: DeleteLeadCommand): Promise<FeatureResult>
+  +delete(command: DeleteLeadCommand): Promise<void>
 }
 class LeadService {
   -http: HttpClient
@@ -50,49 +128,71 @@ class LeadContact {
   +id: Guid
   +firstName: string
   +lastName: string
-  +version: long
-  +checkDeletion(referencing: ReferencingWorkspace[]): void
+  +category: LeadCategory
+  +checkDeletion(responsibleWorkspaceCount: int): void
 }
 interface IMissionControlDataSession {
-  +query(specification): Task<ReadResult>
-  +commit(expectedVersion: long): Task<void>
+  +LoadLeadAsync(id: Guid, ct: CancellationToken): Task<LeadContact?>
+  +LoadResponsibleWorkspacesAsync(leadId: Guid, ct: CancellationToken): Task<ResponsibleWorkspacePreview>
+  +RemoveLead(lead: LeadContact): void
+  +AddAuditEvent(auditEvent: AuditEvent): void
+  +SaveChangesAsync(ct: CancellationToken): Task
 }
-class MissionControlDataSession {
-  -connection: DbConnection
-}
-LeadDetailPage --> LeadView : composes
-LeadDirectoryPage --> LeadView : composes
-LeadDetailPage ..> LeadDeleteDialog : opens; blocked at once when\nresponsibleWorkspaces is not empty
-LeadDirectoryPage ..> LeadDeleteDialog : opens confirmation
-LeadDeleteDialog --> LeadView : composes
-LeadView ..> ILeadService : inject token
+note bottom of IMissionControlDataSession
+  Scoped view of the shared port; only the members
+  this slice uses. Lead deletion takes no workspace lock.
+end note
+class MissionControlDataSession
+LeadDetailPage ..> LeadDeleteDialog : opens with the loaded details
+LeadDirectoryPage ..> LeadDeleteDialog : opens with the row
+LeadDeleteDialog --> LeadDeleteForm : hosts; inputs and outputs only
+LeadDeleteDialog ..> LeadDeleteOutcome : close result
+LeadDirectoryPage ..> IToastService : inject TOAST_SERVICE
+LeadDetailPage ..> IToastService : inject TOAST_SERVICE
+FormDraft <|.. LeadDeleteDialog
+FormDraft <|.. LeadDetailPage
+FormDraft <|.. LeadDirectoryPage
+LeadDeleteForm ..> DraftState : emits
+LeadDeleteForm ..> LeadDeleteTarget : input
+LeadDeleteForm ..> ILeadService : inject LEAD_SERVICE
 ILeadService <|.. LeadService
 IMissionControlDataSession <|.. MissionControlDataSession
 class DeleteLeadCommand {
   +id: Guid
 }
 class DeleteLeadCommandHandler {
-  +handle(request: DeleteLeadCommand): Task<FeatureResult>
+  +handle(request: DeleteLeadCommand, ct: CancellationToken): Task
 }
-class ReferencingWorkspace {
+class ResponsibleWorkspacePreview {
+  +count: int
+  +workspaces: ResponsibleWorkspace[0..10]
+}
+note bottom of ResponsibleWorkspacePreview
+  One read: total count and the first 10
+  by name then ID.
+end note
+class ResponsibleWorkspace {
   +id: Guid
   +name: string
+  +mode: DeliveryMode
 }
 class LeadReferencedProblem {
   +status: 409
   +detail: string
-  +workspaces: ReferencingWorkspace[]
+  +responsibleWorkspaceCount: int
+  +workspaces: ResponsibleWorkspace[0..10]
 }
 note bottom of LeadReferencedProblem
   detail: reassign or remove the responsible lead
-  in each listed workspace before deleting.
+  in each project before deleting. Never the full set.
 end note
-LeadReferencedProblem *-- ReferencingWorkspace
+ResponsibleWorkspacePreview *-- "0..10" ResponsibleWorkspace
+LeadReferencedProblem *-- "0..10" ResponsibleWorkspace
 LeadsController ..> DeleteLeadCommand : dispatches
 DeleteLeadCommandHandler ..> DeleteLeadCommand : handles
-DeleteLeadCommandHandler --> LeadContact : loads / applies
-DeleteLeadCommandHandler ..> LeadReferencedProblem : 409 when referenced
-DeleteLeadCommandHandler ..> IMissionControlDataSession : uses
+DeleteLeadCommandHandler --> LeadContact : loads / checks
+DeleteLeadCommandHandler ..> LeadReferencedProblem : 409 when count > 0
+DeleteLeadCommandHandler ..> IMissionControlDataSession : loads; RemoveLead; AddAuditEvent; SaveChangesAsync
 
 enum LeadCategory {
   Create

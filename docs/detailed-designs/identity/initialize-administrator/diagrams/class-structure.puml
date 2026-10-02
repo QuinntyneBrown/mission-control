@@ -14,48 +14,91 @@ skinparam package {
   BackgroundColor #F9FAFB
 }
 title Class structure - Initialize and protect the administrator
-interface IHostedService <<Microsoft.Extensions.Hosting>> {
-  +startAsync(token: CancellationToken): Task
-  +stopAsync(token: CancellationToken): Task
+left to right direction
+abstract class BackgroundService <<Microsoft.Extensions.Hosting>> {
+  #ExecuteAsync(stoppingToken: CancellationToken): Task
 }
 class DatabaseInitializer <<Infrastructure>> {
-  +startAsync(token: CancellationToken): Task
+  -options: IOptions<InitializationOptions>
+  -jwtOptions: IOptions<JwtOptions>
+  -sender: ISender
+  #ExecuteAsync(stoppingToken: CancellationToken): Task
 }
-class InitializationOptions <<Options>> {
+note bottom of DatabaseInitializer
+  ExecuteAsync runs after the host starts listening:
+  /health/live answers 200 and /health/ready 503
+  (Initializing) during the run. One correlation ID
+  per run, sent with the command and recorded on failure.
+end note
+class InitializationOptions <<Application Options>> {
   +designatedEmail: string
   +firstName: string
   +lastName: string
   +initialPassword: string?
 }
+note bottom of InitializationOptions
+  The designated administrator is the account whose
+  normalized email equals designatedEmail; account
+  management reads it for its protection checks.
+end note
+class JwtOptions <<Infrastructure Options>> {
+  +signingKey: string
+}
+note bottom of JwtOptions
+  Checked first, before the lock: missing or invalid
+  signing material records Failed (readiness 503);
+  the host keeps running. No fallback key.
+end note
 interface IInitializationLock {
-  +acquire(token: CancellationToken): Task<IAsyncDisposable>
+  +AcquireAsync(ct: CancellationToken): Task<IAsyncDisposable>
 }
 interface IMigrationRunner {
-  +migrate(): Task<void>
+  +MigrateAsync(ct: CancellationToken): Task
 }
-class EnsureAdministratorCommand {
+class EnsureRequiredSeedsCommand {
   +email: string
   +firstName: string
   +lastName: string
   +initialPassword: string?
+  +correlationId: string
 }
-class EnsureAdministratorCommandHandler {
-  +handle(request: EnsureAdministratorCommand): Task<UserAccount>
+class EnsureRequiredSeedsCommandHandler {
+  +handle(request: EnsureRequiredSeedsCommand, ct: CancellationToken): Task
 }
-class EnsureCityLeadCommand {
-  +email: string
-  +firstName: string
-  +lastName: string
+note right of EnsureRequiredSeedsCommandHandler
+  One scoped data session, one seed transaction:
+  1 LoadAccountByEmailAsync; AddAccount if absent
+    (hash the initial password), else repair names,
+    active flag and Administrator role; keep hash,
+    ID and credential version.
+  2 LoadSeedMarkerAsync(CityLeadSeedCompleted); if absent,
+    LoadLeadByEmailAndCategoryAsync(email, City), AddLead
+    if none, then AddSeedMarker.
+  3 AddAuditEvent per change (L2-039): Administrator created,
+    Administrator access restored, City contact seeded;
+    null actor, the run's correlation ID; none when unchanged.
+  4 SaveChangesAsync(ct) commits all of it once.
+end note
+interface IMissionControlDataSession {
+  +LoadAccountByEmailAsync(normalizedEmail: string, ct: CancellationToken): Task<UserAccount?>
+  +LoadLeadByEmailAndCategoryAsync(normalizedEmail: string, category: LeadCategory, ct: CancellationToken): Task<LeadContact?>
+  +LoadSeedMarkerAsync(key: string, ct: CancellationToken): Task<SeedMarker?>
+  +AddAccount(account: UserAccount): void
+  +AddLead(lead: LeadContact): void
+  +AddSeedMarker(marker: SeedMarker): void
+  +AddAuditEvent(auditEvent: AuditEvent): void
+  +SaveChangesAsync(ct: CancellationToken): Task
 }
-class EnsureCityLeadCommandHandler {
-  +handle(request: EnsureCityLeadCommand): Task<LeadContact>
+note bottom of IMissionControlDataSession
+  Scoped view of the shared port: only
+  the members this slice uses.
+end note
+interface IPasswordHashService {
+  +hash(password: string): string
 }
 class InitializationState {
   +phase: InitializationPhase
-  +schemaCompatible: bool
-  +administratorReady: bool
   +correlationId: string?
-  +ready(): bool
 }
 enum InitializationPhase {
   Initializing
@@ -69,16 +112,28 @@ class InitializationStatus <<Application singleton>> {
 class HealthController <<MissionControl.Api.Controllers>> {
   -sender: ISender
   +live(): IActionResult
-  +ready(): Task<IActionResult>
+  +ready(ct: CancellationToken): Task<IActionResult>
 }
 class GetReadinessQuery
 class GetReadinessQueryHandler {
-  +handle(request: GetReadinessQuery): Task<ReadinessResult>
+  +handle(request: GetReadinessQuery, ct: CancellationToken): Task<ReadinessResult>
 }
+class ReadinessResult {
+  +ready: bool
+}
+interface IDatabaseReadinessProbe {
+  +CheckAsync(ct: CancellationToken): Task<bool>
+}
+note bottom of IDatabaseReadinessProbe
+  SQL reachable and schema version compatible;
+  failures are logged with a correlation ID and
+  never expose connection details.
+end note
 class UserAccount {
   +id: Guid
   +firstName: string
   +lastName: string
+  +normalizedEmail: string
   +passwordHash: string
   +credentialVersion: long
   +active: bool
@@ -86,24 +141,50 @@ class UserAccount {
 }
 class LeadContact {
   +id: Guid
+  +firstName: string
+  +lastName: string
   +email: string
   +category: LeadCategory
   +phone: string?
 }
-IHostedService <|.. DatabaseInitializer
+class SeedMarker {
+  +key: string
+  +completedAtUtc: DateTimeOffset
+}
+class AuditEvent {
+  +timestampUtc: DateTimeOffset
+  +actorId: Guid?
+  +operation: string
+  +area: AuditArea
+  +entityType: string
+  +entityId: Guid?
+  +outcome: AuditOutcome
+  +correlationId: string
+}
+note bottom of AuditEvent
+  Shared record (review-audit-events).
+  Seeding: actorId null, outcome Succeeded,
+  area Accounts or Leads.
+end note
+BackgroundService <|-- DatabaseInitializer
+DatabaseInitializer ..> JwtOptions : checks signing material first
 DatabaseInitializer ..> InitializationOptions : binds
 DatabaseInitializer ..> IInitializationLock : holds for the run
-DatabaseInitializer ..> IMigrationRunner : migration
-DatabaseInitializer ..> EnsureAdministratorCommand : sends
-DatabaseInitializer ..> EnsureCityLeadCommand : sends
+DatabaseInitializer ..> IMigrationRunner : migrates first
+DatabaseInitializer ..> EnsureRequiredSeedsCommand : sends once, after migration
 DatabaseInitializer --> InitializationStatus : records outcome
-EnsureAdministratorCommandHandler ..> EnsureAdministratorCommand : handles
-EnsureCityLeadCommandHandler ..> EnsureCityLeadCommand : handles
-EnsureAdministratorCommandHandler --> UserAccount : creates / repairs
-EnsureCityLeadCommandHandler --> LeadContact : creates / adopts once
+EnsureRequiredSeedsCommandHandler ..> EnsureRequiredSeedsCommand : handles
+EnsureRequiredSeedsCommandHandler ..> IMissionControlDataSession : loads, adds, commits once
+EnsureRequiredSeedsCommandHandler ..> IPasswordHashService : hashes the initial password (new account only)
+EnsureRequiredSeedsCommandHandler --> UserAccount : creates / repairs
+EnsureRequiredSeedsCommandHandler --> LeadContact : creates / adopts once
+EnsureRequiredSeedsCommandHandler --> SeedMarker : sets once
+EnsureRequiredSeedsCommandHandler --> AuditEvent : registers one per change
 InitializationStatus --> InitializationState
 InitializationState --> InitializationPhase
 HealthController ..> GetReadinessQuery : dispatches
 GetReadinessQueryHandler ..> GetReadinessQuery : handles
 GetReadinessQueryHandler ..> InitializationStatus : reads
+GetReadinessQueryHandler ..> IDatabaseReadinessProbe : checks when Ready
+GetReadinessQueryHandler --> ReadinessResult : returns
 @enduml

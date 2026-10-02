@@ -4,96 +4,236 @@ skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
 skinparam ArrowColor #344054
-skinparam rectangle {
-  BorderColor #344054
-  FontColor #101828
-}
 skinparam package {
   BorderColor #667085
   FontColor #101828
   BackgroundColor #F9FAFB
 }
-title Class structure - Delete permitted leaf work
 skinparam class {
   BorderColor #344054
   FontColor #101828
   BackgroundColor #F9FAFB
 }
-class WorkItemDetailPage {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
+set separator none
+title Class structure - Delete permitted leaf work
+package "frontend/projects/mission-control" {
+  class ProjectLayoutPage {
+    +canDeleteWork: Signal<boolean>
+    +canChangeMode: Signal<boolean>
+    +openDialog(kind: WorkspaceActionKind): void
+  }
+  class WorkItemDetailPage {
+    +workItemId: Signal<Guid>
+    -layout: ProjectLayoutPage
+    -revision: WritableSignal<number>
+    +onAction(action: WorkItemAction): void
+  }
+  class WorkItemDeleteDialog {
+    +target: InputSignal<WorkItemTarget>
+    +canChangeMode: InputSignal<boolean>
+    +draft: Signal<DraftState>
+    +unconfirmed: OutputEmitterRef<void>
+    +close(result: WorkItemDeleteOutcome?): void
+  }
+  class WorkItemDeleteOutcome {
+    +kind: Deleted | AlreadyDeleted | RemoveFromSprint | ChangePlan | ChangeMode
+    +sprintId: Guid?
+  }
+  class SprintScopeDialog {
+    +forbidden: OutputEmitterRef<void>
+  }
+  class ModeChangeDialog
+  note bottom of WorkItemDetailPage
+    WorkHierarchyPage reacts the same way; both
+    implement FormDraft by delegating to the dialog,
+    else to the layout's open dialog.
+    Delete (actionRequested) opens the dialog with the
+    WorkItemTarget. Deleted or AlreadyDeleted:
+    revision + 1 and a toast naming the item (the
+    detail page opens the parent's detail first);
+    AlreadyDeleted after the dialog relayed
+    unconfirmed: the neutral info toast "'...' has
+    been deleted.", not "already deleted".
+    RemoveFromSprint(sprintId): SprintScopeDialog in
+    remove mode with removeStoryId and the target's
+    scopeSummary; its SprintScopeOutcome Changed:
+    revision + 1 and the "Scope updated" toast with
+    its summary; Outdated: revision + 1; its
+    forbidden (an unexpected 403, dialog stays open):
+    the "Your access changed" toast, without Retry.
+    ChangePlan(sprintId): navigate to
+    /projects/:id/sprints/:sprintId/plan?remove={storyId}.
+    ChangeMode: layout.openDialog(ChangeMode) opens
+    ModeChangeDialog. unconfirmed: revision + 1 at
+    once. The page passes layout.canDeleteWork() to
+    its view.
+  end note
 }
-class WorkItemDeleteDialog {
-  +itemName: string
-  +blocker: Signal<DeletionBlocker?>
-  +confirm(): void
+package "frontend/projects/domain" {
+  class "WorkItemDetailView\nWorkHierarchyView" as WorkViews {
+    +canDeleteWork: InputSignal<boolean>
+    +actionRequested: OutputEmitterRef<WorkItemAction>
+  }
+  note bottom of WorkViews
+    Defined by Create and navigate the work
+    hierarchy; WorkHierarchyView passes
+    canDeleteWork to every WorkHierarchyBranch.
+    false: Delete unavailable with "Only
+    administrators can delete work".
+  end note
+  class WorkItemTarget {
+    +itemId: Guid
+    +type: WorkItemType
+    +key: string
+    +title: string
+    +parentTitle: string?
+    +scopeSummary: ScopeStorySummary?
+  }
+  class WorkItemDeleteForm {
+    +item: InputSignal<WorkItemTarget>
+    +canChangeMode: InputSignal<boolean>
+    +deleted: OutputEmitterRef<Guid>
+    +alreadyDeleted: OutputEmitterRef<Guid>
+    +unconfirmed: OutputEmitterRef<void>
+    +removeFromSprintRequested: OutputEmitterRef<Guid>
+    +changePlanRequested: OutputEmitterRef<Guid>
+    +changeModeRequested: OutputEmitterRef<void>
+    +draftChange: OutputEmitterRef<DraftState>
+    -submit: Signal<FeatureState<void>>
+    -blocker: Signal<DeletionBlocker?>
+    -forbidden: Signal<bool>
+    +confirm(): void
+  }
+  note bottom of WorkItemDeleteForm
+    Reads nothing on open: names the item from the
+    WorkItemTarget. draftChange is never dirty and
+    reports pending while the deletion runs. A 409
+    puts the blocker explanation in the alert region;
+    focus moves to Close. A 403 (role changed while
+    open) sets forbidden: the dialog stays open with
+    "Only administrators can delete work", no
+    reference ID, Delete unavailable, focus on Cancel.
+    No response: the failed alert says it couldn't
+    confirm the deletion (no reference ID) and the
+    form emits unconfirmed; Try again resends only
+    when pressed (404 then means AlreadyDeleted,
+    which the page announces neutrally).
+  end note
 }
-class WorkItemView {
-  +state: Signal<FeatureState>
-  +submit(): void
+package "frontend/projects/api" {
+  interface IWorkItemService {
+    +delete(command: DeleteWorkItemCommand): Promise<void>
+  }
+  class WorkItemService {
+    -http: HttpClient
+  }
 }
-interface IWorkItemService {
-  +delete(request: DeleteWorkItemCommand): Promise<FeatureResult>
+package "MissionControl.Api" {
+  class WorkItemsController {
+    -sender: ISender
+  }
 }
-class WorkItemService {
-  -http: HttpClient
+package "MissionControl.Application" {
+  class DeleteWorkItemCommand {
+    +workspaceId: Guid
+    +itemId: Guid
+  }
+  class DeleteWorkItemCommandHandler {
+    +Handle(request, ct): Task
+  }
+  class DeletionCheck {
+    +item: WorkItem
+    +childCount: int
+    +openSprint: SprintReference?
+    +openSprintStatus: SprintStatus?
+    +sprintsPaused: bool
+    +parent: WorkItem?
+    +siblings: WorkOrder
+    +backlog: WorkOrder?
+    +boards: BoardState[]
+  }
+  interface IMissionControlDataSession {
+    +BeginWorkspaceTransactionAsync(workspaceId, ct): Task
+    +LoadDeletionCheckAsync(workspaceId, itemId, ct): Task<DeletionCheck?>
+    +RemoveWorkItem(item: WorkItem): void
+    +AddAuditEvent(auditEvent: AuditEvent): void
+    +SaveChangesAsync(ct): Task
+  }
+  note bottom of IMissionControlDataSession
+    Shared members as defined in the overview; only the
+    members this slice uses are shown. The workspace lock comes
+    first. siblings, backlog, and boards load as tracked
+    aggregates: removing the item's sibling position,
+    StoryBacklogPosition, and BoardPlacements as tracked
+    children compacts those orders and increments their
+    versions. A task's parent story increments its taskRevision
+    only; the story's version and sprint versions stay unchanged.
+  end note
 }
-class WorkItemsController {
-  -sender: ISender
+package "MissionControl.Domain" {
+  class WorkItem {
+    +id: Guid
+    +workspaceId: Guid
+    +parentId: Guid?
+    +type: WorkItemType
+    +title: string
+    +status: WorkStatus
+    +taskRevision: long
+    +checkDeletion(childCount: int, openSprint: SprintReference?, openSprintStatus: SprintStatus?, sprintsPaused: bool): DeletionBlocker?
+  }
+  class DeletionBlocker {
+    +childCount: int
+    +sprint: SprintReference?
+    +sprintStatus: SprintStatus?
+    +storyStatus: WorkStatus?
+    +sprintsPaused: bool
+  }
+  note bottom of DeletionBlocker
+    Domain value; the 409 body names every blocker
+    found. The form explains each: children; a planned
+    sprint (Change plan); a planned sprint while sprints
+    are paused (Close, and Change delivery mode with
+    canChangeMode); an active sprint with an unfinished
+    story (Remove from sprint); an active sprint with a
+    Done story (deletable once the sprint closes; Close
+    only).
+  end note
+  class WorkOrder
+  class BoardState
+  enum WorkItemType {
+    Initiative
+    Epic
+    Story
+    Task
+  }
 }
-class WorkItem {
-  +id: Guid
-  +workspaceId: Guid
-  +parentId: Guid?
-  +type: WorkItemType
-  +title: string
-  +description: string?
-  +status: WorkStatus
-  +siblingPosition: int
-  +assigneeId: Guid?
-  +startDate: DateOnly?
-  +dueDate: DateOnly?
-  +storyEstimate: int?
-  +version: long
-  +checkDeletion(hasChildren: bool, inOpenSprint: bool): void
+package "MissionControl.Infrastructure" {
+  class MissionControlDataSession {
+    -connection: DbConnection
+  }
 }
-interface IMissionControlDataSession {
-  +query(specification): Task<ReadResult>
-  +commit(expectedVersion: long): Task<void>
-}
-class MissionControlDataSession {
-  -connection: DbConnection
-}
-WorkItemDetailPage --> WorkItemView : composes
+WorkItemDetailPage ..> ProjectLayoutPage : reads canDeleteWork and canChangeMode
+WorkItemDetailPage --> WorkViews : composes; passes canDeleteWork
+WorkViews ..> WorkItemTarget : actionRequested Delete
 WorkItemDetailPage ..> WorkItemDeleteDialog : opens
-WorkItemDeleteDialog --> WorkItemView : composes
-WorkItemView ..> IWorkItemService : inject token
+WorkItemDetailPage ..> SprintScopeDialog : opens on WorkItemDeleteOutcome RemoveFromSprint(sprintId)
+WorkItemDetailPage ..> ModeChangeDialog : on ChangeMode: layout.openDialog(ChangeMode)
+WorkItemDeleteDialog --> WorkItemDeleteForm : hosts; inputs and outputs only
+WorkItemDeleteDialog ..> WorkItemDeleteOutcome : close(result)
+WorkItemDeleteForm ..> IWorkItemService : inject WORK_ITEM_SERVICE
+WorkItemDeleteForm ..> WorkItemTarget : item input
 IWorkItemService <|.. WorkItemService
-IMissionControlDataSession <|.. MissionControlDataSession
-class DeleteWorkItemCommand {
-  +workspaceId: Guid
-  +itemId: Guid
-}
-class DeleteWorkItemCommandHandler {
-  +handle(request: DeleteWorkItemCommand): Task<FeatureResult>
-}
 WorkItemsController ..> DeleteWorkItemCommand : dispatches
-DeleteWorkItemCommandHandler ..> DeleteWorkItemCommand : handles
-DeleteWorkItemCommandHandler --> WorkItem : loads / applies
+DeleteWorkItemCommand <.. DeleteWorkItemCommandHandler : handles
 DeleteWorkItemCommandHandler ..> IMissionControlDataSession : uses
-
-enum WorkItemType {
-  Initiative
-  Epic
-  Story
-  Task
-}
-enum WorkStatus {
-  ToDo
-  InProgress
-  Done
-}
+IMissionControlDataSession ..> DeletionCheck : loads tracked
+DeletionCheck --> WorkItem
+DeletionCheck --> WorkOrder
+DeletionCheck --> BoardState
+DeleteWorkItemCommandHandler --> WorkItem : checks, then removes
+DeleteWorkItemCommandHandler ..> DeletionBlocker : 409 body
+WorkItem ..> DeletionBlocker : checkDeletion returns
 WorkItem --> WorkItemType : immutable level
-WorkItem --> WorkStatus : current status
-WorkItem "0..1" <-- "*" WorkItem : parent / children
+IMissionControlDataSession <|.. MissionControlDataSession
+WorkItemService -[hidden]down- WorkItemsController
 @enduml

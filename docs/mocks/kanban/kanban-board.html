@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Kanban board · Mission Control mock</title>
-  <meta name="description" content="Kanban board with story cards, drag and accessible Move controls, a compact column selector, and dragging, saving, failed, conflict, empty, load-more, paused-sprint, loading, and error states.">
+  <meta name="description" content="Kanban board with story cards, drag and accessible Move controls, a compact column selector, and dragging, saving, failed, refused, access-changed, conflict, unconfirmed-move, empty, load-more, failed-batch, collaborator, paused-sprint, loading, and error states.">
   <meta name="mock-area" content="Kanban">
-  <meta name="mock-requirements" content="L2-005.4, L2-019, L2-020, L2-021, L2-027.3, L2-030.3, L2-032, L2-033, L2-034.2, L2-035.4, L2-045.4">
+  <meta name="mock-requirements" content="L2-005.4, L2-019, L2-020, L2-021, L2-027.3, L2-030.3, L2-032, L2-033, L2-034.2, L2-035.4, L2-043.4, L2-045.4">
   <link rel="stylesheet" href="../assets/tokens.css">
   <link rel="stylesheet" href="../assets/mocks.css">
   <script src="../assets/mocks.js" defer></script>
@@ -25,10 +25,14 @@
           <option value="dragging">Dragging a card</option>
           <option value="pending">Move saving</option>
           <option value="move-failed">Move failed</option>
+          <option value="move-refused">Move refused (400)</option>
+          <option value="move-forbidden">Access changed (403)</option>
           <option value="conflict">Board changed</option>
+          <option value="reread-failed">Move unconfirmed, reload failed</option>
           <option value="empty">Empty board</option>
           <option value="empty-column">Empty column</option>
           <option value="load-more">Load more</option>
+          <option value="batch-error">Next batch failed</option>
           <option value="card-menu">Card menu open</option>
           <option value="collaborator">Collaborator</option>
           <option value="preserved">Kanban with paused sprints</option>
@@ -43,17 +47,21 @@
   <div class="mock-notes">
     <p class="mock-note" data-when="default">Stories are cards; tasks stay inside their story. Each story appears once, in its status column, in saved column order (separate from backlog priority). 992px and wider shows all columns; 576–991px scrolls inside the board region; below 576px a column selector shows one column at a time. Every card has a visible Move button and menu, so nothing needs dragging or hover. The project header and tabs stay pinned while the tab content scrolls; on phones only the tabs stay pinned.</p>
     <p class="mock-note" data-when="dragging" hidden>Pointer drag: the card lifts and a placeholder shows where it will land. Counts change only after the move is saved.</p>
-    <p class="mock-note" data-when="pending" hidden>The card moves at once and shows "Saving…" until the server confirms; screen readers hear "Moving Template for partner church homepage to In Progress". Column totals keep their saved counts (To Do 6, In Progress 3) until the move is saved. On success a toast says "Moved to In Progress — "Template for partner church homepage" is position 2 of 4."</p>
-    <p class="mock-note" data-when="move-failed" hidden>The save failed, so the card returns to its last saved place (To Do, position 1) with an error outline. The toast explains and offers Retry; screen readers hear it as an alert.</p>
-    <p class="mock-note" data-when="conflict" hidden>Someone else changed the board while this move was saving. Nothing was applied; Reload board shows the latest saved columns without resubmitting.</p>
-    <p class="mock-note" data-when="empty" hidden>A new project with no stories yet. All three columns stay visible, and both roles can add work.</p>
+    <p class="mock-note" data-when="pending" hidden>The card moves at once and shows "Saving…" until the server confirms; screen readers hear "Saving move… Moving Template for partner church homepage to In Progress, position 2 of 4." One move saves at a time on a board: until it finishes, every Move button, card-menu move, drag, and Load more on this board is unavailable (aria-disabled, so the control that started the move keeps focus), and results from before the move are ignored. Shown after Load more (Done: 50 of 140 loaded; the card list is abbreviated). Column totals keep their saved counts (To Do 6, In Progress 3) until the move is saved. On success the board re-reads the cards already loaded in To Do and In Progress, which become the saved board, and a toast says "Moved to In Progress — "Template for partner church homepage" is position 2 of 4."</p>
+    <p class="mock-note" data-when="move-failed" hidden>The save failed (a server error, or the workspace was busy and nothing changed), so the card returns to the board as last saved (To Do, position 1) with an error outline. The toast explains, shows the reference ID, and offers Retry; screen readers hear it as an alert, and focus stays where it was, because focus never moves to a toast. A refused move (400) shows the "Your move wasn't applied" alert instead (Move refused state), and an unexpected 403 shows the "Your access changed" toast (Access changed state). If no response arrives at all, the board never assumes the move failed: it first re-reads To Do and In Progress, shows where the story really is, and only then allows another move.</p>
+    <p class="mock-note" data-when="move-refused" hidden>The API refused the move as invalid (400), for example a position outside the column. The board's own choices always lie inside its columns, so only a malformed request gets here, and sending it again would be refused again: there is no Retry and no reference ID. The card stays in its last saved place (To Do, position 1), any open move or confirmation dialog closes, and the alert gives the server's reason with Reload board, which reads the latest columns without resubmitting. When a dialog closed, focus moves to Reload board; otherwise the alert is announced and focus stays where it was.</p>
+    <p class="mock-note" data-when="move-forbidden" hidden>Moving cards needs only an active session, so a 403 is unexpected. Nothing changed: the card returns to its last saved place (To Do, position 1), and Mission Control refreshes this account's permissions in the background. The "Your access changed" toast explains, without Retry or a reference ID; screen readers hear it as an alert. Any open move or confirmation dialog closes and focus returns to the card's Move button; focus never moves to a toast.</p>
+    <p class="mock-note" data-when="conflict" hidden>The board changed after it loaded: a story or the column order changed, so the API answered 409 and nothing was applied. The copy names no person or time. The board keeps its last saved view, any open move or confirmation dialog closes, and Reload board shows the latest columns without resubmitting the move. This is always a page alert, never a toast. When a dialog closed, focus moves to Reload board; otherwise the alert is announced and focus stays where it was. A delivery-mode change shows no alert: the project header reloads, the Board tab shows the sprint board, and focus moves to its heading. A story deleted since the board loaded (404) needs no alert either: the board reloads without it and screen readers hear that it was deleted; if a dialog was open or focus was on the card (Move up/Move down), focus moves to the board region, because the card is gone. If the whole project was deleted, that reload finds it missing too and the board shows the project's not-found page described under Load failed.</p>
+    <p class="mock-note" data-when="reread-failed" hidden>A move got no response (a timeout or network failure), so the board never assumes it failed and re-reads To Do and In Progress to find where the story is. Here that re-read failed too. The board can't confirm its cards, so it shows none, and moving cards stays paused until Reload board succeeds. Removing the cards removes the focused control, so focus moves to Reload board. The reference ID appears when the read reached the server and matches its diagnostic record. The sprint board uses the same presentation.</p>
+    <p class="mock-note" data-when="empty" hidden>A new project with no stories yet. All three columns stay visible, and both roles can add work. Neighbourhood Tech Clinic has no other mocks, so its tabs and Project actions open stand-in states drawn for other projects: the empty Overview, Work, and Backlog, the Kanban-to-Scrum switch with no sprints, and the delete confirmation for an empty project.</p>
     <p class="mock-note" data-when="empty-column" hidden>An empty column keeps its place and says so.</p>
     <p class="mock-note" data-when="load-more" hidden>Shown with a larger dataset (140 Done stories); the card list is abbreviated. Columns load in batches and counts always reflect the full total. Screen readers hear "Loaded 25 more Done stories. Showing 50 of 140."</p>
+    <p class="mock-note" data-when="batch-error" hidden>Shown with the larger dataset (140 Done stories; the card list is abbreviated). Load 25 more failed for Done: the 25 cards already loaded stay, the count still shows the full 140, and the alert gives the reference ID and Retry, which reads the same batch again. A batch that got no response at all shows the same alert with Retry but no reference ID, because no server record exists. The alert replaces Load 25 more, so focus moves to Retry. A refused read (400, only possible from a malformed query) would fail again, so its alert gives the server's message with Reload board instead, without Retry or a reference ID. The same column alert covers a failed re-read after a saved move: the moved card stays where the server placed it, and Retry reads that column again. The sprint board uses the same presentation.</p>
     <p class="mock-note" data-when="card-menu" hidden>The card menu offers the same moves as dragging. Move up is unavailable at the top of a column, and the reason is shown.</p>
-    <p class="mock-note" data-when="collaborator" hidden>Collaborators can move cards and add stories. Project settings are administrator-only, so Project actions is absent.</p>
-    <p class="mock-note" data-when="preserved" hidden>Prayer Wall App switched to Kanban with its sprints kept. The board works as usual; sprint planning and starting are paused until it returns to Scrum.</p>
+    <p class="mock-note" data-when="collaborator" hidden>Collaborators can move cards and add stories. Project settings are administrator-only, so Project actions is absent and a notice under the project header says why.</p>
+    <p class="mock-note" data-when="preserved" hidden>Prayer Wall App switched to Kanban with its sprints kept. The board works as usual; sprint planning and starting are paused until an administrator switches it back to Scrum. The alert names no sprints: View sprint history opens the Sprints tab, which lists them. Change delivery mode appears only for administrators.</p>
     <p class="mock-note" data-when="loading" hidden>Skeleton columns hold the layout so the board never looks empty while loading. Screen readers hear "Loading board".</p>
-    <p class="mock-note" data-when="error" hidden>The reference ID matches the server's diagnostic record.</p>
+    <p class="mock-note" data-when="error" hidden>The first read failed (a server error, or no response). Try again reads the project header and the board again together, since the header may have failed too. The reference ID matches the server's diagnostic record; a read that got no response shows the same alert with Try again but no reference ID. A refused first read (400) shows the server's message with Reload board instead of Try again, and no reference ID. A project deleted after the board opened (a 404 on Load more, a reload, or a move) is not a load failure: the header keeps only the breadcrumb and the board shows "Project not found" with Back to projects and no Try again or reference ID, the same presentation as the <a href="../projects/project-overview.html#state=not-found">project overview's Not found state</a>.</p>
   </div>
 
   <div class="mc-app">
@@ -136,7 +144,7 @@
               <h1 class="mc-page-header__title" tabindex="-1"><span data-unless="empty preserved">Church Website Refresh</span><span data-when="empty" hidden>Neighbourhood Tech Clinic</span><span data-when="preserved" hidden>Prayer Wall App</span></h1>
               <div class="mc-page-header__meta" data-unless="empty preserved">
                 <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
-                <span>Responsible lead: <a href="../leads/lead-detail.html#state=lead">Lucia Alvarez</a></span>
+                <span>Responsible lead: <a href="../leads/lead-detail.html#state=lead-lucia">Lucia Alvarez</a></span>
               </div>
               <div class="mc-page-header__meta" data-when="empty" hidden>
                 <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
@@ -160,32 +168,40 @@
                 </button>
                 <div class="mc-menu" id="project-actions">
                   <button class="mc-menu__item" type="button" data-nav="../projects/project-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit project</button>
-                  <button class="mc-menu__item" type="button" data-nav="../projects/mode-change-dialog.html#state=to-scrum"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
+                  <button class="mc-menu__item" type="button" data-nav="../projects/mode-change-dialog.html#state=to-scrum-empty" data-attr-preserved="data-nav=../projects/mode-change-dialog.html#state=to-scrum"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
                   <div class="mc-menu__separator"></div>
-                  <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="../projects/project-delete-dialog.html#state=blocked-work" data-attr-preserved="data-nav=../projects/project-delete-dialog.html#state=blocked" data-attr-empty="data-nav=../projects/project-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
+                  <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="../projects/project-delete-dialog.html#state=blocked-work" data-attr-preserved="data-nav=../projects/project-delete-dialog.html#state=blocked-paused" data-attr-empty="data-nav=../projects/project-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
                 </div>
               </div>
             </div>
           </header>
           <nav class="mc-project-tabs" aria-label="Project sections">
             <ul class="mc-tabs">
-              <li><a class="mc-tabs__link" href="../projects/project-overview.html"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</a></li>
-              <li><a class="mc-tabs__link" href="../work/work-hierarchy.html"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</a></li>
-              <li><a class="mc-tabs__link" href="../backlog/backlog.html"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</a></li>
-              <li><a class="mc-tabs__link" href="../kanban/kanban-board.html" aria-current="page"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</a></li>
-              <li data-when="preserved" hidden><a class="mc-tabs__link" href="../scrum/sprints.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</a></li>
+              <li><a class="mc-tabs__link" href="../projects/project-overview.html#state=kanban" data-attr-preserved="href=../projects/project-overview.html#state=kanban-preserved" data-attr-empty="href=../projects/project-overview.html#state=new-empty"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</a></li>
+              <li><a class="mc-tabs__link" href="../work/work-hierarchy.html" data-attr-empty="href=../work/work-hierarchy.html#state=empty"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</a></li>
+              <li><a class="mc-tabs__link" href="../backlog/backlog.html#state=kanban" data-attr-preserved="href=../backlog/backlog.html#state=kanban-preserved" data-attr-empty="href=../backlog/backlog.html#state=empty"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</a></li>
+              <li><a class="mc-tabs__link" href="../kanban/kanban-board.html" aria-current="page" data-attr-preserved="href=../kanban/kanban-board.html#state=preserved" data-attr-empty="href=../kanban/kanban-board.html#state=empty"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</a></li>
+              <li data-when="preserved" hidden><a class="mc-tabs__link" href="../scrum/sprints.html#state=kanban-paused"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</a></li>
             </ul>
           </nav>
         </div>
 
+        <div class="mc-alert mc-alert--neutral mc-alert--page mock-collaborator-only">
+          <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
+          <div class="mc-alert__body">
+            <p class="mc-alert__text">Only administrators can change project settings. You can add and update work, move cards, and run sprints.</p>
+          </div>
+        </div>
+
         <h2 class="mc-visually-hidden">Board</h2>
-        <p class="mc-section__hint mc-mb-4" data-unless="loading error empty">Drag a card by its handle or use Move. Column order is separate from backlog priority.</p>
+        <p class="mc-section__hint mc-mb-4" data-unless="loading error reread-failed empty pending">Drag a card by its handle or use Move. Column order is separate from backlog priority.</p>
+        <p class="mc-section__hint mc-mb-4" data-when="pending" hidden>Saving move… Moving cards and Load more are paused until it saves.</p>
 
         <div class="mc-alert mc-alert--page" data-when="preserved" hidden>
           <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
           <div class="mc-alert__body">
             <p class="mc-alert__title">Sprints are paused while this project uses Kanban</p>
-            <p class="mc-alert__text">Sprint 3 (planned) and the history of Sprints 1 and 2 are kept. Switch the project back to Scrum to plan or start sprints.</p>
+            <p class="mc-alert__text">This project's planned sprints and sprint history are kept. An administrator can switch the project back to Scrum to plan or start sprints.</p>
             <div class="mc-alert__actions">
               <button class="mc-button mc-button--sm mock-admin-only" type="button" data-nav="../projects/mode-change-dialog.html#state=to-scrum"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
               <a class="mc-button mc-button--sm" href="../scrum/sprints.html#state=kanban-paused"><span class="mc-icon mc-icon--history" aria-hidden="true"></span>View sprint history</a>
@@ -198,7 +214,17 @@
             <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
             <div class="mc-alert__body">
               <p class="mc-alert__title">The board changed</p>
-              <p class="mc-alert__text">Someone else moved stories while you were working, so your last move wasn't applied. Reload to see the latest board.</p>
+              <p class="mc-alert__text">The board changed after it loaded, so your move wasn't applied. Reload to see the latest board.</p>
+              <div class="mc-alert__actions">
+                <button class="mc-button mc-button--sm" type="button" data-goto-state="default"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Reload board</button>
+              </div>
+            </div>
+          </div>
+          <div class="mc-alert mc-alert--warning mc-alert--page" data-when="move-refused" hidden>
+            <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">Your move wasn't applied</p>
+              <p class="mc-alert__text">Position 5 is outside the In Progress column, which has 3 stories. Nothing changed. Reload the board to see the latest columns.</p>
               <div class="mc-alert__actions">
                 <button class="mc-button mc-button--sm" type="button" data-goto-state="default"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Reload board</button>
               </div>
@@ -207,7 +233,7 @@
         </div>
 
         <div class="mc-live" role="status" aria-live="polite">
-          <p class="mc-visually-hidden" data-when="pending" hidden>Moving Template for partner church homepage to In Progress, position 2 of 4.</p>
+          <p class="mc-visually-hidden" data-when="pending" hidden>Saving move… Moving Template for partner church homepage to In Progress, position 2 of 4.</p>
           <p class="mc-visually-hidden" data-when="load-more" hidden>Loaded 25 more Done stories. Showing 50 of 140.</p>
           <p class="mc-visually-hidden" data-when="loading" hidden>Loading board</p>
         </div>
@@ -222,12 +248,12 @@
           </div>
         </div>
 
-        <div data-unless="empty preserved loading error">
+        <div data-unless="empty preserved loading error reread-failed">
           <div class="mc-column-select">
             <div class="mc-segmented mc-w-full" role="group" aria-label="Choose a column">
             <button class="mc-segmented__button" type="button" data-board-column="todo" aria-controls="board-web" aria-pressed="true"><span>To Do</span><span><span>6</span><span class="mc-visually-hidden"> stories</span></span></button>
             <button class="mc-segmented__button" type="button" data-board-column="progress" aria-controls="board-web" aria-pressed="false"><span>In Progress</span><span><span data-unless="empty-column">3</span><span data-when="empty-column" hidden>0</span><span class="mc-visually-hidden"> stories</span></span></button>
-            <button class="mc-segmented__button" type="button" data-board-column="done" aria-controls="board-web" aria-pressed="false"><span>Done</span><span><span data-unless="empty-column load-more">7</span><span data-when="empty-column" hidden>10</span><span data-when="load-more" hidden>140</span><span class="mc-visually-hidden"> stories</span></span></button>
+            <button class="mc-segmented__button" type="button" data-board-column="done" aria-controls="board-web" aria-pressed="false"><span>Done</span><span><span data-unless="empty-column load-more batch-error pending">7</span><span data-when="empty-column" hidden>10</span><span data-when="load-more batch-error pending" hidden>140</span><span class="mc-visually-hidden"> stories</span></span></button>
             </div>
           </div>
           <div class="mc-board-scroll" role="region" aria-label="Church Website Refresh board" tabindex="0">
@@ -238,7 +264,7 @@
                 <span class="mc-board__count"><span>6</span><span class="mc-visually-hidden"> stories</span></span>
               </div>
               <ol class="mc-board__list" aria-labelledby="board-web-todo-title">
-                <li class="mc-story-card" data-unless="dragging pending" data-attr-move-failed="class=mc-story-card mc-story-card--error">
+                <li class="mc-story-card" data-unless="dragging pending" data-attr-move-failed="class=mc-story-card mc-story-card--error" data-attr-move-refused="class=mc-story-card mc-story-card--error" data-attr-move-forbidden="class=mc-story-card mc-story-card--error">
                   <div class="mc-story-card__top">
                     <span class="mc-story-card__handle" aria-hidden="true"><span class="mc-icon mc-icon--grip" aria-hidden="true"></span></span>
                     <div class="mc-story-card__titles">
@@ -246,20 +272,20 @@
                       <span class="mc-story-card__path">WEB-118 · Accessible templates</span>
                     </div>
                   </div>
-                  <p class="mc-field-error" data-when="move-failed" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Move didn't save. Back in To Do.</p>
+                  <p class="mc-field-error" data-when="move-failed move-refused move-forbidden" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Move didn't save. Back in To Do.</p>
                   <div class="mc-story-card__meta">
                     <span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span>
                     <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>0/4 tasks done</span>
                   </div>
                   <div class="mc-story-card__actions">
-                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Template for partner church homepage"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true" aria-label="Move Template for partner church homepage"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-118" aria-expanded="false" aria-label="More actions for Template for partner church homepage" data-open-when="card-menu"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="card-menu-WEB-118">
                         <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
-                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
                         <button class="mc-menu__item" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span><span class="mc-menu__item-text">Move up<span class="mc-menu__hint">Already at the top of the column</span></span></button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                       </div>
                     </div>
                   </div>
@@ -277,14 +303,14 @@
                     <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>1/3 tasks done</span>
                   </div>
                   <div class="mc-story-card__actions">
-                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Publishing guide outline"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true" aria-label="Move Publishing guide outline"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-120" aria-expanded="false" aria-label="More actions for Publishing guide outline"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="card-menu-WEB-120">
                         <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
-                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                       </div>
                     </div>
                   </div>
@@ -302,14 +328,14 @@
                     <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>0/2 tasks done</span>
                   </div>
                   <div class="mc-story-card__actions">
-                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Accessible colour palette for templates"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true" aria-label="Move Accessible colour palette for templates"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-119" aria-expanded="false" aria-label="More actions for Accessible colour palette for templates"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="card-menu-WEB-119">
                         <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
-                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                       </div>
                     </div>
                   </div>
@@ -327,14 +353,14 @@
                     <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>0/1 tasks done</span>
                   </div>
                   <div class="mc-story-card__actions">
-                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Sermon archive page layout"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true" aria-label="Move Sermon archive page layout"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-121" aria-expanded="false" aria-label="More actions for Sermon archive page layout"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="card-menu-WEB-121">
                         <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
-                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                       </div>
                     </div>
                   </div>
@@ -352,14 +378,14 @@
                     <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>0/2 tasks done</span>
                   </div>
                   <div class="mc-story-card__actions">
-                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Guide: updating service times"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true" aria-label="Move Guide: updating service times"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-122" aria-expanded="false" aria-label="More actions for Guide: updating service times"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="card-menu-WEB-122">
                         <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
-                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                       </div>
                     </div>
                   </div>
@@ -377,13 +403,13 @@
                     <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>No tasks</span>
                   </div>
                   <div class="mc-story-card__actions">
-                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Volunteer sign-up embed"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true" aria-label="Move Volunteer sign-up embed"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-123" aria-expanded="false" aria-label="More actions for Volunteer sign-up embed"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="card-menu-WEB-123">
                         <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
-                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
                         <button class="mc-menu__item" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span><span class="mc-menu__item-text">Move down<span class="mc-menu__hint">Already at the bottom of the column</span></span></button>
                       </div>
                     </div>
@@ -410,14 +436,14 @@
                     <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>2/5 tasks done</span>
                   </div>
                   <div class="mc-story-card__actions">
-                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Event listing component"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true" aria-label="Move Event listing component"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-115" aria-expanded="false" aria-label="More actions for Event listing component"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="card-menu-WEB-115">
                         <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
-                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
                         <button class="mc-menu__item" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span><span class="mc-menu__item-text">Move up<span class="mc-menu__hint">Already at the top of the column</span></span></button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                       </div>
                     </div>
                   </div>
@@ -435,14 +461,14 @@
                     <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>0/4 tasks done</span>
                   </div>
                   <div class="mc-story-card__actions">
-                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Template for partner church homepage"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true" aria-label="Move Template for partner church homepage"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-118-drag" aria-expanded="false" aria-label="More actions for Template for partner church homepage"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="card-menu-WEB-118-drag">
                         <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
-                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                       </div>
                     </div>
                   </div>
@@ -462,14 +488,14 @@
                   </div>
                   <p class="mc-loading-inline"><span class="mc-spinner" aria-hidden="true"></span>Saving…</p>
                   <div class="mc-story-card__actions">
-                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Template for partner church homepage"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true" aria-label="Move Template for partner church homepage"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-118-pending" aria-expanded="false" aria-label="More actions for Template for partner church homepage"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="card-menu-WEB-118-pending">
                         <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
-                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                       </div>
                     </div>
                   </div>
@@ -487,14 +513,14 @@
                     <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>2/4 tasks done</span>
                   </div>
                   <div class="mc-story-card__actions">
-                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Contact form with spam protection"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true" aria-label="Move Contact form with spam protection"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-117" aria-expanded="false" aria-label="More actions for Contact form with spam protection"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="card-menu-WEB-117">
                         <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
-                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                       </div>
                     </div>
                   </div>
@@ -512,13 +538,13 @@
                     <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>1/2 tasks done</span>
                   </div>
                   <div class="mc-story-card__actions">
-                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Image alt text checklist"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true" aria-label="Move Image alt text checklist"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-116" aria-expanded="false" aria-label="More actions for Image alt text checklist"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="card-menu-WEB-116">
                         <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
-                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
                         <button class="mc-menu__item" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span><span class="mc-menu__item-text">Move down<span class="mc-menu__hint">Already at the bottom of the column</span></span></button>
                       </div>
                     </div>
@@ -530,7 +556,7 @@
             <section class="mc-board__column" data-column="done" aria-labelledby="board-web-done-title">
               <div class="mc-board__column-header">
                 <h3 class="mc-board__column-title" id="board-web-done-title"><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span></h3>
-                <span class="mc-board__count"><span data-unless="empty-column load-more">7</span><span data-when="empty-column" hidden>10</span><span data-when="load-more" hidden>140</span><span class="mc-visually-hidden"> stories</span></span>
+                <span class="mc-board__count"><span data-unless="empty-column load-more batch-error pending">7</span><span data-when="empty-column" hidden>10</span><span data-when="load-more batch-error pending" hidden>140</span><span class="mc-visually-hidden"> stories</span></span>
               </div>
               <ol class="mc-board__list" aria-labelledby="board-web-done-title">
                 <li class="mc-story-card" data-when="empty-column" hidden>
@@ -546,14 +572,14 @@
                     <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>2/5 tasks done</span>
                   </div>
                   <div class="mc-story-card__actions">
-                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Event listing component"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true" aria-label="Move Event listing component"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-115-done" aria-expanded="false" aria-label="More actions for Event listing component"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="card-menu-WEB-115-done">
                         <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
-                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                       </div>
                     </div>
                   </div>
@@ -571,14 +597,14 @@
                     <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>2/4 tasks done</span>
                   </div>
                   <div class="mc-story-card__actions">
-                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Contact form with spam protection"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true" aria-label="Move Contact form with spam protection"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-117-done" aria-expanded="false" aria-label="More actions for Contact form with spam protection"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="card-menu-WEB-117-done">
                         <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
-                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                       </div>
                     </div>
                   </div>
@@ -596,14 +622,14 @@
                     <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>1/2 tasks done</span>
                   </div>
                   <div class="mc-story-card__actions">
-                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Image alt text checklist"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true" aria-label="Move Image alt text checklist"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-116-done" aria-expanded="false" aria-label="More actions for Image alt text checklist"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="card-menu-WEB-116-done">
                         <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
-                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                       </div>
                     </div>
                   </div>
@@ -621,14 +647,14 @@
                     <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>4/4 tasks done</span>
                   </div>
                   <div class="mc-story-card__actions">
-                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Audit current partner sites"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true" aria-label="Move Audit current partner sites"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-108" aria-expanded="false" aria-label="More actions for Audit current partner sites"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="card-menu-WEB-108">
                         <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
-                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
                         <button class="mc-menu__item" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span><span class="mc-menu__item-text">Move up<span class="mc-menu__hint">Already at the top of the column</span></span></button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                       </div>
                     </div>
                   </div>
@@ -646,14 +672,14 @@
                     <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>2/2 tasks done</span>
                   </div>
                   <div class="mc-story-card__actions">
-                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Collect partner church logos"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true" aria-label="Move Collect partner church logos"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-109" aria-expanded="false" aria-label="More actions for Collect partner church logos"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="card-menu-WEB-109">
                         <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
-                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                       </div>
                     </div>
                   </div>
@@ -671,14 +697,14 @@
                     <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>3/3 tasks done</span>
                   </div>
                   <div class="mc-story-card__actions">
-                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Choose a hosting approach"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true" aria-label="Move Choose a hosting approach"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-110" aria-expanded="false" aria-label="More actions for Choose a hosting approach"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="card-menu-WEB-110">
                         <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
-                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                       </div>
                     </div>
                   </div>
@@ -696,14 +722,14 @@
                     <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>3/3 tasks done</span>
                   </div>
                   <div class="mc-story-card__actions">
-                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Navigation pattern for small sites"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true" aria-label="Move Navigation pattern for small sites"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-111" aria-expanded="false" aria-label="More actions for Navigation pattern for small sites"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="card-menu-WEB-111">
                         <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
-                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                       </div>
                     </div>
                   </div>
@@ -721,14 +747,14 @@
                     <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>2/2 tasks done</span>
                   </div>
                   <div class="mc-story-card__actions">
-                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Footer with service times"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true" aria-label="Move Footer with service times"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-112" aria-expanded="false" aria-label="More actions for Footer with service times"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="card-menu-WEB-112">
                         <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
-                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                       </div>
                     </div>
                   </div>
@@ -746,14 +772,14 @@
                     <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>1/1 tasks done</span>
                   </div>
                   <div class="mc-story-card__actions">
-                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Readable type scale"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true" aria-label="Move Readable type scale"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-113" aria-expanded="false" aria-label="More actions for Readable type scale"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="card-menu-WEB-113">
                         <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
-                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                       </div>
                     </div>
                   </div>
@@ -771,21 +797,36 @@
                     <span class="mc-person"><span class="mc-icon mc-icon--task mc-icon--sm" aria-hidden="true"></span>2/2 tasks done</span>
                   </div>
                   <div class="mc-story-card__actions">
-                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" aria-label="Move Interview two church admins"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
+                    <button class="mc-button mc-button--sm" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true" aria-label="Move Interview two church admins"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move</button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="card-menu-WEB-114" aria-expanded="false" aria-label="More actions for Interview two church admins"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="card-menu-WEB-114">
                         <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
-                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
-                        <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
+                        <button class="mc-menu__item" type="button" data-nav="move-story-dialog.html" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--move" aria-hidden="true"></span>Move to…</button>
+                        <button class="mc-menu__item" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
                         <button class="mc-menu__item" type="button" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span><span class="mc-menu__item-text">Move down<span class="mc-menu__hint">Already at the bottom of the column</span></span></button>
                       </div>
                     </div>
                   </div>
                 </li>
-                <li class="mc-board__more" data-when="load-more" hidden>
+                <li class="mc-board__more" data-when="load-more pending" hidden>
                   <span>Showing 50 of 140</span>
-                  <button class="mc-button mc-button--sm mc-button--block" type="button"><span class="mc-icon mc-icon--chevron-down" aria-hidden="true"></span>Load 25 more</button>
+                  <button class="mc-button mc-button--sm mc-button--block" type="button" data-attr-pending="aria-disabled=true"><span class="mc-icon mc-icon--chevron-down" aria-hidden="true"></span>Load 25 more</button>
+                </li>
+                <li data-when="batch-error" hidden>
+                  <div class="mc-alert mc-alert--danger" role="alert">
+                    <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+                    <div class="mc-alert__body">
+                      <p class="mc-alert__title">Some Done stories didn't load</p>
+                      <p class="mc-alert__text">Stories already shown stay in place. Showing 25 of 140.</p>
+                      <p class="mc-ref">Reference ID <code>a62b-0e3d-71f8</code>
+                        <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="a62b-0e3d-71f8"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                      </p>
+                      <div class="mc-alert__actions">
+                        <button class="mc-button mc-button--sm" type="button" data-goto-state="load-more"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Retry</button>
+                      </div>
+                    </div>
+                  </div>
                 </li>
               </ol>
             </section>
@@ -1206,21 +1247,50 @@
             <button class="mc-button mc-button--primary" type="button" data-goto-state="loading"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again</button>
           </div>
         </div>
+
+        <div class="mc-empty mc-empty--error" role="alert" data-when="reread-failed" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--alert-circle mc-icon--lg" aria-hidden="true"></span></span>
+          <h3 class="mc-empty__title">We couldn't confirm your move</h3>
+          <p class="mc-empty__text">"Template for partner church homepage" may or may not have moved, and the board couldn't reload to check. Moving cards is paused until the board reloads.</p>
+          <p class="mc-ref">Reference ID <code>9d3f-58b2-a147</code>
+            <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="9d3f-58b2-a147"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+          </p>
+          <div class="mc-empty__actions">
+            <button class="mc-button mc-button--primary" type="button" data-goto-state="loading"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Reload board</button>
+          </div>
+        </div>
       </div>
     </main>
   </div>
 
-  <div class="mc-toast-region" role="status" aria-live="polite">
-    <div class="mc-toast mc-toast--danger" role="alert" data-when="move-failed" hidden>
-      <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
-      <div class="mc-toast__body">
-        <p class="mc-toast__title">Couldn't move story</p>
-        <p class="mc-toast__text">"Template for partner church homepage" is back in To Do.</p>
-        <div class="mc-toast__actions">
-          <button class="mc-button mc-button--sm" type="button" data-goto-state="pending"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Retry</button>
+  <div class="mc-toast-region">
+    <div class="mc-toast-live" role="status" aria-live="polite"></div>
+    <div class="mc-toast-live" role="alert">
+      <div class="mc-toast mc-toast--danger" data-when="move-failed" hidden>
+        <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+        <div class="mc-toast__body">
+          <p class="mc-toast__title">Couldn't move story</p>
+          <p class="mc-toast__text">"Template for partner church homepage" is back in To Do.</p>
+          <p class="mc-ref">Reference ID <code>7c4e-2a91-d05b</code>
+            <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="7c4e-2a91-d05b"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+          </p>
+          <div class="mc-toast__actions">
+            <button class="mc-button mc-button--sm" type="button" data-goto-state="pending"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Retry</button>
+          </div>
         </div>
+        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
       </div>
-      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+      <div class="mc-toast mc-toast--danger" data-when="move-forbidden" hidden>
+        <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
+        <div class="mc-toast__body">
+          <p class="mc-toast__title">Your access changed</p>
+          <p class="mc-toast__text">You no longer have permission to do that.</p>
+          <div class="mc-toast__actions">
+            <button class="mc-button mc-button--sm" type="button" data-nav="../home/home.html">Go to Home</button>
+          </div>
+        </div>
+        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+      </div>
     </div>
   </div>
 </body>

@@ -14,6 +14,7 @@ skinparam package {
   BackgroundColor #F9FAFB
 }
 title Behavior - Read and filter immutable audit events
+skinparam maxMessageSize 300
 actor "Administrator" as actor
 box "Frontend - Mission Control application" #E0F2FE
   participant "AuditLogPage / AuditEventView" as page
@@ -25,47 +26,66 @@ box "Backend - MissionControl.Api" #D1FADF
 end box
 box "Backend - MissionControl.Application and Domain" #ECFDF3
   participant "ValidationBehavior" as validation
-  participant "ListAuditEventsQueryHandler" as handler
+  participant "ListAuditEventsQueryHandler /\nListAuditActorsQueryHandler" as handler
   participant "AuditEvent" as entity
 end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   participant "IAuditEventWriter" as audit
   database "Mission Control SQL" as db
 end box
-actor -> page : Open /audit or change a filter or page
+== Actor combobox search ==
+actor -> page : Type in Actor (for example "an")
+page -> page : Debounce about 250 ms on the actor query signal
+page -> client : actorChoicesResource(ListAuditActorsQuery { search, page 1, pageSize 25 }); a newer search aborts the older read
+client -> access : GET /api/audit-events/actors (authorized as below)
+access -> ctrl : Administrator request
+ctrl -> handler : ListAuditActorsQuery through MediatR 12.5.0 and its validator (pageSize 1-100)
+handler -> db : ListAuditActorsAsync: every account, inactive included; display name then ID; window total
+alt Search answered
+  db --> handler : ID and display name only
+  handler --> client : 200 AuditActorPage
+  client --> page : Listbox shows Anyone, then the matches; the match count is announced politely
+  actor -> page : Pick a person, or Anyone to clear the filter
+else 500 or no response
+  handler --> client : Generic 500 with correlation ID, or no response
+  client --> page : actorChoices status error: Actor shows a field message with the reference ID (when there is one) and Retry = reload(); the alert is announced; the actor filter, other filters and rows stay (actor-failed)
+end
+
+== Read and filter events ==
+actor -> page : Open /audit or change a filter or page (the page's refresh input rereads with the same filters)
 page -> page : Reset to page 1 on filter change; show loading skeleton
-page -> client : Build typed ListAuditEventsQuery (actor, area, outcome, Toronto dates, page)
+page -> client : Query signal changes (actor, area, outcome, Toronto dates, page); auditEventsResource aborts any superseded read
 client -> access : GET /api/audit-events
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry (zero clock skew)
-access -> db : Read current status, role and credential version
+access -> db : LoadAccountAccessAsync: current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid or expired JWT; inactive or missing account; credential version changed
-  access -> audit : Append Denied audit (restricted append; no payload)
+  access -> audit : AppendRestrictedAsync(Denied); no payload
   access --> client : 401
-  client --> page : Clear in-memory session; open login (session-ended) with /audit to return to
-else Authenticated Collaborator (L2-039: administrators only)
-  access -> audit : Append Denied audit (restricted append; no payload)
+  client --> page : sessionInterceptor: end(Unauthorized) once for this generation; the read rejects with its 401; login opens (session-ended) with /audit to return to
+else Authenticated Collaborator (L2-039: no audit.read)
+  access -> audit : AppendRestrictedAsync(Denied); no payload
   access --> client : 403
-  client --> page : Show access-denied page; no audit data shown
+  client --> page : refreshCapabilities() (deduplicated); AuditEventView emits forbidden; AuditLogPage calls inject(ApplicationShell).showStatus(AccessDenied); no audit data shown
 else Administrator
   access -> ctrl : Authorized request
   ctrl -> validation : Send ListAuditEventsQuery through MediatR 12.5.0
-  validation -> validation : L2-045 page size 1-100; known outcome and area; from not after to
+  validation -> validation : L2-045 page size 1-100; known AuditOutcome and AuditArea; from not after to
   alt Invalid filter, date range or page size
     validation --> ctrl : 400 field errors; nothing read
     ctrl --> client : Validation ProblemDetails
-    client --> page : Keep the filters; show the field message beside the invalid filter
+    client --> page : Keep every filter and the rows already shown; mark the invalid filter (inverted range: To, "Choose a To date on or after Sep 30, 2026"; invalid-range state)
   else Valid request
     validation -> handler : Handle ListAuditEventsQuery
     handler -> handler : Convert Toronto dates to half-open UTC interval
-    handler -> db : L2-039 bounded read of immutable event metadata; AND filters; newest first, then ID
+    handler -> db : L2-039 bounded read of immutable event metadata; AND filters, area matched on the stored AuditArea; newest first, then ID
     db --> handler : Page of events and full matching count
     handler -> entity : Project timestamp, actor ID, operation, entity type and ID, outcome, correlation ID
     entity --> handler : Safe audit rows; no secret or contact payload
     handler --> ctrl : 200 with rows and total count
     ctrl --> client : Success response
     alt No matching events
-      client --> page : filtered-zero state: announce 0 events; offer Clear filters
+      client --> page : filtered-zero state: announce 0 events; offer Clear filters (back to Anyone and all areas, outcomes and dates)
     else Events found
       client --> page : Update signals; announce the matching count
       page --> actor : Toronto time with UTC beneath; Unknown for events without an actor
@@ -74,7 +94,8 @@ else Administrator
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043);
-the page shows its error state with the reference ID and Try again.
+the page shows its error state with Try again and that reference ID.
+A read that gets no response shows the same state without a reference ID.
 Viewing never changes the audit log; no edit or delete endpoint exists.
 end note
 @enduml

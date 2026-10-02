@@ -4,126 +4,249 @@ skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
 skinparam ArrowColor #344054
-skinparam rectangle {
-  BorderColor #344054
-  FontColor #101828
-}
 skinparam package {
   BorderColor #667085
   FontColor #101828
   BackgroundColor #F9FAFB
 }
-title Class structure - Create and navigate the work hierarchy
 skinparam class {
   BorderColor #344054
   FontColor #101828
   BackgroundColor #F9FAFB
 }
-class WorkHierarchyPage {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
+set separator none
+title Backend classes - Create and navigate the work hierarchy
+package "MissionControl.Api" {
+  class WorkItemsController {
+    -sender: ISender
+  }
 }
-class WorkListPage {
-  +filters: Signal<WorkFilters>
+package "MissionControl.Application" {
+  class CreateWorkItemCommand {
+    +workspaceId: Guid
+    +type: WorkItemType
+    +parentId: Guid?
+    +title: string
+    +description: string?
+    +assigneeId: Guid?
+    +startDate: DateOnly?
+    +dueDate: DateOnly?
+    +storyEstimate: int?
+  }
+  class GetWorkItemsQuery {
+    +workspaceId: Guid
+    +parentId: Guid?
+    +type: WorkItemType?
+    +status: WorkStatus?
+    +search: string?
+    +page: int
+    +pageSize: int
+  }
+  class GetWorkItemQuery {
+    +workspaceId: Guid
+    +itemId: Guid
+  }
+  class CreateWorkItemCommandHandler {
+    +Handle(request, ct): Task<WorkItemSaved>
+  }
+  class GetWorkItemsQueryHandler {
+    +Handle(request, ct): Task<WorkItemPage>
+  }
+  class GetWorkItemQueryHandler {
+    +Handle(request, ct): Task<WorkItemDetail>
+  }
+  class WorkItemSaved {
+    +id: Guid
+    +version: long
+  }
+  note bottom of WorkItemSaved
+    ID and version only. The client's
+    WorkItemForm adds the saved title and the
+    chosen parent's title as WorkItemSavedResult
+    for the opener's toast.
+  end note
+  class WorkItemPage {
+    +items: WorkItemSummary[]
+    +totalCount: int
+    +page: int
+    +pageSize: int
+    +orderVersion: long?
+  }
+  class WorkItemSummary {
+    +id: Guid
+    +key: string
+    +type: WorkItemType
+    +title: string
+    +status: WorkStatus
+    +siblingPosition: int
+    +parentTitle: string?
+    +assigneeName: string?
+    +assigneeActive: bool?
+    +storyEstimate: int?
+    +childCount: int
+    +doneChildCount: int
+    +sprint: SprintReference?
+    +sprintStatus: SprintStatus?
+    +version: long
+  }
+  class WorkItemDetail {
+    +id: Guid
+    +key: string
+    +type: WorkItemType
+    +workspaceName: string
+    +ancestors: AncestorLink[]
+    +title: string
+    +description: string?
+    +status: WorkStatus
+    +assignee: CurrentAssignee?
+    +startDate: DateOnly?
+    +dueDate: DateOnly?
+    +storyEstimate: int?
+    +sprint: SprintReference?
+    +sprintStatus: SprintStatus?
+    +childCount: int
+    +doneChildCount: int
+    +siblingPosition: int
+    +siblingCount: int
+    +siblingOrderVersion: long
+    +version: long
+  }
+  class AncestorLink {
+    +id: Guid
+    +type: WorkItemType
+    +key: string
+    +title: string
+  }
+  class CurrentAssignee {
+    +id: Guid
+    +displayName: string
+    +active: bool
+  }
+  class WorkItemCreation {
+    +workspace: Workspace
+    +parent: WorkItem?
+    +siblings: WorkOrder
+    +backlog: WorkOrder?
+    +kanbanBoard: BoardState?
+  }
+  interface IMissionControlDataSession {
+    +BeginWorkspaceTransactionAsync(workspaceId, ct): Task
+    +LoadWorkItemCreationAsync(workspaceId, parentId, type, ct): Task<WorkItemCreation?>
+    +LoadAccountStatusAsync(accountId, ct): Task<bool?>
+    +AddWorkItem(item: WorkItem): void
+    +AddAuditEvent(auditEvent: AuditEvent): void
+    +ListWorkItemsAsync(query, ct): Task<WorkItemPage>
+    +LoadWorkItemDetailAsync(query, ct): Task<WorkItemDetail?>
+    +SaveChangesAsync(ct): Task
+  }
 }
-class WorkItemDetailPage {
-  +routeContext: Signal<RouteContext>
+note right of IMissionControlDataSession
+  Shared members as defined in the overview;
+  only the members this slice uses are shown.
+  LoadAccountStatusAsync returns null for an
+  unknown account, else its active flag.
+  BeginWorkspaceTransactionAsync takes the
+  workspace lock first; SaveChangesAsync
+  commits or raises ConcurrencyConflictException.
+end note
+note bottom of WorkItemCreation
+  Tracked aggregates the new item joins: its
+  sibling order and, for a story, the backlog
+  order and the Kanban board. Appending adds the
+  sibling position, StoryBacklogPosition, and To Do
+  BoardPlacement as tracked children; SaveChangesAsync
+  inserts them and increments each order version.
+  A task's parent story increments its taskRevision
+  only (its version stays unchanged).
+end note
+note right of WorkItemSummary
+  No description; child counts are
+  set-based aggregates in the same
+  statement as the page. A task carries
+  its story's open sprint. orderVersion
+  is set only for one sibling set with
+  no status or search filter: a parentId's
+  children, or type Initiative without a
+  parentId (the outline's root branch);
+  otherwise null. No parentId and no
+  filters returns every item (the work
+  list's All types). search matches the
+  title or the parent's title. Rows
+  follow outline order: initiative,
+  epic, story, and task positions,
+  then ID (one parent's batch: sibling
+  position, then ID). Batches of 25,
+  capped at 100.
+end note
+package "MissionControl.Domain" {
+  class WorkItem {
+    +id: Guid
+    +workspaceId: Guid
+    +parentId: Guid?
+    +type: WorkItemType
+    +title: string
+    +description: string?
+    +status: WorkStatus
+    +siblingPosition: int
+    +assigneeId: Guid?
+    +startDate: DateOnly?
+    +dueDate: DateOnly?
+    +storyEstimate: int?
+    +taskRevision: long
+    +version: long
+    +createChild(type: WorkItemType, title: string): WorkItem
+  }
+  note right of WorkItem
+    taskRevision applies to stories: every child
+    task create, delete, reparent, or status change
+    increments it in the same transaction, and a
+    Done confirmation compares it. A task change
+    increments only taskRevision; it changes neither
+    the story's version nor a sprint's version, so a
+    resubmitted confirmation passes the version check
+    and a changed condition returns a new 409
+    unfinished-tasks (server-count).
+  end note
+  class WorkOrder
+  class BoardState
+  class Workspace
+  enum WorkItemType {
+    Initiative
+    Epic
+    Story
+    Task
+  }
+  enum WorkStatus {
+    ToDo
+    InProgress
+    Done
+  }
 }
-class WorkItemFormDialog {
-  +draft: Signal<WorkItemDraft>
-  +save(): void
-}
-class WorkItemView {
-  +state: Signal<FeatureState>
-  +submit(): void
-}
-interface IWorkItemService {
-  +create(request: CreateWorkItemCommand): Promise<FeatureResult>
-  +navigate(request: GetWorkItemsQuery): Promise<FeatureResult>
-}
-class WorkItemService {
-  -http: HttpClient
-}
-class WorkItemsController {
-  -sender: ISender
-}
-class WorkItem {
-  +id: Guid
-  +workspaceId: Guid
-  +parentId: Guid?
-  +type: WorkItemType
-  +title: string
-  +description: string?
-  +status: WorkStatus
-  +siblingPosition: int
-  +assigneeId: Guid?
-  +startDate: DateOnly?
-  +dueDate: DateOnly?
-  +storyEstimate: int?
-  +version: long
-  +createChild(type: WorkItemType, title: string): WorkItem
-}
-interface IMissionControlDataSession {
-  +query(specification): Task<ReadResult>
-  +commit(expectedVersion: long): Task<void>
-}
-class MissionControlDataSession {
-  -connection: DbConnection
-}
-WorkHierarchyPage --> WorkItemView : composes
-WorkListPage --> WorkItemView : composes
-WorkItemDetailPage --> WorkItemView : composes
-WorkItemFormDialog --> WorkItemView : composes
-WorkHierarchyPage ..> WorkItemFormDialog : opens
-WorkItemView ..> IWorkItemService : inject token
-IWorkItemService <|.. WorkItemService
-IMissionControlDataSession <|.. MissionControlDataSession
-class CreateWorkItemCommand {
-  +workspaceId: Guid
-  +type: WorkItemType
-  +parentId: Guid?
-  +title: string
-  +description: string?
-  +assigneeId: Guid?
-  +startDate: DateOnly?
-  +dueDate: DateOnly?
-  +storyEstimate: int?
-}
-class CreateWorkItemCommandHandler {
-  +handle(request: CreateWorkItemCommand): Task<FeatureResult>
+package "MissionControl.Infrastructure" {
+  class MissionControlDataSession {
+    -connection: DbConnection
+  }
 }
 WorkItemsController ..> CreateWorkItemCommand : dispatches
-CreateWorkItemCommandHandler ..> CreateWorkItemCommand : handles
-CreateWorkItemCommandHandler --> WorkItem : loads / applies
-CreateWorkItemCommandHandler ..> IMissionControlDataSession : uses
-class GetWorkItemsQuery {
-  +workspaceId: Guid
-  +itemId: Guid?
-  +parentId: Guid?
-  +type: WorkItemType?
-  +status: WorkStatus?
-  +page: int
-  +pageSize: int
-}
-class GetWorkItemsQueryHandler {
-  +handle(request: GetWorkItemsQuery): Task<FeatureResult>
-}
 WorkItemsController ..> GetWorkItemsQuery : dispatches
-GetWorkItemsQueryHandler ..> GetWorkItemsQuery : handles
-GetWorkItemsQueryHandler --> WorkItem : loads / applies
+WorkItemsController ..> GetWorkItemQuery : dispatches
+CreateWorkItemCommand <.. CreateWorkItemCommandHandler : handles
+GetWorkItemsQuery <.. GetWorkItemsQueryHandler : handles
+GetWorkItemQuery <.. GetWorkItemQueryHandler : handles
+CreateWorkItemCommandHandler ..> WorkItemSaved : returns
+GetWorkItemsQueryHandler ..> WorkItemPage : returns
+GetWorkItemQueryHandler ..> WorkItemDetail : returns
+CreateWorkItemCommandHandler ..> IMissionControlDataSession : uses
 GetWorkItemsQueryHandler ..> IMissionControlDataSession : uses
-
-enum WorkItemType {
-  Initiative
-  Epic
-  Story
-  Task
-}
-enum WorkStatus {
-  ToDo
-  InProgress
-  Done
-}
+GetWorkItemQueryHandler ..> IMissionControlDataSession : uses
+CreateWorkItemCommandHandler --> WorkItem : creates
+IMissionControlDataSession ..> WorkItemCreation : loads tracked
+WorkItemCreation --> WorkOrder
+WorkItemCreation --> BoardState
+WorkItemPage *-- WorkItemSummary
+WorkItemDetail *-- CurrentAssignee
+WorkItemDetail *-- AncestorLink
+IMissionControlDataSession <|.. MissionControlDataSession
 WorkItem --> WorkItemType : immutable level
 WorkItem --> WorkStatus : current status
 WorkItem "0..1" <-- "*" WorkItem : parent / children

@@ -1,0 +1,60 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Behavior - Measure large-workspace retention
+actor "Release operator" as actor
+box "Release tooling - e2e/performance" #E0F2FE
+  participant "MeasureRetentionOperation" as runner
+  participant "Page objects\n(e2e/page-objects)" as po
+end box
+box "Browser" #F2F4F7
+  participant "Chromium" as browser
+end box
+box "Frontend - production build" #EEF4FF
+  participant "Mission Control web app" as app
+end box
+box "Backend - MissionControl.Api (performance instance)" #D1FADF
+  participant "Existing feature endpoints" as api
+end box
+box "Release records" #ECFDF3
+  participant "RetentionResult" as result
+end box
+actor -> runner : Large/hot workspace fixture restored (EnvironmentManifest)
+runner -> po : Sign in; open the large workspace board
+po -> browser : Navigate and sign in
+break Sign-in fails or the board shows an error state
+  po --> runner : Not started
+  runner -> result : Outcome NotRun
+  runner --> actor : Check the fixture, session account, and API
+end
+loop 5 cycles
+  runner -> po : Load more on To Do until every card is loaded
+  po -> app : Load more (one batch of up to 100 at a time)
+  app -> api : Board batch request
+  api --> app : Next batch with full column totals
+  runner -> po : Leave the board for another route, then return
+  runner -> po : Expand the largest hierarchy branch through all batches, then collapse it
+  runner -> po : After each step: rendered cards, rendered hierarchy nodes, column totals
+  po --> runner : Counts from page-object queries
+  runner -> browser : DevTools protocol: collect garbage, then read JS heap used
+end
+runner -> runner : Check: collapse restores the node count; return shows only the first batch;\ntotals equal fixture totals at every step; post-collection heap shows no growth across cycles
+runner -> result : Steps, card and node counts, heap series, failed expectations, manifest
+alt Any expectation failed
+  runner --> actor : Outcome Failed; evidence for windowing or virtualization of the named view
+else All expectations met
+  runner --> actor : Outcome Reported; no windowing or virtualization indicated; no L2-046 claim
+end
+@enduml

@@ -1,0 +1,295 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Frontend classes - Plan sprints and allocate stories
+top to bottom direction
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class SprintsPage {
+  +draft: Signal<DraftState>
+  -refreshCount: WritableSignal<number>
+  +openPlanSprint(): void
+  +openEdit(sprintId: Guid): void
+  +openStart(sprintId: Guid): void
+  +openScope(sprintId: Guid): void
+  +openCloseSprint(sprintId: Guid): void
+}
+note right of SprintsPage
+ProjectLayoutPage child. SprintListView.refresh =
+layout.revision() + refreshCount(). Registers Plan sprint
+with layout.setTabAction({ label, run: openPlanSprint })
+while pausedChange is false; clears it (null) in Kanban
+mode and on destroy. planRequested calls openPlanSprint;
+editRequested, startRequested, scopeRequested and
+closeRequested carry the sprint ID to the open method.
+Dialogs get workspaceName from layout.workspace();
+scope and close dialogs get offerSprintsLink = false.
+SprintFormOutcome: Saved after Plan sprint -> open the
+new sprint's plan; Saved after Edit -> refreshCount + 1
+and "Changes saved" toast; ModeChanged ->
+layout.modeChanged(); Outdated -> refreshCount + 1.
+StartSprintOutcome: Started -> open the board with the
+"Sprint 9 started" toast; ModeChanged -> modeChanged();
+Outdated -> refreshCount + 1; CloseSprint(sprint) ->
+openCloseSprint(sprint.sprintId).
+SprintScopeOutcome: Changed -> refreshCount + 1 and
+"Scope updated" toast with its summary; Outdated ->
+refreshCount + 1.
+CloseSprintOutcome: Closed -> open its history with the
+"Sprint 8 closed" toast; Outdated -> refreshCount + 1.
+While a dialog is open: unconfirmed -> refreshCount + 1
+at once; forbidden -> "Your access changed" toast,
+without Retry.
+Toasts go through TOAST_SERVICE.
+changeModeRequested calls layout.openDialog(ChangeMode);
+retryRequested and the first notFound call
+layout.refresh(), so header and list reread together.
+draft delegates to the open dialog, else to
+inject(ProjectLayoutPage).draft(), since the layout
+route has no canDeactivate; UnsavedChangesGuard is
+the sprints route's canDeactivate.
+end note
+class SprintPlanningPage {
+  +remove: InputSignal<Guid?>
+  +add: InputSignal<Guid?>
+  +draft: Signal<DraftState>
+  -workspace: ResourceRef<WorkspaceDetail>
+  -refreshCount: WritableSignal<number>
+  +openEdit(): void
+  +openStart(): void
+  +openCloseSprint(sprintId: Guid): void
+}
+note right of SprintPlanningPage
+Outside ProjectLayoutPage: workspace =
+workspaceResource(() => GetWorkspaceQuery) for the
+breadcrumb; its name goes to SprintPlanView and the
+dialogs. A workspace 404 shows Project not found with
+Back to projects.
+SprintPlanView.refresh = refreshCount(); remove and add
+(query parameters from the work delete dialog and
+Backlog Add to sprint) pass as preMarkedRemoval and
+preMarkedAddition when each is a well-formed story ID;
+a malformed value is ignored. editRequested -> openEdit();
+startRequested -> openStart().
+SprintFormOutcome: Saved -> refreshCount + 1 and
+"Changes saved" toast; ModeChanged, Outdated ->
+refreshCount + 1 (the header is reread).
+StartSprintOutcome: Started -> open the board with the
+"Sprint 9 started" toast; ModeChanged, Outdated ->
+refreshCount + 1; CloseSprint(sprint) ->
+openCloseSprint(sprint.sprintId), offerSprintsLink = true.
+CloseSprintOutcome: Closed -> open its history with the
+"Sprint 8 closed" toast; Outdated -> refreshCount + 1.
+planSaved -> "Sprint planned" toast. A dialog's
+unconfirmed -> refreshCount + 1 at once. The view's or
+a dialog's forbidden -> "Your access changed" toast,
+without Retry. retryRequested ->
+workspace.reload() and refreshCount + 1.
+draft combines the view's latest draftChange with the
+open dialog's draft: dirty, pending or unconfirmed when
+either is, summary naming both. UnsavedChangesGuard is
+the canDeactivate and
+also runs when sprintId changes (Back to another plan),
+after which an open dialog closes with no result.
+end note
+class SprintFormDialog {
+  +sprintId: InputSignal<Guid?>
+  +workspaceName: InputSignal<string>
+  +draft: Signal<DraftState>
+  +unconfirmed: OutputEmitterRef<void>
+  +forbidden: OutputEmitterRef<void>
+  +requestClose(): Promise<void>
+  +close(outcome: SprintFormOutcome?): void
+}
+note right of SprintFormDialog
+close(Saved(result)) on saved; close(ModeChanged)
+when it closes after modeChanged; close(Outdated)
+when it closes after outdated, or at once on
+notFound; close() on Cancel means dismissed.
+Relays the form's unconfirmed and forbidden as its
+own outputs and stays open with the draft.
+requestClose on a dirty draft opens
+UnsavedChangesDialog (CancelForm).
+end note
+class SprintFormOutcome {
+  +kind: Saved | ModeChanged | Outdated
+  +saved: SprintSaveResult?
+}
+class "StartSprintDialog\nSprintScopeDialog\nCloseSprintDialog" as OtherDialogs
+note right of OtherDialogs
+Defined by start-and-adjust-sprint and close-sprint;
+opened with the sprint ID (StartSprintDialog also
+with workspaceName). Close results:
+StartSprintOutcome, SprintScopeOutcome,
+CloseSprintOutcome. Each relays its form's or
+view's unconfirmed and forbidden and stays open.
+SprintScopeDialog and CloseSprintDialog also take
+offerSprintsLink (false on the Sprints tab).
+end note
+class ProjectLayoutPage {
+  +revision: Signal<number>
+  +workspace: Signal<WorkspaceDetail | null>
+  +refresh(): void
+  +openDialog(kind: WorkspaceActionKind): void
+  +setTabAction(action: TabAction?): void
+  +modeChanged(): void
+}
+class SprintListView {
+  +canChangeMode: InputSignal<boolean>
+  +refresh: InputSignal<number>
+  -sprints: ResourceRef<SprintListResult>
+  -plannedPage: WritableSignal<int>
+  -closedPage: WritableSignal<int>
+  +planRequested: OutputEmitterRef<void>
+  +editRequested: OutputEmitterRef<Guid>
+  +startRequested: OutputEmitterRef<Guid>
+  +scopeRequested: OutputEmitterRef<Guid>
+  +closeRequested: OutputEmitterRef<Guid>
+  +changeModeRequested: OutputEmitterRef<void>
+  +pausedChange: OutputEmitterRef<boolean>
+  +retryRequested: OutputEmitterRef<void>
+  +notFound: OutputEmitterRef<void>
+}
+note right of SprintListView
+sprints = sprintListResource(() => ListSprintsQuery
+{ workspaceId, plannedPage, closedPage, pageSize 25 }).
+Planned and closed lists page independently, each
+with its own pager. A refresh change rereads the list
+and keeps both pages. Plan stories, View plan, Open
+board and history rows are router links. Try again
+emits retryRequested; a workspace 404 shows Project
+not found and emits notFound.
+end note
+class SprintForm {
+  +sprintId: InputSignal<Guid?>
+  +workspaceName: InputSignal<string>
+  -sprint: ResourceRef<SprintPlanResult>
+  -draftFields: WritableSignal<SprintFields>
+  +saved: OutputEmitterRef<SprintSaveResult>
+  +draftChange: OutputEmitterRef<DraftState>
+  +modeChanged: OutputEmitterRef<void>
+  +outdated: OutputEmitterRef<void>
+  +notFound: OutputEmitterRef<void>
+  +unconfirmed: OutputEmitterRef<void>
+  +forbidden: OutputEmitterRef<void>
+  +save(): Promise<void>
+  +reloadLatest(): void
+}
+note right of SprintForm
+  Edit: sprint = sprintPlanResource(...) for the plan
+  header; the draft starts from the first resolved value,
+  the fields stay disabled until then, and a failed read
+  keeps them disabled with Try again = sprint.reload().
+  A stale 409 calls sprint.reload() once. A sprints-paused
+  409 keeps the draft, disables Save and emits modeChanged;
+  a not-planned 409 does the same and emits outdated.
+  A read or save 404 emits notFound; an unexpected
+  403 keeps the draft and emits forbidden.
+  No response: keep the draft; "We couldn't confirm
+  whether ..."; emit unconfirmed. Edit reloads the
+  sprint once: a newer version shows the comparison
+  under "The latest saved version is shown beside your
+  entries". Plan sprint: Save stays unavailable.
+  Plan sprint: query undefined, nothing is read.
+end note
+class SprintPlanView {
+  +sprintId: InputSignal<Guid>
+  +workspaceName: InputSignal<string>
+  +refresh: InputSignal<number>
+  +preMarkedRemoval: InputSignal<Guid?>
+  +preMarkedAddition: InputSignal<Guid?>
+  -header: ResourceRef<SprintPlanResult>
+  -candidates: ResourceRef<SprintCandidatePage>
+  -members: ResourceRef<SprintMemberPage>
+  -search: WritableSignal<string>
+  -candidatePage: WritableSignal<int>
+  -memberPage: WritableSignal<int>
+  -toAdd: WritableSignal<Map<Guid, SprintCandidate>>
+  -toRemove: WritableSignal<Set<Guid>>
+  +editRequested: OutputEmitterRef<Guid>
+  +startRequested: OutputEmitterRef<Guid>
+  +planSaved: OutputEmitterRef<SprintSaveResult>
+  +retryRequested: OutputEmitterRef<void>
+  +forbidden: OutputEmitterRef<void>
+  +draftChange: OutputEmitterRef<DraftState>
+  +add(story: SprintCandidate): void
+  +remove(storyId: Guid): void
+  +undo(storyId: Guid): void
+  +savePlan(): Promise<void>
+}
+note bottom of SprintPlanView
+Renders the header actions: Edit details and Start sprint
+emit editRequested and startRequested with sprintId, both
+disabled while paused, not planned, or a save is pending.
+A refresh change rereads the header and both lists and
+keeps toAdd and toRemove.
+preMarkedRemoval reads its member row once (member query
+storyId) and seeds toRemove, as Remove would, only when that
+read returns it as a current member; otherwise nothing is marked.
+preMarkedAddition reads its candidate row once (query storyId)
+and seeds toAdd when the story is eligible. A save 400 naming
+a story to remove as not a member drops that mark and names it
+("HCK-126 is no longer in Sprint 9, so it isn't removed").
+draftChange is dirty while either set is non-empty
+("2 to add - 1 to remove").
+The header's mode and status decide the read-only paused
+view (Kanban) and the not-planned explanation; after a save
+with no response, a header no longer Planned shows only its
+state ("Sprint 9 is active now.", unconfirmed-active).
+An unexpected 403 on Save plan keeps both sets and
+emits forbidden.
+end note
+interface ISprintService {
+  +sprintListResource(query: () => ListSprintsQuery | undefined): ResourceRef<SprintListResult>
+  +sprintPlanResource(query: () => GetSprintPlanQuery | undefined): ResourceRef<SprintPlanResult>
+  +sprintCandidatesResource(query: () => GetSprintCandidatesQuery | undefined): ResourceRef<SprintCandidatePage>
+  +sprintMembersResource(query: () => GetSprintMembersQuery | undefined): ResourceRef<SprintMemberPage>
+  +create(command: CreateSprintCommand): Promise<SprintSaveResult>
+  +savePlan(command: SaveSprintPlanCommand): Promise<SprintSaveResult>
+}
+class SprintService {
+  -http: HttpClient
+}
+note right of ISprintService
+Reads return a caller-owned signal resource created in the
+consumer's injection context; it aborts a superseded request
+when the query signal changes and when the consumer is destroyed.
+Mutations return a promise. No RxJS type crosses api.
+end note
+interface IWorkspaceService {
+  +workspaceResource(query: () => GetWorkspaceQuery | undefined): ResourceRef<WorkspaceDetail>
+}
+note right of IWorkspaceService
+Defined by projects manage-workspaces
+(workspace.service.contract.ts).
+end note
+SprintsPage --> SprintListView : composes; outputs carry the sprint ID
+SprintsPage ..> SprintFormDialog : opens (Plan sprint, Edit)
+SprintsPage ..> OtherDialogs : opens (Start, Change scope, Close sprint)
+SprintsPage ..> ProjectLayoutPage : revision; workspace(); setTabAction(Plan sprint); openDialog(ChangeMode); modeChanged(); refresh()
+SprintPlanningPage --> SprintPlanView : composes; editRequested, startRequested
+SprintPlanningPage ..> SprintFormDialog : opens (Edit details)
+SprintPlanningPage ..> OtherDialogs : opens StartSprintDialog; CloseSprintDialog on CloseSprint
+SprintPlanningPage ..> IWorkspaceService : inject token; workspaceResource
+SprintFormDialog --> SprintForm : composes
+SprintFormDialog ..> SprintFormOutcome : close result
+SprintListView ..> ISprintService : inject token
+SprintForm ..> ISprintService : inject token
+SprintPlanView ..> ISprintService : inject token
+ISprintService <|.. SprintService
+@enduml

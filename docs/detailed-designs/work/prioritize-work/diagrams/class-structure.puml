@@ -4,114 +4,168 @@ skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
 skinparam ArrowColor #344054
-skinparam rectangle {
-  BorderColor #344054
-  FontColor #101828
-}
 skinparam package {
   BorderColor #667085
   FontColor #101828
   BackgroundColor #F9FAFB
 }
-title Class structure - Prioritize siblings and the story backlog
 skinparam class {
   BorderColor #344054
   FontColor #101828
   BackgroundColor #F9FAFB
 }
-class BacklogPage {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
+set separator none
+title Backend classes - Prioritize siblings and the story backlog
+package "MissionControl.Api" {
+  class WorkOrdersController {
+    -sender: ISender
+  }
 }
-class WorkHierarchyPage {
-  +routeContext: Signal<RouteContext>
+package "MissionControl.Application" {
+  class ReorderSiblingCommand {
+    +workspaceId: Guid
+    +parentId: Guid?
+    +itemId: Guid
+    +targetPosition: int
+    +expectedOrderVersion: long
+  }
+  class PrioritizeStoryCommand {
+    +workspaceId: Guid
+    +storyId: Guid
+    +targetPosition: int
+    +expectedOrderVersion: long
+  }
+  class ListBacklogQuery {
+    +workspaceId: Guid
+    +page: int
+    +pageSize: int
+  }
+  class ReorderSiblingCommandHandler {
+    +Handle(request, ct): Task<OrderMoved>
+  }
+  class PrioritizeStoryCommandHandler {
+    +Handle(request, ct): Task<OrderMoved>
+  }
+  class ListBacklogQueryHandler {
+    +Handle(request, ct): Task<BacklogItemPage>
+  }
+  class OrderMoved {
+    +itemId: Guid
+    +position: int
+    +totalCount: int
+    +orderVersion: long
+  }
+  class BacklogItemPage {
+    +items: BacklogItem[]
+    +totalCount: int
+    +page: int
+    +pageSize: int
+    +statusTotals: StatusTotal[]
+    +sprintTargets: SprintTarget[]
+    +sprintsPaused: bool
+    +orderVersion: long
+  }
+  class SprintTarget {
+    +sprintId: Guid
+    +name: string
+    +status: SprintStatus
+    +startDate: DateOnly
+    +endDate: DateOnly
+  }
+  note bottom of SprintTarget
+    The Add to sprint menu's choices: the active
+    sprint, then up to 25 planned sprints by start
+    date, then ID. Empty in Kanban mode and when no
+    sprint is active or planned (NoOpenSprint).
+  end note
+  class BacklogItem {
+    +storyId: Guid
+    +rank: int
+    +key: string
+    +title: string
+    +epicTitle: string
+    +initiativeTitle: string
+    +status: WorkStatus
+    +assigneeName: string?
+    +assigneeActive: bool?
+    +storyEstimate: int?
+    +sprint: SprintReference?
+    +sprintStatus: SprintStatus?
+    +completedIn: SprintReference?
+    +addToSprint: SprintEligibility
+  }
+  enum SprintEligibility {
+    NoSprints
+    SprintsPaused
+    NoOpenSprint
+    Done
+    InOpenSprint
+    Eligible
+  }
+  interface IMissionControlDataSession {
+    +BeginWorkspaceTransactionAsync(workspaceId, ct): Task
+    +LoadSiblingOrderAsync(workspaceId, parentId, ct): Task<WorkOrder>
+    +LoadBacklogOrderAsync(workspaceId, ct): Task<WorkOrder>
+    +ListBacklogAsync(query, ct): Task<BacklogItemPage>
+    +AddAuditEvent(auditEvent: AuditEvent): void
+    +SaveChangesAsync(ct): Task
+  }
+  note bottom of IMissionControlDataSession
+    Shared members as defined in the overview; only the
+    members this slice uses are shown. Each order loads as a
+    tracked aggregate whose positions SaveChangesAsync writes
+    as tracked children. The workspace
+    lock comes first and is held only for the reorder; a
+    lock-wait timeout returns 503 with Retry-After.
+    A stale order version raises ConcurrencyConflictException.
+  end note
+  note bottom of BacklogItem
+    No description. Rows, total, and status
+    totals come from one consistent read.
+    completedIn: for a Done story outside open
+    sprints, the latest closed sprint whose
+    recorded outcome is Done. addToSprint is the
+    first SprintEligibility value that applies,
+    in the order listed; sprintsPaused marks
+    Kanban with kept sprints.
+  end note
 }
-class WorkItemDetailPage {
-  +routeContext: Signal<RouteContext>
+package "MissionControl.Domain" {
+  class WorkOrder {
+    +workspaceId: Guid
+    +kind: OrderKind
+    +parentId: Guid?
+    +orderedItemIds: Guid[]
+    +version: long
+    +move(itemId: Guid, targetPosition: int): void
+  }
+  enum OrderKind {
+    Siblings
+    Backlog
+  }
 }
-class MovePositionDialog {
-  +currentPosition: number
-  +total: number
-  +move(targetPosition: number): void
-}
-class WorkOrderView {
-  +state: Signal<FeatureState>
-  +submit(): void
-}
-interface IWorkOrderService {
-  +siblings(request: ReorderSiblingCommand): Promise<FeatureResult>
-  +backlog(request: PrioritizeStoryCommand): Promise<FeatureResult>
-  +read(request: ListBacklogQuery): Promise<FeatureResult>
-}
-class WorkOrderService {
-  -http: HttpClient
-}
-class WorkOrdersController {
-  -sender: ISender
-}
-class WorkOrder {
-  +workspaceId: Guid
-  +kind: OrderKind
-  +parentId: Guid?
-  +orderedItemIds: Guid[]
-  +version: long
-  +move(itemId: Guid, targetPosition: int): void
-}
-interface IMissionControlDataSession {
-  +query(specification): Task<ReadResult>
-  +commit(expectedVersion: long): Task<void>
-}
-class MissionControlDataSession {
-  -connection: DbConnection
-}
-BacklogPage --> WorkOrderView : composes
-WorkHierarchyPage --> WorkOrderView : composes (sibling moves)
-WorkItemDetailPage --> WorkOrderView : composes (sibling moves)
-MovePositionDialog --> WorkOrderView : uses
-BacklogPage ..> MovePositionDialog : opens
-WorkHierarchyPage ..> MovePositionDialog : opens
-WorkItemDetailPage ..> MovePositionDialog : opens
-WorkOrderView ..> IWorkOrderService : inject token
-IWorkOrderService <|.. WorkOrderService
-IMissionControlDataSession <|.. MissionControlDataSession
-class ReorderSiblingCommand {
-  +workspaceId: Guid
-  +parentId: Guid?
-  +itemId: Guid
-  +targetPosition: int
-  +expectedOrderVersion: long
-}
-class ReorderSiblingCommandHandler {
-  +handle(request: ReorderSiblingCommand): Task<FeatureResult>
+package "MissionControl.Infrastructure" {
+  class MissionControlDataSession {
+    -connection: DbConnection
+  }
 }
 WorkOrdersController ..> ReorderSiblingCommand : dispatches
-ReorderSiblingCommandHandler ..> ReorderSiblingCommand : handles
-ReorderSiblingCommandHandler --> WorkOrder : loads / applies
-ReorderSiblingCommandHandler ..> IMissionControlDataSession : uses
-class PrioritizeStoryCommand {
-  +workspaceId: Guid
-  +storyId: Guid
-  +targetPosition: int
-  +expectedOrderVersion: long
-}
-class PrioritizeStoryCommandHandler {
-  +handle(request: PrioritizeStoryCommand): Task<FeatureResult>
-}
 WorkOrdersController ..> PrioritizeStoryCommand : dispatches
-PrioritizeStoryCommandHandler ..> PrioritizeStoryCommand : handles
-PrioritizeStoryCommandHandler --> WorkOrder : loads / applies
-PrioritizeStoryCommandHandler ..> IMissionControlDataSession : uses
-class ListBacklogQuery {
-  +workspaceId: Guid
-  +page: int
-  +pageSize: int
-}
-class ListBacklogQueryHandler {
-  +handle(request: ListBacklogQuery): Task<FeatureResult>
-}
 WorkOrdersController ..> ListBacklogQuery : dispatches
-ListBacklogQueryHandler ..> ListBacklogQuery : handles
-ListBacklogQueryHandler --> WorkOrder : loads / applies
+ReorderSiblingCommand <.. ReorderSiblingCommandHandler : handles
+PrioritizeStoryCommand <.. PrioritizeStoryCommandHandler : handles
+ListBacklogQuery <.. ListBacklogQueryHandler : handles
+ReorderSiblingCommandHandler ..> OrderMoved : returns
+PrioritizeStoryCommandHandler ..> OrderMoved : returns
+ListBacklogQueryHandler ..> BacklogItemPage : returns
+BacklogItemPage *-- BacklogItem
+BacklogItemPage *-- SprintTarget
+BacklogItem --> SprintEligibility
+ReorderSiblingCommandHandler ..> IMissionControlDataSession : uses
+PrioritizeStoryCommandHandler ..> IMissionControlDataSession : uses
 ListBacklogQueryHandler ..> IMissionControlDataSession : uses
-
+ReorderSiblingCommandHandler --> WorkOrder : moves within siblings
+PrioritizeStoryCommandHandler --> WorkOrder : moves within backlog
+WorkOrder --> OrderKind
+IMissionControlDataSession <|.. MissionControlDataSession
 @enduml

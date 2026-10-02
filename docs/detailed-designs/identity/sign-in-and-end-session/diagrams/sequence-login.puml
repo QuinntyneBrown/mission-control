@@ -14,10 +14,11 @@ skinparam package {
   BackgroundColor #F9FAFB
 }
 title Behavior - Authenticate credentials
+skinparam maxMessageSize 300
 actor "Account holder" as actor
 box "Frontend - Mission Control application" #E0F2FE
   participant "LoginPage / SessionView" as page
-  participant "ISessionService / SessionService" as client
+  participant "ISessionService / SessionService\n(via sessionInterceptor)" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
   participant "HTTPS / CORS / SessionsController" as ctrl
@@ -25,59 +26,77 @@ end box
 box "Backend - MissionControl.Application and Domain" #ECFDF3
   participant "LoginCommandValidator" as validator
   participant "LoginCommandHandler" as handler
-  participant "Password verification / token issuer ports" as security
+  participant "IPasswordHashService /\nIAccessTokenIssuer" as security
 end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
 actor -> page : Submit email and exact password
-page -> client : Build LoginCommand; prevent duplicate submission
-client -> ctrl : POST /api/sessions over HTTPS
-ctrl -> validator : MediatR 12.5.0 validation pipeline
-validator -> validator : Validate email; do not trim password
-alt Invalid fields
-  validator --> ctrl : 400 field messages
-  ctrl --> client : Validation ProblemDetails
-  client --> page : validation state: keep email; focus linked error summary
-else Valid request
-  validator -> handler : Handle LoginCommand
-  handler -> db : L2-038 lock normalized-email attempt state; check rolling window
-  db --> handler : Failure count and blocked-until instant
-  alt Within throttle interval
-    handler -> db : L2-039 append Throttled audit (restricted append); no account status change
-    db --> handler : Recorded outcome
-    handler --> ctrl : 429 with Retry-After and blocked-until UTC instant; no token
-    ctrl --> client : Generic throttle result; same for unknown emails
-    client --> page : throttled state: keep email; "Try again after 3:42 p.m. (in about 12 minutes)" from the 429 timing
-  else Attempt permitted
-    handler -> db : L2-001 read account identity/hash/status
-    db --> handler : Account or absent identity
-    handler -> security : Verify exact password; dummy hash for unknown identity
-    security --> handler : Credential validity
-    alt Unknown / wrong password / inactive account
-      handler -> db : Increment failure window; fifth sets 15-minute throttle
-      db --> handler : Failure state saved
-      handler -> db : L2-039 append Denied audit (restricted append) without credentials or contact payload
-      db --> handler : Audit recorded
-      handler --> ctrl : Same generic 401; no token
-      ctrl --> client : Credential denial
-      client --> page : invalid state: same generic message; clear password; retain email
-    else Active valid account
-      handler -> security : L2-036 sign subject/credential version; expiry now plus 30 minutes
-      security --> handler : JWT and expiry
-      handler -> db : Reset failures and record successful-login audit
-      alt Audit/reset commit fails
-        db --> handler : Rollback; no successful-login audit
-        handler --> ctrl : Generic 500 plus diagnostic correlation ID; no token response
-        ctrl --> client : Failed authentication operation
-        client --> page : error state: reference ID; keep email; Sign in retries
-      else Commit succeeds
-        db --> handler : Successful-login outcome committed
-        handler --> ctrl : Intended JWT response and expiry
-        ctrl --> client : 200 login result
-        client -> client : L2-003 hold token only in memory
-        client --> page : Safe account/capability summary
-        page --> actor : Open Home or permitted internal return route
+page -> client : login(LoginCommand); prevent duplicate submission
+client -> ctrl : POST /api/sessions over HTTPS; public, so no bearer token
+alt No response: connection dropped or request timed out
+  client --> page : login() rejects with a no-response error; no answer arrived, so there is no reference ID and no token (no session, so end() does nothing)
+  page --> actor : unreachable state: keep email and password; "We couldn't reach Mission Control. Check your connection and try again."; Sign in sends again only when pressed; /login is outside ApplicationShell, so no offline banner
+else Response received
+  ctrl -> validator : MediatR 12.5.0 validation pipeline
+  validator -> validator : Validate email; do not trim password
+  alt Invalid fields
+    validator --> ctrl : 400 field messages
+    ctrl --> client : Validation ProblemDetails
+    client --> page : validation state: keep email; one field error moves focus to that field, which reads its error; several move focus to the linked error summary; no Retry or reference ID
+  else Valid request
+    validator -> handler : Handle LoginCommand
+    handler -> db : L2-038 LoadLoginAttemptAsync: lock the normalized-email attempt row; check rolling window
+    db --> handler : Failure count and blocked-until instant
+    alt Within throttle interval
+      handler -> db : L2-039 IAuditEventWriter.AppendRestrictedAsync(Throttled), outside any transaction; no account status change
+      db --> handler : Recorded outcome
+      handler --> ctrl : 429 with Retry-After and blocked-until UTC instant; no token
+      ctrl --> client : Generic throttle result; same for unknown emails
+      client --> page : throttled state: keep email; "Try again after 3:42 p.m. (in about 12 minutes)" from the 429 timing
+    else Attempt permitted
+      handler -> db : L2-001 LoadAccountByEmailAsync: identity, hash, status, credential version
+      db --> handler : Account or absent identity
+      handler -> security : verify(password, stored hash); a null hash for an unknown identity checks a dummy hash
+      security --> handler : Credential validity
+      alt Unknown / wrong password / inactive account
+        handler -> db : Increment failure window (fifth sets 15-minute throttle); SaveChangesAsync
+        db --> handler : Failure state saved
+        handler -> db : L2-039 IAuditEventWriter.AppendRestrictedAsync(Denied) without credentials or contact payload
+        db --> handler : Audit recorded
+        handler --> ctrl : Same generic 401; no token
+        ctrl --> client : Credential denial
+        client --> page : invalid state: same generic message; clear password; retain email (no session, so end() does nothing)
+      else Active valid account
+        handler -> security : L2-036 issue(account ID, credential version); expiry now plus 30 minutes
+        security --> handler : LoginResult: JWT and expiresAtUtc (JwtAccessTokenIssuer signs with JwtOptions)
+        handler -> db : Reset failures; AddAuditEvent(successful login); SaveChangesAsync commits both in one transaction
+        alt Audit/reset commit fails
+          db --> handler : Rollback; no successful-login audit
+          handler --> ctrl : Generic 500; X-Correlation-ID carries the diagnostic reference ID; no token response
+          ctrl --> client : Failed authentication operation
+          client --> page : error state: reference ID; keep email and password; Sign in retries when pressed
+        else Commit succeeds
+          db --> handler : Successful-login outcome committed
+          handler --> ctrl : LoginResult: intended JWT and expiresAtUtc
+          ctrl --> client : 200 LoginResult
+          client -> client : L2-003 hold token only in memory; clear endReason; schedule end(Expired) at expiresAtUtc
+          client --> page : Signed in; SessionView emits signedIn
+          page -> page : Clear RouteContext.loginNotice
+          page -> client : LoginPage awaits refreshCapabilities(): GET /api/session (Check current access)
+          client --> page : currentSession = CurrentSession, or no summary when the read failed
+          alt requestedPath held and currentSession().capabilities permit its route
+            page --> actor : Navigate to RouteContext.requestedPath with replaceUrl, so the sign-in entry leaves the browser history
+          else No requested path, not permitted, or no summary
+            page --> actor : Navigate to /home with replaceUrl; /home needs no capability; its PermissionGuard repeats the check, and with no summary its sections report their own read failures
+          end
+          note right of page
+            /login opened while a session is held redirects
+            to /home, except a SignedOut caller's navigation
+            with router state { signOut: true }, so browser
+            Back never reaches the sign-in form of a live session.
+          end note
+        end
       end
     end
   end

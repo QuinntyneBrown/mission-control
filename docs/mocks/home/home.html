@@ -27,7 +27,7 @@
           <option value="first-run-collaborator">First run (collaborator)</option>
           <option value="no-active-sprints">No active sprints</option>
           <option value="loading">Loading</option>
-          <option value="error">Load failed</option>
+          <option value="error">Every section failed</option>
           <option value="section-error">Projects section failed</option>
         </select>
       </label>
@@ -36,14 +36,14 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">Every total is counted from all saved records, not from the rows visible on any page. Empty categories show 0. Each number links to the matching filtered directory, project, work list, or sprint.</p>
-    <p class="mock-note" data-when="collaborator" hidden>Collaborators see the same summaries. "New project" and the Administration links are absent because only administrators manage projects and accounts.</p>
-    <p class="mock-note" data-when="first-run-admin" hidden>Right after setup, the only record is the seeded City contact for Quinntyne Brown. The Projects empty state offers the next permitted action.</p>
-    <p class="mock-note" data-when="first-run-collaborator" hidden>Collaborators can't add projects, so the empty state explains who can instead of offering a button.</p>
-    <p class="mock-note" data-when="no-active-sprints" hidden>Sprint 8 has closed and Sprint 9 is planned but not started. Counts still come from all saved records.</p>
-    <p class="mock-note" data-when="loading" hidden>Each section keeps its shape with skeletons until its request finishes, so nothing looks empty. Screen readers hear "Loading home".</p>
-    <p class="mock-note" data-when="error" hidden>Every summary request failed. Try again reloads the page's data; the reference ID matches the server's diagnostic record.</p>
-    <p class="mock-note" data-when="section-error" hidden>Only the Projects request failed. Leads and sprints still show, and Retry reloads just that section.</p>
+    <p class="mock-note" data-when="default">Every total is counted from all saved records, not from the rows visible on any page. Projects are listed by name. Empty categories show 0. Each number links to the matching filtered directory, project, work list, or sprint; every category count opens the directory's category filter (shown with Prayer selected), and Event's 0 opens its zero-results state. Project cards leave descriptions to each project's overview. Projects and active sprints load 25 at a time: with more, the section hint reads "Showing 25 of N · View all projects", and the project list and each project's Sprints tab reach the rest. New project opens the project form; once the project is saved, its overview opens with the toast "Project created" naming it. If the save gets no response, the form stays open with every value and Projects here rereads at once, so you can see whether the project was created before saving again.</p>
+    <p class="mock-note" data-when="collaborator" hidden>Collaborators see the same summaries. "New project" and the Administration links are absent because only administrators manage projects and accounts; in place of New project, a neutral notice says what a collaborator can do.</p>
+    <p class="mock-note" data-when="first-run-admin" hidden>Right after setup, the only record is the seeded City contact for Quinntyne Brown. The Projects empty state offers the next permitted action, and Active sprints shows the same message as whenever no sprint is in progress.</p>
+    <p class="mock-note" data-when="first-run-collaborator" hidden>Collaborators can't add projects, so the page notice and the empty state explain who can instead of offering a button. Collaborators can start sprints, so the Active sprints message is the same for both roles.</p>
+    <p class="mock-note" data-when="no-active-sprints" hidden>Sprint 8 has closed and Sprint 9 is planned but not started. Active sprints reads only sprints in progress, so its empty message points to each project's Sprints tab without naming a sprint; the project card names the planned Sprint 9 from the project summary. Counts still come from all saved records.</p>
+    <p class="mock-note" data-when="loading" hidden>Each section keeps its heading and shows its own skeleton until its own request finishes, so nothing looks empty. Each section announces its own loading, for example "Loading projects". New project doesn't wait for the summaries.</p>
+    <p class="mock-note" data-when="error" hidden>Every summary request failed. Each section shows its own error with its own reference ID and Retry, which reloads only that section; there is no page-level error, and New project stays available to administrators. Each reference ID matches the server's diagnostic record for that request (a 500). A section whose request got no response shows the same alert and Retry without a reference ID.</p>
+    <p class="mock-note" data-when="section-error" hidden>Only the Projects request failed. Leads and sprints still show, and Retry reloads just that section. The alert speaks only for its own section.</p>
   </div>
 
   <div class="mc-app">
@@ -119,85 +119,79 @@
             <h1 class="mc-page-header__title" tabindex="-1">Home</h1>
             <p class="mc-page-header__subtitle">FaithTech Toronto's leads, projects, and sprints at a glance.</p>
           </div>
-          <div class="mc-page-header__actions mock-admin-only" data-unless="loading error">
+          <div class="mc-page-header__actions mock-admin-only">
             <button class="mc-button mc-button--primary" type="button" data-nav="../projects/project-form-dialog.html">
               <span class="mc-icon mc-icon--plus" aria-hidden="true"></span>New project
             </button>
           </div>
         </header>
 
-        <div class="mc-live" role="status" aria-live="polite">
-          <p class="mc-visually-hidden" data-when="loading" hidden>Loading home</p>
-        </div>
-
-        <!-- Full-page error -->
-        <div class="mc-empty mc-empty--error" role="alert" data-when="error" hidden>
-          <span class="mc-empty__icon"><span class="mc-icon mc-icon--alert-circle mc-icon--lg" aria-hidden="true"></span></span>
-          <h2 class="mc-empty__title">We couldn't load your home summaries</h2>
-          <p class="mc-empty__text">Nothing was changed. Check your connection and try again. If it keeps happening, share the reference ID with your administrator.</p>
-          <p class="mc-ref">Reference ID <code>9e1b-3c70-a5d4</code>
-            <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="9e1b-3c70-a5d4"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
-          </p>
-          <div class="mc-empty__actions">
-            <button class="mc-button mc-button--primary" type="button" data-goto-state="loading">
-              <span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again
-            </button>
+        <div class="mc-alert mc-alert--neutral mc-alert--page mock-collaborator-only">
+          <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
+          <div class="mc-alert__body">
+            <p class="mc-alert__text">You can open any project and work in it. Only administrators can add projects.</p>
           </div>
         </div>
 
-        <!-- Loading skeletons -->
-        <div class="mc-stack mc-stack--2xl" data-when="loading" hidden aria-hidden="true">
-          <section class="mc-stack">
-            <span class="mc-skeleton mc-skeleton--title"></span>
-            <div class="mc-grid mc-grid--stats">
-              <span class="mc-skeleton mc-skeleton--tall"></span>
-              <span class="mc-skeleton mc-skeleton--tall"></span>
-              <span class="mc-skeleton mc-skeleton--tall"></span>
-              <span class="mc-skeleton mc-skeleton--tall"></span>
-              <span class="mc-skeleton mc-skeleton--tall"></span>
-            </div>
-          </section>
-          <section class="mc-stack">
-            <span class="mc-skeleton mc-skeleton--title"></span>
-            <span class="mc-skeleton mc-skeleton--tall"></span>
-            <span class="mc-skeleton mc-skeleton--tall"></span>
-          </section>
-          <section class="mc-stack">
-            <span class="mc-skeleton mc-skeleton--title"></span>
-            <span class="mc-skeleton mc-skeleton--block"></span>
-          </section>
-        </div>
-
-        <!-- Loaded content -->
-        <div data-unless="loading error">
+        <!-- Sections: each loads, fails, and retries on its own -->
+        <div>
 
           <!-- Lead coverage -->
           <section class="mc-section" aria-labelledby="leads-heading">
             <div class="mc-section__header">
               <h2 class="mc-section__title" id="leads-heading">Lead coverage</h2>
-              <p class="mc-section__hint">
+              <p class="mc-section__hint" data-unless="loading error">
                 <span data-unless="first-run-admin first-run-collaborator">37 leads across five categories ·</span>
                 <span data-when="first-run-admin first-run-collaborator" hidden>1 lead across five categories ·</span>
                 <a href="../leads/lead-directory.html">View all leads</a>
               </p>
             </div>
-            <div class="mc-grid mc-grid--stats">
-              <a class="mc-stat mc-stat--create" href="../leads/lead-directory.html?category=create">
+            <div class="mc-live" role="status" aria-live="polite">
+              <p class="mc-visually-hidden" data-when="loading" hidden>Loading lead coverage</p>
+            </div>
+
+            <div class="mc-grid mc-grid--stats" data-when="loading" hidden aria-hidden="true">
+              <span class="mc-skeleton mc-skeleton--tall"></span>
+              <span class="mc-skeleton mc-skeleton--tall"></span>
+              <span class="mc-skeleton mc-skeleton--tall"></span>
+              <span class="mc-skeleton mc-skeleton--tall"></span>
+              <span class="mc-skeleton mc-skeleton--tall"></span>
+            </div>
+
+            <!-- Lead coverage failed to load (section only) -->
+            <div class="mc-alert mc-alert--danger" role="alert" data-when="error" hidden>
+              <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+              <div class="mc-alert__body">
+                <p class="mc-alert__title">We couldn't load lead coverage</p>
+                <p class="mc-alert__text">Nothing was changed. Try again to load the lead totals.</p>
+                <p class="mc-ref">Reference ID <code>9e1b-3c70-a5d4</code>
+                  <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="9e1b-3c70-a5d4"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                </p>
+                <div class="mc-alert__actions">
+                  <button class="mc-button mc-button--sm" type="button" data-goto-state="default">
+                    <span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Retry
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="mc-grid mc-grid--stats" data-unless="loading error">
+              <a class="mc-stat mc-stat--create" href="../leads/lead-directory.html?category=create#state=category">
                 <span class="mc-stat__label"><span class="mc-stat__icon"><span class="mc-icon mc-icon--category-create" aria-hidden="true"></span></span>Create</span>
                 <span class="mc-stat__value"><span data-unless="first-run-admin first-run-collaborator">9</span><span data-when="first-run-admin first-run-collaborator" hidden>0</span><span class="mc-visually-hidden"> leads</span></span>
                 <span class="mc-stat__hint"><span data-unless="first-run-admin first-run-collaborator">View Create leads</span><span data-when="first-run-admin first-run-collaborator" hidden>No leads yet</span></span>
               </a>
-              <a class="mc-stat mc-stat--communication" href="../leads/lead-directory.html?category=communication">
+              <a class="mc-stat mc-stat--communication" href="../leads/lead-directory.html?category=communication#state=category">
                 <span class="mc-stat__label"><span class="mc-stat__icon"><span class="mc-icon mc-icon--category-communication" aria-hidden="true"></span></span>Communication</span>
                 <span class="mc-stat__value"><span data-unless="first-run-admin first-run-collaborator">8</span><span data-when="first-run-admin first-run-collaborator" hidden>0</span><span class="mc-visually-hidden"> leads</span></span>
                 <span class="mc-stat__hint"><span data-unless="first-run-admin first-run-collaborator">View Communication leads</span><span data-when="first-run-admin first-run-collaborator" hidden>No leads yet</span></span>
               </a>
-              <a class="mc-stat mc-stat--city" href="../leads/lead-directory.html?category=city">
+              <a class="mc-stat mc-stat--city" href="../leads/lead-directory.html?category=city#state=category">
                 <span class="mc-stat__label"><span class="mc-stat__icon"><span class="mc-icon mc-icon--category-city" aria-hidden="true"></span></span>City</span>
                 <span class="mc-stat__value"><span data-unless="first-run-admin first-run-collaborator">6</span><span data-when="first-run-admin first-run-collaborator" hidden>1</span><span class="mc-visually-hidden"> leads</span></span>
-                <span class="mc-stat__hint">City Lead: Quinntyne Brown</span>
+                <span class="mc-stat__hint">View City leads</span>
               </a>
-              <a class="mc-stat mc-stat--prayer" href="../leads/lead-directory.html?category=prayer">
+              <a class="mc-stat mc-stat--prayer" href="../leads/lead-directory.html?category=prayer#state=category">
                 <span class="mc-stat__label"><span class="mc-stat__icon"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span></span>Prayer</span>
                 <span class="mc-stat__value"><span data-unless="first-run-admin first-run-collaborator">14</span><span data-when="first-run-admin first-run-collaborator" hidden>0</span><span class="mc-visually-hidden"> leads</span></span>
                 <span class="mc-stat__hint"><span data-unless="first-run-admin first-run-collaborator">View Prayer leads</span><span data-when="first-run-admin first-run-collaborator" hidden>No leads yet</span></span>
@@ -214,15 +208,24 @@
           <section class="mc-section" aria-labelledby="projects-heading">
             <div class="mc-section__header">
               <h2 class="mc-section__title" id="projects-heading">Projects</h2>
-              <p class="mc-section__hint" data-unless="first-run-admin first-run-collaborator section-error">3 projects · <a href="../projects/project-list.html">View all projects</a></p>
+              <p class="mc-section__hint" data-unless="first-run-admin first-run-collaborator section-error loading error">3 projects · <a href="../projects/project-list.html">View all projects</a></p>
+            </div>
+
+            <div class="mc-live" role="status" aria-live="polite">
+              <p class="mc-visually-hidden" data-when="loading" hidden>Loading projects</p>
+            </div>
+
+            <div class="mc-stack" data-when="loading" hidden aria-hidden="true">
+              <span class="mc-skeleton mc-skeleton--tall"></span>
+              <span class="mc-skeleton mc-skeleton--tall"></span>
             </div>
 
             <!-- Projects failed to load (section only) -->
-            <div class="mc-alert mc-alert--danger" role="alert" data-when="section-error" hidden>
+            <div class="mc-alert mc-alert--danger" role="alert" data-when="section-error error" hidden>
               <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
               <div class="mc-alert__body">
                 <p class="mc-alert__title">We couldn't load projects</p>
-                <p class="mc-alert__text">Leads and sprints loaded. Try again to load project summaries.</p>
+                <p class="mc-alert__text">Nothing was changed. Try again to load project summaries.</p>
                 <p class="mc-ref">Reference ID <code>41fd-0a6e-b2c8</code>
                   <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="41fd-0a6e-b2c8"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
                 </p>
@@ -247,7 +250,34 @@
               </div>
             </div>
 
-            <div class="mc-stack" data-unless="first-run-admin first-run-collaborator section-error">
+            <div class="mc-stack" data-unless="first-run-admin first-run-collaborator section-error loading error">
+              <article class="mc-card" aria-labelledby="project-web-title">
+                <div class="mc-split mc-split--even">
+                  <div class="mc-stack mc-stack--sm">
+                    <div class="mc-cluster mc-cluster--sm">
+                      <h3 class="mc-card__title" id="project-web-title"><a class="mc-link-quiet" href="../projects/project-overview.html#state=kanban">Church Website Refresh</a></h3>
+                      <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
+                    </div>
+                    <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead-lucia">Lucia Alvarez</a></p>
+                    <p class="mc-text-sm">
+                        Kanban board · <a href="../kanban/kanban-board.html">Open board</a>
+                    </p>
+                    <p class="mc-text-sm mc-muted">60 work items in total</p>
+                  </div>
+                  <table class="mc-counts">
+                    <caption class="mc-visually-hidden">Church Website Refresh work items by type and status</caption>
+                    <thead>
+                      <tr><th scope="col">Type</th><th scope="col">To Do</th><th scope="col">In Progress</th><th scope="col">Done</th><th scope="col">Total</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><th scope="row">Initiatives</th><td><a href="../work/work-list.html?project=web&amp;type=initiative&amp;status=todo#state=zero-results" aria-label="0 initiatives to do">0</a></td><td><a href="../work/work-list.html?project=web&amp;type=initiative&amp;status=in-progress" aria-label="1 initiative in progress">1</a></td><td><a href="../work/work-list.html?project=web&amp;type=initiative&amp;status=done#state=zero-results" aria-label="0 initiatives done">0</a></td><td><a href="../work/work-list.html?project=web&amp;type=initiative" aria-label="1 initiative in total">1</a></td></tr>
+                        <tr><th scope="row">Epics</th><td><a href="../work/work-list.html?project=web&amp;type=epic&amp;status=todo" aria-label="1 epic to do">1</a></td><td><a href="../work/work-list.html?project=web&amp;type=epic&amp;status=in-progress" aria-label="1 epic in progress">1</a></td><td><a href="../work/work-list.html?project=web&amp;type=epic&amp;status=done" aria-label="1 epic done">1</a></td><td><a href="../work/work-list.html?project=web&amp;type=epic" aria-label="3 epics in total">3</a></td></tr>
+                        <tr><th scope="row">Stories</th><td><a href="../work/work-list.html?project=web&amp;type=story&amp;status=todo" aria-label="6 stories to do">6</a></td><td><a href="../work/work-list.html?project=web&amp;type=story&amp;status=in-progress" aria-label="3 stories in progress">3</a></td><td><a href="../work/work-list.html?project=web&amp;type=story&amp;status=done" aria-label="7 stories done">7</a></td><td><a href="../work/work-list.html?project=web&amp;type=story" aria-label="16 stories in total">16</a></td></tr>
+                        <tr><th scope="row">Tasks</th><td><a href="../work/work-list.html?project=web&amp;type=task&amp;status=todo" aria-label="12 tasks to do">12</a></td><td><a href="../work/work-list.html?project=web&amp;type=task&amp;status=in-progress" aria-label="5 tasks in progress">5</a></td><td><a href="../work/work-list.html?project=web&amp;type=task&amp;status=done" aria-label="23 tasks done">23</a></td><td><a href="../work/work-list.html?project=web&amp;type=task" aria-label="40 tasks in total">40</a></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </article>
               <article class="mc-card" aria-labelledby="project-hck-title">
                 <div class="mc-split mc-split--even">
                   <div class="mc-stack mc-stack--sm">
@@ -255,8 +285,7 @@
                       <h3 class="mc-card__title" id="project-hck-title"><a class="mc-link-quiet" href="../projects/project-overview.html">Community Hackathon 2026</a></h3>
                       <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
                     </div>
-                    <p class="mc-text-sm mc-muted">Plan and run Toronto's fall build weekend: teams, venues, volunteers, and demo day.</p>
-                    <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Rafael Da Silva</a></p>
+                    <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead-rafael">Rafael Da Silva</a></p>
                     <p class="mc-text-sm">
                         <span data-unless="no-active-sprints">Active sprint: <a href="../scrum/sprint-board.html">Sprint 8</a> · 9 days left</span>
                         <span data-when="no-active-sprints" hidden>No active sprint · Sprint 9 is planned</span>
@@ -277,34 +306,6 @@
                   </table>
                 </div>
               </article>
-              <article class="mc-card" aria-labelledby="project-web-title">
-                <div class="mc-split mc-split--even">
-                  <div class="mc-stack mc-stack--sm">
-                    <div class="mc-cluster mc-cluster--sm">
-                      <h3 class="mc-card__title" id="project-web-title"><a class="mc-link-quiet" href="../projects/project-overview.html#state=kanban">Church Website Refresh</a></h3>
-                      <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
-                    </div>
-                    <p class="mc-text-sm mc-muted">Refresh partner church websites with accessible templates and a simple publishing guide.</p>
-                    <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Lucia Alvarez</a></p>
-                    <p class="mc-text-sm">
-                        Kanban board · <a href="../kanban/kanban-board.html">Open board</a>
-                    </p>
-                    <p class="mc-text-sm mc-muted">60 work items in total</p>
-                  </div>
-                  <table class="mc-counts">
-                    <caption class="mc-visually-hidden">Church Website Refresh work items by type and status</caption>
-                    <thead>
-                      <tr><th scope="col">Type</th><th scope="col">To Do</th><th scope="col">In Progress</th><th scope="col">Done</th><th scope="col">Total</th></tr>
-                    </thead>
-                    <tbody>
-                        <tr><th scope="row">Initiatives</th><td><a href="../work/work-list.html?project=web&amp;type=initiative&amp;status=todo#state=zero-results" aria-label="0 initiatives to do">0</a></td><td><a href="../work/work-list.html?project=web&amp;type=initiative&amp;status=in-progress" aria-label="1 initiative in progress">1</a></td><td><a href="../work/work-list.html?project=web&amp;type=initiative&amp;status=done#state=zero-results" aria-label="0 initiatives done">0</a></td><td><a href="../work/work-list.html?project=web&amp;type=initiative" aria-label="1 initiative in total">1</a></td></tr>
-                        <tr><th scope="row">Epics</th><td><a href="../work/work-list.html?project=web&amp;type=epic&amp;status=todo" aria-label="1 epic to do">1</a></td><td><a href="../work/work-list.html?project=web&amp;type=epic&amp;status=in-progress" aria-label="1 epic in progress">1</a></td><td><a href="../work/work-list.html?project=web&amp;type=epic&amp;status=done" aria-label="1 epic done">1</a></td><td><a href="../work/work-list.html?project=web&amp;type=epic" aria-label="3 epics in total">3</a></td></tr>
-                        <tr><th scope="row">Stories</th><td><a href="../work/work-list.html?project=web&amp;type=story&amp;status=todo" aria-label="6 stories to do">6</a></td><td><a href="../work/work-list.html?project=web&amp;type=story&amp;status=in-progress" aria-label="3 stories in progress">3</a></td><td><a href="../work/work-list.html?project=web&amp;type=story&amp;status=done" aria-label="7 stories done">7</a></td><td><a href="../work/work-list.html?project=web&amp;type=story" aria-label="16 stories in total">16</a></td></tr>
-                        <tr><th scope="row">Tasks</th><td><a href="../work/work-list.html?project=web&amp;type=task&amp;status=todo" aria-label="12 tasks to do">12</a></td><td><a href="../work/work-list.html?project=web&amp;type=task&amp;status=in-progress" aria-label="5 tasks in progress">5</a></td><td><a href="../work/work-list.html?project=web&amp;type=task&amp;status=done" aria-label="23 tasks done">23</a></td><td><a href="../work/work-list.html?project=web&amp;type=task" aria-label="40 tasks in total">40</a></td></tr>
-                    </tbody>
-                  </table>
-                </div>
-              </article>
               <article class="mc-card" aria-labelledby="project-prw-title">
                 <div class="mc-split mc-split--even">
                   <div class="mc-stack mc-stack--sm">
@@ -312,7 +313,6 @@
                       <h3 class="mc-card__title" id="project-prw-title"><a class="mc-link-quiet" href="../projects/project-overview.html#state=kanban-preserved">Prayer Wall App</a></h3>
                       <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
                     </div>
-                    <p class="mc-text-sm mc-muted">A small app for sharing prayer needs within a community, built by volunteers.</p>
                     <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Grace Mensah</a></p>
                     <p class="mc-text-sm">
                         Sprints paused while using Kanban · Sprint 3 is planned
@@ -340,10 +340,33 @@
           <section class="mc-section" aria-labelledby="sprints-heading">
             <div class="mc-section__header">
               <h2 class="mc-section__title" id="sprints-heading">Active sprints</h2>
-              <p class="mc-section__hint" data-unless="first-run-admin first-run-collaborator no-active-sprints">1 active sprint</p>
+              <p class="mc-section__hint" data-unless="first-run-admin first-run-collaborator no-active-sprints loading error">1 active sprint</p>
             </div>
 
-            <article class="mc-card" data-unless="first-run-admin first-run-collaborator no-active-sprints" aria-labelledby="sprint-8-title">
+            <div class="mc-live" role="status" aria-live="polite">
+              <p class="mc-visually-hidden" data-when="loading" hidden>Loading active sprints</p>
+            </div>
+
+            <span class="mc-skeleton mc-skeleton--block" data-when="loading" hidden aria-hidden="true"></span>
+
+            <!-- Active sprints failed to load (section only) -->
+            <div class="mc-alert mc-alert--danger" role="alert" data-when="error" hidden>
+              <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+              <div class="mc-alert__body">
+                <p class="mc-alert__title">We couldn't load active sprints</p>
+                <p class="mc-alert__text">Nothing was changed. Try again to load sprint summaries.</p>
+                <p class="mc-ref">Reference ID <code>c0d8-47e2-1f5a</code>
+                  <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="c0d8-47e2-1f5a"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                </p>
+                <div class="mc-alert__actions">
+                  <button class="mc-button mc-button--sm" type="button" data-goto-state="default">
+                    <span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Retry
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <article class="mc-card" data-unless="first-run-admin first-run-collaborator no-active-sprints loading error" aria-labelledby="sprint-8-title">
               <div class="mc-card__header">
                 <div class="mc-stack mc-stack--xs">
                   <h3 class="mc-card__title" id="sprint-8-title"><a class="mc-link-quiet" href="../scrum/sprint-board.html">Sprint 8</a></h3>
@@ -368,16 +391,14 @@
               </div>
             </article>
 
-            <div class="mc-empty mc-empty--neutral mc-empty--compact" data-when="no-active-sprints" hidden>
+            <div class="mc-empty mc-empty--neutral mc-empty--compact" data-when="no-active-sprints first-run-admin first-run-collaborator" hidden>
               <span class="mc-empty__icon"><span class="mc-icon mc-icon--sprint mc-icon--lg" aria-hidden="true"></span></span>
               <h3 class="mc-empty__title">No active sprints</h3>
-              <p class="mc-empty__text">Sprint 9 in Community Hackathon 2026 is planned for Oct 13 – Oct 23, 2026. Start it from the project's sprints when the team is ready.</p>
+              <p class="mc-empty__text">No Scrum project has a sprint in progress. Start a planned sprint from its project's Sprints tab.</p>
               <div class="mc-empty__actions">
-                <a class="mc-button" href="../scrum/sprints.html">View sprints</a>
+                <a class="mc-button" href="../projects/project-list.html">View projects</a>
               </div>
             </div>
-
-            <p class="mc-muted mc-text-sm" data-when="first-run-admin first-run-collaborator" hidden>No active sprints. Sprints appear here once a Scrum project starts one.</p>
           </section>
         </div>
       </div>

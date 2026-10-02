@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Plan or edit sprint · Mission Control mock</title>
-  <meta name="description" content="Sprint details dialog for planning a new sprint or editing a planned one: validation, saving, failure, and edit conflict.">
+  <meta name="description" content="Sprint details dialog for planning a new sprint or editing a planned one: validation, saving, failure, sprints paused in Kanban mode, edit loading, edit conflict, and the comparison after an unconfirmed save.">
   <meta name="mock-area" content="Scrum sprints">
-  <meta name="mock-requirements" content="L2-022.1, L2-022.2, L2-022.4, L2-031, L2-033.2, L2-034.1, L2-041.3, L2-043.4">
+  <meta name="mock-requirements" content="L2-022.1, L2-022.2, L2-022.4, L2-027.3, L2-031, L2-033.2, L2-034.1, L2-041.3, L2-043.4">
   <link rel="stylesheet" href="../assets/tokens.css">
   <link rel="stylesheet" href="../assets/mocks.css">
   <script src="../assets/mocks.js" defer></script>
@@ -23,9 +23,13 @@
           <option value="validation">Validation errors</option>
           <option value="saving">Saving</option>
           <option value="failed">Save failed</option>
+          <option value="paused">Sprints paused (409)</option>
+          <option value="edit-loading">Edit · loading</option>
+          <option value="edit-load-failed">Edit · couldn't load</option>
           <option value="edit">Edit planned sprint</option>
           <option value="conflict">Edit conflict</option>
           <option value="conflict-reloaded">Conflict · latest loaded</option>
+          <option value="unconfirmed-changed">Save unconfirmed · latest shown</option>
         </select>
       </label>
       <a href="../index.html">All mocks</a>
@@ -34,12 +38,16 @@
 
   <div class="mock-notes">
     <p class="mock-note" data-when="create">Opens from Plan sprint. The next sprint number is suggested. Focus starts on Name; Escape or Cancel closes. Below 576px the dialog fills the screen with the actions pinned to the bottom.</p>
-    <p class="mock-note" data-when="validation" hidden>Focus moves to the error summary. Dates are Toronto calendar dates and the end can't be before the start. Valid input is kept.</p>
-    <p class="mock-note" data-when="saving" hidden>The save button shows progress and ignores repeat clicks. After saving, sprint planning opens so stories can be chosen.</p>
-    <p class="mock-note" data-when="failed" hidden>Nothing was saved and every value is kept. Save retries.</p>
+    <p class="mock-note" data-when="validation" hidden>With two problems, focus moves to the error summary, whose links jump to each field. Dates are Toronto calendar dates and the end can't be before the start. Valid input is kept. The server's 400 is shown the same way, without Retry or a reference ID: one field error moves focus to that field, which reads its error, and several move focus to this summary.</p>
+    <p class="mock-note" data-when="saving" hidden>The save button shows progress and ignores repeat clicks. After saving, sprint planning opens so stories can be chosen. A saved edit instead returns to the page that opened it, which reads the sprint again and shows the "Changes saved" toast naming the sprint.</p>
+    <p class="mock-note" data-when="failed" hidden>Nothing was saved and every value is kept. This covers a server error (500) and a busy project (503 with Retry-After). Save sends again only when pressed; the reference ID matches the server's diagnostic record. Screen readers hear the alert, and focus stays on Save. A save that gets no response reuses this alert with "We couldn't confirm whether Sprint 10 was saved." and no reference ID, never saying that nothing was saved. Every value stays, and the page behind reads its sprints again at once, so a sprint that was saved shows up there. An edit reads the sprint again before Save is offered, and shows the comparison under neutral copy if the sprint has a newer version (Save unconfirmed · latest shown). A new sprint can't be saved again from here, since it may exist already: Save stays unavailable and Cancel closes the dialog. If the account's access changed (an unexpected 403), nothing is saved, every value stays, and the page shows the "Your access changed" toast instead, without Retry.</p>
+    <p class="mock-note" data-when="paused" hidden>Sprint 3's Edit was opened while Prayer Wall App used Scrum; an administrator then switched the project to Kanban, so Save changes is answered with 409 and nothing is saved. The form keeps every value, Save stays unavailable, and the alert explains the pause; there's nothing to retry. Cancel or Close asks before discarding the edits, and once the dialog closes the Sprints tab reloads in Kanban mode (the planning page reads its plan again). Plan sprint gets the same answer in a project that switched to Kanban. The same presentation covers an edit answered with 409 because the sprint started or closed meanwhile: the alert then names its state, for example "Sprint 9 has already started, so its details can't change here. Nothing was saved.", and once the dialog closes the page that opened it reads the sprint again. The explanation sits in the dialog's alert region, so it is announced and becomes the dialog's description. Save is unavailable, so focus moves to the alert.</p>
+    <p class="mock-note" data-when="edit-loading" hidden>Opens from a planned sprint's Edit action. The form reads the saved sprint first: the fields and Save stay disabled until the record arrives, so nothing can be typed over values that haven't loaded. Cancel closes without sending anything. Screen readers hear "Loading sprint…"; focus moves to Name once the values arrive. A read that answers 404 closes the dialog, and the page that opened it reloads and shows its own state, with no reference ID or Try again.</p>
+    <p class="mock-note" data-when="edit-load-failed" hidden>The read failed, so the fields and Save stay disabled. Nothing was changed. Try again repeats the read and fills the form once the saved values arrive. A server error (500) shows the reference ID, which matches the server's diagnostic record; a read that gets no response shows the same alert without a reference ID and asks you to check your connection. The alert is announced and focus moves to Try again; Cancel closes without sending anything.</p>
     <p class="mock-note" data-when="edit" hidden>Only planned sprints can be edited. Stories are changed from Plan stories.</p>
-    <p class="mock-note" data-when="conflict" hidden>Sprint 9 was saved by someone else after this form opened, so the API returns 409 and nothing is saved. The form keeps your edits and reads the latest version once to show them side by side; nothing is resubmitted automatically. Focus moves to the message.</p>
-    <p class="mock-note" data-when="conflict-reloaded" hidden>Reload latest puts the latest saved values and version in the form. The comparison stays visible so your edits can be re-applied by hand; nothing is saved until Save changes. Cancel still asks before discarding your unsaved edits.</p>
+    <p class="mock-note" data-when="conflict" hidden>Sprint 9 was saved again after this form opened, so the API returns 409 and nothing is saved. The form keeps your edits and reads the latest version once to show them side by side; nothing is resubmitted automatically. The message names no person or time. The alert is announced and the dialog's description now points to the conflict explanation; Save is replaced by "Reload latest", so focus moves to the alert, staying inside the form. "Reload latest" goes to the next state.</p>
+    <p class="mock-note" data-when="unconfirmed-changed" hidden>Save changes got no response, so the form read Sprint 9 again and found a newer version than the one it opened. That version may be this save or someone else's, so the alert says only what it shows, never that your edits weren't saved, and names no person or time. Your entries stay in the form beside the latest saved values; nothing is resubmitted. The page behind already read its sprints again when the save went unconfirmed. The alert is announced and the dialog's description now points to it; Save is replaced by "Reload latest", which goes to the Conflict · latest loaded state, so focus moves to the alert.</p>
+    <p class="mock-note" data-when="conflict-reloaded" hidden>Reload latest puts the latest saved values and version in the form. The comparison stays visible so your edits can be re-applied by hand; nothing is saved until Save changes. Focus moves to Name and the status is announced politely. Cancel still asks before discarding your unsaved edits.</p>
   </div>
 
   <div class="mock-screen">
@@ -68,17 +76,20 @@
           <div class="mc-page">
             <div class="mc-page-header">
               <div class="mc-page-header__main">
-                <p class="mc-h1">Community Hackathon 2026</p>
+                <p class="mc-h1"><span data-unless="paused">Community Hackathon 2026</span><span data-when="paused" hidden>Prayer Wall App</span></p>
                 <div class="mc-page-header__meta"><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span></div>
               </div>
             </div>
             <ul class="mc-tabs"><li><span class="mc-tabs__link"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</span></li><li><span class="mc-tabs__link"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</span></li><li><span class="mc-tabs__link"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</span></li><li><span class="mc-tabs__link"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</span></li><li><span class="mc-tabs__link" aria-current="page"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</span></li></ul>
             <div class="mc-stack mc-stack--lg">
-              <div class="mc-card">
+              <div class="mc-card" data-when="paused" hidden>
+                <div class="mc-card__header"><div class="mc-stack mc-stack--xs"><p class="mc-card__title">Sprint 3</p><p class="mc-text-sm mc-muted">Jun 1 – Jun 12, 2026 · 3 stories</p></div><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--calendar" aria-hidden="true"></span>Planned</span></div>
+              </div>
+              <div class="mc-card" data-unless="paused">
                 <div class="mc-card__header"><div class="mc-stack mc-stack--xs"><p class="mc-card__title">Sprint 8</p><p class="mc-text-sm mc-muted">Sep 28 – Oct 9, 2026 · 9 days left</p></div><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--play" aria-hidden="true"></span>Active</span></div>
                 <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-33"></span></span><span>2 of 6 stories done</span></div>
               </div>
-              <div class="mc-card">
+              <div class="mc-card" data-unless="paused">
                 <div class="mc-card__header"><div class="mc-stack mc-stack--xs"><p class="mc-card__title">Sprint 9</p><p class="mc-text-sm mc-muted">Oct 13 – Oct 23, 2026 · 3 stories</p></div><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--calendar" aria-hidden="true"></span>Planned</span></div>
               </div>
             </div>
@@ -88,16 +99,21 @@
     </div>
 
     <div class="mc-backdrop">
-      <section class="mc-dialog mc-dialog--sheet" role="dialog" aria-modal="true" aria-labelledby="sprint-title" aria-describedby="sprint-note">
+      <section class="mc-dialog mc-dialog--sheet" role="dialog" aria-modal="true" aria-labelledby="sprint-title" aria-describedby="sprint-note"
+        data-attr-paused="aria-describedby=sprint-paused-title sprint-paused-text"
+        data-attr-conflict="aria-describedby=sprint-conflict-title sprint-conflict-text"
+        data-attr-unconfirmed-changed="aria-describedby=sprint-unconfirmed-title sprint-unconfirmed-text">
         <header class="mc-dialog__header">
           <div class="mc-dialog__heading">
             <h2 class="mc-dialog__title" id="sprint-title">
-              <span data-unless="edit conflict conflict-reloaded">Plan sprint</span>
-              <span data-when="edit conflict conflict-reloaded" hidden>Edit Sprint 9</span>
+              <span data-unless="edit-loading edit-load-failed edit conflict conflict-reloaded unconfirmed-changed paused">Plan sprint</span>
+              <span data-when="edit-loading edit-load-failed" hidden>Edit sprint</span>
+              <span data-when="edit conflict conflict-reloaded unconfirmed-changed" hidden>Edit Sprint 9</span>
+              <span data-when="paused" hidden>Edit Sprint 3</span>
             </h2>
-            <p class="mc-dialog__subtitle" id="sprint-note">Community Hackathon 2026 · All fields are required.</p>
+            <p class="mc-dialog__subtitle" id="sprint-note"><span data-unless="paused">Community Hackathon 2026</span><span data-when="paused" hidden>Prayer Wall App</span> · All fields are required.</p>
           </div>
-          <button class="mc-button mc-button--quiet mc-button--icon" type="button" aria-label="Close" data-nav="sprints.html" data-attr-validation="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-conflict-reloaded="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-saving="disabled">
+          <button class="mc-button mc-button--quiet mc-button--icon" type="button" aria-label="Close" data-nav="sprints.html" data-attr-validation="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-conflict-reloaded="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-unconfirmed-changed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-paused="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-saving="disabled">
             <span class="mc-icon mc-icon--close" aria-hidden="true"></span>
           </button>
         </header>
@@ -112,6 +128,19 @@
                   <li><a href="#sprint-end">Choose an end date on or after the start date</a></li>
                 </ul>
               </div>
+              <div class="mc-alert mc-alert--danger" data-when="edit-load-failed" hidden>
+                <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">We couldn't load this sprint</p>
+                  <p class="mc-alert__text">Nothing was changed. Try again.</p>
+                  <p class="mc-ref">Reference ID <code>b6d1-08e3-52fa</code>
+                    <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="b6d1-08e3-52fa"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                  </p>
+                  <div class="mc-alert__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-goto-state="edit"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again</button>
+                  </div>
+                </div>
+              </div>
               <div class="mc-alert mc-alert--danger" data-when="failed" hidden>
                 <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
                 <div class="mc-alert__body">
@@ -122,13 +151,31 @@
           </p>
                 </div>
               </div>
-              <div class="mc-alert mc-alert--warning" data-when="conflict" hidden>
-                <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
+              <div class="mc-alert mc-alert--warning" tabindex="-1" data-when="paused" hidden>
+                <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
                 <div class="mc-alert__body">
-                  <p class="mc-alert__title">This sprint changed after you opened it.</p>
-                  <p class="mc-alert__text">Your edits haven't been saved. Compare them with the latest saved version, then reload it and re-apply what you need.</p>
+                  <p class="mc-alert__title" id="sprint-paused-title">Sprints are paused</p>
+                  <p class="mc-alert__text" id="sprint-paused-text">Prayer Wall App now uses Kanban, so Sprint 3 can't be changed. Nothing was saved, and your edits are still here. An administrator can switch the project back to Scrum.</p>
                 </div>
               </div>
+              <div class="mc-alert mc-alert--warning" tabindex="-1" data-when="conflict" hidden>
+                <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title" id="sprint-conflict-title">This sprint changed after you opened it.</p>
+                  <p class="mc-alert__text" id="sprint-conflict-text">Your edits haven't been saved. Compare them with the latest saved version, then reload it and re-apply what you need.</p>
+                </div>
+              </div>
+              <div class="mc-alert mc-alert--warning" tabindex="-1" data-when="unconfirmed-changed" hidden>
+                <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title" id="sprint-unconfirmed-title">The latest saved version is shown beside your entries</p>
+                  <p class="mc-alert__text" id="sprint-unconfirmed-text">We couldn't confirm your save, and Sprint 9 now has a newer saved version than the one you opened. Compare them, then reload the latest version and re-apply what you need.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="mc-live" role="status" aria-live="polite">
+              <div class="mc-loading-inline" data-when="edit-loading" hidden><span class="mc-spinner" aria-hidden="true"></span>Loading sprint…</div>
               <div class="mc-alert" data-when="conflict-reloaded" hidden>
                 <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
                 <div class="mc-alert__body">
@@ -137,7 +184,7 @@
               </div>
             </div>
 
-            <div class="mc-stack mc-stack--sm" data-when="conflict conflict-reloaded" hidden>
+            <div class="mc-stack mc-stack--sm" data-when="conflict conflict-reloaded unconfirmed-changed" hidden>
               <h3 class="mc-h4" data-when="conflict-reloaded" hidden>Your unsaved edits to re-apply</h3>
               <div class="mc-table-wrap">
               <table class="mc-table mc-table--stack">
@@ -158,9 +205,13 @@
                 <label class="mc-label" for="sprint-name">Name</label>
                 <input class="mc-input" id="sprint-name" name="name" type="text" maxlength="200" required value="Sprint 10"
                   data-attr-saving="readonly"
+                  data-attr-edit-loading="value=|disabled"
+                  data-attr-edit-load-failed="value=|disabled"
                   data-attr-edit="value=Sprint 9"
                   data-attr-conflict="value=Sprint 9"
-                  data-attr-conflict-reloaded="value=Sprint 9">
+                  data-attr-conflict-reloaded="value=Sprint 9"
+                  data-attr-unconfirmed-changed="value=Sprint 9"
+                  data-attr-paused="value=Sprint 3">
               </div>
 
               <div class="mc-field mc-field--full">
@@ -170,12 +221,16 @@
                   data-attr-validation="aria-invalid=true|aria-describedby=sprint-goal-hint sprint-goal-error sprint-goal-count"
                   data-attr-saving="value=Venue walkthrough and volunteer briefing done|readonly"
                   data-attr-failed="value=Venue walkthrough and volunteer briefing done"
+                  data-attr-edit-loading="disabled"
+                  data-attr-edit-load-failed="disabled"
                   data-attr-edit="value=Demo day judging flow ready"
                   data-attr-conflict="value=Demo day judging flow ready and tested"
-                  data-attr-conflict-reloaded="value=Demo day judging flow ready"></textarea>
+                  data-attr-conflict-reloaded="value=Demo day judging flow ready"
+                  data-attr-unconfirmed-changed="value=Demo day judging flow ready and tested"
+                  data-attr-paused="value=Moderation tools for shared requests and appeals"></textarea>
                 <div class="mc-field__footer">
                   <p class="mc-field-error" id="sprint-goal-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Enter a sprint goal</p>
-                  <span class="mc-counter" id="sprint-goal-count"><span data-unless="saving failed edit conflict conflict-reloaded">0 / 2,000</span><span data-when="saving failed" hidden>45 / 2,000</span><span data-when="edit conflict-reloaded" hidden>27 / 2,000</span><span data-when="conflict" hidden>38 / 2,000</span></span>
+                  <span class="mc-counter" id="sprint-goal-count"><span data-unless="saving failed edit conflict conflict-reloaded unconfirmed-changed paused">0 / 2,000</span><span data-when="saving failed" hidden>45 / 2,000</span><span data-when="edit conflict-reloaded" hidden>27 / 2,000</span><span data-when="conflict unconfirmed-changed" hidden>38 / 2,000</span><span data-when="paused" hidden>48 / 2,000</span></span>
                 </div>
               </div>
 
@@ -187,9 +242,13 @@
                   data-attr-validation="value=2026-10-26"
                   data-attr-saving="value=2026-10-26|readonly"
                   data-attr-failed="value=2026-10-26"
+                  data-attr-edit-loading="disabled"
+                  data-attr-edit-load-failed="disabled"
                   data-attr-edit="value=2026-10-13"
                   data-attr-conflict="value=2026-10-13"
-                  data-attr-conflict-reloaded="value=2026-10-13">
+                  data-attr-conflict-reloaded="value=2026-10-13"
+                  data-attr-unconfirmed-changed="value=2026-10-13"
+                  data-attr-paused="value=2026-06-01">
               </div>
 
               <div class="mc-field">
@@ -198,28 +257,35 @@
                   data-attr-validation="value=2026-10-19|aria-invalid=true|aria-describedby=sprint-dates-hint sprint-end-error"
                   data-attr-saving="value=2026-11-06|readonly"
                   data-attr-failed="value=2026-11-06"
+                  data-attr-edit-loading="disabled"
+                  data-attr-edit-load-failed="disabled"
                   data-attr-edit="value=2026-10-23"
                   data-attr-conflict="value=2026-10-23"
-                  data-attr-conflict-reloaded="value=2026-10-27">
+                  data-attr-conflict-reloaded="value=2026-10-27"
+                  data-attr-unconfirmed-changed="value=2026-10-23"
+                  data-attr-paused="value=2026-06-12">
                 <p class="mc-field-error" id="sprint-end-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Choose an end date on or after Oct 26, 2026</p>
               </div>
 
-              <p class="mc-hint mc-field--full" data-unless="edit conflict conflict-reloaded">Next, you'll choose stories from the backlog.</p>
-              <p class="mc-hint mc-field--full" data-when="edit conflict conflict-reloaded" hidden>To change this sprint's stories, use Plan stories.</p>
+              <p class="mc-hint mc-field--full" data-unless="edit-loading edit-load-failed edit conflict conflict-reloaded unconfirmed-changed paused">Next, you'll choose stories from the backlog.</p>
+              <p class="mc-hint mc-field--full" data-when="edit-loading edit-load-failed edit conflict conflict-reloaded unconfirmed-changed paused" hidden>To change this sprint's stories, use Plan stories.</p>
             </div>
           </div>
 
           <footer class="mc-dialog__footer">
-            <button class="mc-button" type="button" data-nav="sprints.html" data-attr-validation="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-conflict-reloaded="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-saving="disabled">Cancel</button>
-            <button class="mc-button mc-button--primary" type="button" data-when="conflict" hidden data-goto-state="conflict-reloaded">
+            <button class="mc-button" type="button" data-nav="sprints.html" data-attr-validation="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-conflict-reloaded="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-unconfirmed-changed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-paused="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-saving="disabled">Cancel</button>
+            <button class="mc-button mc-button--primary" type="button" data-when="conflict unconfirmed-changed" hidden data-goto-state="conflict-reloaded">
               <span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Reload latest
             </button>
-            <button class="mc-button mc-button--primary" type="submit" data-unless="conflict"
-              data-attr-saving="aria-busy=true|aria-disabled=true">
+            <button class="mc-button mc-button--primary" type="submit" data-unless="conflict unconfirmed-changed"
+              data-attr-saving="aria-busy=true|aria-disabled=true"
+              data-attr-edit-loading="disabled"
+              data-attr-edit-load-failed="disabled"
+              data-attr-paused="disabled">
               <span class="mc-spinner" aria-hidden="true" data-when="saving" hidden></span>
               <span data-when="saving" hidden>Saving…</span>
-              <span data-unless="saving edit conflict-reloaded">Save and choose stories</span>
-              <span data-when="edit conflict-reloaded" hidden>Save changes</span>
+              <span data-unless="saving edit-loading edit-load-failed edit conflict-reloaded paused">Save and choose stories</span>
+              <span data-when="edit-loading edit-load-failed edit conflict-reloaded paused" hidden>Save changes</span>
             </button>
           </footer>
         </form>

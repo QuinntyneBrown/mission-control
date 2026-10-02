@@ -4,6 +4,7 @@ skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
 skinparam ArrowColor #344054
+skinparam maxMessageSize 300
 skinparam rectangle {
   BorderColor #344054
   FontColor #101828
@@ -16,7 +17,7 @@ skinparam package {
 title Behavior - Delete empty workspace
 actor "Administrator" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "ProjectOverviewPage\nProjectDeleteDialog / WorkspaceView" as page
+  participant "ProjectLayoutPage / ProjectHeaderView\nProjectDeleteDialog / WorkspaceDeleteForm" as page
   participant "IWorkspaceService / WorkspaceService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,65 +32,74 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Project actions > Delete project
-page --> actor : Open ProjectDeleteDialog naming the project; focus Cancel
+actor -> page : Project actions > Delete project on any project tab (the header's actionRequested output; shown only with workspaces.manage)
+page --> actor : The layout's openDialog(Delete) opens ProjectDeleteDialog naming the project, always as a confirmation; WorkspaceDeleteForm receives the header's resolved workspace as input; focus Cancel
 alt Cancel or Escape
   page --> actor : Close dialog; no request; focus returns to Project actions
 else Confirm
-  page -> page : Disable repeat confirmation; show deleting progress
-  page -> client : Build typed DeleteWorkspaceCommand (workspace ID only; no version)
+  page -> page : Disable repeat confirmation; show deleting progress; draftChange reports pending
+  page -> client : delete(DeleteWorkspaceCommand: workspace ID only; no version) returns a promise
   client -> access : DELETE /api/workspaces/{id}
   access -> access : L2-002 validate signature, issuer, audience, subject, expiry
   access -> db : Read current status, role and credential version
   db --> access : Current account access
   alt Missing, invalid, or expired JWT; inactive account
     access --> client : 401; audit denial without payloads
-    client --> page : Clear in-memory session; require login; nothing deleted
+    client -> client : sessionInterceptor: a 401 for the current session generation calls SessionService.end(Unauthorized) once
+    client --> page : The promise rejects with the 401; nothing deleted; navigation to sign-in
   else Collaborator (profile P: no workspace deletion)
     access --> client : 403; audit denial without payloads
-    client --> page : Close dialog; explain that only administrators delete projects; nothing deleted
+    client -> client : sessionInterceptor calls SessionService.refreshCapabilities() (one in flight)
+    client --> page : The promise rejects with the 403; keep the dialog open; explain that only administrators can delete projects; Delete project unavailable, so focus moves to the alert; no reference ID; nothing deleted; controls follow currentSession
   else Administrator
     access -> ctrl : Authorized request
     ctrl -> validation : Send DeleteWorkspaceCommand through MediatR 12.5.0
     validation -> handler : Handle DeleteWorkspaceCommand
-    handler -> db : Begin transaction; lock workspace row
-    db --> handler : Workspace row or none
-    alt Workspace missing (already deleted)
+    handler -> db : BeginWorkspaceTransactionAsync(workspaceId): take the workspace lock first
+    alt Lock wait times out
+      db --> handler : Lock not acquired; nothing read or changed
+      handler --> ctrl : 503 with Retry-After; no partial change
+      ctrl --> client : ServiceUnavailable ProblemDetails with correlation ID
+      client --> page : The promise rejects; keep dialog open in failed state with the reference ID; nothing deleted; no automatic retry; Delete project keeps focus and retries on request
+    else Lock acquired; workspace missing (already deleted)
       handler --> ctrl : 404; nothing deleted
       ctrl --> client : NotFound ProblemDetails
-      client --> page : Close dialog; reload Projects without it; announce it was already deleted
-    else Workspace found
-      handler -> db : Count every work item by type and every sprint (planned, active, closed)
-      db --> handler : Content counts and newest sprints
-      handler -> entity : L2-014 checkDeletion(work items, sprints)
+      client --> page : The promise rejects; WorkspaceDeleteForm emits alreadyDeleted; the dialog closes with AlreadyDeleted; the layout navigates to /projects, which reads the list without it, and shows an info toast that the named project was already deleted (TOAST_SERVICE)
+    else Lock acquired; workspace found
+      handler -> db : LoadWorkspaceContentCountsAsync: work items by type and sprints by status (planned, active, closed)
+      db --> handler : Counts only
+      handler -> entity : L2-014 checkDeletion(work item total, sprint total)
       alt Work items or sprints exist
         entity --> handler : Rejected: workspace has content
-        handler --> ctrl : 409 with work-item counts by type and sprints; nothing deleted or cascaded
+        handler --> ctrl : 409 WorkspaceInUseProblem: totals, per-type and per-state counts, no lists; nothing deleted or cascaded
         ctrl --> client : Conflict ProblemDetails
-        client --> page : Switch to blocked explanation (counts and sprints); Close only; no retry
+        client --> page : The promise rejects; switch to blocked explanation with the counts; focus Close; announce the explanation as an alert; Close only; no retry
       else Empty workspace
         entity --> handler : Deletion permitted
-        handler -> db : L2-039 / L2-040 delete workspace row with success audit; one transaction
+        handler -> db : L2-039 / L2-040 SaveChangesAsync: delete workspace row with success audit; one transaction; lock released
         alt Restrictive child FK rejects a racing work item or sprint
           db --> handler : Roll back delete and audit; recount content
-          handler --> ctrl : Same 409 with counts; nothing deleted
+          handler --> ctrl : Same 409 with counts only; nothing deleted
           ctrl --> client : Conflict ProblemDetails
-          client --> page : Switch to blocked explanation; Close only; no retry
+          client --> page : The promise rejects; switch to blocked explanation; focus Close; announce it as an alert; Close only; no retry
         else Commit fails unexpectedly
           db --> handler : Roll back delete and audit
           handler --> ctrl : Generic 500 with correlation ID
           ctrl --> client : Failure; nothing deleted
-          client --> page : Keep dialog open; show reference ID; Delete project retries
+          client --> page : The promise rejects; keep dialog open in the failed state; announce the alert with the reference ID; Delete project keeps focus and retries only when pressed
         else Commit succeeds
           db --> handler : Workspace removed
           handler --> ctrl : 204 No Content
           ctrl --> client : Success response
-          client --> page : Close dialog; open Projects without the workspace
-          page --> actor : "Project deleted" toast; focus the Projects heading
+          client --> page : The promise resolves; WorkspaceDeleteForm emits deleted; the dialog closes with Deleted; the layout navigates to /projects, which reads the list without the workspace
+          page --> actor : The layout shows the "Project deleted" toast naming the project through TOAST_SERVICE; focus the Projects heading
         end
       end
     end
   end
+end
+opt No response to the deletion (timeout or network failure)
+  client --> page : The deletion may have committed: the dialog stays open; the failed alert reads "We couldn't confirm whether Youth Coding Night was deleted" without a reference ID; WorkspaceDeleteForm emits unconfirmed, which the dialog relays, so the layout calls refresh() and the header and the active tab reread at once; Delete project resends only when pressed, and a deletion that did commit makes it return 404 and close the dialog with AlreadyDeleted; the layout received the relayed unconfirmed, so its info toast reads the neutral "Youth Coding Night has been deleted." instead of saying it was already deleted
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).

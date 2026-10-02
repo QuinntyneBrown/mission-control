@@ -20,27 +20,127 @@ skinparam class {
   BackgroundColor #F9FAFB
 }
 class LeadDirectoryPage {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
+  +canManageLeads: Signal<boolean>
+  +draft: Signal<DraftState>
+  -refresh: WritableSignal<number>
+  +openForm(leadId?: Guid): void
+}
+note right of LeadDirectoryPage
+  LeadDetailPage opens the form for Edit the
+  same way. Add lead and Edit appear only when
+  canManageLeads (leads.manage) is true; the views
+  emit createRequested and editRequested.
+  LeadFormOutcome reactions:
+  Saved -> refresh + 1 and a toast naming the
+  lead (Lead added / Changes saved);
+  NotFound -> the directory: refresh + 1,
+  the detail page: navigate to /leads;
+  no result -> nothing. The dialog's
+  unconfirmed (still open) -> refresh + 1.
+  Both pages implement FormDraft by delegating
+  to the open dialog (clean when none is open);
+  UnsavedChangesGuard is their routes'
+  canDeactivate.
+end note
+interface IToastService {
+  +show(toast: Toast): void
+}
+interface FormDraft {
+  +draft: Signal<DraftState>
+}
+note right of FormDraft
+  Defined in Navigate with context and
+  preserve form input.
+end note
+class DraftState {
+  +dirty: bool
+  +pending: bool
+  +unconfirmed: bool
+  +summary: string?
 }
 class LeadFormDialog {
-  +comparison: Signal<LeadComparison?>
+  +leadId: InputSignal<Guid?>
+  +draft: Signal<DraftState>
+  +unconfirmed: OutputEmitterRef<void>
+  +close(result: LeadFormOutcome?): void
+}
+note right of LeadFormDialog
+  Implements FormDraft from the latest
+  DraftState. Cancel, Close, or Escape on a
+  dirty draft opens UnsavedChangesDialog.
+  Relays the form's unconfirmed and stays open.
+end note
+class LeadFormOutcome {
+  +kind: Saved | NotFound
+  +saved: SavedLeadResult?
+}
+note right of LeadFormOutcome
+  Saved(result) on saved, NotFound on
+  notFound; no result on Cancel, Close,
+  or Escape, or once a navigation completes
+  that deactivates its hosting page, such
+  as View existing lead (dismissed); from
+  lead details, the :id change closes it
+  too. A query-only Back or Forward on the
+  directory leaves it open.
+end note
+class LeadForm {
+  +leadId: InputSignal<Guid?>
+  +saved: OutputEmitterRef<SavedLeadResult>
+  +notFound: OutputEmitterRef<void>
+  +unconfirmed: OutputEmitterRef<void>
+  +draftChange: OutputEmitterRef<DraftState>
+  -lead: ResourceRef<LeadDetailResult>
+  -draft: WritableSignal<LeadDetails>
+  -comparison: Signal<LeadComparison?>
+  -submit: WritableSignal<FeatureState>
+  +save(): Promise<void>
   +reloadLatest(): void
 }
-class LeadView {
-  +state: Signal<FeatureState>
-  +submit(): void
+note right of LeadForm
+  lead = leadResource(() => leadId() ? { id } : undefined).
+  The draft starts from the first resolved value; the
+  fields stay disabled until then, and a failed read
+  keeps them disabled with Try again = lead.reload().
+  A stale 409 calls lead.reload() once; comparison
+  pairs the attempted draft with the reloaded value.
+  A read 404 (edit-not-found) or a save 404 (deleted)
+  disables the fields and Save; Back to leads emits
+  notFound. A 403 keeps the draft; Save unavailable.
+  Focus: forbidden -> its alert; 404 -> Back to leads;
+  stale 409 -> Reload latest (replaces Save);
+  duplicate -> Email, which reads its error.
+  No response: keep the draft; the failed alert says
+  it couldn't confirm the save (no reference ID); an
+  edit calls lead.reload() once; emit unconfirmed.
+  After that, a stale 409 is headed "The latest saved
+  version is shown beside your entries", a 404
+  drops "Your edits weren't saved", and a 403 drops
+  "so nothing was saved" (neutral copy).
+end note
+interface "ResourceRef<T>" as ResourceRef {
+  +value: Signal<T | undefined>
+  +status: Signal<loading | resolved | error>
+  +error: Signal<unknown>
+  +reload(): void
 }
 interface ILeadService {
-  +create(request: CreateLeadCommand): Promise<FeatureResult>
-  +edit(request: UpdateLeadCommand): Promise<FeatureResult>
-  +read(id: Guid): Promise<LeadDetailResult>
+  +leadResource(query: () => GetLeadQuery | undefined): ResourceRef<LeadDetailResult>
+  +create(command: CreateLeadCommand): Promise<SavedLeadResult>
+  +edit(command: UpdateLeadCommand): Promise<SavedLeadResult>
 }
 class LeadService {
   -http: HttpClient
 }
 class LeadsController {
   -sender: ISender
+}
+class LeadDetails {
+  +firstName: string
+  +lastName: string
+  +email: string
+  +phone: string?
+  +category: LeadCategory
 }
 class LeadContact {
   +id: Guid
@@ -54,17 +154,30 @@ class LeadContact {
   +edit(details: LeadDetails): void
 }
 interface IMissionControlDataSession {
-  +query(specification): Task<ReadResult>
-  +commit(expectedVersion: long): Task<void>
+  +LoadLeadAsync(id: Guid, ct: CancellationToken): Task<LeadContact?>
+  +LoadLeadByEmailAndCategoryAsync(normalizedEmail: string, category: LeadCategory, ct: CancellationToken): Task<LeadContact?>
+  +AddLead(lead: LeadContact): void
+  +AddAuditEvent(auditEvent: AuditEvent): void
+  +SaveChangesAsync(ct: CancellationToken): Task
 }
-class MissionControlDataSession {
-  -connection: DbConnection
-}
-LeadDirectoryPage --> LeadView : composes
+note bottom of IMissionControlDataSession
+  Scoped view of the shared port; only the members this
+  slice uses. SaveChangesAsync checks the tracked expected
+  version and raises ConcurrencyConflictException (409).
+  Contact writes take no workspace lock.
+end note
+class MissionControlDataSession
 LeadDirectoryPage ..> LeadFormDialog : opens for add / edit
-LeadFormDialog --> LeadView : composes
-LeadView ..> ILeadService : inject token
+LeadDirectoryPage ..> IToastService : inject TOAST_SERVICE; saved toast
+LeadFormDialog ..> LeadFormOutcome : close result
+LeadFormOutcome ..> SavedLeadResult : Saved carries
+FormDraft <|.. LeadDirectoryPage
+FormDraft <|.. LeadFormDialog
+LeadFormDialog --> LeadForm : hosts; inputs and outputs only
+LeadForm ..> DraftState : emits
+LeadForm ..> ILeadService : inject LEAD_SERVICE
 ILeadService <|.. LeadService
+ILeadService ..> ResourceRef : returns per consumer
 IMissionControlDataSession <|.. MissionControlDataSession
 class CreateLeadCommand {
   +firstName: string
@@ -74,24 +187,33 @@ class CreateLeadCommand {
   +category: LeadCategory
 }
 class CreateLeadCommandHandler {
-  +handle(request: CreateLeadCommand): Task<FeatureResult>
+  +handle(request: CreateLeadCommand, ct: CancellationToken): Task<SavedLeadResult>
+}
+class SavedLeadResult {
+  +id: Guid
+  +version: long
+  +firstName: string
+  +lastName: string
+  +category: LeadCategory
 }
 LeadsController ..> CreateLeadCommand : dispatches
 CreateLeadCommandHandler ..> CreateLeadCommand : handles
-CreateLeadCommandHandler --> LeadContact : loads / applies
-CreateLeadCommandHandler ..> IMissionControlDataSession : uses
+CreateLeadCommandHandler --> LeadContact : creates
+CreateLeadCommandHandler ..> IMissionControlDataSession : loads pair; adds lead and audit; saves
+CreateLeadCommandHandler ..> SavedLeadResult : returns
 class UpdateLeadCommand {
   +id: Guid
   +details: LeadDetails
   +expectedVersion: long
 }
 class UpdateLeadCommandHandler {
-  +handle(request: UpdateLeadCommand): Task<FeatureResult>
+  +handle(request: UpdateLeadCommand, ct: CancellationToken): Task<SavedLeadResult>
 }
 LeadsController ..> UpdateLeadCommand : dispatches
 UpdateLeadCommandHandler ..> UpdateLeadCommand : handles
-UpdateLeadCommandHandler --> LeadContact : loads / applies
-UpdateLeadCommandHandler ..> IMissionControlDataSession : uses
+UpdateLeadCommandHandler --> LeadContact : loads / edits
+UpdateLeadCommandHandler ..> IMissionControlDataSession : loads; loads pair; adds audit; saves
+UpdateLeadCommandHandler ..> SavedLeadResult : returns
 class DuplicateLeadProblem {
   +status: 409
   +existingLeadId: Guid
@@ -110,7 +232,7 @@ class LeadComparison {
 CreateLeadCommandHandler ..> DuplicateLeadProblem : duplicate pair
 UpdateLeadCommandHandler ..> DuplicateLeadProblem : duplicate pair
 UpdateLeadCommandHandler ..> StaleLeadProblem : version mismatch
-LeadView ..> LeadComparison : builds after stale 409 (one read)
+LeadForm ..> LeadComparison : builds after stale 409 (one reload)
 
 enum LeadCategory {
   Create

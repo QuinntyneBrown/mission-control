@@ -4,6 +4,7 @@ skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
 skinparam ArrowColor #344054
+skinparam maxMessageSize 300
 skinparam rectangle {
   BorderColor #344054
   FontColor #101828
@@ -16,7 +17,7 @@ skinparam package {
 title Behavior - Confirm and delete a lead
 actor "Administrator" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "LeadDetailPage or LeadDirectoryPage\nLeadDeleteDialog / LeadView" as page
+  participant "LeadDetailPage or LeadDirectoryPage\nLeadDeleteDialog / LeadDeleteForm" as page
   participant "ILeadService / LeadService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,67 +32,75 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Select Delete on lead details or a directory row
-alt Loaded lead details already list responsible workspaces
-  page --> actor : Open blocked explanation with project links; no request; no delete or retry
+actor -> page : Select Delete on lead details or a directory row (shown only with leads.manage; the view's deleteRequested output)
+page -> page : The page opens LeadDeleteDialog; LeadDeleteForm receives the row or the loaded details as its target input
+alt Target already reports responsibleWorkspaceCount above 0 (loaded details)
+  page --> actor : Blocked explanation: count, up to 10 project links, View all link; no request; focus Close; announce the explanation as an alert; no delete or retry
 else No known reference
-  page --> actor : Open LeadDeleteDialog naming the lead and category; focus Cancel
+  page --> actor : Dialog names the lead and category (the target's isCityLead selects the City contact copy); focus Cancel
   alt Cancel or Escape
     page --> actor : Close dialog; no request; focus returns to Delete
   else Confirm
-    page -> page : Disable repeat confirmation; show deleting progress
-    page -> client : Build typed DeleteLeadCommand (lead ID only)
+    page -> page : Disable repeat confirmation; show deleting progress; draftChange reports pending
+    page -> client : delete(DeleteLeadCommand: lead ID only) returns a promise
     client -> access : DELETE /api/leads/{id}
     access -> access : L2-002 validate signature, issuer, audience, subject, expiry
     access -> db : Read current status, role and credential version
     db --> access : Current account access
     alt Missing, invalid, or expired JWT; inactive account
       access --> client : 401; audit denial without payloads
-      client --> page : Clear in-memory session; require login; nothing deleted
+      client -> client : sessionInterceptor: a 401 for the current session generation calls SessionService.end(Unauthorized) once
+      client --> page : The promise rejects with the 401; nothing deleted; navigation to sign-in
     else Collaborator (no contact mutation in profile P)
       access --> client : 403; audit denial without payloads
-      client --> page : Close dialog; show that only administrators can delete leads; nothing deleted
+      client -> client : sessionInterceptor calls SessionService.refreshCapabilities() (one in flight)
+      client --> page : The promise rejects with the 403; keep the dialog open; explain that only administrators can delete leads; Delete lead unavailable, so focus moves to the alert; no reference ID; nothing deleted; controls follow currentSession
     else Administrator
       access -> ctrl : Authorized request
       ctrl -> validation : Send DeleteLeadCommand through MediatR 12.5.0
       validation -> handler : Handle DeleteLeadCommand
-      handler -> db : Begin transaction; load lead and workspaces naming it responsible (ID, name)
-      db --> handler : Contact or none; referencing workspaces
+      handler -> db : LoadLeadAsync; LoadResponsibleWorkspacesAsync: count of workspaces naming it responsible and the first 10 by name then ID (ID, name, mode)
+      db --> handler : Contact or none; responsibleWorkspaceCount; bounded preview
       alt Lead missing (already deleted)
         handler --> ctrl : 404; nothing deleted
         ctrl --> client : NotFound ProblemDetails
-        client --> page : Close dialog; reload directory without the lead; announce it was already deleted
+        client --> page : The promise rejects; LeadDeleteForm emits alreadyDeleted; the dialog closes with AlreadyDeleted; LeadDirectoryPage increments refresh and the directory reloads without the lead, or LeadDetailPage navigates to the directory, which reads afresh; the page shows an info toast that the named lead was already deleted (TOAST_SERVICE), or, when the dialog had relayed unconfirmed, the neutral "Hana Kim has been deleted."
       else Lead found
-        handler -> entity : L2-012 checkDeletion(referencing workspaces)
-        alt Workspaces reference the lead
+        handler -> entity : L2-012 checkDeletion(responsibleWorkspaceCount)
+        alt Count above 0
           entity --> handler : Rejected: still responsible
-          handler --> ctrl : 409 listing referencing workspaces (ID, name) with reassignment guidance; nothing deleted
+          handler --> ctrl : 409 LeadReferencedProblem: count, at most 10 ResponsibleWorkspace entries (ID, name, mode), reassignment guidance; nothing deleted
           ctrl --> client : Conflict ProblemDetails
-          client --> page : Switch to blocked explanation with project links; no delete or retry
+          client --> page : The promise rejects; switch to blocked explanation: count, listed projects with Open project, View all to /projects?responsibleLeadId={id}; focus Close; announce the explanation as an alert; no delete or retry; following a link closes the dialog with no result once the navigation completes
         else Unreferenced
           entity --> handler : Deletion permitted
-          handler -> db : L2-039 / L2-040 delete only the contact row and append success audit; one transaction
+          handler -> db : L2-039 / L2-040 RemoveLead and AddAuditEvent, then SaveChangesAsync: delete only the contact row with its success audit; one transaction
           alt Restrictive FK rejects a racing owner assignment
-            db --> handler : Roll back delete and audit; read the new referencing workspaces
-            handler --> ctrl : 409 listing referencing workspaces; nothing deleted
+            db --> handler : Roll back delete and audit
+            handler -> db : Re-read count and first 10 responsible workspaces
+            handler --> ctrl : Same 409 LeadReferencedProblem (count and bounded preview); nothing deleted
             ctrl --> client : Conflict ProblemDetails
-            client --> page : Switch to blocked explanation with project links; no delete or retry
+            client --> page : The promise rejects; switch to blocked explanation with count, project links, and View all; focus Close; announce it as an alert; no delete or retry
           else Commit fails unexpectedly
             db --> handler : Roll back delete and audit
             handler --> ctrl : Generic 500 with correlation ID
             ctrl --> client : Failure; nothing deleted
-            client --> page : Keep dialog open; show reference ID; Delete lead retries
+            client --> page : The promise rejects; keep dialog open in the failed state; announce the alert with the reference ID; Delete lead keeps focus and retries only when pressed
           else Commit succeeds
-            db --> handler : Contact row removed; accounts, work, and sprint history untouched
+            db --> handler : Contact row removed; accounts (L2-013: the administrator, even for the City contact), work, and sprint history untouched
             handler --> ctrl : 204 No Content
             ctrl --> client : Success response
-            client --> page : Close dialog; reload directory and counts without the lead; announce deletion
+            client --> page : The promise resolves; LeadDeleteForm emits deleted; the dialog closes with Deleted
+            page -> page : LeadDirectoryPage increments refresh and the directory reloads its resource with live counts, or LeadDetailPage navigates to the directory; the page shows the "Lead deleted" toast naming the lead (TOAST_SERVICE)
             page --> actor : Focus moves to the directory heading
           end
         end
       end
     end
   end
+end
+opt No response to the deletion (timeout or network failure)
+  client --> page : The deletion may have committed: the dialog stays open; the failed alert reads "We couldn't confirm whether Hana Kim was deleted" without a reference ID; LeadDeleteForm emits unconfirmed, which the dialog relays, so the opening page increments refresh and its view rereads at once; Delete lead resends only when pressed, and a deletion that did commit makes it return 404 and close the dialog with AlreadyDeleted; the page received the relayed unconfirmed, so its info toast reads the neutral "Hana Kim has been deleted." instead of saying the lead was already deleted
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).

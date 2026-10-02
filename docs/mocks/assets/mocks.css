@@ -23,6 +23,9 @@ html {
   /* Keeps focused or linked content clear of pinned headers (WCAG 2.4.11).
      mocks.js measures the pinned app chrome into --mock-sticky-height. */
   scroll-padding-top: calc(var(--mock-chrome-height, 0px) + var(--mock-sticky-height, var(--mc-space-14)) + var(--mc-space-4));
+  /* Keeps a focused control clear of a sheet's pinned footer and a visible toast
+     region (L2-033.3); mocks.js measures both. */
+  scroll-padding-bottom: calc(var(--mock-sheet-footer-height, 0px) + var(--mock-toast-height, 0px) + var(--mc-space-4));
 }
 
 body {
@@ -330,6 +333,10 @@ svg {
 
 .mc-mb-6 {
   margin-bottom: var(--mc-space-6);
+}
+
+.mc-w-3 {
+  width: 3%;
 }
 
 .mc-w-25 {
@@ -2026,6 +2033,13 @@ a.mc-stat:hover {
   color: var(--mc-color-text-muted);
 }
 
+.mc-listbox__empty {
+  margin: 0;
+  padding: var(--mc-space-2) var(--mc-space-3);
+  font-size: var(--mc-font-size-sm);
+  color: var(--mc-color-text-muted);
+}
+
 /* --------------------------------------------------------- alerts/banners */
 
 .mc-alert {
@@ -2035,7 +2049,7 @@ a.mc-stat:hover {
   align-items: flex-start;
   gap: var(--mc-space-3);
   padding: var(--mc-space-4);
-  border: var(--mc-border-width) solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border: var(--mc-border-width) solid color-mix(in srgb, var(--accent) var(--mc-color-alert-border-mix), transparent);
   border-radius: var(--mc-radius-md);
   background: var(--accent-subtle);
   color: var(--mc-color-text);
@@ -2192,6 +2206,20 @@ a.mc-stat:hover {
   pointer-events: auto;
 }
 
+/* Two persistent live containers inside the region: a polite status one
+   (success, info) and an assertive alert one (errors, warnings). */
+.mc-toast-live {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mc-space-2);
+}
+
+/* A container with no visible toast cancels the region gap beside it, so
+   the toasts sit where they did before the containers existed. */
+.mc-toast-live:not(:has(> .mc-toast:not([hidden]))) {
+  margin-top: calc(-1 * var(--mc-space-3));
+}
+
 .mc-toast {
   --accent: var(--mc-color-info);
   display: flex;
@@ -2260,7 +2288,8 @@ a.mc-stat:hover {
 @media (max-width: 575.98px) {
   .mc-toast-region:not(.mc-toast-region--static) {
     right: var(--mc-space-4);
-    bottom: var(--mc-space-4);
+    /* Sits above an open sheet's pinned footer, so no toast covers its actions. */
+    bottom: calc(var(--mock-sheet-footer-height, 0px) + var(--mc-space-4));
     left: var(--mc-space-4);
     width: auto;
   }

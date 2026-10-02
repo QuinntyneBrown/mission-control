@@ -2,22 +2,22 @@
 !include <C4/C4_Component>
 LAYOUT_WITH_LEGEND()
 title Components - View the Kanban story board
-Container(web, "Mission Control web client", "Angular", "KanbanBoardPage / BoardView")
-ContainerDb(db, "Mission Control database", "SQL", "Versioned feature records and audit events")
+Container(web, "Mission Control web client", "Angular", "KanbanBoardPage, WorkItemFormDialog / BoardView")
+ContainerDb(db, "Mission Control database", "SQL", "Stories, board placements and tasks")
 Container_Boundary(api, "MissionControl.Api runtime") {
   Component(ctrl, "BoardsController", "API boundary", "Binds request and dispatches through MediatR 12.5.0")
   Component(access, "CurrentAccountAuthorization", "API authentication / authorization", "Validates JWT and checks current SQL account access")
   Component(validation, "ValidationBehavior", "Application pipeline", "Invokes request validators")
-  Component(entity, "BoardCard", "Domain / read model", "View the Kanban story board")
-  Component(store, "MissionControlDataSession", "Infrastructure", "Implements Application data port; commits transactions")
-Rel(web, access, "Calls through IBoardService / BoardService", "HTTPS")
+  Component(entity, "BoardCard", "Application read projection", "Title, assignee, status, position and task counts; no description")
+  Component(store, "MissionControlDataSession", "Infrastructure", "Implements the Application data port; typed board reads")
+Rel(web, access, "Reads through boardResource (IBoardService / BoardService)", "HTTPS")
 Rel(access, db, "Checks current access for protected requests", "SQL")
-Rel(access, ctrl, "Forwards authorized request; login remains public")
+Rel(access, ctrl, "Forwards authorized request")
 Rel(ctrl, validation, "Sends typed request")
 Component(h0, "GetKanbanBoardQueryHandler", "Application / MediatR", "Read story columns and task counts")
 Rel(validation, h0, "Dispatches validated request")
-Rel(h0, entity, "Reads / applies domain behavior")
-Rel(h0, store, "Loads / persists state")
+Rel(h0, entity, "Projects cards")
+Rel(h0, store, "Reads column batches, full counts and task counts")
 }
-Rel(store, db, "Executes bounded queries / atomic writes", "SQL")
+Rel(store, db, "Bounded column batches; set-based task-count aggregate", "SQL")
 @enduml

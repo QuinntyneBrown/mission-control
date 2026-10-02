@@ -14,81 +14,122 @@ skinparam package {
   BackgroundColor #F9FAFB
 }
 title Class structure - Close a sprint and resolve unfinished work
+top to bottom direction
 skinparam class {
   BorderColor #344054
   FontColor #101828
   BackgroundColor #F9FAFB
 }
-class SprintBoardPage {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
-}
-class SprintView {
-  +state: Signal<FeatureState>
-  +submit(): void
-}
-interface ISprintService {
-  +close(request: CloseSprintCommand): Promise<FeatureResult>
-}
-class SprintService {
-  -http: HttpClient
-}
 class SprintsController {
   -sender: ISender
 }
-class Sprint {
-  +id: Guid
+
+class GetSprintClosureReviewQuery {
   +workspaceId: Guid
+  +sprintId: Guid
+  +page: int
+  +pageSize: int
+}
+class SprintClosureReview {
+  +sprintId: Guid
   +name: string
   +goal: string
   +startDate: DateOnly
   +endDate: DateOnly
-  +status: SprintStatus
-  +startedAtUtc: DateTimeOffset?
-  +startedByUserId: Guid?
-  +startedByName: string?
-  +closedAtUtc: DateTimeOffset?
-  +closedByUserId: Guid?
-  +closedByName: string?
   +version: long
-  +close(dispositions: StoryDisposition[], at: DateTimeOffset, actorId: Guid): SprintSnapshot
+  +storyTotal: int
+  +doneTotal: int
+  +unfinishedTotal: int
+  +unfinished: ClosureReviewStory[]
+  +destinations: SprintPeriod[]
+  +page: int
+  +pageSize: int
 }
-interface IMissionControlDataSession {
-  +query(specification): Task<ReadResult>
-  +commit(expectedVersion: long): Task<void>
+class ClosureReviewStory {
+  +storyId: Guid
+  +key: string
+  +title: string
+  +status: WorkStatus
+  +assigneeName: string?
 }
-class MissionControlDataSession {
-  -connection: DbConnection
+class SprintPeriod {
+  +sprintId: Guid
+  +name: string
+  +startDate: DateOnly
+  +endDate: DateOnly
 }
-SprintBoardPage --> SprintView : composes
-SprintView ..> ISprintService : inject token
-ISprintService <|.. SprintService
-IMissionControlDataSession <|.. MissionControlDataSession
 class CloseSprintCommand {
   +workspaceId: Guid
   +sprintId: Guid
-  +expectedVersion: long
-  +dispositions: StoryDisposition[]
+  +reviewedVersion: long
+  +setAllTo: CarryoverDestination?
+  +overrides: StoryDisposition[]
+}
+class StoryDisposition {
+  +storyId: Guid
+  +destination: CarryoverDestination
+}
+class CarryoverDestination {
+  +kind: CarryoverKind
+  +sprintId: Guid?
+}
+enum CarryoverKind {
+  Backlog
+  PlannedSprint
+}
+class SprintCloseResult {
+  +sprintId: Guid
+  +name: string
+  +historyRoute: string
+  +doneCount: int
+  +returnedCount: int
+  +carriedOver: CarryoverCount[]
+}
+class CarryoverCount {
+  +destination: SprintReference
+  +count: int
+}
+note bottom of SprintCloseResult
+Counts come from the recorded outcomes; the
+opener's "Sprint 8 closed" toast names them.
+end note
+class GetSprintClosureReviewQueryHandler {
+  +handle(request: GetSprintClosureReviewQuery, ct: CancellationToken): Task<SprintClosureReview>
 }
 class CloseSprintCommandHandler {
-  +handle(request: CloseSprintCommand): Task<FeatureResult>
+  +handle(request: CloseSprintCommand, ct: CancellationToken): Task<SprintCloseResult>
 }
+SprintsController ..> GetSprintClosureReviewQuery : dispatches
 SprintsController ..> CloseSprintCommand : dispatches
+GetSprintClosureReviewQueryHandler ..> GetSprintClosureReviewQuery : handles
+GetSprintClosureReviewQueryHandler --> SprintClosureReview : returns
+SprintClosureReview *-- ClosureReviewStory
+SprintClosureReview *-- SprintPeriod : planned destinations by start date then ID, at most 25
+note bottom of SprintPeriod
+Destinations: at most 25 planned sprints, a design
+proposal stricter than L2-025 (overview retained
+decisions). A story meant for a later planned sprint
+returns to the backlog and is added from that
+sprint's plan page.
+end note
 CloseSprintCommandHandler ..> CloseSprintCommand : handles
-CloseSprintCommandHandler --> Sprint : loads / applies
-CloseSprintCommandHandler ..> IMissionControlDataSession : uses
+CloseSprintCommandHandler --> SprintCloseResult : returns
+SprintCloseResult *-- CarryoverCount
+CloseSprintCommand *-- StoryDisposition
+CloseSprintCommand --> CarryoverDestination : setAllTo
+StoryDisposition --> CarryoverDestination
+CarryoverDestination --> CarryoverKind
 
-class OpenSprintMembership {
+class Sprint {
+  +id: Guid
   +workspaceId: Guid
-  +storyId: Guid
-  +sprintId: Guid
-}
-class SprintStoryOutcome {
-  +recordedStoryId: Guid
-  +recordedTitle: string
-  +statusAtClosure: WorkStatus
-  +recordedDestinationId: Guid?
-  +recordedDestinationName: string?
+  +status: SprintStatus
+  +version: long
+  +closedAtUtc: DateTimeOffset?
+  +closedByUserId: Guid?
+  +closedByName: string?
+  +initialScopeStoryIds: Guid[]
+  +close(setAllTo: CarryoverDestination?, overrides: StoryDisposition[], unfinishedIds: Guid[], destinations: Sprint[], at: DateTimeOffset, actorId: Guid): SprintSnapshot
 }
 class SprintSnapshot {
   +sprintId: Guid
@@ -97,27 +138,73 @@ class SprintSnapshot {
   +plannedStart: DateOnly
   +plannedEnd: DateOnly
   +startedAtUtc: DateTimeOffset
-  +startedByUserId: Guid
   +startedByName: string
   +closedAtUtc: DateTimeOffset
-  +closedByUserId: Guid
   +closedByName: string
-  +initialScopeIds: Guid[]
-  +finalScopeIds: Guid[]
-  +scopeChanges: SprintScopeChange[]
-  +outcomes: SprintStoryOutcome[]
+}
+class SprintStoryOutcome {
+  +recordedStoryId: Guid
+  +recordedKey: string
+  +recordedTitle: string
+  +statusAtClosure: WorkStatus
+  +recordedDestination: SprintReference?
+}
+class SprintReference {
+  +sprintId: Guid
+  +name: string
 }
 class SprintScopeChange {
-  +sprintId: Guid
   +storyId: Guid
+  +storyKey: string
   +storyTitle: string
   +kind: ScopeChangeKind
-  +actorId: Guid
   +actorName: string
   +atUtc: DateTimeOffset
 }
-Sprint "1" --> "0..1" SprintSnapshot : records at closure
-SprintSnapshot "1" *-- "*" SprintStoryOutcome : immutable outcomes at closure
-SprintSnapshot "1" *-- "*" SprintScopeChange : scope log with actor and instant
-Sprint ..> OpenSprintMembership : live allocation / historical source
+class OpenSprintMembership {
+  +workspaceId: Guid
+  +storyId: Guid
+  +sprintId: Guid
+}
+CloseSprintCommandHandler --> Sprint : close
+Sprint "1" *-- "0..1" SprintSnapshot : recorded at closure (tracked child)
+SprintSnapshot "1" *-- "*" SprintStoryOutcome : outcomes = final scope
+SprintStoryOutcome --> SprintReference : recorded destination
+Sprint "1" *-- "*" SprintScopeChange : recorded during the sprint (start-and-adjust-sprint); referenced, not copied
+Sprint "1" *-- "*" OpenSprintMembership : tracked children; source removed, destination sprint's added
+
+interface IMissionControlDataSession {
+  +BeginWorkspaceTransactionAsync(workspaceId: Guid, ct: CancellationToken): Task
+  +ListSprintClosureReviewAsync(query: GetSprintClosureReviewQuery, ct: CancellationToken): Task<SprintClosureReview?>
+  +LoadSprintClosureAsync(workspaceId: Guid, sprintId: Guid, destinationIds: Guid[], ct: CancellationToken): Task<SprintClosure?>
+  +RemoveActiveSprintSlot(slot: ActiveSprintSlot): void
+  +RemoveBoardState(board: BoardState): void
+  +AddAuditEvent(auditEvent: AuditEvent): void
+  +SaveChangesAsync(ct: CancellationToken): Task
+}
+note right of IMissionControlDataSession
+Scoped view of the shared port defined in the overview;
+only the members this slice uses. The snapshot, its outcomes
+and the membership moves are tracked children of the loaded
+source and destination sprints; SaveChangesAsync writes them
+with set-based statements. ActiveSprintSlot and the sprint
+BoardState are aggregate roots. SaveChangesAsync raises
+ConcurrencyConflictException on a stale version (409).
+end note
+class SprintClosure {
+  +sprint: Sprint
+  +unfinishedIds: Guid[]
+  +destinations: Sprint[]
+  +activeSlot: ActiveSprintSlot
+  +board: BoardState
+}
+GetSprintClosureReviewQueryHandler ..> IMissionControlDataSession : ListSprintClosureReviewAsync
+CloseSprintCommandHandler ..> IMissionControlDataSession : transaction, LoadSprintClosureAsync, RemoveActiveSprintSlot, RemoveBoardState, AddAuditEvent, save
+IMissionControlDataSession ..> SprintClosure : loads
+note bottom of CloseSprintCommandHandler
+A sprint that is not Active (Planned or Closed) returns 409,
+history unchanged. reviewedVersion must equal Sprint.version,
+else 409 (neutral copy, no actor or time). Each current unfinished story gets its override,
+otherwise setAllTo; with neither, 400 identifies each unresolved story.
+end note
 @enduml

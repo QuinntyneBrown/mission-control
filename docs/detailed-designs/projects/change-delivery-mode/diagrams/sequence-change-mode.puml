@@ -4,6 +4,7 @@ skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
 skinparam ArrowColor #344054
+skinparam maxMessageSize 300
 skinparam rectangle {
   BorderColor #344054
   FontColor #101828
@@ -16,7 +17,7 @@ skinparam package {
 title Behavior - Confirm delivery mode change
 actor "Administrator" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "ProjectOverviewPage\nModeChangeDialog / WorkspaceView" as page
+  participant "ProjectLayoutPage / ProjectHeaderView\nModeChangeDialog / ModeChangeForm" as page
   participant "IWorkspaceService / WorkspaceService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,23 +32,30 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Project actions > Change delivery mode
-page --> actor : ModeChangeDialog names the destination mode and what is kept; focus Cancel
-alt Cancel or Escape
-  page --> actor : Close dialog; no request; focus returns to Project actions
-else Confirm switch
-  page -> page : Disable repeat confirmation; show switching progress
-  page -> client : Build ChangeDeliveryModeCommand (destination mode, expectedVersion)
+actor -> page : Change delivery mode from Project actions on any tab (actionRequested), a paused-sprints banner (overview, Backlog, Board, Sprints; the page relays changeModeRequested), the edit form's link (ProjectFormDialog closes with ChangeMode after the unsaved-changes check), or the work delete dialog's paused-sprint blocker (WorkItemDeleteDialog closes with WorkItemDeleteOutcome ChangeMode; WorkHierarchyPage or WorkItemDetailPage reacts by calling openDialog(ChangeMode)); all shown only with workspaces.changeMode
+page -> page : The layout's openDialog(ChangeMode) opens ModeChangeDialog with the workspace the header last resolved; ModeChangeForm receives it as input
+alt Loaded workspace has an active sprint
+  page --> actor : Blocked state without a request: "Close Sprint N first"; focus Close Sprint N; announce the explanation as an alert; Close only
+  opt Close Sprint N
+    page -> page : ModeChangeForm emits closeSprintRequested(SprintReference); the dialog closes with CloseSprint(SprintReference); the layout opens CloseSprintDialog with that sprint's ID; on CloseSprintOutcome Closed it calls refresh() and shows the "Sprint 8 closed" toast with its counts through TOAST_SERVICE, and on Outdated it calls refresh(); while that dialog stays open, its unconfirmed output calls refresh() at once, and its forbidden output shows the "Your access changed" toast, without Retry
+  end
+else No active sprint; Cancel or Escape
+  page --> actor : Names the destination mode and what is kept; focus Cancel; Cancel or Escape closes with no request; focus returns to the opener
+else No active sprint; Confirm switch
+  page -> page : Disable repeat confirmation; show switching progress; draftChange reports pending
+  page -> client : changeMode(ChangeDeliveryModeCommand: destination mode, expectedVersion) returns a promise
   client -> access : PUT /api/workspaces/{id}/mode
   access -> access : L2-002 validate signature, issuer, audience, subject, expiry
   access -> db : Read current status, role and credential version
   db --> access : Current account access
   alt Missing, invalid, or expired JWT; inactive account
     access --> client : 401; audit denial without payloads
-    client --> page : Clear in-memory session; require login; mode unchanged
+    client -> client : sessionInterceptor: a 401 for the current session generation calls SessionService.end(Unauthorized) once
+    client --> page : The promise rejects with the 401; mode unchanged; navigation to sign-in
   else Collaborator (profile P: no mode changes)
     access --> client : 403; audit denial without payloads
-    client --> page : Close dialog; explain that only administrators change delivery mode
+    client -> client : sessionInterceptor calls SessionService.refreshCapabilities() (one in flight)
+    client --> page : The promise rejects with the 403; keep the dialog open; explain that only administrators change the delivery mode; switch unavailable, so focus moves to the alert; no reference ID; mode unchanged; controls follow currentSession
   else Administrator
     access -> ctrl : Authorized request
     ctrl -> validation : Send ChangeDeliveryModeCommand through MediatR 12.5.0
@@ -55,20 +63,24 @@ else Confirm switch
     alt Unknown mode or missing version
       validation --> ctrl : 400 field errors; mode unchanged
       ctrl --> client : Validation ProblemDetails
-      client --> page : Show failure with the field message; mode unchanged
+      client --> page : The promise rejects; the dialog's alert shows the field message; no retry or reference ID; the switch becomes unavailable, so focus moves to the alert; mode unchanged
     else Valid request
       validation -> handler : Handle ChangeDeliveryModeCommand
-      handler -> db : Begin transaction; lock workspace (shared with sprint start and allocation)
-      db --> handler : Workspace row or none
-      alt Workspace missing
+      handler -> db : BeginWorkspaceTransactionAsync(workspaceId): take the workspace lock first (shared with sprint start and allocation)
+      alt Lock wait times out
+        db --> handler : Lock not acquired; nothing read or changed
+        handler --> ctrl : 503 with Retry-After; mode unchanged
+        ctrl --> client : ServiceUnavailable ProblemDetails with correlation ID
+        client --> page : The promise rejects; keep dialog open in failed state with the reference ID; previous mode kept; no automatic retry; the switch button keeps focus and retries on request
+      else Lock acquired; workspace missing
         handler --> ctrl : 404; nothing changed
         ctrl --> client : NotFound ProblemDetails
-        client --> page : Close dialog; show "Project not found" with Back to projects
-      else Version differs from expectedVersion
+        client --> page : The promise rejects; ModeChangeForm emits outdated; the dialog closes with Outdated; the layout calls modeChanged(); the header's read fails, so it keeps only the breadcrumb, and the active tab's view shows "Project not found" with Back to projects; focus its heading; no other announcement
+      else Lock acquired; version differs from expectedVersion
         handler --> ctrl : L2-041 409 stale version; nothing changed
         ctrl --> client : Conflict ProblemDetails
-        client --> page : Close dialog; reload overview with the current mode; announce that the project changed
-      else Current version
+        client --> page : The promise rejects; ModeChangeForm emits outdated; the dialog closes with Outdated; the layout calls modeChanged(): the header and the active tab reload the current mode and the board route re-matches; once the reloaded header resolves (workspaceLoaded), ProjectLayoutPage shows the info toast "This project changed while the dialog was open. Its current delivery mode is shown." through TOAST_SERVICE, or, when the dialog relayed unconfirmed before this 409, the neutral info toast naming the mode the header now shows ("Community Hackathon 2026 uses Kanban now.")
+      else Lock acquired; current version
         handler -> db : Read active sprint under the same lock
         db --> handler : Active sprint or none
         handler -> entity : L2-027 changeMode(destination, activeSprint)
@@ -76,26 +88,31 @@ else Confirm switch
           entity --> handler : Rejected: close the sprint first
           handler --> ctrl : 409 naming the active sprint; nothing changed
           ctrl --> client : Conflict ProblemDetails
-          client --> page : Show "Close Sprint N first" with a Close sprint link; Close only; no retry
+          client --> page : The promise rejects; switch to the blocked state: "Close Sprint N first" with Close Sprint N; focus it; announce the explanation as an alert; Close only; no retry
         else No active sprint
           entity --> handler : Mode set; IDs, statuses, order, assignments, placements, sprints untouched
-          handler -> db : L2-039 / L2-040 update Workspace.Mode and version with success audit; one transaction
+          handler -> db : L2-039 / L2-040 AddAuditEvent, then SaveChangesAsync: update Workspace.Mode and version with the success audit; one transaction; lock released
           alt Commit fails unexpectedly
             db --> handler : Roll back mode and audit
             handler --> ctrl : Generic 500 with correlation ID
             ctrl --> client : Failure; mode unchanged
-            client --> page : Keep dialog open; show reference ID; the switch button retries
+            client --> page : The promise rejects; keep dialog open in the failed state; announce the alert with the reference ID; previous mode kept; the switch button keeps focus and retries only when pressed
           else Commit succeeds
             db --> handler : New committed version
-            handler --> ctrl : 200 with mode and version
+            handler --> ctrl : 204 No Content
             ctrl --> client : Success response
-            client --> page : Close dialog; reload overview tabs and summary for the new mode
-            page --> actor : "Now using Kanban" or "Now using Scrum" toast; focus the project heading
+            client --> page : The promise resolves; ModeChangeForm emits changed; the dialog closes with Changed; the layout calls modeChanged(): revision + 1 reloads the header and the active tab, whose tabs and summary follow the new mode; re-navigating the current tab URL lets BoardModeGuard match the board for the new mode; on the sprints route with no Sprints tab in the reloaded header, the layout navigates to overview instead
+            page --> actor : The layout shows the "Now using Kanban" or "Now using Scrum" toast through TOAST_SERVICE; focus the project heading
           end
         end
       end
     end
   end
+end
+opt No response to the switch (timeout or network failure)
+  client --> page : The switch may have committed: the dialog stays open; the failed alert reads "We couldn't confirm whether Community Hackathon 2026 switched to Kanban" without a reference ID; ModeChangeForm emits unconfirmed, which the dialog relays
+  page -> page : The layout calls modeChanged() at once: revision + 1, so the header and the active tab reread and show the persisted mode; because the dialog is open, the layout defers the re-navigation (BoardModeGuard re-match) and any sprints-to-overview redirect until it closes, since deactivating the active child page, which hosts the dialog, would dismiss it
+  page --> actor : The switch resends only when chosen; a switch that did commit makes it meet the stale-version 409, which closes the dialog with Outdated; the deferred re-navigation then runs, and the layout shows the neutral info toast "Community Hackathon 2026 uses Kanban now." naming the mode the reloaded header shows, not the changed-while-open toast; Cancel or Escape closes with no result, and the deferred re-navigation runs then
 end
 note over ctrl, db
 Kanban mode keeps planned/closed sprints readable but paused;

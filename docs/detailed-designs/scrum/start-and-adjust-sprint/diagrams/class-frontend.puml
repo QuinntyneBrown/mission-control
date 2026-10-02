@@ -1,0 +1,284 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Frontend classes - Start a sprint and change its active scope
+top to bottom direction
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class SprintsPage {
+  +openStart(sprintId: Guid): void
+  +openScope(sprintId: Guid): void
+  +openCloseSprint(sprintId: Guid): void
+}
+note top of SprintsPage
+SprintListView emits startRequested(sprintId)
+and scopeRequested(sprintId) (plan-sprints);
+workspaceName = layout.workspace().name.
+Scope and close dialogs: offerSprintsLink = false.
+Started: open the board, "Sprint 9 started"
+toast. ModeChanged: layout.modeChanged().
+Outdated: own counter + 1 (list rereads).
+CloseSprint(sprint): openCloseSprint.
+Scope Changed: counter + 1, "Scope updated"
+toast with the summary; Outdated: counter + 1.
+While a dialog is open: unconfirmed -> counter + 1
+at once; forbidden -> "Your access changed" toast
+via TOAST_SERVICE, without Retry.
+end note
+class SprintPlanningPage {
+  +openStart(): void
+  +openCloseSprint(sprintId: Guid): void
+}
+note top of SprintPlanningPage
+SprintPlanView startRequested(sprintId) ->
+openStart(), with the workspace name it read.
+Started: open the board with the toast.
+ModeChanged, Outdated: own counter + 1
+(the plan header is reread).
+CloseSprint(sprint): openCloseSprint.
+While the dialog is open: unconfirmed -> counter + 1
+at once; forbidden -> "Your access changed" toast
+via TOAST_SERVICE, without Retry.
+end note
+class SprintBoardPage {
+  -header: WritableSignal<ActiveSprintHeader?>
+  +openStart(sprintId: Guid): void
+  +openScope(): void
+  +openRemove(card: BoardCard): void
+  +openCloseSprint(sprintId: Guid): void
+}
+note top of SprintBoardPage
+Change scope and Add stories: openScope() with
+header().sprintId. BoardView removeRequested(card):
+openRemove builds the ScopeStorySummary. Both pass
+offerSprintsLink = true. No active
+sprint: openStart(header().nextPlannedSprint.sprintId)
+with workspaceName = layout.workspace().name.
+Started: own counter + 1 with the toast. ModeChanged:
+layout.modeChanged(). Outdated: counter + 1.
+CloseSprint(sprint): openCloseSprint(sprint.sprintId).
+Scope Changed: counter + 1 with the "Scope updated"
+toast; Outdated: counter + 1.
+While a dialog is open: unconfirmed -> counter + 1
+at once; forbidden -> "Your access changed" toast
+via TOAST_SERVICE, without Retry.
+end note
+class BacklogPage
+note top of BacklogPage
+Owned by work prioritize-work. Opens the dialog
+with addStoryId and offerSprintsLink = true. A planned
+sprint navigates to its plan with ?add={storyId} instead.
+Changed reloads the backlog with the "Scope
+updated" toast; Outdated and unconfirmed reload
+it; forbidden: "Your access changed" toast,
+without Retry.
+end note
+class "WorkItemDetailPage\nWorkHierarchyPage" as WorkPages {
+  +openRemoveFromSprint(sprintId: Guid): void
+}
+note top of WorkPages
+Owned by work delete-leaf-work. When WorkItemDeleteDialog
+closes with RemoveFromSprint(sprintId), opens the dialog
+in remove mode with the summary of its story and
+offerSprintsLink = true.
+Changed reloads the view with the "Scope updated"
+toast; Outdated and unconfirmed reload it;
+forbidden: "Your access changed" toast,
+without Retry.
+end note
+class StartSprintDialog {
+  +sprintId: InputSignal<Guid>
+  +workspaceName: InputSignal<string>
+  +unconfirmed: OutputEmitterRef<void>
+  +forbidden: OutputEmitterRef<void>
+  +close(outcome: StartSprintOutcome?): void
+}
+note right of StartSprintDialog
+close(Started(result)) on started.
+close(ModeChanged) when it closes after modeChanged.
+close(Outdated) when it closes after outdated, or
+at once on notFound.
+close(CloseSprint(sprint)) at once on
+closeSprintRequested.
+close() on Cancel means dismissed.
+Relays the view's unconfirmed and forbidden as
+its own outputs and stays open.
+end note
+class StartSprintOutcome {
+  +kind: Started | ModeChanged | Outdated | CloseSprint
+  +started: SprintSaveResult?
+  +sprint: SprintReference?
+}
+class SprintScopeDialog {
+  +sprintId: InputSignal<Guid>
+  +addStoryId: InputSignal<Guid?>
+  +removeStoryId: InputSignal<Guid?>
+  +removeStorySummary: InputSignal<ScopeStorySummary?>
+  +offerSprintsLink: InputSignal<boolean>
+  +draft: Signal<DraftState>
+  +unconfirmed: OutputEmitterRef<void>
+  +forbidden: OutputEmitterRef<void>
+  +requestClose(): Promise<void>
+  +close(outcome: SprintScopeOutcome?): void
+}
+note right of SprintScopeDialog
+Inputs, offerSprintsLink included, pass straight
+to SprintScopeForm.
+close(Changed(summary)) on changed; close(Outdated)
+when it closes after outdated, or at once on
+notFound; close() on Cancel means dismissed.
+Relays the form's unconfirmed and forbidden as
+its own outputs and stays open with the selection.
+requestClose on a dirty draft opens
+UnsavedChangesDialog (CancelForm);
+each opening page delegates its FormDraft to it.
+end note
+class SprintScopeOutcome {
+  +kind: Changed | Outdated
+  +changed: ScopeChangeSummary?
+}
+class ScopeChangeSummary {
+  +saved: SprintSaveResult
+  +summary: string
+}
+note bottom of ScopeChangeSummary
+summary names the change for the opener's
+"Scope updated" toast, e.g. "Volunteer check-in
+list" was added to Sprint 8.
+end note
+class ScopeStorySummary {
+  +storyId: Guid
+  +key: string
+  +title: string
+  +status: WorkStatus
+  +assigneeName: string?
+  +completedTasks: int
+  +totalTasks: int
+  +estimate: int?
+}
+class SprintStartView {
+  +sprintId: InputSignal<Guid>
+  +workspaceName: InputSignal<string>
+  -sprint: ResourceRef<SprintPlanResult>
+  +started: OutputEmitterRef<SprintSaveResult>
+  +modeChanged: OutputEmitterRef<void>
+  +outdated: OutputEmitterRef<void>
+  +notFound: OutputEmitterRef<void>
+  +unconfirmed: OutputEmitterRef<void>
+  +forbidden: OutputEmitterRef<void>
+  +closeSprintRequested: OutputEmitterRef<SprintReference>
+  +start(): Promise<void>
+}
+note right of SprintStartView
+sprint = sprintPlanResource(...): summary and version;
+no active-sprint check on open. Start sprint stays
+disabled until it resolves; a failed read offers
+Try again = sprint.reload() and Cancel.
+A stale 409 calls sprint.reload() once.
+409 active sprint: blocked-active; Review and close
+emits closeSprintRequested(the sprint the 409 names).
+409 Kanban: modeChanged. 409 not planned: outdated.
+404: notFound. Unexpected 403: forbidden.
+No response: "We couldn't confirm
+whether Sprint 9 started"; emits unconfirmed;
+sprint.reload() once. Still Planned: Start sprint
+again; Active: neutral "Sprint 9 is active now."
+with Close only, and outdated is emitted.
+end note
+class SprintScopeForm {
+  +sprintId: InputSignal<Guid>
+  +addStoryId: InputSignal<Guid?>
+  +removeStoryId: InputSignal<Guid?>
+  +removeStorySummary: InputSignal<ScopeStorySummary?>
+  +offerSprintsLink: InputSignal<boolean>
+  -sprint: ResourceRef<SprintPlanResult>
+  -search: WritableSignal<string>
+  -page: WritableSignal<int>
+  -candidates: ResourceRef<SprintCandidatePage>
+  -toAdd: WritableSignal<Set<Guid>>
+  +changed: OutputEmitterRef<ScopeChangeSummary>
+  +outdated: OutputEmitterRef<void>
+  +notFound: OutputEmitterRef<void>
+  +unconfirmed: OutputEmitterRef<void>
+  +forbidden: OutputEmitterRef<void>
+  +draftChange: OutputEmitterRef<DraftState>
+  +submit(): Promise<void>
+}
+note right of SprintScopeForm
+sprint = sprintPlanResource: title, dates and the version
+the command carries; Add and Return to backlog stay disabled
+until it resolves. candidates = sprintCandidatesResource with
+eligibleOnly = true; toAdd is keyed by story ID and survives
+search and paging. addStoryId joins toAdd only if one eligible
+read with storyId = addStoryId returns it.
+A stale 409, or no response (which also emits unconfirmed),
+reloads the sprint and the candidates once and adopts the new
+version; toAdd then drops each story now in this sprint, named
+neutrally ("HCK-130 is already in Sprint 8"), and remove mode
+names a story that left it. After no response, a sprint read
+Closed shows the neutral "Sprint 8 is closed now." and emits
+outdated. A 409 for a closed or still planned sprint emits
+outdated; a 404 emits notFound; an unexpected 403 keeps the
+selection and emits forbidden. A 400 or 409 naming stories to
+add (Done, foreign, already a member, or in another open
+sprint) marks each; a marked checkbox stays focusable
+(aria-disabled) and takes focus first. A 400 naming the story
+to remove as no longer a member drops it, named neutrally.
+View sprints renders only while offerSprintsLink is true;
+without it, Close is the first action and takes focus.
+draftChange is dirty once toAdd differs from its opening set.
+end note
+interface ISprintService {
+  +sprintPlanResource(query: () => GetSprintPlanQuery | undefined): ResourceRef<SprintPlanResult>
+  +sprintCandidatesResource(query: () => GetSprintCandidatesQuery | undefined): ResourceRef<SprintCandidatePage>
+  +start(command: StartSprintCommand): Promise<SprintSaveResult>
+  +changeScope(command: ChangeSprintScopeCommand): Promise<SprintSaveResult>
+}
+note right of ISprintService
+Reads are caller-owned signal resources defined by
+plan-sprints; mutations return promises.
+No RxJS type crosses api.
+end note
+class SprintService {
+  -http: HttpClient
+}
+class CloseSprintDialog
+note bottom of CloseSprintDialog
+Defined by close-sprint; opened for the sprint
+a CloseSprint outcome names.
+end note
+SprintsPage ..> StartSprintDialog : opens from startRequested(sprintId)
+SprintPlanningPage ..> StartSprintDialog : opens (Start sprint)
+SprintBoardPage ..> StartSprintDialog : opens (No active sprint: Start next)
+SprintsPage ..> SprintScopeDialog : opens from scopeRequested(sprintId)
+SprintBoardPage ..> SprintScopeDialog : opens (Change scope, Add stories, Remove)
+BacklogPage ..> SprintScopeDialog : Add to sprint (active): add mode with addStoryId
+WorkPages ..> SprintScopeDialog : opens in remove mode on WorkItemDeleteOutcome RemoveFromSprint(sprintId)
+SprintBoardPage ..> ScopeStorySummary : builds from BoardCard
+SprintsPage ..> CloseSprintDialog : on CloseSprint
+SprintPlanningPage ..> CloseSprintDialog : on CloseSprint
+SprintBoardPage ..> CloseSprintDialog : on CloseSprint
+StartSprintDialog --> SprintStartView : composes
+StartSprintDialog ..> StartSprintOutcome : close result
+SprintScopeDialog --> SprintScopeForm : composes
+SprintScopeDialog ..> SprintScopeOutcome : close result
+SprintScopeOutcome --> ScopeChangeSummary
+SprintStartView ..> ISprintService : inject token
+SprintScopeForm ..> ISprintService : inject token
+ISprintService <|.. SprintService
+@enduml

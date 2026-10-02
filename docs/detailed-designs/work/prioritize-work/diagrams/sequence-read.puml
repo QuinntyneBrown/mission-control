@@ -4,6 +4,7 @@ skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
 skinparam ArrowColor #344054
+skinparam maxMessageSize 300
 skinparam rectangle {
   BorderColor #344054
   FontColor #101828
@@ -16,7 +17,7 @@ skinparam package {
 title Behavior - Read bounded backlog and full priority count
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "BacklogPage / WorkOrderView" as page
+  participant "BacklogPage / BacklogView" as page
   participant "IWorkOrderService / WorkOrderService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,16 +32,16 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Open the Backlog tab, change page, or Reload backlog
-page -> page : Show skeleton rows (loading state)
-page -> client : Build typed ListBacklogQuery (page, page size)
+actor -> page : Open the Backlog tab, change page, or Reload backlog; a change of the view's refresh input rereads the same page
+page -> page : BacklogView sets its query signal; resource status loading shows skeleton rows (loading state)
+page -> client : BacklogView's backlogResource reads ListBacklogQuery (page, page size); a changed page aborts the superseded request
 client -> access : GET /api/workspaces/{id}/backlog
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid or expired JWT; deactivated account
   access --> client : 401; audit denial without payloads
-  client --> page : Clear session; sign in with the backlog as return route
+  client --> page : sessionInterceptor calls SessionService.end(Unauthorized) once for this generation; the read is cancelled; sign in returns to the backlog
 else Authenticated (every role may read the backlog)
   access -> ctrl : Authorized request
   ctrl -> validation : Send ListBacklogQuery through MediatR 12.5.0
@@ -51,24 +52,28 @@ else Authenticated (every role may read the backlog)
     client --> page : Fall back to 25 per page and show the message
   else Valid request
     validation -> handler : Handle ListBacklogQuery
-    handler -> db : L2-045 read one page ordered by priority then ID; count every story; read the order version
+    handler -> db : L2-045 ListBacklogAsync: one page of BacklogItem rows without descriptions (epic and initiative titles, assignee name and active flag, estimate, open sprint and status, completedIn), ordered by priority then ID, with the full count, status totals, order version, sprintsPaused, and sprint targets (active sprint first, then up to 25 planned sprints) in one consistent read
     db --> handler : Bounded rows, full count, status totals, version
-    alt Workspace not found
+    alt Workspace not found (also when the project was deleted after the backlog opened)
       handler --> ctrl : 404
       ctrl --> client : ProblemDetails (not found)
-      client --> page : Not-found state linking to Projects
+      client --> page : BacklogView shows Project not found with Back to projects (no Try again or reference ID; focus its heading when the replaced rows held focus) and emits notFound; on the first one only BacklogPage calls the layout's refresh(), so the header rereads once and keeps only the breadcrumb
     else Rows read
-      handler -> entity : Project ranks, current sprint labels, and Add to sprint eligibility for the delivery mode
+      handler -> entity : Project ranks, open sprint and completedIn labels, and Add to sprint eligibility (NoSprints, SprintsPaused, NoOpenSprint, Done, InOpenSprint, or Eligible) for the delivery mode
       entity --> handler : Backlog page with absolute ranks
-      handler --> ctrl : Typed result with items, total count, page, page size, and order version
+      handler --> ctrl : BacklogItemPage with items, total count, page, page size, status totals, sprint targets, sprintsPaused, and order version
       ctrl --> client : 200
-      client --> page : Update signal state; zero stories shows the empty state with Add initiative
-      page --> actor : Present the page, totals for all stories, and the pager when there is more than one page
+      client --> page : Update signal state; zero stories shows the empty state, whose Add initiative emits addInitiativeRequested; on the first read, and whenever a read changes whether the total is zero, BacklogView emits emptyChange, and BacklogPage registers Add initiative as the header's tab action while it is true, Add story otherwise
+      page --> actor : Present the page, totals for all stories, and the pager when there is more than one page; when sprintsPaused, the paused banner (Change delivery mode only with canChangeMode)
+      opt Add to sprint from a row's menu
+        actor -> page : Choose Sprint 8 (Active) or Sprint 9 (Planned) from sprintTargets
+        page -> page : BacklogView emits addToSprintRequested (story ID, SprintTarget). Active: BacklogPage opens SprintScopeDialog in add mode (offerSprintsLink true), which preselects the story once its eligible read returns it; on SprintScopeOutcome Changed it rereads the backlog and shows the "Scope updated" toast with the outcome's summary, and on Outdated it rereads the backlog; while the dialog stays open its forbidden output (an unexpected 403) shows the "Your access changed" toast without Retry. Planned: BacklogPage navigates to /projects/:id/sprints/:sprintId/plan?add={storyId}, which marks the story To add; the backlog reads afresh on return
+      end
     end
   end
 end
-opt Read fails unexpectedly (500 with correlation ID or no response)
-  client --> page : Error state with reference ID and Try again; no stale rows shown as current
+opt Read fails unexpectedly (500 or 503 with correlation ID, or no response)
+  client --> page : Error state with Try again and the reference ID only when the server answered; no stale rows shown as current; Try again emits retryRequested, so BacklogPage calls the layout's refresh() and a failed project header rereads with the tab
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).

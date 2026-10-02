@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Close sprint · Mission Control mock</title>
-  <meta name="description" content="Close-sprint dialog requiring a destination for each unfinished story, with unresolved, all-done, no-planned-sprint, conflict, closing, and failed states.">
+  <meta name="description" content="Close-sprint dialog requiring a destination for each unfinished story, with a Set all destination plus per-story choices kept across pages, and loading, many-unfinished, unresolved, all-done, no-planned-sprint, conflict, review-failed, already-closed, closing, failed, and unconfirmed-close states.">
   <meta name="mock-area" content="Scrum sprints">
-  <meta name="mock-requirements" content="L2-024, L2-025, L2-026, L2-030, L2-031, L2-033.2, L2-041.2, L2-043.4">
+  <meta name="mock-requirements" content="L2-024, L2-025, L2-026, L2-030, L2-031, L2-033.2, L2-041.2, L2-043.4, L2-045">
   <link rel="stylesheet" href="../assets/tokens.css">
   <link rel="stylesheet" href="../assets/mocks.css">
   <script src="../assets/mocks.js" defer></script>
@@ -20,12 +20,17 @@
       <label class="mock-bar__state">State
         <select data-mock-state>
           <option value="default">Choose destinations</option>
+          <option value="loading">Loading review</option>
+          <option value="many-unfinished">Many unfinished stories</option>
           <option value="unresolved">Unresolved stories</option>
           <option value="all-done">All stories done</option>
           <option value="no-planned">No planned sprint</option>
-          <option value="conflict">Membership changed</option>
+          <option value="conflict">Sprint changed during review</option>
+          <option value="review-failed">Review couldn't load</option>
+          <option value="already-closed">Already closed</option>
           <option value="closing">Closing</option>
           <option value="failed">Close failed</option>
+          <option value="unconfirmed-closed">Close unconfirmed · now closed</option>
         </select>
       </label>
       <a href="../index.html">All mocks</a>
@@ -33,13 +38,18 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">Every unfinished story needs a destination: back to the backlog or into a planned sprint in this project. "Set all" fills every row at once. Below 576px the dialog fills the screen and each story stacks above its destination.</p>
-    <p class="mock-note" data-when="unresolved" hidden>Closing without a destination for every unfinished story returns 400 and lists each unresolved story; the sprint stays active. Focus moves to the error summary, and its links jump to each select.</p>
+    <p class="mock-note" data-when="default">Every unfinished story needs a destination: back to the backlog or into a planned sprint in this project. "Set all unfinished stories to" gives that destination to every unfinished story, including stories on other pages; a story set one by one keeps its own destination. The dialog reads its own review of the sprint (unfinished stories 25 at a time in backlog priority order, then story ID; the destinations; and the sprint version it was read at), not the cards loaded on the board. The destinations are the backlog and the project's planned sprints by start date, at most the 25 earliest (a proposed bound); a story meant for a later sprint returns to the backlog and is added from that sprint's plan. Choosing Set all or any story's destination is an unsaved change, so Cancel, Close, or Escape then asks before discarding the choices. A story's title opens that story: with choices made, leaving asks first, and once the story opens the dialog closes without closing the sprint. Below 576px the dialog fills the screen and each story stacks above its destination.</p>
+    <p class="mock-note" data-when="loading" hidden>Opens from Close sprint on the board's header or on the Sprints tab's active sprint. The dialog reads its own review first (unfinished stories, destinations, and the sprint version), so Close sprint stays disabled until it arrives and no choice can be made on data that hasn't loaded. Cancel closes without sending anything. The title stays generic until the review names the sprint. Screen readers hear "Loading unfinished stories…". A review that answers 404 closes the dialog, and the page that opened it reloads and shows its own state, with no reference ID or Try again.</p>
+    <p class="mock-note" data-when="many-unfinished" hidden>Shown with a larger dataset: Sprint 8 has 66 stories and 64 are unfinished, 25 per page, so this is page 1 of 3; the list is abbreviated. Set all is "Return to backlog", so all 64 stories have a destination. HCK-112 and HCK-121 were set to Sprint 9 one by one and keep that choice on every page. Close sprint sends the Set all destination, those two choices, and the reviewed version; the server applies Set all to every unfinished story without its own choice.</p>
+    <p class="mock-note" data-when="unresolved" hidden>With no Set all destination, every unfinished story needs its own. Closing with any left on "Choose…" returns 400 and lists each unresolved story; the sprint stays active. With two unresolved stories, focus moves to the error summary, and its links jump to each select; a single unresolved story on this page moves focus straight to its select, which reads its error. No Retry or reference ID is offered. Other refusals that name a story or Set all (400), such as a destination that is no longer a planned sprint, use the same presentation with the server's reason on that row or on Set all.</p>
     <p class="mock-note" data-when="all-done" hidden>All six stories are Done on the board behind the dialog. With nothing unfinished, closing needs no choices. Every story's completed outcome is recorded, along with who closed the sprint and when.</p>
-    <p class="mock-note" data-when="no-planned" hidden>With no planned sprint, the backlog is the only destination. The dialog suggests planning a sprint first.</p>
-    <p class="mock-note" data-when="conflict" hidden>A story left the sprint while this dialog was open, so the API returns 409 and nothing changes. The changed story is marked and its row disabled; Review again reloads the current scope.</p>
-    <p class="mock-note" data-when="closing" hidden>Closing shows progress and ignores repeat clicks. On success the sprint history opens and the board shows "No active sprint".</p>
-    <p class="mock-note" data-when="failed" hidden>Closing is all-or-nothing, so the sprint is still active and no story moved. Choices are kept for another try.</p>
+    <p class="mock-note" data-when="no-planned" hidden>With no planned sprint, the backlog is the only destination, so Set all starts on "Return to backlog" and the dialog says so. That starting choice isn't an unsaved change.</p>
+    <p class="mock-note" data-when="conflict" hidden>Sprint 8's version moved on after the review was read; only membership changes and member status changes move it. Here a story left the sprint, so the API returns 409 and nothing changes. The dialog reads the review again once: HCK-121 is no longer listed, the other choices are kept, and nothing is sent until Close sprint is pressed again. The message is neutral and names no person or time. It sits in the dialog's alert region, so it is announced, and the dialog's description now points to that explanation; Close sprint stays available, so focus stays on it. Turning to another page of a long review that comes back at a newer version shows this same state, read again from page 1, so one review never mixes versions.</p>
+    <p class="mock-note" data-when="review-failed" hidden>The review read failed: a server error (500) or no response. No stories or destinations are shown, so nothing out of date can be chosen, and Close sprint stays unavailable until a review loads. Nothing was changed. Try again repeats the read. A server error shows the reference ID, which matches its diagnostic record; a read that gets no response shows the same alert without a reference ID. Screen readers hear the alert, and focus moves to Try again.</p>
+    <p class="mock-note" data-when="already-closed" hidden>Sprint 8 was closed after the board loaded, so the review or Close sprint returns 409 because the sprint is no longer active. Nothing changed and its recorded history stays as it is. A sprint that hasn't started gets the same 409 and presentation, naming its state: "Sprint 9 hasn't started, so it can't close. Nothing changed." There's nothing to retry: View sprints opens the Sprints tab, where closed sprints are listed under History, and Close returns the dialog's outdated result, so the board reads again and now shows No active sprint. The message names no person or time. It sits in the dialog's alert region, so it is announced and becomes the dialog's description. Close sprint is gone, so focus moves to View sprints, the first action offered. View sprints appears only when the dialog opens from a page other than the Sprints tab, such as this board; opened from the Sprints tab it is left out, so Close, which returns the outdated result, is the first action and takes focus. After a close that got no response, a sprint found closed is named with neutral copy instead (Close unconfirmed · now closed).</p>
+    <p class="mock-note" data-when="closing" hidden>Closing shows progress and ignores repeat clicks. On success the sprint history opens with the "Sprint 8 closed" toast naming the outcome counts (for example "2 done, 2 returned to the backlog, 2 moved to Sprint 9."), and the board shows "No active sprint".</p>
+    <p class="mock-note" data-when="unconfirmed-closed" hidden>Close sprint got no response, so the dialog read Sprint 8's review again from page 1 and found the sprint closed. It can't tell whether this close or another one went through, so it says only what is true now, never that nothing changed, and names no person or time. The page behind already read again when the close went unconfirmed. View sprints opens the Sprints tab, where Sprint 8 is listed under History, and Close returns the dialog's outdated result, so the page that opened it reads again; the board then shows No active sprint. The explanation sits in the dialog's alert region, so it is announced and the dialog's description now points to it. Close sprint is gone, so focus moves to View sprints, the first action offered; opened from the Sprints tab, the dialog leaves View sprints out, so focus moves to Close.</p>
+    <p class="mock-note" data-when="failed" hidden>Closing is all-or-nothing, so the sprint is still active and no story moved. This covers a server error (500) and a busy project (503 with Retry-After). Choices are kept, and Close sprint sends them again only when pressed; the reference ID matches the server's diagnostic record. The alert is announced and focus stays on Close sprint. A close that gets no response reuses this alert with "We couldn't confirm whether Sprint 8 closed." and no reference ID, never saying that nothing changed; the choices stay, the page behind reads again at once, and the dialog reads the review again from page 1 before Close sprint is offered: a sprint that is closed by then is named with neutral copy (Close unconfirmed · now closed), and an active one shows the updated list with the choices kept, as in the changed-during-review state. If the account's access changed (an unexpected 403), nothing closes, the choices stay, and the page shows the "Your access changed" toast instead, without Retry.</p>
   </div>
 
   <div class="mock-screen">
@@ -75,13 +85,14 @@
             <ul class="mc-tabs"><li><span class="mc-tabs__link"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</span></li><li><span class="mc-tabs__link"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</span></li><li><span class="mc-tabs__link"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</span></li><li><span class="mc-tabs__link" aria-current="page"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</span></li><li><span class="mc-tabs__link"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</span></li></ul>
             <div class="mc-card mc-mb-6">
               <div class="mc-card__header"><div class="mc-stack mc-stack--xs"><p class="mc-card__title">Sprint 8</p><p class="mc-text-sm mc-muted">Sep 28 – Oct 9, 2026 · 9 days left</p></div><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--play" aria-hidden="true"></span>Active</span></div>
-              <div class="mc-progress" data-unless="all-done"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-33"></span></span><span>2 of 6 stories done</span></div>
+              <div class="mc-progress" data-unless="all-done many-unfinished"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-33"></span></span><span>2 of 6 stories done</span></div>
+              <div class="mc-progress" data-when="many-unfinished" hidden><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-3"></span></span><span>2 of 66 stories done</span></div>
               <div class="mc-progress" data-when="all-done" hidden><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-full"></span></span><span>6 of 6 stories done</span></div>
             </div>
             <div class="mc-board-scroll">
               <div class="mc-board">
-                <div class="mc-board__column"><div class="mc-board__column-header"><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-board__count"><span data-unless="all-done">2 stories</span><span data-when="all-done" hidden>0 stories</span></span></div><ul class="mc-board__list" data-unless="all-done"><li class="mc-story-card"><div class="mc-story-card__titles"><span class="mc-story-card__title">Mentors can see team needs</span><span class="mc-story-card__path">HCK-118</span></div><div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span></span><span>No tasks</span></div></li><li class="mc-story-card"><div class="mc-story-card__titles"><span class="mc-story-card__title">Volunteer check-in list</span><span class="mc-story-card__path">HCK-125</span></div><div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span></span><span>0/3 tasks</span></div></li></ul><p class="mc-board__empty" data-when="all-done" hidden>Nothing to do</p></div>
-                <div class="mc-board__column"><div class="mc-board__column-header"><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-board__count"><span data-unless="all-done">2 stories</span><span data-when="all-done" hidden>0 stories</span></span></div><ul class="mc-board__list" data-unless="all-done"><li class="mc-story-card"><div class="mc-story-card__titles"><span class="mc-story-card__title">Volunteers can join a build team</span><span class="mc-story-card__path">HCK-112</span></div><div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span></span><span>2/5 tasks</span></div></li><li class="mc-story-card"><div class="mc-story-card__titles"><span class="mc-story-card__title">Book AV for demo day</span><span class="mc-story-card__path">HCK-121</span></div><div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span></span><span>1/2 tasks</span></div></li></ul><p class="mc-board__empty" data-when="all-done" hidden>Nothing in progress</p></div>
+                <div class="mc-board__column"><div class="mc-board__column-header"><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-board__count"><span data-unless="all-done many-unfinished">2 stories</span><span data-when="all-done" hidden>0 stories</span><span data-when="many-unfinished" hidden>41 stories</span></span></div><ul class="mc-board__list" data-unless="all-done"><li class="mc-story-card"><div class="mc-story-card__titles"><span class="mc-story-card__title">Mentors can see team needs</span><span class="mc-story-card__path">HCK-118</span></div><div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span></span><span>No tasks</span></div></li><li class="mc-story-card"><div class="mc-story-card__titles"><span class="mc-story-card__title">Volunteer check-in list</span><span class="mc-story-card__path">HCK-125</span></div><div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span></span><span>0/3 tasks</span></div></li></ul><p class="mc-board__empty" data-when="all-done" hidden>Nothing to do</p></div>
+                <div class="mc-board__column"><div class="mc-board__column-header"><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-board__count"><span data-unless="all-done many-unfinished">2 stories</span><span data-when="all-done" hidden>0 stories</span><span data-when="many-unfinished" hidden>23 stories</span></span></div><ul class="mc-board__list" data-unless="all-done"><li class="mc-story-card"><div class="mc-story-card__titles"><span class="mc-story-card__title">Volunteers can join a build team</span><span class="mc-story-card__path">HCK-112</span></div><div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span></span><span>2/5 tasks</span></div></li><li class="mc-story-card"><div class="mc-story-card__titles"><span class="mc-story-card__title">Book AV for demo day</span><span class="mc-story-card__path">HCK-121</span></div><div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span></span><span>1/2 tasks</span></div></li></ul><p class="mc-board__empty" data-when="all-done" hidden>Nothing in progress</p></div>
                 <div class="mc-board__column"><div class="mc-board__column-header"><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span><span class="mc-board__count"><span data-unless="all-done">2 stories</span><span data-when="all-done" hidden>6 stories</span></span></div><ul class="mc-board__list"><li class="mc-story-card"><div class="mc-story-card__titles"><span class="mc-story-card__title">Teams can register a project idea</span><span class="mc-story-card__path">HCK-119</span></div><div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span></span><span>2/2 tasks</span></div></li><li class="mc-story-card"><div class="mc-story-card__titles"><span class="mc-story-card__title">Publish the kickoff agenda</span><span class="mc-story-card__path">HCK-124</span></div><div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span></span><span>2/2 tasks</span></div></li><li class="mc-story-card" data-when="all-done" hidden><div class="mc-story-card__titles"><span class="mc-story-card__title">Volunteers can join a build team</span><span class="mc-story-card__path">HCK-112</span></div><div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span></span><span>5/5 tasks</span></div></li><li class="mc-story-card" data-when="all-done" hidden><div class="mc-story-card__titles"><span class="mc-story-card__title">Mentors can see team needs</span><span class="mc-story-card__path">HCK-118</span></div><div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span></span><span>No tasks</span></div></li><li class="mc-story-card" data-when="all-done" hidden><div class="mc-story-card__titles"><span class="mc-story-card__title">Book AV for demo day</span><span class="mc-story-card__path">HCK-121</span></div><div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span></span><span>2/2 tasks</span></div></li><li class="mc-story-card" data-when="all-done" hidden><div class="mc-story-card__titles"><span class="mc-story-card__title">Volunteer check-in list</span><span class="mc-story-card__path">HCK-125</span></div><div class="mc-story-card__meta"><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span></span><span>3/3 tasks</span></div></li></ul></div>
               </div>
             </div>
@@ -91,19 +102,25 @@
     </div>
 
     <div class="mc-backdrop">
-      <section class="mc-dialog mc-dialog--lg mc-dialog--sheet" role="dialog" aria-modal="true" aria-labelledby="close-title" aria-describedby="close-note">
+      <section class="mc-dialog mc-dialog--lg mc-dialog--sheet" role="dialog" aria-modal="true" aria-labelledby="close-title" aria-describedby="close-note"
+        data-attr-conflict="aria-describedby=close-conflict-title close-conflict-text"
+        data-attr-already-closed="aria-describedby=close-closed-title close-closed-text"
+        data-attr-unconfirmed-closed="aria-describedby=close-closed-now-title close-closed-now-text">
         <header class="mc-dialog__header">
           <div class="mc-dialog__heading">
-            <h2 class="mc-dialog__title" id="close-title">Close Sprint 8</h2>
-            <p class="mc-dialog__subtitle" id="close-note">Sep 28 – Oct 9, 2026 · Goal: Teams can form and register ideas before kickoff</p>
+            <h2 class="mc-dialog__title" id="close-title"><span data-unless="loading review-failed">Close Sprint 8</span><span data-when="loading review-failed" hidden>Close sprint</span></h2>
+            <p class="mc-dialog__subtitle" id="close-note"><span data-unless="loading review-failed">Sep 28 – Oct 9, 2026 · Goal: Teams can form and register ideas before kickoff</span><span data-when="loading" hidden>Loading the sprint's review</span><span data-when="review-failed" hidden>Sprint details unavailable</span></p>
           </div>
-          <button class="mc-button mc-button--quiet mc-button--icon" type="button" aria-label="Close" data-nav="sprint-board.html" data-attr-closing="disabled">
+          <button class="mc-button mc-button--quiet mc-button--icon" type="button" aria-label="Close" data-nav="sprint-board.html" data-attr-already-closed="data-nav=sprint-board.html#state=no-active" data-attr-unconfirmed-closed="data-nav=sprint-board.html#state=no-active" data-attr-many-unfinished="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-unresolved="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-closing="disabled">
             <span class="mc-icon mc-icon--close" aria-hidden="true"></span>
           </button>
         </header>
 
         <form class="mc-dialog__form" novalidate data-goto-state="closing">
           <div class="mc-dialog__body">
+            <div class="mc-live" role="status" aria-live="polite">
+              <div class="mc-loading-inline" data-when="loading" hidden><span class="mc-spinner" aria-hidden="true"></span>Loading unfinished stories…</div>
+            </div>
             <div class="mc-live" role="alert">
               <div class="mc-error-summary" tabindex="-1" aria-labelledby="close-errors-title" data-when="unresolved" hidden>
                 <p class="mc-error-summary__title" id="close-errors-title"><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Choose a destination for 2 stories</p>
@@ -112,11 +129,44 @@
                   <li><a href="#dest-125">HCK-125 Volunteer check-in list</a></li>
                 </ul>
               </div>
-              <div class="mc-alert mc-alert--danger" data-when="conflict" hidden>
+              <div class="mc-alert mc-alert--warning" data-when="conflict" hidden>
+                <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title" id="close-conflict-title">Sprint 8 changed while you were reviewing.</p>
+                  <p class="mc-alert__text" id="close-conflict-text">Review the updated list; your choices are kept where they still apply. Nothing was closed: Sprint 8 is still active.</p>
+                </div>
+              </div>
+              <div class="mc-alert mc-alert--danger" data-when="review-failed" hidden>
                 <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
                 <div class="mc-alert__body">
-                  <p class="mc-alert__title">Sprint 8 changed while you were closing it</p>
-                  <p class="mc-alert__text">Mateo Silva removed HCK-121 "Book AV for demo day" from the sprint. Nothing was changed: Sprint 8 is still active. Review the stories and try again.</p>
+                  <p class="mc-alert__title">We couldn't load this sprint's unfinished stories</p>
+                  <p class="mc-alert__text">Nothing changed: the sprint is still active. Closing is unavailable until the unfinished stories and their destinations load.</p>
+                  <p class="mc-ref">Reference ID <code>e41d-96b3-2c07</code>
+                    <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="e41d-96b3-2c07"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                  </p>
+                  <div class="mc-alert__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-goto-state="default"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again</button>
+                  </div>
+                </div>
+              </div>
+              <div class="mc-alert mc-alert--warning" data-when="already-closed" hidden>
+                <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title" id="close-closed-title">Sprint 8 is already closed.</p>
+                  <p class="mc-alert__text" id="close-closed-text">Nothing changed. Its outcomes are recorded in its history.</p>
+                  <div class="mc-alert__actions">
+                    <a class="mc-button mc-button--sm" href="sprints.html"><span class="mc-icon mc-icon--history" aria-hidden="true"></span>View sprints</a>
+                  </div>
+                </div>
+              </div>
+              <div class="mc-alert" data-when="unconfirmed-closed" hidden>
+                <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title" id="close-closed-now-title">Sprint 8 is closed now.</p>
+                  <p class="mc-alert__text" id="close-closed-now-text">Its outcomes are recorded in its history.</p>
+                  <div class="mc-alert__actions">
+                    <a class="mc-button mc-button--sm" href="sprints.html"><span class="mc-icon mc-icon--history" aria-hidden="true"></span>View sprints</a>
+                  </div>
                 </div>
               </div>
               <div class="mc-alert mc-alert--danger" data-when="failed" hidden>
@@ -131,17 +181,25 @@
               </div>
             </div>
 
-            <section aria-labelledby="summary-heading" class="mc-stack mc-stack--sm">
+            <section aria-labelledby="summary-heading" class="mc-stack mc-stack--sm" data-unless="loading review-failed already-closed unconfirmed-closed">
               <h3 class="mc-h4" id="summary-heading">Summary</h3>
-              <div class="mc-progress" data-unless="all-done">
+              <div class="mc-progress" data-unless="all-done conflict many-unfinished">
                 <span class="mc-progress__bar" aria-hidden="true"><span class="mc-progress__fill mc-w-33"></span></span>
                 <span>2 of 6 stories done</span>
+              </div>
+              <div class="mc-progress" data-when="conflict" hidden>
+                <span class="mc-progress__bar" aria-hidden="true"><span class="mc-progress__fill mc-w-40"></span></span>
+                <span>2 of 5 stories done</span>
+              </div>
+              <div class="mc-progress" data-when="many-unfinished" hidden>
+                <span class="mc-progress__bar" aria-hidden="true"><span class="mc-progress__fill mc-w-3"></span></span>
+                <span>2 of 66 stories done</span>
               </div>
               <div class="mc-progress" data-when="all-done" hidden>
                 <span class="mc-progress__bar" aria-hidden="true"><span class="mc-progress__fill mc-w-full"></span></span>
                 <span>6 of 6 stories done</span>
               </div>
-              <p class="mc-text-sm mc-muted" data-unless="all-done">Done stories stay with Sprint 8's history: HCK-119 Teams can register a project idea and HCK-124 Publish the kickoff agenda.</p>
+              <p class="mc-text-sm mc-muted" data-unless="all-done">The 2 Done stories stay with Sprint 8's history.</p>
             </section>
 
             <div class="mc-alert mc-alert--success" data-when="all-done" hidden>
@@ -152,34 +210,36 @@
               </div>
             </div>
 
-            <section aria-labelledby="unfinished-heading" class="mc-stack" data-unless="all-done">
+            <section aria-labelledby="unfinished-heading" class="mc-stack" data-unless="all-done loading review-failed already-closed unconfirmed-closed">
               <div class="mc-section__header">
-                <h3 class="mc-h4" id="unfinished-heading">Unfinished stories (4)</h3>
+                <h3 class="mc-h4" id="unfinished-heading">Unfinished stories (<span data-unless="conflict many-unfinished">4</span><span data-when="conflict" hidden>3</span><span data-when="many-unfinished" hidden>64</span>)</h3>
                 <span class="mc-section__hint">Their work status doesn't change. <span data-unless="no-planned">Sprint 9 is planned for Oct 13 – Oct 23.</span></span>
               </div>
 
               <div class="mc-alert mc-alert--neutral" data-when="no-planned" hidden>
                 <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
                 <div class="mc-alert__body">
-                  <p class="mc-alert__text">There's no planned sprint, so unfinished stories return to the backlog. Plan a sprint first to move stories into it.</p>
-                  <div class="mc-alert__actions">
-                    <a class="mc-button mc-button--sm" href="sprint-form-dialog.html">Plan sprint</a>
-                  </div>
+                  <p class="mc-alert__text">There's no planned sprint, so unfinished stories return to the backlog.</p>
                 </div>
               </div>
 
-              <div class="mc-toolbar" data-unless="no-planned conflict">
+              <div class="mc-toolbar">
                 <div class="mc-field mc-toolbar__grow">
                   <label class="mc-label" for="dest-all">Set all unfinished stories to</label>
                   <span class="mc-select-wrap">
-                    <select class="mc-select" id="dest-all" data-attr-closing="disabled">
+                    <select class="mc-select" id="dest-all" aria-describedby="dest-all-hint" data-attr-closing="disabled">
                       <option value="">Choose…</option>
-                      <option value="backlog">Return to backlog</option>
-                      <option value="sprint-9">Move to Sprint 9</option>
+                      <option value="backlog" data-attr-no-planned="selected" data-attr-many-unfinished="selected">Return to backlog</option>
+                      <option value="sprint-9" data-unless="no-planned">Move to Sprint 9</option>
                     </select>
                   </span>
+                  <p class="mc-hint" id="dest-all-hint">Applies to every unfinished story, including those on other pages. A story you set below keeps its own destination.</p>
                 </div>
-                <button class="mc-button" type="button" data-attr-closing="disabled">Apply to all</button>
+              </div>
+              <div class="mc-live" role="status" aria-live="polite">
+                <div class="mc-results-meta" data-when="many-unfinished" hidden>
+                  <span>Showing 1–25 of 64 unfinished stories</span><span>2 with their own destination</span>
+                </div>
               </div>
 
               <ul class="mc-list">
@@ -194,7 +254,23 @@
                       <select class="mc-select" id="dest-112" name="dest-112" required data-attr-closing="disabled">
                         <option value="">Choose…</option>
                         <option value="backlog" data-attr-no-planned="selected">Return to backlog</option>
-                        <option value="sprint-9" data-unless="no-planned" data-attr-closing="selected" data-attr-failed="selected" data-attr-conflict="selected" data-attr-unresolved="selected">Move to Sprint 9</option>
+                        <option value="sprint-9" data-unless="no-planned" data-attr-closing="selected" data-attr-failed="selected" data-attr-conflict="selected" data-attr-unresolved="selected" data-attr-many-unfinished="selected">Move to Sprint 9</option>
+                      </select>
+                    </span>
+                  </div>
+                </li>
+                <li class="mc-list__item" data-unless="conflict">
+                  <div class="mc-list__main">
+                    <a class="mc-list__title" href="../work/work-item-detail.html">Book AV for demo day</a>
+                    <div class="mc-list__meta"><span>HCK-121</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span></div>
+                  </div>
+                  <div class="mc-field mc-list__control">
+                    <label class="mc-label" for="dest-121">Destination<span class="mc-visually-hidden"> for HCK-121</span></label>
+                    <span class="mc-select-wrap">
+                      <select class="mc-select" id="dest-121" name="dest-121" required data-attr-closing="disabled">
+                        <option value="">Choose…</option>
+                        <option value="backlog" data-attr-no-planned="selected">Return to backlog</option>
+                        <option value="sprint-9" data-unless="no-planned" data-attr-closing="selected" data-attr-failed="selected" data-attr-unresolved="selected" data-attr-many-unfinished="selected">Move to Sprint 9</option>
                       </select>
                     </span>
                   </div>
@@ -210,25 +286,8 @@
                     <span class="mc-select-wrap">
                       <select class="mc-select" id="dest-118" name="dest-118" required data-attr-closing="disabled" data-attr-unresolved="aria-invalid=true|aria-describedby=dest-118-error">
                         <option value="">Choose…</option>
-                        <option value="backlog" data-attr-closing="selected" data-attr-failed="selected" data-attr-conflict="selected" data-attr-no-planned="selected">Return to backlog</option>
+                        <option value="backlog" data-attr-closing="selected" data-attr-failed="selected" data-attr-conflict="selected" data-attr-no-planned="selected" data-attr-many-unfinished="selected">Return to backlog</option>
                         <option value="sprint-9" data-unless="no-planned" >Move to Sprint 9</option>
-                      </select>
-                    </span>
-                  </div>
-                </li>
-                <li class="mc-list__item" data-attr-conflict="class=mc-list__item mc-list__item--invalid">
-                  <div class="mc-list__main">
-                    <a class="mc-list__title" href="../work/work-item-detail.html">Book AV for demo day</a>
-                    <div class="mc-list__meta"><span>HCK-121</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span></div>
-                    <p class="mc-field-error" data-when="conflict" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>No longer in Sprint 8. Mateo Silva removed it at 11:12 a.m.</p>
-                  </div>
-                  <div class="mc-field mc-list__control">
-                    <label class="mc-label" for="dest-121">Destination<span class="mc-visually-hidden"> for HCK-121</span></label>
-                    <span class="mc-select-wrap">
-                      <select class="mc-select" id="dest-121" name="dest-121" required data-attr-closing="disabled" data-attr-conflict="disabled">
-                        <option value="">Choose…</option>
-                        <option value="backlog" data-attr-no-planned="selected">Return to backlog</option>
-                        <option value="sprint-9" data-unless="no-planned" data-attr-closing="selected" data-attr-failed="selected" data-attr-conflict="selected" data-attr-unresolved="selected">Move to Sprint 9</option>
                       </select>
                     </span>
                   </div>
@@ -244,16 +303,33 @@
                     <span class="mc-select-wrap">
                       <select class="mc-select" id="dest-125" name="dest-125" required data-attr-closing="disabled" data-attr-unresolved="aria-invalid=true|aria-describedby=dest-125-error">
                         <option value="">Choose…</option>
-                        <option value="backlog" data-attr-closing="selected" data-attr-failed="selected" data-attr-conflict="selected" data-attr-no-planned="selected">Return to backlog</option>
+                        <option value="backlog" data-attr-closing="selected" data-attr-failed="selected" data-attr-conflict="selected" data-attr-no-planned="selected" data-attr-many-unfinished="selected">Return to backlog</option>
                         <option value="sprint-9" data-unless="no-planned" >Move to Sprint 9</option>
                       </select>
                     </span>
                   </div>
                 </li>
               </ul>
+              <nav class="mc-pagination" aria-label="Unfinished story pages" data-when="many-unfinished" hidden>
+                <span class="mc-show-compact">Page 1 of 3</span>
+                <span class="mc-hide-compact">25 per page · choices are kept on every page</span>
+                <div class="mc-cluster mc-cluster--sm">
+                  <button class="mc-button mc-button--sm" type="button" disabled>
+                    <span class="mc-icon mc-icon--chevron-left" aria-hidden="true"></span>Previous
+                  </button>
+                  <ol class="mc-pagination__pages mc-hide-compact">
+                    <li><a class="mc-pagination__page" href="#state=many-unfinished" aria-current="page" aria-label="Page 1">1</a></li>
+                    <li><a class="mc-pagination__page" href="#state=many-unfinished" aria-label="Page 2">2</a></li>
+                    <li><a class="mc-pagination__page" href="#state=many-unfinished" aria-label="Page 3">3</a></li>
+                  </ol>
+                  <button class="mc-button mc-button--sm" type="button" data-goto-state="many-unfinished">
+                    Next<span class="mc-icon mc-icon--chevron-right" aria-hidden="true"></span>
+                  </button>
+                </div>
+              </nav>
             </section>
 
-            <div class="mc-alert mc-alert--neutral">
+            <div class="mc-alert mc-alert--neutral" data-unless="loading review-failed already-closed unconfirmed-closed">
               <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
               <div class="mc-alert__body">
                 <p class="mc-alert__text">Closing is all-or-nothing: if anything fails, Sprint 8 stays active and no story moves. Once closed, the sprint's history can't be edited.</p>
@@ -262,12 +338,12 @@
           </div>
 
           <footer class="mc-dialog__footer">
-            <button class="mc-button" type="button" data-nav="sprint-board.html" data-attr-closing="disabled">Cancel</button>
-            <button class="mc-button mc-button--primary" type="button" data-when="conflict" hidden data-goto-state="default">
-              <span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Review again
-            </button>
-            <button class="mc-button mc-button--primary" type="submit" data-unless="conflict"
+            <button class="mc-button" type="button" data-nav="sprint-board.html" data-unless="already-closed unconfirmed-closed" data-attr-many-unfinished="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-unresolved="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-closing="disabled">Cancel</button>
+            <button class="mc-button mc-button--primary" type="button" data-nav="sprint-board.html#state=no-active" data-when="already-closed unconfirmed-closed" hidden>Close</button>
+            <button class="mc-button mc-button--primary" type="submit" data-unless="already-closed unconfirmed-closed"
               data-attr-default="data-goto-state=unresolved"
+              data-attr-loading="disabled"
+              data-attr-review-failed="disabled"
               data-attr-closing="aria-busy=true|aria-disabled=true">
               <span class="mc-spinner" aria-hidden="true" data-when="closing" hidden></span>
               <span data-when="closing" hidden>Closing…</span>

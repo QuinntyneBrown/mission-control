@@ -12,9 +12,15 @@ This design refines the [L2 baseline](../../../specs/L2.md) and its linked L1 sc
 
 ## Description
 
+The [shared design rules](../../README.md#shared-design-rules) apply: proposed type status, Application placement and MediatR `12.5.0`, authentication and validation V, responsive profile R and accessibility, token styling, data ownership and session handling, and incremental ATDD. This page records feature-specific behavior and exceptions only.
+Exception: as L2-048 design artifacts, the mocks have no ATDD and no automated tests. Production Playwright specs use the `e2e` mock composition, never these static mocks.
+
 The existing artifact lives at `docs/mocks/`. `index.html` catalogs screens, `viewer.html` previews widths, and `build-index.mjs` creates the index and `assets/catalog.js` manifest.
 `assets/mocks.js` handles state switching, menus, column selection, and click-through without network calls or persisted application writes.
-`assets/mocks.css` consumes `--mc-` tokens from the provisional `assets/tokens.css` copy. Its only literal values are media-query widths, which cannot read custom properties, and the `1px` visually-hidden pattern.
+`assets/mocks.css` consumes `--mc-` tokens from `assets/tokens.css`. Its only literal values are media-query widths, which cannot read custom properties, and the `1px` visually-hidden pattern.
+`assets/tokens.css` is a provisional copy until `design-system/` exists. From then on, `node docs/mocks/sync-tokens.mjs` replaces it with the design system's `dist/tokens.css` and adds `assets/_breakpoints.scss` from `dist/_breakpoints.scss`.
+Both mirrors carry the source design-system version and commit in a header comment, as the [design-language page](../review-design-language/README.md) defines; they are never edited by hand.
+`assets/mocks.css` stays plain CSS, so review checks its media-query widths against the mirrored `_breakpoints.scss`.
 HTML metadata names screen descriptions and L2 coverage; design notes record focus, announcement, and behavior rules beyond static appearance.
 
 The catalog illustrates login/session, home, leads, workspaces, hierarchy, backlog, Kanban, Scrum planning/board/closure/history, accounts, and audit review.
@@ -25,7 +31,6 @@ The supplied Quinntyne Brown City identity is the only real one, and no phone is
 `viewer.html` frames any mock and state at 320, 375, 576, 768, 992, 1200, 1440, and 1920 CSS pixels, 800 pixels high.
 Manual review uses 375, 768, and 1440 for L2-048 and the profile R widths (320, 375, 576, 768, 992, 1200, 1920) for intended production layouts.
 Regeneration uses `node docs/mocks/build-index.mjs`; this design does not alter the existing mocks.
-Mocks have no ATDD or automated tests. Production Playwright specs bind `<entity>.service.mock.ts` adapters, not these static mocks, while testing application behavior.
 
 | Behavior | Proposed boundary | Review operation |
 | --- | --- | --- |
@@ -47,15 +52,15 @@ Requirement text and identifiers below are copied verbatim from L2, including th
 
 ## Diagrams
 
-The context view identifies the reviewer and the standalone artifact.
+The context view identifies the reviewer, the static mocks, and the design system they mirror.
 
 ![Review workflow mock artifacts: c4 context](diagrams/c4-context.png)
 
-The container view separates editable static sources and their independent review site.
+The container view separates the editable mock sources, their offline review site, and the design-system mirror source.
 
 ![Review workflow mock artifacts: c4 container](diagrams/c4-container.png)
 
-The component view shows the static catalog, examples, and token source.
+The component view shows the static catalog, mock screens, and the mirrored token and breakpoint files.
 
 ![Review workflow mock artifacts: c4 component](diagrams/c4-component.png)
 

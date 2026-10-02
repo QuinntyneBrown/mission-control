@@ -1,0 +1,437 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+set separator none
+title Frontend classes - Create and manage project workspaces
+package "frontend/projects/mission-control" {
+  class ProjectListPage {
+    +filters: Signal<WorkspaceFilters>
+    +canManageWorkspace: Signal<boolean>
+    +draft: Signal<DraftState>
+    -refresh: WritableSignal<number>
+    +openCreate(): void
+  }
+  note bottom of ProjectListPage
+    page and responsibleLeadId live in the route query
+    (/projects?responsibleLeadId={id}); a filter change
+    resets page one. No debounce. A 400 for the route
+    query (lead, page, or page size) shows the field
+    message with Clear filter; no Try again or reference ID.
+    canManageWorkspace: workspaces.manage
+    in currentSession. ProjectFormOutcome Saved:
+    navigate to the new overview + "Project created"
+    toast naming it; no result: nothing. The
+    dialog's unconfirmed (still open): refresh + 1.
+  end note
+  class ProjectLayoutPage {
+    +workspaceId: Signal<Guid>
+    +canManageWorkspace: Signal<boolean>
+    +canChangeMode: Signal<boolean>
+    +canDeleteWork: Signal<boolean>
+    +revision: Signal<number>
+    +draft: Signal<DraftState>
+    +workspace: Signal<WorkspaceDetail | null>
+    -tabAction: WritableSignal<TabAction?>
+    +openDialog(kind: WorkspaceActionKind): void
+    +setTabAction(action: TabAction?): void
+    +refresh(): void
+    +modeChanged(): void
+  }
+  note right of ProjectLayoutPage
+    Routed parent /projects/:workspaceId; child routes
+    overview (default), work, work-list, work/:itemId,
+    backlog, board, sprints; the header renders on all,
+    with the Work tab active for work-list and
+    work/:itemId.
+    canManageWorkspace: workspaces.manage;
+    canChangeMode: workspaces.changeMode;
+    canDeleteWork: work.delete; all computed from
+    currentSession.capabilities (SESSION_SERVICE).
+    Work pages read canDeleteWork and pass it to
+    their views.
+    Close results (toasts through TOAST_SERVICE):
+    ProjectFormOutcome Saved -> refresh() +
+    "Changes saved"; NotFound -> /projects +
+    neutral "Community Hackathon 2026 has been
+    deleted." info toast;
+    ChangeMode -> openDialog(ChangeMode).
+    ProjectDeleteOutcome Deleted -> /projects +
+    "Project deleted"; AlreadyDeleted -> /projects +
+    already-deleted info toast.
+    AlreadyDeleted after the dialog relayed
+    unconfirmed: neutral "Youth Coding Night has
+    been deleted." info toast instead.
+    ModeChangeOutcome: change-delivery-mode slice;
+    CloseSprint(sprint) opens CloseSprintDialog
+    (offerSprintsLink false only on the sprints tab).
+    No result: nothing. A form, delete, or close-sprint
+    dialog's unconfirmed (still open) -> refresh(); the
+    mode dialog's unconfirmed -> modeChanged().
+    The header's retryRequested -> refresh().
+    refresh() increments revision after a committed
+    change; child pages read revision and relay requests
+    through inject(ProjectLayoutPage).
+    workspace is the header's last resolved value
+    (workspaceLoaded); openDialog(kind) uses it and does
+    nothing before it resolves; child pages pass its
+    name to dialogs as workspaceName.
+    modeChanged(): revision + 1, then re-navigate to the
+    current tab URL so BoardModeGuard re-matches.
+    A resolved header without a Sprints tab while the
+    child route is sprints navigates to overview.
+    While one of the layout's dialogs is open, revision
+    still increments at once, but the re-navigation and
+    the sprints redirect wait until it closes: the
+    active child page hosts the dialog, and deactivating
+    it would dismiss the dialog.
+    The active child page registers its header create
+    action with setTabAction and clears it on destroy;
+    tabActionRequested calls run(). Every child page
+    hosts form dialogs, so every child route has
+    canDeactivate: UnsavedChangesGuard; a child page
+    with no dialog open falls back to layout.draft(),
+    because canDeactivate runs only for deactivated
+    routes. The layout's own route has no guard, so
+    leaving the project asks once.
+  end note
+  class TabAction {
+    +label: string
+    +run(): void
+  }
+  class ProjectOverviewPage {
+    +draft: Signal<DraftState>
+    -layout: ProjectLayoutPage
+  }
+  note bottom of ProjectOverviewPage
+    Relays changeModeRequested to
+    layout.openDialog(ChangeMode), and
+    retryRequested and the first notFound to
+    layout.refresh(), so the header and the
+    overview reread together;
+    opens WorkItemFormDialog for a first
+    initiative from addInitiativeRequested
+    (dialog defined by work create-and-navigate-work).
+    WorkItemFormOutcome: Saved -> layout.refresh()
+    + "Initiative added" toast naming its title;
+    NotFound -> layout.refresh(). While open:
+    unconfirmed -> layout.refresh(); forbidden ->
+    "Your access changed" toast, no Retry.
+    draft: its open dialog's, else layout.draft().
+  end note
+  class BoardModeGuard {
+    +canMatch(route: Route, segments: UrlSegment[]): Promise<boolean | UrlTree>
+  }
+  note bottom of BoardModeGuard
+    canMatch on the two board child routes; reads
+    :workspaceId from the current navigation URL.
+    Kanban matches KanbanBoardPage, Scrum matches
+    SprintBoardPage (kanban and scrum slices).
+    404: UrlTree to overview (Project not found).
+    500, 503, or no response: RouteContext.status =
+    Error (reference ID) or Offline, return false.
+    A declined canMatch skips its route instead of
+    cancelling the navigation: with both board
+    routes skipped, the router lands on the
+    shell's ** route at the board URL, and the
+    shell shows the status set (it clears when a
+    navigation starts, not when it ends), not Not
+    found.
+    The shell's Try again navigates to that URL with
+    onSameUrlNavigation 'reload', so route matching
+    and this guard run again.
+  end note
+  class ProjectFormDialog {
+    +workspaceId: InputSignal<Guid?>
+    +draft: Signal<DraftState>
+    +unconfirmed: OutputEmitterRef<void>
+    +close(result: ProjectFormOutcome?): void
+  }
+  note bottom of ProjectFormDialog
+    Opened for create by ProjectListPage and
+    HomePage (workspace review-home), for edit
+    by ProjectLayoutPage. A 403 shows its own
+    forbidden state; no forbidden output.
+    Closes with NotFound on the form's notFound:
+    at once after a read 404, or from Back to
+    projects in the deleted state.
+  end note
+  class ProjectFormOutcome {
+    +kind: Saved | NotFound | ChangeMode
+    +saved: SavedWorkspaceResult?
+  }
+  class ProjectDeleteDialog {
+    +workspace: InputSignal<WorkspaceDetail>
+    +draft: Signal<DraftState>
+    +unconfirmed: OutputEmitterRef<void>
+    +close(result: ProjectDeleteOutcome?): void
+  }
+  class ProjectDeleteOutcome {
+    +kind: Deleted | AlreadyDeleted
+  }
+  class ModeChangeDialog {
+    +workspace: InputSignal<WorkspaceDetail>
+    +draft: Signal<DraftState>
+    +unconfirmed: OutputEmitterRef<void>
+    +close(result: ModeChangeOutcome?): void
+  }
+  class CloseSprintDialog {
+    +sprintId: InputSignal<Guid>
+    +offerSprintsLink: InputSignal<bool>
+    +unconfirmed: OutputEmitterRef<void>
+    +forbidden: OutputEmitterRef<void>
+    +close(result: CloseSprintOutcome?): void
+  }
+  note bottom of CloseSprintDialog
+    Defined by scrum close-sprint. The layout
+    opens it with CloseSprint(sprint).sprintId.
+    CloseSprintOutcome: Closed -> refresh() +
+    "Sprint 8 closed" toast with its counts;
+    Outdated -> refresh(). Still open:
+    unconfirmed -> refresh(); forbidden ->
+    "Your access changed" toast, no Retry.
+  end note
+  class WorkItemFormDialog {
+    +context: InputSignal<WorkItemFormContext>
+    +unconfirmed: OutputEmitterRef<void>
+    +forbidden: OutputEmitterRef<void>
+    +close(result: WorkItemFormOutcome?): void
+  }
+  interface FormDraft {
+    +draft: Signal<DraftState>
+  }
+  note bottom of FormDraft
+    Navigate with context and preserve form input.
+    Each dialog implements it from the latest
+    DraftState; ProjectListPage, ProjectLayoutPage,
+    and ProjectOverviewPage delegate to their open
+    dialog, and ProjectOverviewPage falls back to
+    the layout's. UnsavedChangesGuard is the
+    canDeactivate of /projects and every child route.
+  end note
+}
+package "frontend/projects/domain" {
+  class WorkspaceListView {
+    +filters: InputSignal<WorkspaceFilters>
+    +refresh: InputSignal<number>
+    +canManageWorkspace: InputSignal<boolean>
+    +filtersChanged: OutputEmitterRef<WorkspaceFilters>
+    +createRequested: OutputEmitterRef<void>
+    -query: Signal<ListWorkspacesQuery>
+    -workspaces: ResourceRef<WorkspaceList>
+  }
+  class ProjectHeaderView {
+    +workspaceId: InputSignal<Guid>
+    +refresh: InputSignal<number>
+    +canManageWorkspace: InputSignal<boolean>
+    +canChangeMode: InputSignal<boolean>
+    +tabActionLabel: InputSignal<string?>
+    +actionRequested: OutputEmitterRef<WorkspaceActionKind>
+    +tabActionRequested: OutputEmitterRef<void>
+    +workspaceLoaded: OutputEmitterRef<WorkspaceDetail>
+    +retryRequested: OutputEmitterRef<void>
+    -workspace: ResourceRef<WorkspaceDetail>
+  }
+  note bottom of ProjectHeaderView
+    Pinned breadcrumb, name, mode, responsible lead,
+    and tabs for the mode (Kanban shows Sprints only
+    while keptSprints is not empty). Project actions
+    only with canManageWorkspace; the Collaborator
+    notice otherwise. A 404 leaves only the
+    breadcrumb. A 500, 503, or no response adds a
+    compact alert under it: "We couldn't load this
+    project's details", the reference ID only when a
+    response carried one, and Try again, which emits
+    retryRequested; the layout calls refresh(), so
+    the header and the tab reread together. A tab
+    view's own Try again reaches layout.refresh()
+    through its page the same way.
+  end note
+  class WorkspaceOverviewView {
+    +workspaceId: InputSignal<Guid>
+    +refresh: InputSignal<number>
+    +canChangeMode: InputSignal<boolean>
+    +changeModeRequested: OutputEmitterRef<void>
+    +addInitiativeRequested: OutputEmitterRef<void>
+    +retryRequested: OutputEmitterRef<void>
+    +notFound: OutputEmitterRef<void>
+    -workspace: ResourceRef<WorkspaceDetail>
+  }
+  class WorkspaceForm {
+    +workspaceId: InputSignal<Guid?>
+    +saved: OutputEmitterRef<SavedWorkspaceResult>
+    +notFound: OutputEmitterRef<void>
+    +changeModeRequested: OutputEmitterRef<void>
+    +unconfirmed: OutputEmitterRef<void>
+    +draftChange: OutputEmitterRef<DraftState>
+    -workspace: ResourceRef<WorkspaceDetail>
+    -draft: WritableSignal<WorkspaceDraft>
+    -conflicted: WritableSignal<boolean>
+    -submit: WritableSignal<FeatureState>
+    +save(): Promise<void>
+    +reloadLatest(): void
+  }
+  note bottom of WorkspaceForm
+    Edit: the draft starts from the first resolved
+    workspace; the fields stay disabled until then, and
+    a failed read keeps them disabled with Try again =
+    workspace.reload(). A stale 409 calls
+    workspace.reload() once; the comparison shows the
+    draft beside the reloaded value. Create: query undefined.
+    A 403 keeps the dialog and the draft; Save unavailable.
+    A read 404 emits notFound at once: the dialog closes
+    and the layout opens /projects.
+    A save 404, or a 404 from the reread after a stale
+    409 or an unconfirmed save (deleted): keep the
+    draft, disable the fields and Save, focus Back to
+    projects, which emits notFound; no reference ID or
+    Try again. After an unconfirmed save its alert
+    drops "Your edits weren't saved".
+    No response: keep the draft; the failed alert says it
+    couldn't confirm the save (no reference ID); an edit
+    calls workspace.reload() once; emit unconfirmed.
+    A stale 409 after that keeps the conflict title but
+    reads "The latest saved version is shown beside
+    your entries." instead of "haven't been saved".
+  end note
+  class LeadPicker {
+    +selected: InputSignal<LeadReference?>
+    +chosen: OutputEmitterRef<LeadReference?>
+    -searchText: WritableSignal<string>
+    -query: Signal<ListLeadsQuery | undefined>
+    -choices: ResourceRef<LeadDirectoryResult>
+  }
+  note right of LeadPicker
+    query stays undefined until the combobox opens;
+    typed text reaches it once stable for about 250 ms.
+    A failed read shows a field-level alert with Retry
+    (choices.reload()) and, for a 500, the reference
+    ID; the chosen lead and the draft stay intact and
+    Save stays available.
+  end note
+  class WorkspaceDeleteForm {
+    +workspace: InputSignal<WorkspaceDetail>
+    +deleted: OutputEmitterRef<Guid>
+    +alreadyDeleted: OutputEmitterRef<Guid>
+    +unconfirmed: OutputEmitterRef<void>
+    +draftChange: OutputEmitterRef<DraftState>
+    -submit: WritableSignal<FeatureState>
+    -blocked: WritableSignal<WorkspaceInUseProblem?>
+    +confirm(): Promise<void>
+  }
+  class WorkspaceFilters {
+    +page: int
+    +responsibleLeadId: Guid?
+  }
+  enum WorkspaceActionKind {
+    Edit
+    Delete
+    ChangeMode
+  }
+  class DraftState {
+    +dirty: bool
+    +pending: bool
+    +unconfirmed: bool
+    +summary: string?
+  }
+  class WorkspaceDraft {
+    +name: string
+    +description: string?
+    +mode: DeliveryMode
+    +responsibleLead: LeadReference?
+  }
+}
+package "frontend/projects/api" {
+  interface "ResourceRef<T>" as ResourceRef {
+    +value: Signal<T | undefined>
+    +status: Signal<loading | resolved | error>
+    +error: Signal<unknown>
+    +reload(): void
+  }
+  interface IWorkspaceService {
+    +workspacesResource(query: () => ListWorkspacesQuery | undefined): ResourceRef<WorkspaceList>
+    +workspaceResource(query: () => GetWorkspaceQuery | undefined): ResourceRef<WorkspaceDetail>
+    +loadMode(workspaceId: Guid): Promise<DeliveryMode>
+    +create(command: CreateWorkspaceCommand): Promise<SavedWorkspaceResult>
+    +edit(command: UpdateWorkspaceCommand): Promise<SavedWorkspaceResult>
+    +delete(command: DeleteWorkspaceCommand): Promise<void>
+  }
+  interface ILeadService {
+    +leadsResource(query: () => ListLeadsQuery | undefined): ResourceRef<LeadDirectoryResult>
+  }
+  interface IToastService {
+    +show(toast: Toast): void
+  }
+  class WorkspaceService {
+    -http: HttpClient
+  }
+  note bottom of WorkspaceService
+    Creates each resource in the consumer's injection
+    context; aborts a superseded read when the query
+    signal changes and cancels on consumer destroy.
+    loadMode reads GET /api/workspaces/{id} once for
+    the guard. Mutations return promises; no RxJS type
+    leaves api.
+  end note
+}
+ProjectListPage --> WorkspaceListView : composes; inputs and outputs only
+ProjectListPage ..> ProjectFormDialog : opens (create)
+ProjectLayoutPage --> ProjectHeaderView : composes; inputs and outputs only
+ProjectLayoutPage ..> ProjectFormDialog : opens (edit)
+ProjectLayoutPage ..> ProjectDeleteDialog : opens
+ProjectLayoutPage ..> ModeChangeDialog : opens
+ProjectLayoutPage ..> CloseSprintDialog : opens on CloseSprint
+ProjectLayoutPage *-- ProjectOverviewPage : child route
+ProjectOverviewPage --> WorkspaceOverviewView : composes; refresh = layout.revision
+ProjectOverviewPage ..> ProjectLayoutPage : relays requests; draft fallback
+ProjectLayoutPage ..> TabAction : holds the active tab's create action
+ProjectOverviewPage ..> WorkItemFormDialog : opens (first initiative)
+ProjectFormDialog ..> ProjectFormOutcome : close result
+ProjectDeleteDialog ..> ProjectDeleteOutcome : close result
+ProjectListPage ..> IToastService : inject TOAST_SERVICE
+ProjectLayoutPage ..> IToastService : inject TOAST_SERVICE
+ProjectOverviewPage ..> IToastService : inject TOAST_SERVICE
+FormDraft <|.. ProjectFormDialog
+FormDraft <|.. ProjectDeleteDialog
+FormDraft <|.. ModeChangeDialog
+WorkspaceForm ..> DraftState : emits
+WorkspaceDeleteForm ..> DraftState : emits
+BoardModeGuard ..> IWorkspaceService : inject WORKSPACE_SERVICE; loadMode
+ProjectFormDialog --> WorkspaceForm : hosts
+ProjectDeleteDialog --> WorkspaceDeleteForm : hosts
+WorkspaceForm --> LeadPicker : composes
+WorkspaceListView ..> IWorkspaceService : inject WORKSPACE_SERVICE
+ProjectHeaderView ..> IWorkspaceService : inject WORKSPACE_SERVICE
+WorkspaceOverviewView ..> IWorkspaceService : inject WORKSPACE_SERVICE
+WorkspaceForm ..> IWorkspaceService : inject WORKSPACE_SERVICE
+WorkspaceDeleteForm ..> IWorkspaceService : inject WORKSPACE_SERVICE
+LeadPicker ..> ILeadService : inject LEAD_SERVICE
+IWorkspaceService <|.. WorkspaceService
+IWorkspaceService ..> ResourceRef : returns per consumer
+
+ProjectDeleteOutcome -[hidden]down-> WorkspaceDeleteForm
+ProjectDeleteOutcome -[hidden]down-> WorkspaceForm
+ProjectDeleteOutcome -[hidden]down-> WorkspaceOverviewView
+ProjectDeleteOutcome -[hidden]down-> ProjectHeaderView
+ProjectDeleteOutcome -[hidden]down-> WorkspaceListView
+ProjectDeleteOutcome -[hidden]down-> WorkspaceFilters
+ProjectDeleteOutcome -[hidden]down-> WorkspaceActionKind
+LeadPicker -[hidden]down-> IWorkspaceService
+LeadPicker -[hidden]down-> ILeadService
+@enduml

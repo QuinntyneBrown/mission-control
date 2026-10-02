@@ -14,84 +14,130 @@ skinparam package {
   BackgroundColor #F9FAFB
 }
 title Class structure - Execute work on the active sprint board
+top to bottom direction
 skinparam class {
   BorderColor #344054
   FontColor #101828
   BackgroundColor #F9FAFB
 }
-class SprintBoardPage {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
+set separator none
+package "MissionControl.Api" {
+  class BoardsController {
+    -sender: ISender
+  }
 }
-class BoardView {
-  +state: Signal<FeatureState>
-  +submit(): void
-}
-interface IBoardService {
-  +read(request: GetActiveSprintBoardQuery): Promise<FeatureResult>
-  +move(request: MoveStoryCommand): Promise<FeatureResult>
-}
-class BoardService {
-  -http: HttpClient
-}
-class BoardsController {
-  -sender: ISender
-}
-class SprintBoardCard {
-  +sprintId: Guid
-  +storyId: Guid
-  +status: WorkStatus
-  +position: int
-  +completedTasks: int
-  +totalTasks: int
-  +boardVersion: long
-}
-interface IMissionControlDataSession {
-  +query(specification): Task<ReadResult>
-  +commit(expectedVersion: long): Task<void>
-}
-class MissionControlDataSession {
-  -connection: DbConnection
-}
-SprintBoardPage --> BoardView : composes
-BoardView ..> IBoardService : inject token
-IBoardService <|.. BoardService
-IMissionControlDataSession <|.. MissionControlDataSession
-class GetActiveSprintBoardQuery {
-  +workspaceId: Guid
-  +status: WorkStatus?
-  +page: int
-  +pageSize: int
-}
-class GetActiveSprintBoardQueryHandler {
-  +handle(request: GetActiveSprintBoardQuery): Task<FeatureResult>
+package "MissionControl.Application" {
+  class GetActiveSprintBoardQuery {
+    +workspaceId: Guid
+    +status: WorkStatus?
+    +page: int
+    +pageSize: int
+  }
+  class GetActiveSprintBoardQueryHandler {
+    +handle(request: GetActiveSprintBoardQuery, ct: CancellationToken): Task<ActiveSprintBoardResult>
+  }
+  class ActiveSprintBoardResult {
+    +sprintId: Guid?
+    +name: string?
+    +version: long?
+    +goal: string?
+    +startDate: DateOnly?
+    +endDate: DateOnly?
+    +startedAtUtc: DateTimeOffset?
+    +startedByName: string?
+    +initialScopeCount: int
+    +scopeChangeCount: int
+    +storyCount: int
+    +doneCount: int
+    +points: int
+    +donePoints: int
+    +nextPlannedSprint: SprintPeriod?
+    +latestClosedSprint: SprintReference?
+    +workspaceStoryTotal: int
+    +board: BoardResult?
+  }
+  note right of ActiveSprintBoardResult
+    Totals cover the whole current scope,
+    computed by the server, never from loaded cards.
+    Every read returns the header, a Load more batch
+    or a post-move reread included.
+    latestClosedSprint: latest closure, then ID; read
+    when no sprint is active or planned.
+    workspaceStoryTotal: stories in the whole workspace;
+    zero makes the create action Add initiative.
+  end note
+  class SprintPeriod {
+    +sprintId: Guid
+    +name: string
+    +startDate: DateOnly
+    +endDate: DateOnly
+  }
+  class SprintReference {
+    +sprintId: Guid
+    +name: string
+  }
+  class BoardResult {
+    +boardId: Guid
+    +boardVersion: long
+    +sprintsPaused: bool
+    +columns: BoardColumn[]
+  }
+  note right of BoardResult
+    sprintsPaused is always false on a sprint board.
+  end note
+  class BoardColumn {
+    +status: WorkStatus
+    +totalCount: int
+    +cards: BoardCard[]
+  }
+  class BoardCard {
+    +storyId: Guid
+    +key: string
+    +title: string
+    +epicTitle: string
+    +assigneeName: string?
+    +status: WorkStatus
+    +position: int
+    +completedTasks: int
+    +totalTasks: int
+    +estimate: int?
+    +storyVersion: long
+  }
+  note bottom of BoardCard
+    No description. Task counts come from one
+    set-based aggregate per batch, never per card.
+  end note
+  class MoveStoryCommand {
+    +workspaceId: Guid
+    +storyId: Guid
+    +sprintBoardId: Guid?
+    +destination: WorkStatus
+    +targetPosition: int
+    +expectedStoryVersion: long
+    +expectedBoardVersion: long
+    +completionCondition: StoryCompletionCondition?
+  }
+  note bottom of MoveStoryCommand
+    Sent by IBoardService.move with sprintBoardId
+    set to the active sprint; handled by kanban
+    move-story-cards.
+  end note
+  interface IMissionControlDataSession {
+    +LoadActiveSprintBoardAsync(query: GetActiveSprintBoardQuery, ct: CancellationToken): Task<ActiveSprintBoardResult?>
+  }
+  note bottom of IMissionControlDataSession
+    Scoped view of the shared port defined in the overview;
+    this read-only slice uses one typed read. Moves use the
+    kanban move-story-cards members.
+  end note
 }
 BoardsController ..> GetActiveSprintBoardQuery : dispatches
 GetActiveSprintBoardQueryHandler ..> GetActiveSprintBoardQuery : handles
-GetActiveSprintBoardQueryHandler --> SprintBoardCard : loads / applies
-GetActiveSprintBoardQueryHandler ..> IMissionControlDataSession : uses
-class MoveStoryCommand {
-  +workspaceId: Guid
-  +storyId: Guid
-  +sprintBoardId: Guid?
-  +destination: WorkStatus
-  +targetPosition: int
-  +expectedStoryVersion: long
-  +expectedBoardVersion: long
-  +completionCondition: StoryCompletionCondition?
-}
-class MoveStoryDialog {
-  +destination: Signal<WorkStatus>
-}
-class UnfinishedTasksDialog {
-  +unfinishedCount: Signal<int>
-}
-class SprintScopeDialog {
-  +selection: Signal<Guid[]>
-}
-IBoardService ..> MoveStoryCommand : sends with sprintBoardId
-SprintBoardPage ..> MoveStoryDialog : opens from Move (kanban move-story-cards)
-SprintBoardPage ..> UnfinishedTasksDialog : opens on 409 unfinished-tasks (kanban confirm-story-completion)
-SprintBoardPage ..> SprintScopeDialog : opens from Remove or Change scope (start-and-adjust-sprint)
-
+GetActiveSprintBoardQueryHandler --> ActiveSprintBoardResult : returns
+GetActiveSprintBoardQueryHandler ..> IMissionControlDataSession : LoadActiveSprintBoardAsync
+ActiveSprintBoardResult --> SprintPeriod : next planned sprint
+ActiveSprintBoardResult --> SprintReference : latest closed sprint
+ActiveSprintBoardResult *-- BoardResult
+BoardResult *-- BoardColumn
+BoardColumn *-- BoardCard
 @enduml

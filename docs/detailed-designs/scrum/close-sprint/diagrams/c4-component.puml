@@ -2,22 +2,25 @@
 !include <C4/C4_Component>
 LAYOUT_WITH_LEGEND()
 title Components - Close a sprint and resolve unfinished work
-Container(web, "Mission Control web client", "Angular", "SprintBoardPage / SprintView")
+Container(web, "Mission Control web client", "Angular", "SprintBoardPage, SprintsPage, SprintPlanningPage, ProjectLayoutPage, CloseSprintDialog / SprintClosureForm")
 ContainerDb(db, "Mission Control database", "SQL", "Versioned feature records and audit events")
 Container_Boundary(api, "MissionControl.Api runtime") {
   Component(ctrl, "SprintsController", "API boundary", "Binds request and dispatches through MediatR 12.5.0")
   Component(access, "CurrentAccountAuthorization", "API authentication / authorization", "Validates JWT and checks current SQL account access")
   Component(validation, "ValidationBehavior", "Application pipeline", "Invokes request validators")
-  Component(entity, "Sprint", "Domain / read model", "Close a sprint and resolve unfinished work")
-  Component(store, "MissionControlDataSession", "Infrastructure", "Implements Application data port; commits transactions")
+  Component(entity, "Sprint / SprintSnapshot / SprintStoryOutcome", "Domain", "Applies dispositions; records immutable closure facts as tracked children")
+  Component(store, "MissionControlDataSession", "Infrastructure", "Implements IMissionControlDataSession: ListSprintClosureReviewAsync, LoadSprintClosureAsync, RemoveActiveSprintSlot, RemoveBoardState, AddAuditEvent, workspace transaction, SaveChangesAsync")
 Rel(web, access, "Calls through ISprintService / SprintService", "HTTPS")
 Rel(access, db, "Checks current access for protected requests", "SQL")
-Rel(access, ctrl, "Forwards authorized request; login remains public")
+Rel(access, ctrl, "Forwards authorized request")
 Rel(ctrl, validation, "Sends typed request")
-Component(h0, "CloseSprintCommandHandler", "Application / MediatR", "Close with a disposition for every unfinished story")
+Component(h0, "GetSprintClosureReviewQueryHandler", "Application / MediatR", "One page of unfinished stories, totals, destinations, reviewed version")
 Rel(validation, h0, "Dispatches validated request")
-Rel(h0, entity, "Reads / applies domain behavior")
-Rel(h0, store, "Loads / persists state")
+Rel(h0, store, "Typed review read")
+Component(h1, "CloseSprintCommandHandler", "Application / MediatR", "Close with a disposition for every unfinished story")
+Rel(validation, h1, "Dispatches validated request")
+Rel(h1, entity, "close(setAllTo, overrides, unfinishedIds, destinations, at, actorId)")
+Rel(h1, store, "Workspace transaction; SaveChangesAsync")
 }
-Rel(store, db, "Executes bounded queries / atomic writes", "SQL")
+Rel(store, db, "Executes bounded queries / set-based atomic writes", "SQL")
 @enduml

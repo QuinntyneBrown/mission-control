@@ -19,71 +19,301 @@ skinparam class {
   FontColor #101828
   BackgroundColor #F9FAFB
 }
-class KanbanBoardPage {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
+set separator none
+package "frontend/projects/mission-control" {
+  class KanbanBoardPage {
+    +workspaceId: Signal<Guid>
+    -layout: ProjectLayoutPage
+    -moveRequest: WritableSignal<MoveRequest?>
+    -chosenMove: WritableSignal<MoveChoice?>
+    -decision: WritableSignal<CompletionDecision?>
+    -moveStatus: WritableSignal<MoveStatus?>
+  }
+  note right of KanbanBoardPage
+    Opens MoveStoryDialog with moveRequested's
+    MoveRequest and UnfinishedTasksDialog when
+    moveStatus asks for confirmation; relays dialog
+    outputs to BoardView inputs. On Settled and Forbidden
+    any open dialog closes itself. Failed (500/503) with no dialog
+    open shows the "Couldn't move story" toast with the
+    reference ID (Retry sets chosenMove to the status's
+    choice); Forbidden (unexpected 403) shows the "Your
+    access changed" toast without Retry; a Settled
+    announcement shows a success toast. Toasts follow
+    moveStatus with or without a dialog. MoveStoryDialog
+    close: none (dismissed) clears the request, sends
+    nothing, focus to the card's Move button; Settled:
+    focus follows the outcome; Forbidden: focus to the
+    Move button; ConfirmationRequired: opens
+    UnfinishedTasksDialog. UnfinishedTasksDialog close
+    (Settled, Forbidden): focus to the card's Move button
+    unless a board alert, the board region (story
+    deleted), or the not-found heading takes it;
+    none (a navigation closed it): relays kept through
+    completionDecision, so the pending move ends
+    without a request.
+    modeChanged calls layout.modeChanged().
+    No method calls into BoardView.
+  end note
+  class ProjectLayoutPage {
+    +modeChanged(): void
+  }
+  note bottom of ProjectLayoutPage
+    Defined by projects/manage-workspaces;
+    reached through inject(ProjectLayoutPage).
+  end note
+  class MoveStoryDialog {
+    +request: InputSignal<MoveRequest>
+    +status: InputSignal<MoveStatus?>
+    +chosen: OutputEmitterRef<MoveChoice>
+    +close(result: MoveStoryOutcome?): void
+  }
+  note bottom of MoveStoryDialog
+    Reads nothing on open: columns, totals and
+    position choices (Top, After each loaded card,
+    Bottom) come from request. Holds a choice, not
+    a draft: no FormDraft. Closes itself when status
+    reports Settled, Forbidden or ConfirmationRequired;
+    no result on Cancel, Close or Escape (unavailable
+    while a move is pending).
+  end note
+  class MoveStoryOutcome {
+    +kind: Settled | Forbidden | ConfirmationRequired
+  }
+  class UnfinishedTasksDialog {
+    +prompt: InputSignal<CompletionPrompt>
+    +confirmed: OutputEmitterRef<StoryCompletionCondition>
+    +kept: OutputEmitterRef<void>
+    +close(result: UnfinishedTasksOutcome?): void
+  }
+  note bottom of UnfinishedTasksDialog
+    Escape is Keep in progress (kept); never
+    dismissed without a choice. Closes itself when
+    prompt reports Settled or Forbidden. A navigation
+    closes it with no result; the opener relays kept.
+  end note
+  class UnfinishedTasksOutcome {
+    +kind: Settled | Forbidden
+  }
+  class CompletionPrompt {
+    +storyKey: string
+    +storyTitle: string
+    +savedStatus: WorkStatus
+    +condition: StoryCompletionCondition
+    +state: Asking | ServerCount | Saving | Failed | Settled | Forbidden
+    +referenceId: string?
+  }
 }
-class MoveStoryDialog {
-  +destination: Signal<WorkStatus>
-  +position: Signal<int>
-  +move(): void
+package "frontend/projects/domain" {
+  class BoardView {
+    +workspaceId: InputSignal<Guid>
+    +sprintBoard: InputSignal<boolean>
+    +chosenMove: InputSignal<MoveChoice?>
+    +completionDecision: InputSignal<CompletionDecision?>
+    +moveRequested: OutputEmitterRef<MoveRequest>
+    +moveStatus: OutputEmitterRef<MoveStatus>
+    +modeChanged: OutputEmitterRef<void>
+    -query: WritableSignal<BoardQuery?>
+    -board: ResourceRef<BoardResult>
+    -acknowledged: WritableSignal<BoardResult?>
+    -pendingMove: WritableSignal<MoveStoryCommand?>
+    -generation: WritableSignal<int>
+  }
+  note right of BoardView
+    Move members only: the sprint-only outputs
+    (removeRequested, sprintLoaded) belong to sprint
+    execution, the Kanban-only members to view the board.
+    One pending move per board: other moves, drag
+    and Load more are aria-disabled until it settles.
+    A move start increments the generation and clears
+    the query (the resource aborts any read in flight).
+    Results stamped with an older generation or
+    another board ID are discarded.
+    Success sets the query to the loaded window of the
+    source and destination columns; the resolved columns
+    become the latest acknowledged state.
+    Failure restores the latest acknowledged state.
+    A board-changed 409 or a 400 refusal restores it,
+    ends the move (Settled) and shows a page alert with
+    Reload board (no Retry, no reference ID); a 403
+    restores it and reports Forbidden.
+    A mode-changed 409 restores it, ends the move
+    (Settled, no board-changed alert) and emits modeChanged.
+    While UnfinishedTasksDialog is open, a 500 or 503
+    keeps the move pending and reports Failed.
+  end note
+  class MoveRequest {
+    +card: BoardCard
+    +columns: MoveColumn[]
+  }
+  class MoveColumn {
+    +status: WorkStatus
+    +totalCount: int
+    +loadedCards: MoveColumnCard[]
+  }
+  class MoveColumnCard {
+    +storyId: Guid
+    +title: string
+  }
+  note bottom of MoveColumn
+    From the latest acknowledged board;
+    totalCount is the server's full count.
+  end note
+  class MoveChoice {
+    +storyId: Guid
+    +destination: WorkStatus
+    +position: int
+  }
+  class MoveStatus {
+    +state: Saving | ConfirmationRequired | Failed | Forbidden | Settled
+    +card: BoardCard
+    +choice: MoveChoice
+    +condition: StoryCompletionCondition?
+    +referenceId: string?
+    +message: string?
+  }
+  note bottom of MoveStatus
+    Failed: 500 or 503, always with referenceId.
+    message: the failure text (Failed) or the
+    success announcement (Settled after a saved
+    move); null otherwise. A 400 refusal reports
+    Settled; BoardView shows its reason.
+  end note
+  class CompletionDecision {
+    +markDone: bool
+    +condition: StoryCompletionCondition?
+  }
 }
-class UnfinishedTasksDialog {
-  +storyTitle: string
-  +unfinishedCount: int
-  +keep(): void
-  +markDone(): void
+package "frontend/projects/api" {
+  interface "ResourceRef<T>" as ResourceRef {
+    +value: Signal<T | undefined>
+    +status: Signal<loading | resolved | error>
+    +error: Signal<unknown>
+    +reload(): void
+  }
+  interface IBoardService {
+    +boardResource(query: () => BoardQuery | undefined): ResourceRef<BoardResult>
+    +move(command: MoveStoryCommand): Promise<MoveStoryResult>
+  }
+  class BoardService {
+    -http: HttpClient
+  }
+  interface IToastService {
+    +show(toast: Toast): void
+  }
 }
-class BoardView {
-  +state: Signal<FeatureState>
-  +submit(): void
+package "MissionControl.Api" {
+  class BoardsController {
+    -sender: ISender
+  }
 }
-interface IBoardService {
-  +move(request: MoveStoryCommand): Promise<FeatureResult>
+package "MissionControl.Application" {
+  class MoveStoryCommand {
+    +workspaceId: Guid
+    +storyId: Guid
+    +sprintBoardId: Guid?
+    +destination: WorkStatus
+    +targetPosition: int
+    +expectedStoryVersion: long
+    +expectedBoardVersion: long
+    +completionCondition: StoryCompletionCondition?
+  }
+  class MoveStoryResult {
+    +boardId: Guid
+    +storyId: Guid
+    +status: WorkStatus
+    +position: int
+    +storyVersion: long
+    +boardVersion: long
+  }
+  class MoveStoryCommandHandler {
+    +handle(request: MoveStoryCommand, ct: CancellationToken): Task<MoveStoryResult>
+  }
+  class StoryStatusTransition {
+    +apply(placements, status, sent?, requestedBoardId?, position?): bool
+  }
+  note bottom of StoryStatusTransition
+    Defined by confirm story completion; shared with
+    story edits and the completion endpoint. False
+    means confirmation required (nothing changed).
+    Otherwise the requested board gets the explicit
+    position, other live placements append, and the
+    active sprint's version increments for a member.
+  end note
+  interface IMissionControlDataSession {
+    +BeginWorkspaceTransactionAsync(workspaceId: Guid, ct: CancellationToken): Task
+    +LoadStoryPlacementsAsync(workspaceId: Guid, storyId: Guid, ct: CancellationToken): Task<StoryPlacements?>
+    +AddAuditEvent(auditEvent: AuditEvent): void
+    +SaveChangesAsync(ct: CancellationToken): Task
+  }
+  class StoryPlacements {
+    +story: WorkItem
+    +mode: DeliveryMode
+    +boards: IReadOnlyList<BoardState>
+    +completion: StoryCompletionCondition
+  }
 }
-class BoardService {
-  -http: HttpClient
+package "MissionControl.Domain" {
+  class BoardState {
+    +id: Guid
+    +workspaceId: Guid
+    +sprintId: Guid?
+    +version: long
+  }
+  class BoardPlacement {
+    +boardId: Guid
+    +storyId: Guid
+    +status: WorkStatus
+    +position: int
+    +move(status: WorkStatus, position: int): void
+  }
+  class StoryCompletionPolicy {
+    +requireConfirmation(sent: StoryCompletionCondition?, current: StoryCompletionCondition): bool
+  }
+  class StoryCompletionCondition {
+    +storyVersion: long
+    +taskRevision: long
+    +unfinishedCount: int
+  }
 }
-class BoardsController {
-  -sender: ISender
+package "MissionControl.Infrastructure" {
+  class MissionControlDataSession
 }
-class BoardPlacement {
-  +boardId: Guid
-  +storyId: Guid
-  +status: WorkStatus
-  +position: int
-  +version: long
-  +move(status: WorkStatus, position: int): void
-}
-interface IMissionControlDataSession {
-  +query(specification): Task<ReadResult>
-  +commit(expectedVersion: long): Task<void>
-}
-class MissionControlDataSession {
-  -connection: DbConnection
-}
-KanbanBoardPage --> BoardView : composes
-KanbanBoardPage --> MoveStoryDialog : opens from Move
-KanbanBoardPage --> UnfinishedTasksDialog : opens on 409 unfinished-tasks
-BoardView ..> IBoardService : inject token
+KanbanBoardPage --> BoardView : composes; inputs and outputs only
+KanbanBoardPage --> MoveStoryDialog : opens on moveRequested; request input
+KanbanBoardPage --> UnfinishedTasksDialog : opens when confirmation is required
+KanbanBoardPage ..> CompletionPrompt : builds from moveStatus
+MoveStoryDialog ..> MoveStoryOutcome : close result
+UnfinishedTasksDialog ..> UnfinishedTasksOutcome : close result
+KanbanBoardPage ..> ProjectLayoutPage : modeChanged() on modeChanged
+KanbanBoardPage ..> IToastService : inject TOAST_SERVICE; move toasts
+BoardView ..> MoveRequest : moveRequested output
+MoveRequest *-- MoveColumn
+MoveColumn *-- MoveColumnCard
+BoardView ..> MoveChoice : chosenMove input
+BoardView ..> CompletionDecision : completionDecision input
+BoardView ..> MoveStatus : moveStatus output
+BoardView ..> IBoardService : inject BOARD_SERVICE
 IBoardService <|.. BoardService
-IMissionControlDataSession <|.. MissionControlDataSession
-class MoveStoryCommand {
-  +workspaceId: Guid
-  +storyId: Guid
-  +sprintBoardId: Guid?
-  +destination: WorkStatus
-  +targetPosition: int
-  +expectedStoryVersion: long
-  +expectedBoardVersion: long
-  +completionCondition: StoryCompletionCondition?
-}
-class MoveStoryCommandHandler {
-  +handle(request: MoveStoryCommand): Task<FeatureResult>
-}
+IBoardService ..> ResourceRef : returns per consumer
+IBoardService ..> MoveStoryCommand : sends
 BoardsController ..> MoveStoryCommand : dispatches
 MoveStoryCommandHandler ..> MoveStoryCommand : handles
-MoveStoryCommandHandler --> BoardPlacement : loads / applies
+MoveStoryCommandHandler --> MoveStoryResult : returns
+MoveStoryCommandHandler --> StoryStatusTransition : status changes through
+MoveStoryCommandHandler --> BoardPlacement : same-column reorder
+StoryStatusTransition --> StoryCompletionPolicy : checks before any change
+StoryStatusTransition --> BoardPlacement : moves every live placement
+StoryCompletionPolicy ..> StoryCompletionCondition : compares
+BoardState "1" *-- "*" BoardPlacement
 MoveStoryCommandHandler ..> IMissionControlDataSession : uses
+IMissionControlDataSession ..> StoryPlacements : loads tracked
+StoryPlacements --> BoardState
+StoryPlacements --> StoryCompletionCondition
+IMissionControlDataSession <|.. MissionControlDataSession
+MoveStatus -[hidden]down- ResourceRef
+UnfinishedTasksDialog -[hidden]down- BoardsController
+CompletionPrompt -[hidden]down- MoveStoryCommand
+BoardService -[hidden]down- BoardsController
 
 @enduml

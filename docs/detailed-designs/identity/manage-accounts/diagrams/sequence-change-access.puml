@@ -14,9 +14,10 @@ skinparam package {
   BackgroundColor #F9FAFB
 }
 title Behavior - Edit names or role
+skinparam maxMessageSize 300
 actor "Administrator" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "AccountFormDialog / AccountView" as page
+  participant "AccountFormDialog / AccountForm" as page
   participant "IAccountService / AccountService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -32,21 +33,40 @@ box "Backend - MissionControl.Infrastructure" #FFF4E5
   participant "IAuditEventWriter" as audit
   database "Mission Control SQL" as db
 end box
+== Open: the form reads its account ==
+actor -> page : Choose Edit on a row or the details page
+page -> client : accountResource(GetAccountQuery { id }); the fields and Save changes stay disabled while it loads (edit-loading)
+client -> access : GET /api/accounts/{id}, with the checks and handler of Read account details
+access --> client : 200 AccountDetail, 404, or a failure
+alt Account read
+  client --> page : The draft starts from the resolved values; the fields and Save changes enabled (edit)
+else Read failed: 500 or no response
+  client --> page : load-failed: alert with Try again (reload()), plus the reference ID when a 500 carried one; Cancel closes; the fields and Save changes stay disabled (edit-load-failed)
+else 404
+  client --> page : Form emits notFound; the dialog closes with NotFound; the owning page increments its counter: the details page shows its not-found state with Back to accounts, and the directory rereads and shows the "Account not found" toast
+end
+== Submit ==
 actor -> page : Change names or role and save
 page -> page : Disable repeat submission; show saving progress
-page -> client : Build typed UpdateAccountCommand (names, role, expectedVersion; email only if a caller sends one)
+page -> client : update(UpdateAccountCommand: names, role, expectedVersion; email only if a caller sends one)
 client -> access : PUT /api/accounts/{id}
+alt No response: the connection dropped or the request timed out
+  client --> page : update() rejects with a no-response error; the edit may or may not have been saved
+  page -> page : failed presentation with "We couldn't confirm whether your changes were saved"; keep the edits and the version the form opened; no reference ID; DraftState.unconfirmed until the next answered save
+  page -> page : AccountForm emits unconfirmed, which the dialog relays while it stays open; the owning page increments its counter at once, so the page behind rereads and shows whether the change is there
+  page --> actor : Save changes resends only when chosen, with the version the form opened: if the first save committed, the repeat meets the stale 409 below, whose comparison is headed "The latest saved version is shown beside your entries" and never says "Your edits haven't been saved"
+else Response received
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry (zero clock skew)
-access -> db : Read current status, role and credential version
+access -> db : LoadAccountAccessAsync: current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid or expired JWT; inactive or missing account; credential version changed
-  access -> audit : Append Denied audit (restricted append; no payload)
+  access -> audit : AppendRestrictedAsync(Denied); no payload
   access --> client : 401
-  client --> page : Clear in-memory session; open login (session-unsaved); edits were not saved
-else Authenticated Collaborator (profile P: no account management)
-  access -> audit : Append Denied audit (restricted append; no payload)
+  client --> page : sessionInterceptor: end(Unauthorized) once for this generation; the promise rejects with its 401, so nothing was written; login opens (session-unsaved)
+else Authenticated Collaborator (profile P: no accounts.manage)
+  access -> audit : AppendRestrictedAsync(Denied); no payload
   access --> client : 403
-  client --> page : Show access-denied page; nothing saved
+  client --> page : refreshCapabilities() (deduplicated); AccountForm emits forbidden; the dialog closes with Forbidden and the owning page calls showStatus(AccessDenied); nothing saved
 else Administrator
   access -> ctrl : Authorized request
   ctrl -> validation : Send UpdateAccountCommand through MediatR 12.5.0
@@ -54,7 +74,7 @@ else Administrator
   alt Invalid request
     validation --> ctrl : 400 field errors; no business mutation
     ctrl --> client : Validation ProblemDetails
-    client --> page : Keep valid input; focus linked error summary
+    client --> page : Keep valid input; one field error moves focus to that field, which reads its error; several move focus to the linked error summary; no Retry or reference ID
   else Valid request
     validation -> handler : Handle UpdateAccountCommand
     handler -> db : Load account by ID
@@ -62,22 +82,23 @@ else Administrator
     alt Account missing
       handler --> ctrl : 404; nothing changed
       ctrl --> client : NotFound ProblemDetails
-      client --> page : Close dialog; account detail shows not-found state with link back to Accounts
+      client --> page : Form emits notFound; the dialog closes with NotFound; the owning page increments its counter: the details page shows its not-found state with Back to accounts, and the directory shows the "Account not found" toast
     else Account found
-      handler -> entity : L2-008 reject email change / demotion / rename -> 409
-      entity --> handler : Designated: email, names or role differ; any account: normalized email differs (proposed)
+      handler -> entity : L2-008 (email, demotion, deactivation); proposed name lock -> 409
+      entity --> handler : Designated: email, names (proposed lock) or role differ; any account: normalized email differs (proposed)
       alt Protected identity change
-        handler -> audit : Append Rejected audit via restricted append, outside any business transaction (L2-039.2)
+        handler -> audit : AppendRestrictedAsync(Rejected), outside any business transaction (L2-039.2)
         audit -> db : Insert audit event only
         handler --> ctrl : 409 protected-identity with explanation; account unchanged
         ctrl --> client : Conflict ProblemDetails (protected-identity)
-        client --> page : Show the explanation; keep input; no retry offered
+        client --> page : Show the explanation in the alert region; keep input; no retry offered; emit outdated, so closing returns Outdated
       else Stored version differs from expectedVersion
         handler --> ctrl : 409 stale version; nothing changed
         ctrl --> client : Conflict ProblemDetails (stale)
-        client -> access : GET /api/accounts/{id} once (authorized as above)
-        access --> client : Latest saved values and version
-        client --> page : conflict state: keep attempted values; show Your edit vs Latest saved; no resubmission
+        client --> page : Promise rejects with the stale 409
+        page -> client : AccountForm emits outdated and calls reload() on its accountResource once (GET /api/accounts/{id}, authorized as above)
+        client --> page : Latest saved values and version
+        page --> actor : conflict state: keep attempted values; show Your edit vs Latest saved; no resubmission; after an unconfirmed save the alert is headed "The latest saved version is shown beside your entries" instead of saying "Your edits haven't been saved"
         note right of page
           L2-041.3: Reload latest adopts the latest values and
           version without a request (conflict-reloaded); the
@@ -86,7 +107,7 @@ else Administrator
       else Permitted change at current version
         handler -> entity : L2-004 apply names and role
         entity --> handler : Updated account
-        handler -> db : L2-039 / L2-040 update where version matches; success audit in the same transaction
+        handler -> db : L2-039 / L2-040 AddAuditEvent(success); SaveChangesAsync updates where version matches and commits both
         alt Racing save changed the version
           db --> handler : 0 rows; roll back update and audit
           handler --> ctrl : 409 stale version, handled as above
@@ -96,17 +117,18 @@ else Administrator
           db --> handler : Roll back business state and success audit
           handler --> ctrl : Generic 500 with correlation ID
           ctrl --> client : Failure; no successful-save claim
-          client --> page : Keep input; show reference ID; Save changes retries
+          client --> page : failed: nothing changed; keep input; show reference ID; Save changes retries
         else Commit succeeds
           db --> handler : New committed version
           handler --> ctrl : 200 with safe account summary and version
           ctrl --> client : Success response
-          client --> page : Close dialog; refresh account; announce Changes saved
+          client --> page : Form emits draftChange (clean) and saved; the dialog closes with Saved(account); the owning page increments its counter, so its view rereads, and shows the "Changes saved" toast naming the account
           page --> actor : Role change applies on that account's next request (L2-004.3)
         end
       end
     end
   end
+end
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).

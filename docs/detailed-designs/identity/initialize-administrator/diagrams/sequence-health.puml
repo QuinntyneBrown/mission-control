@@ -23,6 +23,7 @@ box "Backend - MissionControl.Application and Domain" #ECFDF3
   participant "InitializationStatus" as status
 end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
+  participant "IDatabaseReadinessProbe" as probe
   database "Mission Control SQL" as db
 end box
 alt GET /health/live
@@ -30,20 +31,23 @@ alt GET /health/live
   ctrl --> actor : L2-042.4 200 while the process runs; no SQL dependency
 else GET /health/ready
   actor -> ctrl : Readiness probe
-  ctrl -> handler : Send GetReadinessQuery through MediatR 12.5.0
+  ctrl -> handler : Send GetReadinessQuery through MediatR 12.5.0 (request cancellation token)
   handler -> status : Read InitializationState
   status --> handler : Initializing, Ready or Failed
   alt Initializing or Failed
     handler --> ctrl : Not ready
     ctrl --> actor : 503; no secret, connection string or exception detail
   else Ready
-    handler -> db : Check SQL access and compatible schema version
+    handler -> probe : CheckAsync(ct)
+    probe -> db : Check SQL access and compatible schema version
     alt SQL unavailable or schema incompatible
-      db --> handler : Failure
-      handler --> ctrl : Not ready; diagnostic with correlation ID
+      db --> probe : Failure
+      probe --> handler : false; diagnostic with correlation ID
+      handler --> ctrl : Not ready
       ctrl --> actor : 503; no secret, connection string or exception detail
     else Available and compatible
-      db --> handler : OK
+      db --> probe : OK
+      probe --> handler : true
       handler --> ctrl : Ready
       ctrl --> actor : 200 ready
     end

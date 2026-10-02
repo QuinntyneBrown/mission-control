@@ -1,0 +1,92 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam maxMessageSize 300
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Behavior - Mark a story Done from the edit form
+actor "Authorized user" as actor
+box "Frontend - Mission Control application" #E0F2FE
+  participant "WorkItemFormDialog / WorkItemForm" as page
+  participant "UnfinishedTasksDialog" as dialog
+  participant "IWorkItemService / WorkItemService" as client
+end box
+box "Backend - MissionControl.Api" #D1FADF
+  participant "CurrentAccountAuthorization / WorkItemsController" as ctrl
+end box
+box "Backend - MissionControl.Application and Domain" #ECFDF3
+  participant "UpdateWorkItemCommandHandler / StoryStatusTransition" as handler
+end box
+box "Backend - MissionControl.Infrastructure" #FFF4E5
+  database "Mission Control SQL" as db
+end box
+actor -> page : Set Status to Done in the edit form and save
+page -> client : update(UpdateWorkItemCommand: status Done, the other edits, expected version, no condition)
+client -> ctrl : PUT /api/workspaces/{id}/work-items/{itemId}; authentication and validation as in the edit sequence
+ctrl -> handler : Handle UpdateWorkItemCommand through MediatR 12.5.0
+handler -> db : BeginWorkspaceTransactionAsync takes the workspace lock first; LoadStoryPlacementsAsync reads the story, its live placements, and its completion condition
+db --> handler : Story HCK-112 with 3 unfinished tasks
+handler -> handler : L2-021 StoryCompletionPolicy: the sent condition is absent or not current
+handler --> ctrl : 409 unfinished-tasks with the count and StoryCompletionCondition; nothing changed
+ctrl --> client : ProblemDetails (unfinished-tasks)
+client --> page : The promise rejects with the condition; WorkItemForm keeps every edit
+page -> page : completionStatus ConfirmationRequired (story key, title, saved status, condition)
+page -> dialog : WorkItemFormDialog sets prompt Asking and opens it; focus Keep in progress
+alt Keep in progress
+  dialog --> page : kept
+  page -> page : completionDecision Keep (Keep in progress or Escape): the form restores the saved status in the draft and sends nothing; completionStatus Settled closes the confirmation
+  page --> actor : The edit form stays open with the other edits; focus returns to Status
+else Mark story Done
+  dialog --> page : confirmed(condition)
+  page -> page : completionDecision carries the condition; completionStatus Saving: the prompt shows progress (saving state)
+  page -> client : Resubmit the same UpdateWorkItemCommand with the returned condition
+  client -> ctrl : PUT /api/workspaces/{id}/work-items/{itemId}
+  ctrl -> handler : Handle
+  handler -> db : Lock first; LoadStoryPlacementsAsync; check version and condition before any write
+  db --> handler : Current story and condition, or lock-wait timeout
+  alt Condition and version current
+    handler -> db : StoryStatusTransition sets Done, moves every live placement to Done, and increments the active sprint's version when the story is a member; AddAuditEvent; SaveChangesAsync in one transaction
+    db --> handler : New story version
+    handler --> ctrl : Updated item
+    ctrl --> client : 200 with the new version
+    client --> page : completionStatus Settled closes the confirmation; WorkItemForm emits saved with a WorkItemSavedResult; the edit dialog closes with Saved(saved, title, parentTitle)
+    page --> actor : The opening page increments its refresh counter, so its view rereads, and shows the "Changes saved" toast
+  else Task count changed since the prompt (L2-021)
+    handler --> ctrl : 409 unfinished-tasks with the new count and condition; nothing changed
+    ctrl --> client : ProblemDetails (unfinished-tasks)
+    client --> page : completionStatus ConfirmationRequired with the new condition; the open dialog shows the server's count (server-count state) and asks again
+  else Story changed after the form opened (stale version, L2-041)
+    handler --> ctrl : 409 stale version; nothing changed
+    ctrl --> client : ProblemDetails (changed)
+    client --> page : completionStatus Settled closes the confirmation; WorkItemForm keeps the attempted values, calls reload() on its item resource once, and shows the comparison (conflict state); nothing is resent
+  else Commit fails (500), or the workspace lock wait times out (503 with Retry-After)
+    handler --> ctrl : 500 with correlation ID, or 503; nothing changed
+    ctrl --> client : ProblemDetails
+    client --> page : completionStatus Failed(referenceId): the confirmation stays open with the reference ID (failed state); Mark story Done resends the same request only when chosen; Keep in progress restores the saved status
+  else Story deleted meanwhile
+    handler --> ctrl : 404; nothing changed
+    ctrl --> client : ProblemDetails (not found)
+    client --> page : completionStatus Settled closes the confirmation; the form shows edit-not-found, whose Back to work emits notFound; the edit dialog closes with NotFound; the page calls the layout's refresh(), and the detail page opens the work outline
+  else No response to the resubmission (timeout or network failure)
+    client --> page : The update may have committed: WorkItemForm keeps the attempted values and calls reload() on its item resource once; completionStatus Settled closes the confirmation and focus returns to Status
+    page --> actor : The form announces the persisted status (for example "HCK-112 is In Progress") with the failed alert "We couldn't confirm whether your changes were saved", without a reference ID, and emits unconfirmed so the page rereads its view; nothing is resent
+  end
+end
+note over ctrl, db
+A 401 at either request ends the session once (sessionInterceptor, end(Unauthorized)); the edit was not saved, so sign-in shows session-unsaved.
+Updating work needs only an active session, so a 403 is unexpected: it changes nothing, completionStatus Forbidden restores the saved status in the draft,
+WorkItemFormDialog closes the confirmation and emits forbidden, and the opening page shows the "Your access changed" toast without Retry; the edit form stays open.
+Mutations are never retried automatically.
+Unexpected failures return generic 500 plus correlation ID (L2-043).
+end note
+@enduml

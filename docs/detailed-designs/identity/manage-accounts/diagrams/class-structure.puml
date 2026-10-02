@@ -13,156 +13,376 @@ skinparam package {
   FontColor #101828
   BackgroundColor #F9FAFB
 }
-title Class structure - Provision and manage accounts
+title Class structure - Provision and manage accounts: client
+left to right direction
 skinparam class {
   BorderColor #344054
   FontColor #101828
   BackgroundColor #F9FAFB
 }
-class AccountsPage {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
+package "frontend/projects/mission-control" {
+  class AccountsPage {
+    -refresh: WritableSignal<number>
+    +draft: Signal<DraftState>
+    +openAdd(): void
+    +openEdit(id: Guid): void
+    +openStatus(id: Guid, active: bool): void
+    +openPassword(id: Guid): void
+  }
+  note right of AccountsPage
+    Route /accounts; AccountView.refresh = refresh.
+    Add account (page header) calls openAdd(); the
+    view's outputs call the other openers.
+    Added, Saved, Changed, Replaced: refresh++ and a
+    TOAST_SERVICE toast naming the account.
+    Outdated: refresh++. NotFound: refresh++ and
+    "Account not found". ViewAccount(id), Review:
+    navigate to /accounts/:id. Forbidden, or the
+    view's forbidden: showStatus(AccessDenied).
+    A dialog's relayed unconfirmed (still open):
+    refresh++ at once.
+  end note
+  class AccountDetailPage {
+    +id: InputSignal<Guid>
+    -refresh: WritableSignal<number>
+    +draft: Signal<DraftState>
+    +openEdit(): void
+    +openStatus(active: bool): void
+    +openPassword(): void
+  }
+  note right of AccountDetailPage
+    Route /accounts/:id; refresh feeds
+    AccountDetailView. Saved, Changed, Replaced: refresh++
+    and the same toasts. Review, Outdated, NotFound:
+    refresh++ (latest details or not-found state).
+    Forbidden, or the view's forbidden:
+    showStatus(AccessDenied). A dialog's relayed
+    unconfirmed (still open): refresh++ at once.
+    Opens Edit only, so Added and ViewAccount never
+    arrive here.
+  end note
+  interface FormDraft <<navigation slice>> {
+    +draft: Signal<DraftState>
+  }
+  note right of FormDraft
+    UnsavedChangesGuard is canDeactivate on both
+    routes. Dialogs follow the form's latest
+    DraftState; pages delegate to the open dialog
+    and are clean when none is open.
+  end note
+  class AccountFormDialog {
+    +accountId: Guid?
+    +draft: Signal<DraftState>
+    +unconfirmed: OutputEmitterRef<void>
+    +close(result?: AccountFormOutcome): void
+  }
+  note right of AccountFormDialog
+    saved (edit): Saved. saved (add): created
+    confirmation; Done, Close or Escape: Added with
+    the latest account added. outdated, then closed:
+    Outdated. existingAccountRequested: confirm
+    (Navigate) first, then ViewAccount(id).
+    No result: dismissed. All three dialogs relay
+    their form's unconfirmed and stay open.
+  end note
+  class AccountStatusDialog {
+    +accountId: Guid
+    +active: bool
+    +draft: Signal<DraftState>
+    +unconfirmed: OutputEmitterRef<void>
+    +close(result?: AccountStatusOutcome): void
+  }
+  class ReplacePasswordDialog {
+    +accountId: Guid
+    -own: Signal<bool>
+    +draft: Signal<DraftState>
+    +unconfirmed: OutputEmitterRef<void>
+    +close(result?: ReplacePasswordOutcome): void
+  }
+  note right of ReplacePasswordDialog
+    own = accountId equals currentSession().accountId.
+    On replaced with own: loginNotice = SignedOut,
+    navigate to /login with replaceUrl and router
+    state { signOut: true } (the /login guard lets
+    it through), then end(SignedOut); no result.
+  end note
+  class AccountFormOutcome <<union>> {
+    Added: AccountSummary
+    Saved: AccountSummary
+    Outdated
+    NotFound
+    ViewAccount: Guid
+    Forbidden
+  }
+  class AccountStatusOutcome <<union>> {
+    Changed: AccountSummary
+    Review
+    Outdated
+    NotFound
+    Forbidden
+  }
+  class ReplacePasswordOutcome <<union>> {
+    Replaced: AccountSummary
+    Outdated
+    NotFound
+    Forbidden
+  }
+  class RouteContext <<root provider>> {
+    +loginNotice: Signal<LoginNotice?>
+  }
+  class ApplicationShell <<navigation slice>> {
+    +showStatus(kind: StatusKind, referenceId?: string): void
+  }
 }
-class AccountView {
-  +state: Signal<FeatureState>
-  +submit(): void
+package "frontend/projects/domain" {
+  class AccountView {
+    +refresh: InputSignal<number>
+    -query: WritableSignal<ListAccountsQuery>
+    -accounts: ResourceRef<AccountSummaryPage>
+    +state: Signal<FeatureState>
+    +showPage(page: int): void
+    +editRequested: OutputEmitterRef<Guid>
+    +passwordRequested: OutputEmitterRef<Guid>
+    +statusRequested: OutputEmitterRef<AccountStatusRequest>
+    +forbidden: OutputEmitterRef<void>
+  }
+  class AccountStatusRequest {
+    +id: Guid
+    +active: bool
+  }
+  class AccountDetailView {
+    +accountId: InputSignal<Guid>
+    +refresh: InputSignal<number>
+    -account: ResourceRef<AccountDetail>
+    +state: Signal<FeatureState>
+    +editRequested: OutputEmitterRef<void>
+    +statusRequested: OutputEmitterRef<bool>
+    +passwordRequested: OutputEmitterRef<void>
+    +forbidden: OutputEmitterRef<void>
+  }
+  note bottom of AccountDetailView
+    A refresh change rereads the view's resource
+    (AccountView keeps its page query).
+  end note
+  note bottom of AccountView
+    Once totalCount exceeds pageSize: "Showing 1-25
+    of N accounts" with Previous and Next;
+    showPage() sets query.page at once.
+  end note
+  class AccountForm {
+    +accountId: InputSignal<Guid?>
+    +saved: OutputEmitterRef<AccountSummary>
+    +outdated: OutputEmitterRef<void>
+    +unconfirmed: OutputEmitterRef<void>
+    +draftChange: OutputEmitterRef<DraftState>
+    +notFound: OutputEmitterRef<void>
+    +forbidden: OutputEmitterRef<void>
+    +existingAccountRequested: OutputEmitterRef<Guid>
+    -account: ResourceRef<AccountDetail>
+    -draft: WritableSignal<AccountDraft>
+    -comparison: Signal<AccountComparison?>
+    -submit: WritableSignal<FeatureState>
+    +save(): Promise<void>
+    +reloadLatest(): void
+  }
+  note right of AccountForm
+    account = accountResource(() => query for accountId()).
+    Edit: the draft starts from the first resolved value;
+    the fields stay disabled until then, and a failed read
+    keeps them disabled with Try again = account.reload().
+    Stale 409: outdated; account.reload() once; comparison.
+    No response: unconfirmed; failed presentation with
+    "We couldn't confirm"; DraftState.unconfirmed until
+    the next answered save. Add waits for the next Add
+    account (a repeat may meet the duplicate 409, then
+    neutral: the account exists now; check Accounts).
+    Save changes keeps the version the form opened, so a
+    committed first save meets the stale 409 comparison,
+    headed "The latest saved version is shown beside
+    your entries".
+    Add account: query undefined, nothing is read.
+  end note
+  class AccountStatusForm {
+    +accountId: InputSignal<Guid>
+    +active: InputSignal<bool>
+    +changed: OutputEmitterRef<AccountSummary>
+    +reviewRequested: OutputEmitterRef<void>
+    +outdated: OutputEmitterRef<void>
+    +unconfirmed: OutputEmitterRef<void>
+    +draftChange: OutputEmitterRef<DraftState>
+    +notFound: OutputEmitterRef<void>
+    +forbidden: OutputEmitterRef<void>
+    -account: ResourceRef<AccountDetail>
+    -submit: WritableSignal<StatusFormState>
+    +confirm(): Promise<void>
+  }
+  note right of AccountStatusForm
+    Blocked or stale 409: outdated. No response:
+    unconfirmed (DraftState.unconfirmed until settled);
+    account.reload() once; if the account already has
+    the requested status, changed; otherwise Unconfirmed
+    (the failed presentation with "We couldn't
+    confirm"), and the action resends with the
+    reloaded version.
+  end note
+  class ReplacePasswordForm {
+    +accountId: InputSignal<Guid>
+    +own: InputSignal<bool>
+    +replaced: OutputEmitterRef<AccountSummary>
+    +outdated: OutputEmitterRef<void>
+    +unconfirmed: OutputEmitterRef<void>
+    +draftChange: OutputEmitterRef<DraftState>
+    +notFound: OutputEmitterRef<void>
+    +forbidden: OutputEmitterRef<void>
+    -account: ResourceRef<AccountDetail>
+    -password: WritableSignal<string>
+    -submit: WritableSignal<PasswordFormState>
+    +replace(): Promise<void>
+  }
+  note right of ReplacePasswordForm
+    Read on open (both status and password forms):
+    the action and the password field stay disabled
+    until the account resolves; LoadFailed offers
+    Try again = account.reload() and Cancel; a 404
+    from the read or the save emits notFound.
+    Stale 409: outdated; keep the typed password;
+    account.reload() once; nothing sent until Replace
+    password again. No response: unconfirmed; Unconfirmed,
+    the failed presentation with "We couldn't confirm";
+    reload() once; Replace password then carries the
+    reloaded version. DraftState.unconfirmed stays true
+    until the next answered save.
+    No SESSION_SERVICE: own comes from the dialog.
+  end note
+  enum StatusFormState {
+    Loading
+    LoadFailed
+    Ready
+    Pending
+    Blocked
+    Stale
+    Unconfirmed
+    Failed
+  }
+  enum PasswordFormState {
+    Loading
+    LoadFailed
+    Ready
+    Pending
+    Validation
+    Stale
+    Unconfirmed
+    Failed
+  }
 }
-interface IAccountService {
-  +read(request: GetAccountQuery): Promise<FeatureResult>
-  +provision(request: ProvisionAccountCommand): Promise<FeatureResult>
-  +update(request: UpdateAccountCommand): Promise<FeatureResult>
-  +changeStatus(request: ChangeAccountStatusCommand): Promise<FeatureResult>
-  +replacePassword(request: ReplacePasswordCommand): Promise<FeatureResult>
+class DraftState <<navigation slice>> {
+  +dirty: bool
+  +pending: bool
+  +unconfirmed: bool
+  +summary: string?
 }
-class AccountService {
-  -http: HttpClient
+package "frontend/projects/api" {
+  interface IAccountService {
+    +accountsResource(query: () => ListAccountsQuery | undefined): ResourceRef<AccountSummaryPage>
+    +accountResource(query: () => GetAccountQuery | undefined): ResourceRef<AccountDetail>
+    +provision(request: ProvisionAccountCommand): Promise<AccountSummary>
+    +update(request: UpdateAccountCommand): Promise<AccountSummary>
+    +changeStatus(request: ChangeAccountStatusCommand): Promise<AccountSummary>
+    +replacePassword(request: ReplacePasswordCommand): Promise<AccountSummary>
+  }
+  class AccountService {
+    -http: HttpClient
+  }
+  note right of AccountService
+    Reads: a caller-owned resource per call (observable-to-signal
+    inside; aborts on consumer destroy). Mutations: one Promise each.
+    No shared results. Requests pass sessionInterceptor.
+  end note
+  interface ISessionService {
+    +currentSession: Signal<CurrentSession?>
+    +end(reason: SessionEndReason): void
+  }
+  interface IToastService {
+    +show(toast: Toast): void
+  }
 }
-class AccountsController {
-  -sender: ISender
-}
-class UserAccount {
+class AccountSummary {
   +id: Guid
-  +firstName: string
-  +lastName: string
-  +normalizedEmail: string
-  +role: AccountRole
-  +active: bool
-  +passwordHash: string
-  +credentialVersion: long
-  +version: long
-  +rename(firstName: string, lastName: string): void
-  +changeRole(role: AccountRole): void
-  +changeStatus(active: bool): void
-  +replacePassword(hash: string): void
-}
-class DesignatedAdministratorPolicy {
-  +rejectsEdit(account: UserAccount, firstName: string, lastName: string, role: AccountRole, normalizedEmail: string?): bool
-  +rejectsStatus(account: UserAccount, active: bool): bool
-}
-note right of DesignatedAdministratorPolicy
-  L2-008: designated email, names, role and
-  active status are protected; any account's
-  email is immutable (proposed). Rejections
-  return 409 before any mutation.
-end note
-interface IMissionControlDataSession {
-  +query(specification): Task<ReadResult>
-  +commit(expectedVersion: long): Task<void>
-}
-class MissionControlDataSession {
-  -connection: DbConnection
-}
-interface IAuditEventWriter {
-  +addToTransaction(event: AuditEvent): void
-  +appendRestricted(event: AuditEvent): Task<void>
-}
-note bottom of IAuditEventWriter
-  appendRestricted runs outside the business
-  transaction: Rejected and Denied outcomes only.
-end note
-class AuditEventWriter {
-  -connection: DbConnection
-}
-AccountsPage --> AccountView : composes
-AccountView ..> IAccountService : inject token
-IAccountService <|.. AccountService
-IMissionControlDataSession <|.. MissionControlDataSession
-IAuditEventWriter <|.. AuditEventWriter
-class GetAccountQuery {
-  +id: Guid?
-  +page: int
-  +pageSize: int
-}
-class GetAccountQueryHandler {
-  +handle(request: GetAccountQuery): Task<FeatureResult>
-}
-AccountsController ..> GetAccountQuery : dispatches
-GetAccountQueryHandler ..> GetAccountQuery : handles
-GetAccountQueryHandler --> UserAccount : loads / applies
-GetAccountQueryHandler ..> IMissionControlDataSession : uses
-class ProvisionAccountCommand {
   +firstName: string
   +lastName: string
   +email: string
-  +password: string
   +role: AccountRole
+  +active: bool
+  +inactiveSinceUtc: DateTimeOffset?
+  +designated: bool
+  +version: long
 }
-class ProvisionAccountCommandHandler {
-  +handle(request: ProvisionAccountCommand): Task<FeatureResult>
+class AccountSummaryPage {
+  +items: AccountSummary[]
+  +totalCount: int
+  +page: int
+  +pageSize: int
 }
-AccountsController ..> ProvisionAccountCommand : dispatches
-ProvisionAccountCommandHandler ..> ProvisionAccountCommand : handles
-ProvisionAccountCommandHandler --> UserAccount : loads / applies
-ProvisionAccountCommandHandler ..> IMissionControlDataSession : uses
-ProvisionAccountCommandHandler ..> IAuditEventWriter : success audit
-class UpdateAccountCommand {
+class AccountDetail {
   +id: Guid
   +firstName: string
   +lastName: string
+  +email: string
   +role: AccountRole
-  +email: string?
-  +expectedVersion: long
-}
-class UpdateAccountCommandHandler {
-  +handle(request: UpdateAccountCommand): Task<FeatureResult>
-}
-AccountsController ..> UpdateAccountCommand : dispatches
-UpdateAccountCommandHandler ..> UpdateAccountCommand : handles
-UpdateAccountCommandHandler --> UserAccount : loads / applies
-UpdateAccountCommandHandler ..> DesignatedAdministratorPolicy : checks first
-UpdateAccountCommandHandler ..> IMissionControlDataSession : uses
-UpdateAccountCommandHandler ..> IAuditEventWriter : success / Rejected audit
-class ChangeAccountStatusCommand {
-  +id: Guid
   +active: bool
-  +expectedVersion: long
+  +inactiveSinceUtc: DateTimeOffset?
+  +designated: bool
+  +version: long
+  +createdAtUtc: DateTimeOffset
+  +createdByName: string?
 }
-class ChangeAccountStatusCommandHandler {
-  +handle(request: ChangeAccountStatusCommand): Task<FeatureResult>
+class DuplicateAccountConflict {
+  +existingAccountId: Guid
+  +existingAccountName: string
 }
-AccountsController ..> ChangeAccountStatusCommand : dispatches
-ChangeAccountStatusCommandHandler ..> ChangeAccountStatusCommand : handles
-ChangeAccountStatusCommandHandler --> UserAccount : loads / applies
-ChangeAccountStatusCommandHandler ..> DesignatedAdministratorPolicy : checks first
-ChangeAccountStatusCommandHandler ..> IMissionControlDataSession : uses
-ChangeAccountStatusCommandHandler ..> IAuditEventWriter : success / Rejected audit
-class ReplacePasswordCommand {
-  +id: Guid
-  +password: string
-  +expectedVersion: long
-}
-class ReplacePasswordCommandHandler {
-  +handle(request: ReplacePasswordCommand): Task<FeatureResult>
-}
-AccountsController ..> ReplacePasswordCommand : dispatches
-ReplacePasswordCommandHandler ..> ReplacePasswordCommand : handles
-ReplacePasswordCommandHandler --> UserAccount : loads / applies
-ReplacePasswordCommandHandler ..> IMissionControlDataSession : uses
-ReplacePasswordCommandHandler ..> IAuditEventWriter : success audit
-
-enum AccountRole {
-  Administrator
-  Collaborator
-}
-UserAccount --> AccountRole : SQL authority
+note bottom of DuplicateAccountConflict
+  Extension of the 409 duplicate ProblemDetails;
+  the form names the account and links to it.
+end note
+AccountsPage --> AccountView : composes; refresh in, outputs handled
+AccountsPage ..> AccountFormDialog : openAdd / openEdit
+AccountsPage ..> AccountStatusDialog : openStatus
+AccountsPage ..> ReplacePasswordDialog : openPassword
+AccountDetailPage --> AccountDetailView : composes; refresh in, outputs handled
+AccountDetailPage ..> AccountFormDialog : openEdit
+AccountDetailPage ..> AccountStatusDialog : openStatus
+AccountDetailPage ..> ReplacePasswordDialog : openPassword
+AccountsPage ..> IToastService : inject TOAST_SERVICE; show(toast)
+AccountDetailPage ..> IToastService : inject TOAST_SERVICE; show(toast)
+FormDraft <|.. AccountsPage : delegates
+FormDraft <|.. AccountDetailPage : delegates
+FormDraft <|.. AccountFormDialog
+FormDraft <|.. AccountStatusDialog
+FormDraft <|.. ReplacePasswordDialog
+AccountFormDialog --> AccountForm : hosts; inputs and outputs only
+AccountStatusDialog --> AccountStatusForm : hosts; inputs and outputs only
+ReplacePasswordDialog --> ReplacePasswordForm : hosts; passes own
+AccountFormDialog --> AccountFormOutcome : closes with
+AccountStatusDialog --> AccountStatusOutcome : closes with
+ReplacePasswordDialog --> ReplacePasswordOutcome : closes with
+ReplacePasswordDialog ..> ISessionService : inject SESSION_SERVICE; currentSession, end(SignedOut)
+ReplacePasswordDialog ..> RouteContext : loginNotice = SignedOut
+AccountsPage ..> ApplicationShell : showStatus(AccessDenied) on Forbidden
+AccountDetailPage ..> ApplicationShell : showStatus(AccessDenied) on Forbidden
+AccountView --> AccountStatusRequest : statusRequested
+AccountView ..> IAccountService : inject ACCOUNT_SERVICE
+AccountDetailView ..> IAccountService : inject ACCOUNT_SERVICE
+AccountForm ..> IAccountService : inject ACCOUNT_SERVICE
+AccountStatusForm ..> IAccountService : inject ACCOUNT_SERVICE
+ReplacePasswordForm ..> IAccountService : inject ACCOUNT_SERVICE
+AccountForm --> DraftState : draftChange
+AccountStatusForm --> DraftState : draftChange
+ReplacePasswordForm --> DraftState : draftChange
+AccountStatusForm --> StatusFormState
+ReplacePasswordForm --> PasswordFormState
+IAccountService <|.. AccountService
+IAccountService --> AccountSummaryPage
+IAccountService --> AccountDetail
+AccountSummaryPage *-- AccountSummary
+IAccountService ..> DuplicateAccountConflict : provision rejects with (409)
 @enduml

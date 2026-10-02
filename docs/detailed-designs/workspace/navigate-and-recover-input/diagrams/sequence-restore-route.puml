@@ -3,6 +3,7 @@ skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
+skinparam maxMessageSize 300
 skinparam ArrowColor #344054
 skinparam rectangle {
   BorderColor #344054
@@ -19,8 +20,8 @@ box "Frontend - Mission Control application" #E0F2FE
   participant "ApplicationShell / Router" as shell
   participant "AuthenticationGuard /\nPermissionGuard" as guard
   participant "LoginPage" as login
-  participant "ISessionService /\nSessionService" as session
-  participant "Route's record service" as records
+  participant "Routed view /\nrecord resource" as records
+  participant "ISessionService /\nSessionService /\nsessionInterceptor" as session
 end box
 box "Backend - MissionControl.Api" #D1FADF
   participant "CurrentAccountAuthorization" as access
@@ -34,67 +35,102 @@ end box
 == 1. Direct protected URL with no session (L2-029.3, L2-003.3) ==
 actor -> shell : Open a protected URL (reload, bookmark, or shared link)
 shell -> guard : AuthenticationGuard.canActivate(path)
-guard -> session : check_access(GetCurrentSessionQuery)
-session --> guard : Unauthenticated: no token in memory, so no request is sent
+guard -> session : signedIn()
+session --> guard : false: no token in memory, so no request is sent
 guard -> guard : Accept internal application paths only; store RouteContext.requestedPath
-guard -> login : Redirect to sign-in
-login --> actor : "Sign in to continue" (deep-link); the record is not named and no protected data is requested
+guard -> guard : loginNotice = session-ended if Navigation Timing reports a reload, otherwise deep-link
+guard -> login : Redirect to /login with replaceUrl
+login --> actor : "Sign in to continue" or "Your session ended"; the record is not named and no protected data is requested
 
-== 2. Sign in, refresh capabilities, apply permissions (L2-029.3, L2-002) ==
+== 2. Sign in, refresh capabilities, restore only a permitted path (L2-029.3, L2-002) ==
 actor -> login : Submit email and password
-login -> session : LoginCommand (sign-in-and-end-session slice)
-session --> login : 200 token held in memory; new session generation
-login -> session : check_access(GetCurrentSessionQuery)
-session -> access : GET /api/session
+login -> session : login(LoginCommand) (sign-in-and-end-session slice)
+session --> login : 200: token held in memory; end(Expired) scheduled at expiresAtUtc
+login -> login : Clear loginNotice
+login -> session : await refreshCapabilities(); concurrent callers share one request
+session -> access : GET /api/session with bearer token; generation N captured
 access -> db : Read current status, role and credential version
 db --> access : Active account
 access -> sessionApi : Authenticated request; MediatR 12.5.0
 sessionApi -> db : Read safe account summary
-db --> sessionApi : Account ID, display name, role
-sessionApi --> session : 200 CurrentSession: role and capability summary; no contact data
-session --> login : Capabilities held in signals
-login -> shell : Navigate to RouteContext.requestedPath
-shell -> guard : PermissionGuard.canActivate(requestedPath)
-alt Role lacks the route's capability (Accounts or Audit log for a Collaborator)
-  guard --> shell : Deny before any record request
-  shell --> actor : Access-denied page offering Home and Projects; focus heading (L2-029.4)
-else Route permitted
-  guard --> shell : Allow; clear requestedPath
+db --> sessionApi : Account ID, display name, email, role
+sessionApi --> session : 200 CurrentSession: email, role and capability summary; no contact data
+session --> login : currentSession set (generation still N)
+login -> guard : PermissionGuard.permits(requestedPath, currentSession()); clear requestedPath
+alt Role lacks the path's capability (accounts.manage or audit.read for a Collaborator), or the refresh failed and no summary is held
+  login -> shell : Navigate to /home instead of the requested path, with replaceUrl
+  shell --> actor : Home opens with its heading focused; no access-denied page follows sign-in (L2-029.3)
+else Path permitted
+  login -> shell : Navigate to the requested path, with replaceUrl, so Back never reaches the sign-in form of this live session
+  shell -> guard : AuthenticationGuard passes; PermissionGuard.canActivate allows from the current summary
+  guard --> shell : Allow
+  ref over shell, db : 4. Route's existing record query
+end
 
-  == 3. Route's existing record query (L2-029.2, L2-029.4) ==
-  shell -> records : Load the route's record through its own service contract
-  records -> access : GET the record endpoint, e.g. /api/workspaces/{id}/work-items/{itemId}
-  access -> db : Read current status, role and credential version
-  db --> access : Current account access
-  alt 401: token expired, account deactivated, or credential version changed
-    access --> records : 401 ProblemDetails; denial audited without payloads
-    records -> session : Clear in-memory session and protected caches
-    session --> shell : Unauthenticated
-    shell --> actor : Store requestedPath; sign-in shows "Your session ended"
-  else 403: role changed after capabilities were read (L2-002.4)
-    access --> records : 403 ProblemDetails; denial audited without payloads
-    records --> shell : Forbidden
-    shell --> actor : Access-denied page offering permitted destinations; focus heading
-  else Authorized
-    access -> recordApi : Authenticated request
-    recordApi -> db : Read record with its workspace and ancestor path
-    alt 404: record missing or deleted
-      db --> recordApi : No row
-      recordApi --> records : 404 ProblemDetails
-      records --> shell : Not found
-      shell --> actor : Not-found page offering Home, Projects, and Leads; focus heading
-    else 200: record found
-      db --> recordApi : Record, workspace, ancestors
-      recordApi --> records : 200 record projection
+== 3. In-session navigation to a route the role cannot use (L2-029.4) ==
+actor -> shell : Follow an in-app link or browser history to /accounts or /audit, or keep using a route after a role change
+shell -> guard : PermissionGuard.canActivate(path)
+guard -> session : refreshCapabilities()
+session --> guard : Current summary lacks accounts.manage or audit.read
+guard -> shell : Set RouteContext.status = AccessDenied for the attempted URL; return false, so no record is requested
+shell --> actor : ShellStatusView access-denied page in place of the routed content, offering Home and Projects; focus heading (L2-029.4)
+
+== 4. Route's existing record query (L2-029.2, L2-029.4) ==
+shell -> records : Create the routed view; its record resource reads through its own service contract
+records -> session : Request passes through sessionInterceptor; bearer token; generation N captured
+session -> access : GET the record endpoint, e.g. /api/workspaces/{id}/work-items/{itemId}
+access -> db : Read current status, role and credential version
+db --> access : Current account access
+alt 401: token expired, account deactivated, or credential version changed
+  access --> session : 401 ProblemDetails; denial audited without payloads
+  session -> session : Generation still N: end(Unauthorized), once; later 401s of generation N are discarded
+  session --> records : 401: the read rejects with its 401; the resource keeps its state
+  session --> shell : endReason = Unauthorized
+  shell --> actor : Store requestedPath; navigate to /login with replaceUrl, destroying the page; sign-in shows "Your session ended"
+else 403: capability routes only (/accounts, /audit), role changed after the check (L2-002.4)
+  access --> session : 403 ProblemDetails; denial audited without payloads
+  session -> session : refreshCapabilities() (deduplicated)
+  session --> records : 403 passes on
+  records --> shell : AccountView, AccountDetailView or AuditEventView emits forbidden; its page calls inject(ApplicationShell).showStatus(AccessDenied)
+  shell --> actor : ShellStatusView access-denied page in place of the routed content, offering permitted destinations; navigation follows the refreshed role; focus heading
+else Authorized
+  access -> recordApi : Authenticated request
+  recordApi -> db : Read record with its workspace and ancestor path
+  alt 404: record missing or deleted
+    db --> recordApi : No row
+    recordApi --> session : 404 ProblemDetails (a malformed ID never gets this far: the {id:guid} route constraint answers 404 at once)
+    session --> records : Generation still N: pass on
+    records --> actor : The routed view renders its own not-found state inside the shell (e.g. Lead not found with Back to leads); focus heading
+  else 200: record found
+    db --> recordApi : Record, workspace, ancestors
+    recordApi --> session : 200 record projection
+    alt Session ended while in flight (generation no longer N)
+      session --> records : Discard: the record resource keeps its state
+    else Generation still N
+      session --> records : Record projection
       records --> shell : Record and path
       shell -> shell : RouteContext = workspaceId and ancestorIds
       shell --> actor : Render page with ancestor links; focus heading (L2-033.4)
     end
   end
 end
+
+== 5. Address that matches no client route (L2-029.4) ==
+actor -> shell : Open a mistyped address, e.g. /projcts
+shell -> guard : AuthenticationGuard.canActivate(path)
+guard --> shell : Token in memory: pass
+shell -> shell : No client route matches, so the shell's last child route ** renders ShellStatusView NotFound with Home, Projects and Leads
+shell --> actor : "That page doesn't exist"; no request sent; focus heading
 note over shell, db
-GET /api/session reads only the token subject, so it has no 400 path.
-A record request answered 500 shows the error page with its reference ID and Try again (L2-043);
-one that cannot reach the API shows the offline page with Try again. Both keep the navigation.
+GET /api/session reads only the token subject, so it has no 400 path. If the post-login refresh fails, no summary
+is held: LoginPage opens /home, which needs no capability, and its sections report their own read failures.
+Later, a refresh that fails with no summary held shows ShellStatusView Error (reference ID) or Offline for a
+capability route; other routes open. Lead, workspace, work, and sprint reads need only an active session, so they
+have no 403 branch. A record read answered 500 renders the routed view's own error state with its reference ID and
+Try again (L2-043); a read with no response renders it with Try again and no reference ID. A malformed record ID inside a matched client route reaches the routed view, whose read gets 404.
+Status pages stay until the next navigation starts; Try again navigates to the attempted URL with onSameUrlNavigation 'reload',
+so route matching and guards run again even at the same URL. A BoardModeGuard (canMatch) that declines on a 500, 503 or no
+response leaves the router at the board URL on the ** route with the Error or Offline status it set. All keep the navigation.
+/login opened while a session is held redirects to /home, except the sign-out navigation, which carries { signOut: true }.
 end note
 @enduml

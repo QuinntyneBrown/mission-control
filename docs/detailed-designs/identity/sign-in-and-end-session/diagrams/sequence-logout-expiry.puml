@@ -13,33 +13,85 @@ skinparam package {
   FontColor #101828
   BackgroundColor #F9FAFB
 }
-title Behavior - End a session on logout, reload, or expiry
+title Behavior - End a session on Sign out, own-password replacement, expiry, or 401
 actor "Account holder" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "Application page / dialog" as page
-  participant "Session / form signals" as state
-  participant "Router / focus management" as router
+  participant "ApplicationShell /\nUserMenuView" as shell
+  participant "ReplacePasswordDialog" as pwd
+  participant "UnsavedChangesGuard /\nFormDraft" as guard
+  participant "ISessionService /\nSessionService" as session
+  participant "sessionInterceptor" as icpt
+  participant "Router / LoginPage" as router
 end box
 box "Backend - MissionControl.Api" #D1FADF
   participant "Protected API" as api
 end box
-actor -> page : Select logout / reload / expiry occurs
-alt Explicit logout with dirty draft
-  page -> state : Open UnsavedChangesDialog (sign-out) (L2-031.4)
-  state --> page : Stay or Sign out without saving
-  opt Stay selected
-    page --> actor : Retain session and draft; no request sent
+
+== Four triggers converge on end(reason) ==
+alt Sign out (L2-003.2)
+  actor -> shell : Choose Sign out in the user menu
+  shell -> router : Navigate to /login with replaceUrl and router state { signOut: true }
+  router -> guard : canDeactivate (a pending save is awaited first)
+  alt Dirty draft and Stay chosen in UnsavedChangesDialog (sign-out)
+    guard --> actor : Session and draft kept; nothing sent; end() is not called
+  else Clean draft, or Sign out without saving
+    guard --> router : Leave allowed
+    router -> router : The /login guard lets the signOut navigation through while the session is still held
+    router -> router : Leaving the shell destroys route-owned components and route-scoped providers
+    shell -> session : end(SignedOut)
+    shell -> router : RouteContext.loginNotice = signed-out
+  end
+else Own password replaced (L2-004.4)
+  pwd -> pwd : Replacement committed for the caller's own account; the form is clean
+  pwd -> router : RouteContext.loginNotice = signed-out; navigate to /login with replaceUrl and router state { signOut: true }
+  router -> guard : canDeactivate finds no dirty draft; leave allowed
+  router -> router : The /login guard lets the signOut navigation through while the session is still held
+  router -> router : Leaving the shell destroys route-owned components and route-scoped providers
+  pwd -> session : end(SignedOut)
+else Proactive expiry at the token's exp (L2-003.1)
+  session -> session : Expiry timer scheduled by login() at expiresAtUtc fires
+  session -> session : end(Expired)
+else Protected request answered 401 (L2-002.2, L2-002.3)
+  api --> icpt : 401 for a request sent at generation N
+  alt Generation is still N
+    icpt -> session : end(Unauthorized); that request rejects with its 401, so nothing was written
+  else Generation already moved on
+    icpt -> icpt : Discard; no second session end
   end
 end
-opt Logout confirmed / reload / token expiry / API 401
-  page -> state : L2-003 ISessionService.logout(): clear memory token and protected caches
-  state -> state : Cancel requests; increment session generation
-  state --> page : Session ended; late responses ignored
-  page -> router : Navigate to login without protected data
-  router --> actor : Login shows signed-out after logout; session-ended after expiry, reload or 401; session-unsaved if a draft was lost
+
+== end(reason): one path, once per generation ==
+alt No session held (already ended, or never signed in)
+  session -> session : Return; nothing to end
+else Session held
+  session -> session : generation = N + 1; clear token, capability summary and expiry timer
+  session -> icpt : Abort every in-flight protected request (unsubscribe aborts HttpClient)
+  icpt --> session : Aborted and late responses are discarded: resources keep state, mutation promises reject with SessionEndedError; no logout
+  note right of icpt
+    Cancellation never implies that a
+    mutation did not commit.
+  end note
+  session -> session : endReason = reason
+  opt reason is Expired or Unauthorized (SignedOut callers have already navigated)
+    session --> shell : endReason changed
+    shell -> router : Store the current path in RouteContext; loginNotice = session-ended; navigate to /login with replaceUrl
+    router -> guard : canDeactivate during the session-end navigation
+    guard -> guard : No dialog: nothing can be saved without a session
+    alt A form or dialog save was aborted or discarded (pending stays true), or its last save got no response and is still unconfirmed; outcome unknown
+      guard -> router : loginNotice = session-save-unknown (L2-003.4)
+    else Dirty draft, not unconfirmed, never sent or answered 401
+      guard -> router : loginNotice = session-unsaved (L2-003.4)
+    else Clean, including a board move, reorder, status control, or other mutation without a FormDraft
+      guard -> router : loginNotice stays session-ended; the restored view rereads after sign-in
+    end
+    router -> router : Leaving the shell destroys route-owned components and route-scoped providers
+  end
+  router --> actor : Login with its notice and no contact or work data; focus on the heading; no success reported
 end
-note over state, api
-Local logout does not revoke a copied valid token.
-Protected requests still validate expiry (zero clock skew) and current SQL access.
+
+note over shell, api
+A reload discards memory, so no end() runs; the next protected route opens login (session-ended after a reload).
+No protected record stays in root-level services or browser storage.
+Local logout does not revoke a copied valid token; the API still checks expiry (zero clock skew) and current SQL access.
 end note
 @enduml

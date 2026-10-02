@@ -4,6 +4,7 @@ skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
 skinparam ArrowColor #344054
+skinparam maxMessageSize 300
 skinparam rectangle {
   BorderColor #344054
   FontColor #101828
@@ -16,7 +17,7 @@ skinparam package {
 title Behavior - Reorder siblings
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "WorkHierarchyPage / MovePositionDialog / WorkOrderView" as page
+  participant "WorkHierarchyBranch, or MovePositionDialog / MovePositionForm" as page
   participant "IWorkOrderService / WorkOrderService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,64 +32,72 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Move up / Move down (row menu below 768px), or Move to position... from the hierarchy or detail page
-page -> page : Snapshot saved sibling order; show the item at its new place as Saving
-page -> client : Build typed ReorderSiblingCommand (parent, item, absolute target position, expected sibling-order version)
+actor -> page : Move up / Move down on an outline row (row menu below 768px), or Move to position... from the outline or the detail page
+page -> page : Move up / Move down: WorkHierarchyBranch snapshots its saved sibling order and shows the item at its new place as Saving. Move to position: the page opens MovePositionDialog with a MoveTarget (position, count, order version from the read that drew the row; nothing read on open). One move at a time, never debounced
+opt Cancel, Close, or Escape after choosing another position in the dialog
+  page -> page : The chosen position is a dirty draft: UnsavedChangesDialog asks first; Discard closes and sends nothing
+end
+page -> client : reorderSibling(ReorderSiblingCommand: parent, item, absolute target position, expected sibling-order version: WorkItemPage.orderVersion of the branch, or WorkItemDetail.siblingOrderVersion)
 client -> access : PUT /api/workspaces/{id}/work-order/siblings
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid or expired JWT; deactivated account
   access --> client : 401; audit denial without payloads
-  client --> page : Restore snapshot; clear session; sign in with the outline as return route
-else Authenticated without permission to reorder work
-  access --> client : 403; audit denial without payloads
-  client --> page : Restore snapshot; explain that reordering is not permitted
-else Authorized
+  client --> page : sessionInterceptor calls SessionService.end(Unauthorized) once for this generation; the promise rejects with its 401 (nothing written); restore snapshot; sign-in shows session-unsaved when a draft was dirty, then returns to the outline
+else Authenticated active account (profile P: reordering needs no capability beyond an active session)
   access -> ctrl : Authorized request
   ctrl -> validation : Send ReorderSiblingCommand through MediatR 12.5.0
   validation -> validation : Identifiers well formed; target position is a whole number of 1 or more
   alt Malformed request
     validation --> ctrl : 400 field errors; nothing read or changed
     ctrl --> client : Validation ProblemDetails
-    client --> page : Restore snapshot; MovePositionDialog keeps the value and shows the position message
+    client --> page : Restore snapshot; MovePositionDialog keeps the value and focus moves to the position field, which reads its message; no Retry or reference ID
   else Valid request
     validation -> handler : Handle ReorderSiblingCommand
-    handler -> db : Lock workspace; read the full sibling set under the parent and its order version
-    db --> handler : Ordered stable IDs and version
-    alt Workspace, parent, or item not found
+    handler -> db : BeginWorkspaceTransactionAsync takes the workspace lock first; LoadSiblingOrderAsync loads the tracked sibling order under the parent and its order version
+    db --> handler : Ordered stable IDs and version, or lock-wait timeout
+    alt Workspace lock wait times out
+      handler --> ctrl : 503 with Retry-After; nothing read or changed
+      ctrl --> client : ProblemDetails (unavailable)
+      client --> page : Unavailable save: restore snapshot; keep focus on the move control; Try again resends the same move only when chosen (move-failed on the outline, failed in the dialog)
+    else Workspace, parent, or item not found
       handler --> ctrl : 404; nothing changed
       ctrl --> client : ProblemDetails (not found)
-      client --> page : Reload the outline without the item; announce that it no longer exists
+      client --> page : The branch rereads without the item and announces that it no longer exists; with no dialog open the focused row is gone, so focus moves to the branch's parent row, or to the Work heading for an initiative; an open dialog closes with NotFound, and the page increments its refresh counter and shows the toast
     else Item not a sibling under that parent, other workspace, or position beyond the sibling count (L2-017.3)
       handler --> ctrl : 400 invalid position or reference; nothing changed
       ctrl --> client : Validation ProblemDetails
-      client --> page : Restore snapshot; "Enter a position from 1 to N" (out-of-range state)
+      client --> page : Restore snapshot; the dialog shows "Enter a position from 1 to N" with focus on the position field (out-of-range state); an inline move shows the reason with Reload order, without Try again or a reference ID
     else Stale sibling-order version (L2-041)
       handler --> ctrl : 409 order changed; nothing applied
       ctrl --> client : ProblemDetails (order changed)
-      client --> page : Restore snapshot; "The order changed" alert; Reload order only, never resent (conflict state)
+      client --> page : Restore snapshot; never resent. Outline: "The order changed" alert announced without moving focus, because the move controls stay enabled; Reload order only, which rereads the loaded window and returns focus to the item's row (move-failed conflict variant). Dialog: Move gives way to Reload order, which receives focus and closes the dialog with Outdated (conflict state)
     else Move permitted
       handler -> entity : L2-017 move within the sibling set
       entity --> handler : Deterministic affected interval; every sibling present once
-      handler -> db : L2-039 / L2-040 rewrite the interval, bump the sibling-order version, and record success audit in one transaction
+      handler -> db : L2-039 / L2-040 AddAuditEvent, then SaveChangesAsync: rewrite the affected interval, bump the sibling-order version, and record success audit in one transaction; release the lock
       alt Commit fails
         db --> handler : Roll back business state and success audit
         handler --> ctrl : Generic 500 with correlation ID
         ctrl --> client : Failure; no successful-move claim
-        client --> page : Restore snapshot; keep focus on the move control; Try again resends the same move (failed state)
+        client --> page : Restore snapshot; alert with reference ID; keep focus on the move control; Try again resends the same move (move-failed on the outline, failed in the dialog)
       else Commit succeeds
         db --> handler : New sibling-order version
         handler --> ctrl : Committed order
-        ctrl --> client : 200 with order and version
-        client --> page : Replace snapshot with committed order
-        page --> actor : Announce "{title} moved to position N of M"; focus stays on the moved item's control
+        ctrl --> client : 200 OrderMoved (position, total, order version)
+        client --> page : WorkHierarchyBranch rereads its loaded sibling window; after Move to position the dialog closes with Moved and the opening page increments its refresh counter (the outline rereads its expanded branches; the detail rereads its sibling position)
+        page --> actor : Announce "{title} moved to position N of M" (the "Reordered" toast after the dialog); focus stays on the moved item's control, which stays focusable with aria-disabled at either end of the order
       end
     end
   end
 end
+opt No response to the move (timeout or network failure)
+  client --> page : The move may have committed. Move up or Move down: the branch rereads its loaded window and the move-failed alert says "We couldn't confirm whether {title} moved" and where the reread found it, without a reference ID or Try again. Dialog: the failed alert with that title and no reference ID; the form emits unconfirmed, so the page rereads at once; Try again resends only when pressed, and a 409 to that resend drops "Nothing was applied" and says to reload to see where the item is now
+end
 note over ctrl, db
-All rejection checks run under the lock before any write.
+An unexpected 403 applies nothing; WorkHierarchyBranch restores its snapshot (or MovePositionForm keeps the position) and emits forbidden, and the routed page shows the "Your access changed" toast through TOAST_SERVICE, without Retry or reference ID; the capability refresh still runs.
+All rejection checks run under the lock before any write; a stale version in SaveChangesAsync raises ConcurrencyConflictException, the same 409.
 Unexpected failures return generic 500 plus correlation ID (L2-043).
 Diagnostics exclude secrets and contact payloads.
 end note

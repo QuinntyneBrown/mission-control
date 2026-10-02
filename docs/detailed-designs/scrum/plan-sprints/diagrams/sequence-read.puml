@@ -3,6 +3,7 @@ skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
+skinparam maxMessageSize 300
 skinparam ArrowColor #344054
 skinparam rectangle {
   BorderColor #344054
@@ -13,10 +14,10 @@ skinparam package {
   FontColor #101828
   BackgroundColor #F9FAFB
 }
-title Behavior - Read sprint plans and available stories
+title Behavior - Read the Sprints tab, a plan header, available stories, and members
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "SprintsPage / SprintPlanningPage / SprintView" as page
+  participant "SprintsPage / SprintListView\nSprintPlanningPage / SprintPlanView" as page
   participant "ISprintService / SprintService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -25,52 +26,71 @@ box "Backend - MissionControl.Api" #D1FADF
 end box
 box "Backend - MissionControl.Application and Domain" #ECFDF3
   participant "ValidationBehavior" as validation
-  participant "GetSprintPlanQueryHandler" as handler
-  participant "Sprint" as entity
+  participant "ListSprintsQueryHandler\nGetSprintPlanQueryHandler\nGetSprintCandidatesQueryHandler\nGetSprintMembersQueryHandler" as handler
 end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Open the Sprints tab or a sprint's planning page
-page -> client : Build typed GetSprintPlanQuery with page and page size
-client -> access : GET /api/workspaces/{id}/sprints[/{sprintId}/plan]
+actor -> page : Open the Sprints tab, or a sprint's planning page
+page -> client : Sprints tab: sprint list resource (ListSprintsQuery: plannedPage, closedPage, pageSize)\nPlanning page: workspace resource (IWorkspaceService.workspaceResource, GetWorkspaceQuery) for the\nbreadcrumb and project name; plan header (GetSprintPlanQuery), candidate (search, eligibleOnly false, page)\nand member (page) resources - independent caller-owned signal resources
+client -> access : GET .../sprints, .../sprints/{sprintId}/plan, .../candidates, .../members
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid or expired JWT; deactivated account
   access --> client : 401; audit denial without payloads
-  client --> page : Clear session; sign in with this route as return route
-else Authenticated without the required permission
-  access --> client : 403; audit denial without payloads
-  client --> page : Access-denied state; nothing loaded
-else Authorized
+  client --> page : SessionService.end(Unauthorized) once; sign in with this route as return route
+else Authenticated (profile P: every active role reads sprints)
   access -> ctrl : Authorized request
-  ctrl -> validation : Send GetSprintPlanQuery through MediatR 12.5.0
-  validation -> validation : L2-045 page size 1-100, default 25
+  ctrl -> validation : Send the typed query through MediatR 12.5.0
+  validation -> validation : L2-045 page 1 or more; page size 1-100, default 25
   alt Invalid page or page size
     validation --> ctrl : 400 field errors; nothing read
     ctrl --> client : Validation ProblemDetails
-    client --> page : Load-failed state; Try again uses the default page size
+    client --> page : That list shows the page-size message without Try again or reference ID\n(the views always send page size 25, so only direct API callers meet this)
   else Valid request
-    validation -> handler : Handle GetSprintPlanQuery
-    handler -> db : Read workspace mode, sprint list or planned sprint, one bounded page of candidate stories
-    db --> handler : Records, full matching counts, stable order
-    alt Workspace or sprint not found (or sprint in another workspace)
+    validation -> handler : Handle the query
+    handler -> db : Read workspace mode and the sprint
+    db --> handler : Mode and sprint, or none
+    alt Workspace not found (the planning page's workspace read also answers 404)
       handler --> ctrl : 404
       ctrl --> client : ProblemDetails (not found)
-      client --> page : Sprint not found state with Back to sprints
+      client --> page : Project not found with Back to projects (planning page: project-not-found; Sprints tab:\nSprintListView emits notFound and SprintsPage calls the layout's refresh() on the first one)
+    else Sprint not found (or in another workspace)
+      handler --> ctrl : 404
+      ctrl --> client : ProblemDetails (not found)
+      client --> page : Sprint not found state with Back to sprints (not-found)
     else Found
-      handler -> entity : Project eligibility, unavailable reasons (Done, in another sprint), selection, Toronto dates
-      entity --> handler : Plan or sprint list view
-      handler --> ctrl : Plans and bounded candidates with full counts and versions
-      ctrl --> client : 200 with view
-      client --> page : Update signals; no sprints shows Plan your first sprint; Kanban mode shows plans read-only
-      page --> actor : Present sprints, eligible stories and unavailable stories with reasons
+      handler -> db : One statement per list: bounded page plus total (window count),\nbacklog priority then story ID; rows omit descriptions
+      db --> handler : Sprints tab: active sprint, one page of planned sprints by start date then ID,\none page of closed sprints newest closure first then ID, each with its total; or the plan header; or a candidate page with availability per row\n(eligible first, then Done or in another open sprint); or a member page, Done members included
+      handler --> ctrl : Typed result with page, page size and total
+      ctrl --> client : 200
+      client --> page : Each resource updates its own value signal; pending marks apply by story ID;\nno sprints shows Plan your first sprint; Kanban mode shows plans read-only (paused);\na header that reads Active or Closed shows not-planned instead of the lists
+      page --> actor : Present the header, available stories with reasons, and sprint members
     end
   end
 end
+opt Planning page opened with ?add={storyId} or ?remove={storyId}
+  page -> page : A value that is not a well-formed story ID is ignored; nothing is marked
+  page -> client : add: one candidate read with storyId (eligibleOnly false);\nremove: one member read with storyId
+  client --> page : add: eligible joins toAdd and lists first under the sprint (paged state: HCK-130);\notherwise not marked and its row shows the reason. remove: returned as a current member joins\ntoRemove (paged state: HCK-126); otherwise nothing is marked
+end
+loop Search typing, or a page change in either list
+  actor -> page : Type in search, or choose a page
+  page -> client : Search debounces about 250 ms on the query signal and restarts at page 1;\npage actions are immediate; the resource aborts the superseded read
+  client --> page : New page of that list only; the other list, the header and both pending sets are unchanged
+end
+opt Try again after a failed read
+  actor -> page : Choose Try again
+  page -> page : The view emits retryRequested: SprintsPage calls ProjectLayoutPage.refresh(), so the header and\nthe list reread together; SprintPlanningPage reloads its workspace resource and increments its counter
+end
+opt A committed dialog outcome, or a layout revision on the Sprints tab
+  page -> page : The page increments its counter; the refresh input change rereads the list,\nor the plan header and both lists, keeping pages and both pending sets
+end
 note over ctrl, db
-Unexpected failures return generic 500 plus correlation ID (L2-043).
+Unexpected failures return generic 500 plus correlation ID (L2-043);
+the page shows Load failed with the reference ID and Try again (error state).
+A read that gets no response shows the same state with Try again and no reference ID.
 Diagnostics exclude secrets and contact payloads.
 end note
 @enduml

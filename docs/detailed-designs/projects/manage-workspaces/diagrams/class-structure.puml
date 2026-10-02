@@ -20,39 +20,6 @@ skinparam class {
   FontColor #101828
   BackgroundColor #F9FAFB
 }
-class ProjectListPage {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
-}
-class ProjectOverviewPage {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
-}
-class ProjectFormDialog {
-  +attempted: Signal<UpdateWorkspaceCommand?>
-  +latest: Signal<WorkspaceDetail?>
-  +save(): void
-  +reloadLatest(): void
-}
-class ProjectDeleteDialog {
-  +blocked: Signal<WorkspaceInUseProblem?>
-  +confirm(): void
-  +cancel(): void
-}
-class WorkspaceView {
-  +state: Signal<FeatureState>
-  +submit(): void
-}
-interface IWorkspaceService {
-  +list(request: GetWorkspacesQuery): Promise<WorkspaceList>
-  +read(request: GetWorkspaceQuery): Promise<WorkspaceDetail>
-  +create(request: CreateWorkspaceCommand): Promise<FeatureResult>
-  +edit(request: UpdateWorkspaceCommand): Promise<FeatureResult>
-  +delete(request: DeleteWorkspaceCommand): Promise<FeatureResult>
-}
-class WorkspaceService {
-  -http: HttpClient
-}
 class WorkspacesController {
   -sender: ISender
 }
@@ -64,43 +31,59 @@ class Workspace {
   +responsibleLeadId: Guid?
   +version: long
   +edit(name: string, description: string?, leadId: Guid?): void
-  +checkDeletion(workItems: int, sprints: int): void
+  +checkDeletion(workItemTotal: int, sprintTotal: int): void
 }
 interface IMissionControlDataSession {
-  +query(specification): Task<ReadResult>
-  +commit(expectedVersion: long): Task<void>
+  +ListWorkspacesAsync(query: ListWorkspacesQuery, ct: CancellationToken): Task<WorkspaceList>
+  +LoadWorkspaceDetailAsync(id: Guid, ct: CancellationToken): Task<WorkspaceDetail?>
+  +LoadLeadReferenceAsync(leadId: Guid, ct: CancellationToken): Task<LeadReference?>
+  +LoadWorkspaceAsync(id: Guid, ct: CancellationToken): Task<Workspace?>
+  +LoadWorkspaceContentCountsAsync(workspaceId: Guid, ct: CancellationToken): Task<WorkspaceContentCounts>
+  +AddWorkspace(workspace: Workspace): void
+  +RemoveWorkspace(workspace: Workspace): void
+  +AddAuditEvent(auditEvent: AuditEvent): void
+  +BeginWorkspaceTransactionAsync(workspaceId: Guid, ct: CancellationToken): Task
+  +SaveChangesAsync(ct: CancellationToken): Task
 }
-class MissionControlDataSession {
-  -connection: DbConnection
-}
-ProjectListPage --> WorkspaceView : composes
-ProjectOverviewPage --> WorkspaceView : composes
-ProjectListPage ..> ProjectFormDialog : opens (create)
-ProjectOverviewPage ..> ProjectFormDialog : opens (edit)
-ProjectOverviewPage ..> ProjectDeleteDialog : opens
-ProjectFormDialog --> WorkspaceView : composes
-ProjectDeleteDialog --> WorkspaceView : composes
-WorkspaceView ..> IWorkspaceService : inject token
-IWorkspaceService <|.. WorkspaceService
+note right of IMissionControlDataSession
+  Scoped view of the shared port; only the members
+  this slice uses. ListWorkspacesAsync is one statement
+  (window total); LoadWorkspaceDetailAsync is one snapshot.
+  Success audits go through AddAuditEvent and commit
+  with the change in SaveChangesAsync.
+  Only deletion takes the workspace lock; a lock-wait
+  timeout maps to 503 with Retry-After, nothing changed.
+end note
+class MissionControlDataSession
 IMissionControlDataSession <|.. MissionControlDataSession
 
-class GetWorkspacesQuery {
+class ListWorkspacesQuery {
   +page: int
   +pageSize: int
+  +responsibleLeadId: Guid?
 }
-class GetWorkspacesQueryHandler {
-  +handle(request: GetWorkspacesQuery): Task<WorkspaceList>
+class ListWorkspacesQueryHandler {
+  +handle(request: ListWorkspacesQuery, ct: CancellationToken): Task<WorkspaceList>
+}
+class LeadReference {
+  +id: Guid
+  +name: string
 }
 class WorkspaceList {
   +items: WorkspaceListItem[]
   +totalCount: int
   +page: int
   +pageSize: int
+  +responsibleLead: LeadReference?
 }
+note right of WorkspaceList
+  responsibleLead echoes the filter for
+  "Projects led by ..."; a malformed or
+  unknown responsibleLeadId returns 400.
+end note
 class WorkspaceListItem {
   +id: Guid
   +name: string
-  +description: string?
   +mode: DeliveryMode
   +responsibleLeadId: Guid?
   +responsibleLeadName: string?
@@ -111,24 +94,28 @@ class WorkspaceListItem {
   +sprintsPaused: bool
 }
 note right of WorkspaceListItem
-  Active sprint name and Toronto end date,
-  or sprintsPaused when Kanban keeps sprints.
-  Story counts cover every persisted story.
+  No description (up to 10,000 characters);
+  the overview returns it. Active sprint name and
+  Toronto end date, or sprintsPaused when Kanban
+  keeps sprints. Story counts are set-based over
+  every persisted story.
 end note
-WorkspacesController ..> GetWorkspacesQuery : dispatches
-GetWorkspacesQueryHandler ..> GetWorkspacesQuery : handles
-GetWorkspacesQueryHandler --> WorkspaceList : projects
-GetWorkspacesQueryHandler ..> IMissionControlDataSession : uses
+WorkspacesController ..> ListWorkspacesQuery : dispatches
+ListWorkspacesQueryHandler ..> ListWorkspacesQuery : handles
+ListWorkspacesQueryHandler --> WorkspaceList : returns
+ListWorkspacesQueryHandler ..> IMissionControlDataSession : LoadLeadReferenceAsync; ListWorkspacesAsync
 WorkspaceList *-- "0..100" WorkspaceListItem
+WorkspaceList *-- "0..1" LeadReference
 
 class GetWorkspaceQuery {
   +id: Guid
 }
 class GetWorkspaceQueryHandler {
-  +handle(request: GetWorkspaceQuery): Task<WorkspaceDetail>
+  +handle(request: GetWorkspaceQuery, ct: CancellationToken): Task<WorkspaceDetail>
 }
 class WorkspaceDetail {
   +id: Guid
+  +key: string
   +name: string
   +description: string?
   +mode: DeliveryMode
@@ -137,15 +124,22 @@ class WorkspaceDetail {
   +version: long
   +workItemTotal: int
   +counts: TypeStatusCount[]
+  +typeTotals: TypeCount[4]
   +activeSprint: SprintSummary?
   +nextPlannedSprint: SprintSummary?
   +latestClosedSprint: SprintSummary?
   +keptSprints: SprintSummary[]
 }
 note right of WorkspaceDetail
-  Scrum: active, next planned, and latest closed sprint.
-  Kanban: keptSprints holds planned and closed sprints,
-  newest first, at most 25, each flagged paused.
+  Scrum: active, next planned (earliest start date,
+  then ID), and latest closed sprint (latest closure,
+  then ID). Kanban: keptSprints holds planned and
+  closed sprints by planned start date, newest first,
+  then ID, at most 25, each flagged paused.
+  counts, typeTotals, and workItemTotal are computed
+  on the server, never summed from rendered cells.
+  key: the project-local display key prefix (HCK);
+  allocation policy <TO SUPPLY>.
 end note
 class TypeStatusCount {
   +type: WorkItemType
@@ -155,7 +149,7 @@ class TypeStatusCount {
 class SprintSummary {
   +sprintId: Guid
   +name: string
-  +state: SprintState
+  +status: SprintStatus
   +goal: string?
   +startDate: DateOnly
   +endDate: DateOnly
@@ -169,9 +163,10 @@ note bottom of SprintSummary
 end note
 WorkspacesController ..> GetWorkspaceQuery : dispatches
 GetWorkspaceQueryHandler ..> GetWorkspaceQuery : handles
-GetWorkspaceQueryHandler --> WorkspaceDetail : projects
-GetWorkspaceQueryHandler ..> IMissionControlDataSession : uses
+GetWorkspaceQueryHandler --> WorkspaceDetail : returns; 404 when missing
+GetWorkspaceQueryHandler ..> IMissionControlDataSession : LoadWorkspaceDetailAsync
 WorkspaceDetail *-- "12" TypeStatusCount
+WorkspaceDetail *-- "4" TypeCount
 WorkspaceDetail *-- SprintSummary
 
 class CreateWorkspaceCommand {
@@ -181,12 +176,18 @@ class CreateWorkspaceCommand {
   +responsibleLeadId: Guid?
 }
 class CreateWorkspaceCommandHandler {
-  +handle(request: CreateWorkspaceCommand): Task<FeatureResult>
+  +handle(request: CreateWorkspaceCommand, ct: CancellationToken): Task<SavedWorkspaceResult>
+}
+class SavedWorkspaceResult {
+  +id: Guid
+  +version: long
+  +name: string
 }
 WorkspacesController ..> CreateWorkspaceCommand : dispatches
 CreateWorkspaceCommandHandler ..> CreateWorkspaceCommand : handles
 CreateWorkspaceCommandHandler --> Workspace : creates
-CreateWorkspaceCommandHandler ..> IMissionControlDataSession : uses
+CreateWorkspaceCommandHandler ..> IMissionControlDataSession : loads lead; adds workspace and audit; saves
+CreateWorkspaceCommandHandler ..> SavedWorkspaceResult : returns
 
 class UpdateWorkspaceCommand {
   +id: Guid
@@ -196,45 +197,57 @@ class UpdateWorkspaceCommand {
   +expectedVersion: long
 }
 class UpdateWorkspaceCommandHandler {
-  +handle(request: UpdateWorkspaceCommand): Task<FeatureResult>
+  +handle(request: UpdateWorkspaceCommand, ct: CancellationToken): Task<SavedWorkspaceResult>
 }
 WorkspacesController ..> UpdateWorkspaceCommand : dispatches
 UpdateWorkspaceCommandHandler ..> UpdateWorkspaceCommand : handles
 UpdateWorkspaceCommandHandler --> Workspace : loads / applies
-UpdateWorkspaceCommandHandler ..> IMissionControlDataSession : uses
+UpdateWorkspaceCommandHandler ..> IMissionControlDataSession : loads; loads lead; adds audit; saves (version guard)
+UpdateWorkspaceCommandHandler ..> SavedWorkspaceResult : returns
 
 class DeleteWorkspaceCommand {
   +id: Guid
 }
 class DeleteWorkspaceCommandHandler {
-  +handle(request: DeleteWorkspaceCommand): Task<FeatureResult>
+  +handle(request: DeleteWorkspaceCommand, ct: CancellationToken): Task
+}
+class WorkspaceContentCounts {
+  +workItemTotal: int
+  +workItemCounts: TypeCount[4]
+  +sprintTotal: int
+  +sprintCounts: SprintStatusCount[3]
 }
 class WorkspaceInUseProblem {
   +status: 409
-  +workItemTotal: int
-  +workItemCounts: TypeCount[]
-  +sprintTotal: int
-  +sprints: SprintReference[]
+  +content: WorkspaceContentCounts
 }
 note bottom of WorkspaceInUseProblem
-  Sprints of every state, newest first, at most 25.
-  Nothing is deleted or cascaded.
+  Counts only: work items by type, sprints by
+  status. No item or sprint lists. Nothing is
+  deleted or cascaded.
 end note
 class TypeCount {
   +type: WorkItemType
   +count: int
 }
-class SprintReference {
-  +sprintId: Guid
-  +name: string
-  +state: SprintState
+class SprintStatusCount {
+  +status: SprintStatus
+  +count: int
 }
-WorkspaceInUseProblem *-- "4" TypeCount
-WorkspaceInUseProblem *-- "0..25" SprintReference
+WorkspaceContentCounts *-- "4" TypeCount
+WorkspaceContentCounts *-- "3" SprintStatusCount
+WorkspaceInUseProblem *-- WorkspaceContentCounts
 WorkspacesController ..> DeleteWorkspaceCommand : dispatches
 DeleteWorkspaceCommandHandler ..> DeleteWorkspaceCommand : handles
 DeleteWorkspaceCommandHandler --> Workspace : loads / checks
 DeleteWorkspaceCommandHandler ..> WorkspaceInUseProblem : 409 when content exists
-DeleteWorkspaceCommandHandler ..> IMissionControlDataSession : uses
+DeleteWorkspaceCommandHandler ..> IMissionControlDataSession : locks; loads counts; removes; adds audit; saves
 
+enum SprintStatus {
+  Planned
+  Active
+  Closed
+}
+SprintSummary --> SprintStatus
+SprintStatusCount --> SprintStatus
 @enduml

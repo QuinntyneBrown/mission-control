@@ -31,11 +31,11 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">The keyboard and touch alternative to dragging. It also works when the target is on another page. The result is announced: "Book AV for demo day moved to position 2 of 6".</p>
-    <p class="mock-note" data-when="backlog" hidden>Backlog priority is separate from the order inside an epic, so this move doesn't change the parent or the sibling order.</p>
-    <p class="mock-note" data-when="out-of-range" hidden>The position is checked before sending. Focus stays on the field and the error is announced.</p>
-    <p class="mock-note" data-when="conflict" hidden>The sibling order changed after this dialog opened, so the order version no longer matched and the API answered 409. Nothing was applied and the move is never resent: positions chosen from the old order could land somewhere unintended. "Reload order" closes the dialog and reloads the outline with the latest order; focus returns to the item's actions button so the move can be chosen again.</p>
-    <p class="mock-note" data-when="failed" hidden>The saved order is unchanged and shown again. "Try again" resends the same move.</p>
+    <p class="mock-note" data-when="default">The keyboard and touch alternative to dragging. It also works when the target is on another page. Below 576px the dialog fills the screen with its actions pinned to the bottom. The result is announced: "Book AV for demo day moved to position 2 of 6". The dialog reads nothing when it opens: the position, the count, and the order version come from the read that drew the row. Choosing a different position is an unsaved change, so Cancel, Close, or Escape asks before discarding it.</p>
+    <p class="mock-note" data-when="backlog" hidden>Backlog priority is separate from the order inside an epic, so this move doesn't change the parent or the sibling order. The field starts at the story's current priority, so Cancel closes without asking until it changes.</p>
+    <p class="mock-note" data-when="out-of-range" hidden>The position is checked before sending, and nothing is sent. Focus moves to New priority, which reads its error through its description: "Enter a position from 1 to 24." The same message appears when the API rejects a position beyond the full count (400).</p>
+    <p class="mock-note" data-when="conflict" hidden>The sibling order changed after this dialog opened, so the order version no longer matched and the API answered 409. Nothing was applied and the move is never resent: positions chosen from the old order could land somewhere unintended. Move gives way to Reload order, so focus moves to Reload order and the alert is announced; the dialog's description now points to that explanation. "Reload order" closes the dialog and reloads the outline with the latest order; focus returns to the item's actions button so the move can be chosen again. The chosen position no longer applies, so Cancel and Reload order close without asking. When this follows a move that got no response, that move may have gone through, so the alert drops "Nothing was applied" and reads "The order under Venue and logistics has changed since this dialog opened. Reload to see where Book AV for demo day is now."</p>
+    <p class="mock-note" data-when="failed" hidden>The API answered 500, or 503 because the project was busy, so the saved order is unchanged and shown again. The alert is announced with the reference ID, and focus stays on the button, now "Try again", which resends the same move; nothing is retried automatically. A move that gets no response may have gone through, so this alert reads "We couldn't confirm whether Book AV for demo day moved", with no reference ID and no claim that the order is unchanged; the outline or backlog behind rereads at once, and Try again sends again only when pressed, meeting the order-changed state, with its neutral wording, if the first move went through. If the item was deleted meanwhile, the API answers 404 instead: the dialog closes, the outline or backlog reloads without it, and the announcement says it no longer exists. Reordering needs only an active session, so a 403 is unexpected: nothing moves, the position is kept, the dialog shows no alert and stays open, and the page behind shows the "Your access changed" toast, without Retry or a reference ID.</p>
   </div>
 
   <div class="mock-screen">
@@ -116,7 +116,8 @@
     </div>
 
     <div class="mc-backdrop">
-      <section class="mc-dialog mc-dialog--sm" role="dialog" aria-modal="true" aria-labelledby="pos-title" aria-describedby="pos-note">
+      <section class="mc-dialog mc-dialog--sm mc-dialog--sheet" role="dialog" aria-modal="true" aria-labelledby="pos-title" aria-describedby="pos-note"
+        data-attr-conflict="aria-describedby=pos-conflict-title pos-conflict-text">
         <header class="mc-dialog__header">
           <div class="mc-dialog__heading">
             <h2 class="mc-dialog__title" id="pos-title">Move “Book AV for demo day”</h2>
@@ -125,7 +126,7 @@
               <span data-when="backlog out-of-range" hidden>Backlog priority · now 2 of 24</span>
             </p>
           </div>
-          <button class="mc-button mc-button--quiet mc-button--icon" type="button" aria-label="Close" data-nav="work-hierarchy.html"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+          <button class="mc-button mc-button--quiet mc-button--icon" type="button" aria-label="Close" data-nav="../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-backlog="data-nav=../backlog/backlog.html" data-attr-conflict="data-nav=work-hierarchy.html"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
         </header>
         <form class="mc-dialog__form" novalidate>
           <div class="mc-dialog__body">
@@ -133,8 +134,8 @@
               <div class="mc-alert mc-alert--warning" data-when="conflict" hidden>
                 <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
                 <div class="mc-alert__body">
-                  <p class="mc-alert__title">The order changed</p>
-                  <p class="mc-alert__text">The order under Venue and logistics changed while you were moving “Book AV for demo day”. Nothing was applied. Reload to see the latest order.</p>
+                  <p class="mc-alert__title" id="pos-conflict-title">The order changed</p>
+                  <p class="mc-alert__text" id="pos-conflict-text">The order under Venue and logistics changed while you were moving “Book AV for demo day”. Nothing was applied. Reload to see the latest order.</p>
                 </div>
               </div>
               <div class="mc-alert mc-alert--danger" data-when="failed" hidden>
@@ -164,30 +165,20 @@
               <p class="mc-hint">Changes the order under Venue and logistics only.</p>
             </div>
 
-            <div data-unless="backlog out-of-range conflict">
-              <p class="mc-label mc-mb-4" id="pos-preview-label">Result</p>
-              <ol class="mc-list" aria-labelledby="pos-preview-label">
-                <li class="mc-list__item"><span class="mc-list__rank">1</span><span class="mc-list__main"><span class="mc-list__title">Confirm venue accessibility checklist</span></span></li>
-                <li class="mc-list__item mc-list__item--selected"><span class="mc-list__rank">2</span><span class="mc-list__main"><span class="mc-list__title">Book AV for demo day</span></span></li>
-                <li class="mc-list__item"><span class="mc-list__rank">3</span><span class="mc-list__main"><span class="mc-list__title">Venue floor plan with accessible routes</span></span></li>
-                <li class="mc-list__item"><span class="mc-list__rank">4</span><span class="mc-list__main"><span class="mc-list__title">Dietary needs survey for attendees</span></span></li>
-                <li class="mc-list__item"><span class="mc-list__rank">5</span><span class="mc-list__main"><span class="mc-list__title">Venue shortlist</span></span></li>
-                <li class="mc-list__item"><span class="mc-list__rank">6</span><span class="mc-list__main"><span class="mc-list__title">Sponsor thank-you page</span></span></li>
-              </ol>
-            </div>
+            <p class="mc-text-sm" data-unless="backlog out-of-range conflict"><strong>Result:</strong> Book AV for demo day moves from position 6 to position 2 of 6. The other items under Venue and logistics keep their order.</p>
 
             <div class="mc-field" data-when="backlog out-of-range" hidden>
               <label class="mc-label" for="pos-backlog">New priority</label>
               <p class="mc-hint" id="pos-backlog-hint">1 is the top of the backlog, 24 the bottom. The epic and the order inside it don't change.</p>
-              <input class="mc-input" id="pos-backlog" type="text" inputmode="numeric" autocomplete="off" aria-describedby="pos-backlog-hint" value="2"
+              <input class="mc-input" id="pos-backlog" type="text" inputmode="numeric" autocomplete="off" required aria-describedby="pos-backlog-hint" value="2"
                   data-attr-out-of-range="value=30|aria-invalid=true|aria-describedby=pos-backlog-error pos-backlog-hint">
               <p class="mc-field-error" id="pos-backlog-error" data-when="out-of-range" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Enter a position from 1 to 24.</p>
             </div>
           </div>
           <footer class="mc-dialog__footer">
-            <button class="mc-button" type="button" data-nav="work-hierarchy.html">Cancel</button>
+            <button class="mc-button" type="button" data-nav="../shell/unsaved-changes-dialog.html#state=cancel-form" data-attr-backlog="data-nav=../backlog/backlog.html" data-attr-conflict="data-nav=work-hierarchy.html">Cancel</button>
             <button class="mc-button mc-button--primary" type="button" data-when="conflict" hidden data-nav="work-hierarchy.html"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Reload order</button>
-            <button class="mc-button mc-button--primary" type="submit" data-unless="conflict" data-nav="work-hierarchy.html" data-attr-out-of-range="!data-nav">
+            <button class="mc-button mc-button--primary" type="submit" data-unless="conflict" data-nav="work-hierarchy.html" data-attr-backlog="data-nav=../backlog/backlog.html" data-attr-out-of-range="!data-nav">
               <span data-unless="failed">Move</span>
               <span data-when="failed" hidden>Try again</span>
             </button>

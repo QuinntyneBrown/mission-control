@@ -34,11 +34,24 @@ class ReviewProfile {
   +viewportHeight: int
   +textZoomPercent: int
 }
+class MirroredFile {
+  +destinationPath: string
+  +sourcePath: string
+  +sourceVersion: string
+  +sourceCommit: string
+}
 ArtifactCatalog "1" o-- "*" DesignToken : lists
 ArtifactCatalog "1" o-- "*" NamedBreakpoint : documents
 ArtifactCatalog ..> ReviewProfile : reviews at profile R widths
+MirroredFile ..> DesignToken : copies dist/tokens.css
+MirroredFile ..> NamedBreakpoint : copies dist/_breakpoints.scss
 note right of NamedBreakpoint
 Literal widths live only here;
 component styles use the names.
+end note
+note bottom of MirroredFile
+Written only by sync-tokens with a header naming
+sourceVersion and sourceCommit. Review rebuilds
+at that commit, resyncs, and expects no change.
 end note
 @enduml

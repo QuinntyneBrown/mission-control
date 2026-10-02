@@ -5,10 +5,10 @@ title Containers - Move and reorder story cards
 Person(actor, "Authorized user", "Move and reorder story cards")
 System_Boundary(mc, "Mission Control") {
   Container(web, "Mission Control web client", "Angular", "Move and reorder story cards")
-  Container(api, "MissionControl.Api", ".NET", "Authorized application handlers")
-  ContainerDb(db, "Mission Control database", "SQL - provider <TO SUPPLY>", "BoardPlacement and related records")
+  Container(api, "MissionControl.Api", ".NET", "Authorized placement command")
+  ContainerDb(db, "Mission Control database", "SQL - provider <TO SUPPLY>", "BoardState, BoardPlacement, stories and audit events")
 }
 Rel(actor, web, "Uses")
-Rel(web, api, "Requests feature behavior", "HTTPS / JSON")
-Rel(api, db, "Reads or commits feature records", "Parameterized SQL")
+Rel(web, api, "One pending move per board; re-reads affected columns", "HTTPS / JSON")
+Rel(api, db, "Commits placement, status and audit atomically", "Parameterized SQL")
 @enduml

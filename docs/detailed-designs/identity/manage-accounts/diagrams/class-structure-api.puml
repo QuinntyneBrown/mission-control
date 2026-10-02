@@ -1,0 +1,224 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Provision and manage accounts: API
+left to right direction
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class AccountsController {
+  -sender: ISender
+}
+class AccountSummary {
+  +id: Guid
+  +firstName: string
+  +lastName: string
+  +email: string
+  +role: AccountRole
+  +active: bool
+  +inactiveSinceUtc: DateTimeOffset?
+  +designated: bool
+  +version: long
+}
+class AccountSummaryPage {
+  +items: AccountSummary[]
+  +totalCount: int
+  +page: int
+  +pageSize: int
+}
+class AccountDetail {
+  +id: Guid
+  +firstName: string
+  +lastName: string
+  +email: string
+  +role: AccountRole
+  +active: bool
+  +inactiveSinceUtc: DateTimeOffset?
+  +designated: bool
+  +version: long
+  +createdAtUtc: DateTimeOffset
+  +createdByName: string?
+}
+class DuplicateAccountConflict {
+  +existingAccountId: Guid
+  +existingAccountName: string
+}
+note bottom of DuplicateAccountConflict
+  Extension of the 409 duplicate ProblemDetails;
+  the form names the account and links to it.
+end note
+class UserAccount {
+  +id: Guid
+  +firstName: string
+  +lastName: string
+  +normalizedEmail: string
+  +role: AccountRole
+  +active: bool
+  +passwordHash: string
+  +credentialVersion: long
+  +version: long
+  +createdAtUtc: DateTimeOffset
+  +createdById: Guid?
+  +statusChangedAtUtc: DateTimeOffset?
+  +rename(firstName: string, lastName: string): void
+  +changeRole(role: AccountRole): void
+  +changeStatus(active: bool, nowUtc: DateTimeOffset): void
+  +replacePassword(hash: string): void
+}
+class InitializationOptions <<Application Options>> {
+  +designatedEmail: string
+}
+note bottom of InitializationOptions
+  Owned by initialize-administrator. The designated
+  administrator is the account whose normalized email
+  equals designatedEmail; emails never change.
+end note
+class DesignatedAdministratorPolicy {
+  +rejectsEdit(account: UserAccount, designatedEmail: string, firstName: string, lastName: string, role: AccountRole, normalizedEmail: string?): bool
+  +rejectsStatus(account: UserAccount, designatedEmail: string, active: bool): bool
+}
+note right of DesignatedAdministratorPolicy
+  L2-008 (email, demotion, deactivation);
+  proposed name lock for the designated account;
+  any account's email is immutable (proposed).
+  Rejections return 409 before any mutation.
+end note
+interface IMissionControlDataSession {
+  +ListAccountsAsync(page: int, pageSize: int, designatedEmail: string, ct: CancellationToken): Task<AccountSummaryPage>
+  +LoadAccountDetailAsync(id: Guid, designatedEmail: string, ct: CancellationToken): Task<AccountDetail?>
+  +LoadAccountAsync(id: Guid, ct: CancellationToken): Task<UserAccount?>
+  +LoadAccountByEmailAsync(normalizedEmail: string, ct: CancellationToken): Task<UserAccount?>
+  +AddAccount(account: UserAccount): void
+  +AddAuditEvent(auditEvent: AuditEvent): void
+  +SaveChangesAsync(ct: CancellationToken): Task
+}
+note bottom of IMissionControlDataSession
+  Scoped view of the shared port: only the members this
+  slice uses. The two projections compute designated as
+  normalized email = designatedEmail. SaveChangesAsync checks
+  the tracked expected version and commits the change with the
+  success audit registered by AddAuditEvent; a stale version
+  raises ConcurrencyConflictException (409) and keeps neither.
+end note
+interface IPasswordHashService {
+  +hash(password: string): string
+}
+interface IAuditEventWriter {
+  +AppendRestrictedAsync(auditEvent: AuditEvent, ct: CancellationToken): Task
+}
+note bottom of IAuditEventWriter
+  Outside the business transaction: Rejected
+  (protected identity) and Denied only.
+end note
+class AuditEventWriter <<Infrastructure>>
+IAuditEventWriter <|.. AuditEventWriter
+AccountSummaryPage *-- AccountSummary
+class ListAccountsQuery {
+  +page: int
+  +pageSize: int
+}
+class ListAccountsQueryHandler {
+  +handle(request: ListAccountsQuery, ct: CancellationToken): Task<AccountSummaryPage>
+}
+AccountsController ..> ListAccountsQuery : dispatches
+ListAccountsQueryHandler ..> ListAccountsQuery : handles
+ListAccountsQueryHandler --> AccountSummaryPage : returns
+ListAccountsQueryHandler ..> InitializationOptions : designatedEmail
+ListAccountsQueryHandler ..> IMissionControlDataSession : ListAccountsAsync
+class GetAccountQuery {
+  +id: Guid
+}
+class GetAccountQueryHandler {
+  +handle(request: GetAccountQuery, ct: CancellationToken): Task<AccountDetail>
+}
+note bottom of GetAccountQueryHandler
+  No row for the ID: 404.
+end note
+AccountsController ..> GetAccountQuery : dispatches
+GetAccountQueryHandler ..> GetAccountQuery : handles
+GetAccountQueryHandler --> AccountDetail : returns
+GetAccountQueryHandler ..> InitializationOptions : designatedEmail
+GetAccountQueryHandler ..> IMissionControlDataSession : LoadAccountDetailAsync
+class ProvisionAccountCommand {
+  +firstName: string
+  +lastName: string
+  +email: string
+  +password: string
+  +role: AccountRole
+}
+class ProvisionAccountCommandHandler {
+  +handle(request: ProvisionAccountCommand, ct: CancellationToken): Task<AccountSummary>
+}
+AccountsController ..> ProvisionAccountCommand : dispatches
+ProvisionAccountCommandHandler ..> ProvisionAccountCommand : handles
+ProvisionAccountCommandHandler --> UserAccount : creates; AddAccount
+ProvisionAccountCommandHandler --> DuplicateAccountConflict : 409 duplicate
+ProvisionAccountCommandHandler ..> IPasswordHashService : hashes
+ProvisionAccountCommandHandler ..> IMissionControlDataSession : duplicate check; AddAccount; AddAuditEvent; SaveChangesAsync
+class UpdateAccountCommand {
+  +id: Guid
+  +firstName: string
+  +lastName: string
+  +role: AccountRole
+  +email: string?
+  +expectedVersion: long
+}
+class UpdateAccountCommandHandler {
+  +handle(request: UpdateAccountCommand, ct: CancellationToken): Task<AccountSummary>
+}
+AccountsController ..> UpdateAccountCommand : dispatches
+UpdateAccountCommandHandler ..> UpdateAccountCommand : handles
+UpdateAccountCommandHandler --> UserAccount : loads / applies
+UpdateAccountCommandHandler ..> InitializationOptions : designatedEmail
+UpdateAccountCommandHandler ..> DesignatedAdministratorPolicy : checks first
+UpdateAccountCommandHandler ..> IMissionControlDataSession : LoadAccountAsync; AddAuditEvent; SaveChangesAsync
+UpdateAccountCommandHandler ..> IAuditEventWriter : Rejected
+class ChangeAccountStatusCommand {
+  +id: Guid
+  +active: bool
+  +expectedVersion: long
+}
+class ChangeAccountStatusCommandHandler {
+  +handle(request: ChangeAccountStatusCommand, ct: CancellationToken): Task<AccountSummary>
+}
+AccountsController ..> ChangeAccountStatusCommand : dispatches
+ChangeAccountStatusCommandHandler ..> ChangeAccountStatusCommand : handles
+ChangeAccountStatusCommandHandler --> UserAccount : loads / applies
+ChangeAccountStatusCommandHandler ..> InitializationOptions : designatedEmail
+ChangeAccountStatusCommandHandler ..> DesignatedAdministratorPolicy : checks first
+ChangeAccountStatusCommandHandler ..> IMissionControlDataSession : LoadAccountAsync; AddAuditEvent; SaveChangesAsync
+ChangeAccountStatusCommandHandler ..> IAuditEventWriter : Rejected
+class ReplacePasswordCommand {
+  +id: Guid
+  +password: string
+  +expectedVersion: long
+}
+class ReplacePasswordCommandHandler {
+  +handle(request: ReplacePasswordCommand, ct: CancellationToken): Task<AccountSummary>
+}
+AccountsController ..> ReplacePasswordCommand : dispatches
+ReplacePasswordCommandHandler ..> ReplacePasswordCommand : handles
+ReplacePasswordCommandHandler --> UserAccount : loads / applies
+ReplacePasswordCommandHandler ..> IPasswordHashService : hashes
+ReplacePasswordCommandHandler ..> IMissionControlDataSession : LoadAccountAsync; AddAuditEvent; SaveChangesAsync
+
+enum AccountRole {
+  Administrator
+  Collaborator
+}
+UserAccount --> AccountRole : SQL authority
+@enduml

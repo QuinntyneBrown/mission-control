@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Projects · Mission Control mock</title>
-  <meta name="description" content="Project list with mode, responsible lead, story progress, and active sprint, plus collaborator, paged, empty, loading, and error states.">
+  <meta name="description" content="Project list with mode, responsible lead, story progress, and active sprint, plus collaborator, paged, filtered-by-lead (Grace Mensah, Rafael Da Silva, Lucia Alvarez), invalid lead filter or page, empty, loading, and error states.">
   <meta name="mock-area" content="Projects">
   <meta name="mock-requirements" content="L2-005.4, L2-014, L2-028, L2-032, L2-043.4, L2-045">
   <link rel="stylesheet" href="../assets/tokens.css">
@@ -24,6 +24,10 @@
           <option value="default">Administrator</option>
           <option value="collaborator">Collaborator</option>
           <option value="many">Many projects (page 1 of 3)</option>
+          <option value="by-lead">Filtered by responsible lead</option>
+          <option value="by-lead-rafael">Filtered by lead (Rafael Da Silva)</option>
+          <option value="by-lead-lucia">Filtered by lead (Lucia Alvarez)</option>
+          <option value="lead-filter-invalid">Lead filter no longer valid</option>
           <option value="empty-admin">Empty (administrator)</option>
           <option value="empty-collaborator">Empty (collaborator)</option>
           <option value="loading">Loading</option>
@@ -35,12 +39,17 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">Projects are sorted by name, 25 per page; three fit on one page. Each card links to the project overview. "New project" is administrator-only.</p>
+    <p class="mock-note" data-when="default">Projects are sorted by name, then ID, 25 per page; three fit on one page. Each card links to the project overview. Cards leave out the project description, which can run to 10,000 characters; the overview shows it. "New project" is administrator-only.</p>
     <p class="mock-note" data-when="collaborator" hidden>Collaborators open projects and work in them (add and update work, run boards and sprints) but cannot add projects or change project settings.</p>
     <p class="mock-note" data-when="many" hidden>52 projects: the first 25 by name (then ID) fill page 1, so Prayer Wall App and Youth Coding Night fall on page 2. The total, story counts, and sprint summaries come from persisted records, not this page. Previous is disabled on page 1; on phones the pager reads "Page 1 of 3".</p>
+    <p class="mock-note" data-when="by-lead" hidden>Opened from "View all projects led by Grace Mensah" on lead details or the blocked delete-lead dialog. The responsible-lead filter is part of the route, so the list reloads at page 1 with only her projects; the count is the full total for that lead, and paging works as usual when it exceeds 25. Screen readers hear the result line. Clear filter shows all projects at page 1 straight away; filter and page changes are never delayed.</p>
+    <p class="mock-note" data-when="by-lead-rafael" hidden>Opened from "View all projects led by Rafael Da Silva" on his lead details. The route carries his lead ID, so the list reloads at page 1 with only Community Hackathon 2026, the one project naming him responsible; the count is the full total for that lead. Clear filter shows all projects at page 1 straight away.</p>
+    <p class="mock-note" data-when="by-lead-lucia" hidden>Opened from "View all projects led by Lucia Alvarez" on her lead details. The route carries her lead ID, so the list reloads at page 1 with only Church Website Refresh, the one project naming her responsible; the count is the full total for that lead. Clear filter shows all projects at page 1 straight away.</p>
+    <p class="mock-note" data-when="lead-filter-invalid" hidden>The link named a lead that has since been deleted (or a mistyped lead ID), so the API answers 400 with a field message instead of a list. The page says why the filter can't apply and offers Clear filter, which shows all projects at page 1. Nothing failed on the server, so there is no Try again and no reference ID. Screen readers hear the explanation. An edited link whose page is below 1 or whose page size is outside 1–100 gets the same presentation with its own field message, such as "Choose a page number of 1 or more".</p>
     <p class="mock-note" data-when="empty-admin" hidden>First run: the empty state explains what a project holds and offers the next permitted action.</p>
     <p class="mock-note" data-when="empty-collaborator" hidden>Collaborators are told who can add a project instead of being shown an action they can't take.</p>
     <p class="mock-note" data-when="loading" hidden>Skeleton cards hold the layout while projects load. Screen readers hear "Loading projects".</p>
+    <p class="mock-note" data-when="error" hidden>The read got a server error (500), so no cards or paging are shown as if there were no projects. Try again repeats the read; the reference ID matches the server's diagnostic record. A read that gets no response shows the same state without a reference ID, and the shell's offline banner appears. Screen readers hear the alert.</p>
   </div>
 
   <div class="mc-app">
@@ -137,10 +146,23 @@
           <div class="mc-results-meta" data-when="many" hidden>
             <span>Showing 1–25 of 52 projects</span><span>Sorted by name</span>
           </div>
+          <div class="mc-results-meta" data-when="by-lead" hidden>
+            <span><strong>Projects led by Grace Mensah</strong> · 1 project</span>
+            <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-goto-state="default">Clear filter</button>
+          </div>
+          <div class="mc-results-meta" data-when="by-lead-rafael" hidden>
+            <span><strong>Projects led by Rafael Da Silva</strong> · 1 project</span>
+            <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-goto-state="default">Clear filter</button>
+          </div>
+          <div class="mc-results-meta" data-when="by-lead-lucia" hidden>
+            <span><strong>Projects led by Lucia Alvarez</strong> · 1 project</span>
+            <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-goto-state="default">Clear filter</button>
+          </div>
           <p class="mc-visually-hidden" data-when="loading" hidden>Loading projects</p>
+          <p class="mc-visually-hidden" data-when="lead-filter-invalid" hidden>That lead no longer exists, so projects can't be filtered by them</p>
         </div>
 
-        <div class="mc-grid mc-grid--fit" data-when="default collaborator many">
+        <div class="mc-grid mc-grid--fit" data-when="default collaborator many by-lead by-lead-rafael by-lead-lucia">
               <article class="mc-card mc-stack" aria-labelledby="many-accessible-forms-clinic-title" data-when="many" hidden>
                 <div class="mc-cluster mc-cluster--between">
                   <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
@@ -213,16 +235,12 @@
                   <span class="mc-muted">Sprint plans and history kept</span><a href="../kanban/kanban-board.html#state=preserved">Open board</a>
                 </div>
               </article>
-              <article class="mc-card mc-stack" aria-labelledby="kanban-title">
+              <article class="mc-card mc-stack" aria-labelledby="kanban-title" data-unless="by-lead by-lead-rafael">
                 <div class="mc-cluster mc-cluster--between">
                   <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
-                  
                 </div>
-                <div class="mc-stack mc-stack--sm">
-                  <h2 class="mc-h3" id="kanban-title"><a class="mc-link-quiet" href="project-overview.html#state=kanban">Church Website Refresh</a></h2>
-                  <p class="mc-muted mc-text-sm">Refresh partner church websites with accessible templates and a simple publishing guide.</p>
-                </div>
-                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Lucia Alvarez</a></p>
+                <h2 class="mc-h3" id="kanban-title"><a class="mc-link-quiet" href="project-overview.html#state=kanban">Church Website Refresh</a></h2>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead-lucia">Lucia Alvarez</a></p>
                 <div class="mc-stack mc-stack--xs">
                   <span class="mc-text-sm mc-strong">7 of 16 stories done</span>
                   <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-44"></span></span></div>
@@ -245,16 +263,13 @@
                   <span class="mc-muted">Continuous flow · no sprints</span><a href="../kanban/kanban-board.html">Open board</a>
                 </div>
               </article>
-              <article class="mc-card mc-stack" aria-labelledby="default-title">
+              <article class="mc-card mc-stack" aria-labelledby="default-title" data-unless="by-lead by-lead-lucia">
                 <div class="mc-cluster mc-cluster--between">
                   <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
                   <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>Sprint 8 active</span>
                 </div>
-                <div class="mc-stack mc-stack--sm">
-                  <h2 class="mc-h3" id="default-title"><a class="mc-link-quiet" href="project-overview.html#state=default">Community Hackathon 2026</a></h2>
-                  <p class="mc-muted mc-text-sm">Plan and run Toronto's fall build weekend: teams, venues, volunteers, and demo day.</p>
-                </div>
-                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Rafael Da Silva</a></p>
+                <h2 class="mc-h3" id="default-title"><a class="mc-link-quiet" href="project-overview.html#state=default">Community Hackathon 2026</a></h2>
+                <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead-rafael">Rafael Da Silva</a></p>
                 <div class="mc-stack mc-stack--xs">
                   <span class="mc-text-sm mc-strong">11 of 24 stories done</span>
                   <div class="mc-progress"><span class="mc-progress__bar"><span class="mc-progress__fill mc-w-46"></span></span></div>
@@ -508,15 +523,12 @@
                   <span class="mc-muted">Sprint 2 ends Oct 15, 2026</span><a href="../scrum/sprint-board.html">Open sprint board</a>
                 </div>
               </article>
-              <article class="mc-card mc-stack" aria-labelledby="kanban-preserved-title" data-unless="many">
+              <article class="mc-card mc-stack" aria-labelledby="kanban-preserved-title" data-unless="many by-lead-rafael by-lead-lucia">
                 <div class="mc-cluster mc-cluster--between">
                   <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
                   <span class="mc-pill"><span class="mc-icon mc-icon--history" aria-hidden="true"></span>Sprints paused</span>
                 </div>
-                <div class="mc-stack mc-stack--sm">
-                  <h2 class="mc-h3" id="kanban-preserved-title"><a class="mc-link-quiet" href="project-overview.html#state=kanban-preserved">Prayer Wall App</a></h2>
-                  <p class="mc-muted mc-text-sm">A small app for sharing prayer needs within a community, built by volunteers.</p>
-                </div>
+                <h2 class="mc-h3" id="kanban-preserved-title"><a class="mc-link-quiet" href="project-overview.html#state=kanban-preserved">Prayer Wall App</a></h2>
                 <p class="mc-text-sm">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Grace Mensah</a></p>
                 <div class="mc-stack mc-stack--xs">
                   <span class="mc-text-sm mc-strong">5 of 12 stories done</span>
@@ -545,6 +557,15 @@
             </button>
           </div>
         </nav>
+
+        <div class="mc-empty mc-empty--neutral mc-empty--compact" data-when="lead-filter-invalid" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--search mc-icon--lg" aria-hidden="true"></span></span>
+          <h2 class="mc-empty__title">Can't filter by this lead</h2>
+          <p class="mc-empty__text">That lead no longer exists, so projects can't be filtered by them. Clear the filter to see all projects.</p>
+          <div class="mc-empty__actions">
+            <button class="mc-button" type="button" data-goto-state="default">Clear filter</button>
+          </div>
+        </div>
 
         <div class="mc-empty" data-when="empty-admin empty-collaborator" hidden>
           <span class="mc-empty__icon"><span class="mc-icon mc-icon--folder mc-icon--lg" aria-hidden="true"></span></span>
@@ -585,7 +606,7 @@
         <div class="mc-empty mc-empty--error" role="alert" data-when="error" hidden>
           <span class="mc-empty__icon"><span class="mc-icon mc-icon--alert-circle mc-icon--lg" aria-hidden="true"></span></span>
           <h2 class="mc-empty__title">We couldn't load projects</h2>
-          <p class="mc-empty__text">Check your connection and try again. If it keeps happening, share the reference ID with your administrator.</p>
+          <p class="mc-empty__text">Try again. If it keeps happening, share the reference ID with your administrator.</p>
           <p class="mc-ref">Reference ID <code>4c97-b0e2-1fd8</code>
                   <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="4c97-b0e2-1fd8"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
                 </p>

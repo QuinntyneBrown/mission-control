@@ -1,0 +1,278 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Frontend classes - Execute work on the active sprint board
+top to bottom direction
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+set separator none
+package "frontend/projects/mission-control" {
+  class SprintBoardPage {
+    +workspaceId: Signal<Guid>
+    +draft: Signal<DraftState>
+    -header: WritableSignal<ActiveSprintHeader?>
+    -refreshCount: WritableSignal<number>
+    -moveRequest: WritableSignal<MoveRequest?>
+    -chosenMove: WritableSignal<MoveChoice?>
+    -decision: WritableSignal<CompletionDecision?>
+    -moveStatus: WritableSignal<MoveStatus?>
+    +openScope(): void
+    +openRemove(card: BoardCard): void
+    +openCloseSprint(sprintId: Guid): void
+    +openStart(sprintId: Guid): void
+    +openPlanSprint(): void
+    +openAddStory(): void
+  }
+  note bottom of SprintBoardPage
+    Scrum match of the board child route of ProjectLayoutPage
+    (BoardModeGuard); binds sprintBoard = true. header is the
+    latest sprintLoaded value: it renders the header card
+    (Scope changes, Change scope, Close sprint), Add stories,
+    and the No active sprint / No sprints states, and supplies
+    the sprint ID to the scope log and the dialogs.
+    Registers layout.setTabAction({ label, run: openAddStory }):
+    Add story, or Add initiative while
+    header().workspaceStoryTotal is 0 (re-registered when
+    the label changes, cleared on destroy).
+    No active sprint: Start for nextPlannedSprint and Plan
+    sprint; none planned: Plan sprint and a history link for
+    latestClosedSprint; no sprints: Plan sprint, Open Work.
+    BoardView.refresh and SprintScopeLogView.refresh =
+    layout.revision() + refreshCount().
+    moveRequested opens MoveStoryDialog; moveStatus drives it
+    and UnfinishedTasksDialog; their choices return through
+    chosenMove and completionDecision; Forbidden shows the
+    "Your access changed" toast; Failed shows the "Couldn't
+    move story" toast with the reference ID and Retry only
+    when no dialog is open (an open dialog shows its failed
+    state instead). MoveStoryDialog close:
+    none clears the request, focus to the card's Move
+    button; Settled: focus follows the outcome; Forbidden:
+    focus to the Move button; ConfirmationRequired: opens
+    UnfinishedTasksDialog. UnfinishedTasksDialog close
+    (Settled, Forbidden): focus to the Move button unless
+    a board alert, the board region (story deleted) or the
+    not-found heading takes it; none (a navigation closed
+    it): relays kept through completionDecision, so the
+    pending move ends without a request. With no dialog open, a 404
+    that removes the focused card moves focus to the board
+    region.
+    modeChanged calls ProjectLayoutPage.modeChanged(); the
+    first notFound and every retryRequested call
+    layout.refresh(), so header and board reread together.
+    draft delegates to the open dialog, else to
+    inject(ProjectLayoutPage).draft(), since the layout
+    route has no canDeactivate; UnsavedChangesGuard is the
+    board route's canDeactivate. No method calls into
+    BoardView.
+  end note
+  class MoveStoryDialog {
+    +request: InputSignal<MoveRequest>
+    +status: InputSignal<MoveStatus?>
+    +chosen: OutputEmitterRef<MoveChoice>
+    +close(result: MoveStoryOutcome?): void
+  }
+  class MoveStoryOutcome {
+    +kind: Settled | Forbidden | ConfirmationRequired
+  }
+  class UnfinishedTasksDialog {
+    +prompt: InputSignal<CompletionPrompt>
+    +confirmed: OutputEmitterRef<StoryCompletionCondition>
+    +kept: OutputEmitterRef<void>
+    +close(result: UnfinishedTasksOutcome?): void
+  }
+  class UnfinishedTasksOutcome {
+    +kind: Settled | Forbidden
+  }
+  note bottom of UnfinishedTasksOutcome
+    Kanban move-story-cards. Escape is Keep
+    in progress (kept); never dismissed without a
+    choice. A navigation that leaves its page closes
+    it with no result; the opener then relays kept.
+  end note
+  class "SprintScopeDialog\nCloseSprintDialog\nStartSprintDialog\nSprintFormDialog\nWorkItemFormDialog" as SprintDialogs
+  note bottom of SprintDialogs
+    Defined by start-and-adjust-sprint, close-sprint,
+    plan-sprints and work create-and-navigate-work.
+    Scope and close take header().sprintId and
+    offerSprintsLink = true; Remove adds
+    removeStoryId and a ScopeStorySummary from the card;
+    Start takes nextPlannedSprint.sprintId; Start and Plan
+    sprint take workspaceName from layout.workspace().
+    Reactions (toasts via TOAST_SERVICE):
+    SprintScopeOutcome Changed: refreshCount + 1,
+    "Scope updated" toast; Outdated: refreshCount + 1.
+    CloseSprintOutcome Closed: open its history,
+    "Sprint 8 closed" toast; Outdated: refreshCount + 1.
+    StartSprintOutcome Started: refreshCount + 1,
+    "Sprint 9 started" toast; ModeChanged:
+    layout.modeChanged(); Outdated: refreshCount + 1;
+    CloseSprint(sprint): openCloseSprint(sprint.sprintId).
+    SprintFormOutcome Saved: open the new sprint's plan;
+    ModeChanged: modeChanged(); Outdated: refreshCount + 1.
+    WorkItemFormOutcome Saved: refreshCount + 1,
+    toast naming the added story or initiative;
+    NotFound: layout.refresh().
+    Any of these dialogs while open: unconfirmed ->
+    refreshCount + 1 at once.
+    Any of these dialogs' forbidden (it stays open):
+    "Your access changed" toast, without Retry.
+  end note
+}
+package "frontend/projects/domain" {
+  class BoardView {
+    +workspaceId: InputSignal<Guid>
+    +sprintBoard: InputSignal<boolean>
+    +refresh: InputSignal<number>
+    +chosenMove: InputSignal<MoveChoice?>
+    +completionDecision: InputSignal<CompletionDecision?>
+    +moveRequested: OutputEmitterRef<MoveRequest>
+    +moveStatus: OutputEmitterRef<MoveStatus>
+    +modeChanged: OutputEmitterRef<void>
+    +removeRequested: OutputEmitterRef<BoardCard>
+    +sprintLoaded: OutputEmitterRef<ActiveSprintHeader | null>
+    +notFound: OutputEmitterRef<void>
+    +retryRequested: OutputEmitterRef<void>
+    -activeSprintQuery: WritableSignal<ActiveSprintBoardQuery?>
+    -activeSprint: ResourceRef<ActiveSprintBoardResult>
+    -acknowledged: WritableSignal<BoardResult?>
+    -pendingMove: WritableSignal<MoveStoryCommand?>
+    -generation: WritableSignal<int>
+    +loadMore(status: WorkStatus): void
+    +reloadBoard(): void
+  }
+  note bottom of BoardView
+    Shared with the Kanban board; read members are defined in
+    kanban view-story-board and move members in move-story-cards
+    (Kanban-only members are omitted here). A refresh change
+    rereads the first batch with a new generation. With
+    sprintBoard true, activeSprint reads through
+    activeSprintBoardResource(() => activeSprintQuery())
+    and the Kanban board query stays undefined.
+    removeRequested and sprintLoaded are sprint-board only;
+    every accepted result, a Load more batch or post-move
+    reread included, emits sprintLoaded with its header, so
+    the totals follow each confirmed move; null only while
+    a first-batch read (opening, refresh, Reload board)
+    loads or after it failed.
+    A workspace 404 shows Project not found and emits notFound.
+    A mode-changed 409 restores the acknowledged board, ends
+    the pending move, shows no board-changed alert and emits
+    modeChanged. One pending move per board; reads and moves
+    carry the board ID and generation; stale results are
+    discarded.
+  end note
+  class ActiveSprintHeader {
+    +sprintId: Guid?
+    +name: string?
+    +version: long?
+    +goal: string?
+    +startDate: DateOnly?
+    +endDate: DateOnly?
+    +startedAtUtc: DateTimeOffset?
+    +startedByName: string?
+    +initialScopeCount: int
+    +scopeChangeCount: int
+    +storyCount: int
+    +doneCount: int
+    +points: int
+    +donePoints: int
+    +nextPlannedSprint: SprintPeriod?
+    +latestClosedSprint: SprintReference?
+    +workspaceStoryTotal: int
+  }
+  note bottom of ActiveSprintHeader
+    ActiveSprintBoardResult without its board.
+    sprintId null: no active sprint.
+  end note
+  class MoveRequest {
+    +card: BoardCard
+    +columns: MoveColumn[]
+  }
+  class MoveColumn {
+    +status: WorkStatus
+    +totalCount: int
+    +loadedCards: MoveColumnCard[]
+  }
+  class MoveColumnCard {
+    +storyId: Guid
+    +title: string
+  }
+  class SprintScopeLogView {
+    +sprintId: InputSignal<Guid>
+    +refresh: InputSignal<number>
+    -changes: ResourceRef<SprintScopeChangePage>
+    -page: WritableSignal<int>
+  }
+  note bottom of SprintScopeLogView
+    changes = sprintScopeChangesResource: newest first,
+    then story ID, 25 per page. Panel-level loading
+    state; a failed read shows a panel alert with Try
+    again = changes.reload(), the reference ID only
+    when a response carried one; the board is unaffected.
+  end note
+}
+package "frontend/projects/api" {
+  interface IBoardService {
+    +activeSprintBoardResource(query: () => ActiveSprintBoardQuery | undefined): ResourceRef<ActiveSprintBoardResult>
+    +move(command: MoveStoryCommand): Promise<MoveStoryResult>
+  }
+  note bottom of IBoardService
+    move sends MoveStoryCommand with sprintBoardId
+    set to the active sprint (class structure).
+  end note
+  class BoardService {
+    -http: HttpClient
+  }
+  class ActiveSprintBoardQuery {
+    +workspaceId: Guid
+    +status: WorkStatus?
+    +page: int
+    +pageSize: int
+    +generation: int
+  }
+  note bottom of ActiveSprintBoardQuery
+    Sent as GetActiveSprintBoardQuery;
+    the generation stays in the client.
+  end note
+  interface ISprintService {
+    +sprintScopeChangesResource(query): ResourceRef<SprintScopeChangePage>
+  }
+  note bottom of ISprintService
+    query: () => GetSprintScopeChangesQuery | undefined
+    (read sprint history).
+  end note
+}
+SprintBoardPage --> BoardView : composes; sprintBoard = true
+SprintBoardPage --> SprintScopeLogView : composes; sprintId from header
+SprintBoardPage ..> MoveStoryDialog : opens on moveRequested (kanban move-story-cards)
+SprintBoardPage ..> UnfinishedTasksDialog : opens when moveStatus requires confirmation
+MoveStoryDialog ..> MoveStoryOutcome : close result
+UnfinishedTasksDialog ..> UnfinishedTasksOutcome : close result
+SprintBoardPage ..> SprintDialogs : opens (Change scope, Add stories, Remove, Close sprint, Start, Plan sprint, Add story)
+SprintBoardPage ..> ActiveSprintHeader : keeps from sprintLoaded
+BoardView .down.> ActiveSprintBoardQuery : query signal
+BoardView ..> MoveRequest : moveRequested
+MoveRequest *-- MoveColumn
+MoveColumn *-- MoveColumnCard
+BoardView .down.> IBoardService : inject token; activeSprintBoardResource
+SprintScopeLogView .down.> ISprintService : inject token
+IBoardService <|.. BoardService
+MoveColumnCard -[hidden]down- ISprintService
+MoveColumnCard -[hidden]down- IBoardService
+@enduml

@@ -6,7 +6,7 @@ Person(actor, "Authorized user", "Execute work on the active sprint board")
 System_Boundary(mc, "Mission Control") {
   Container(web, "Mission Control web client", "Angular", "Execute work on the active sprint board")
   Container(api, "MissionControl.Api", ".NET", "Authorized application handlers")
-  ContainerDb(db, "Mission Control database", "SQL - provider <TO SUPPLY>", "SprintBoardCard and related records")
+  ContainerDb(db, "Mission Control database", "SQL - provider <TO SUPPLY>", "Sprints, open memberships, stories, and board placements")
 }
 Rel(actor, web, "Uses")
 Rel(web, api, "Requests feature behavior", "HTTPS / JSON")

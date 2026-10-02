@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Sign in · Mission Control mock</title>
-  <meta name="description" content="Sign-in page with validation, submission, generic failure, throttling, sign-out, session-ended, deep-link, and service-error states.">
+  <meta name="description" content="Sign-in page with validation, submission, generic failure, throttling, sign-out, session-ended, interrupted-save, deep-link, service-error, and no-response states.">
   <meta name="mock-area" content="Sign in and session">
   <meta name="mock-requirements" content="L2-001, L2-003, L2-005.3, L2-029.3, L2-031, L2-036, L2-037.5, L2-038, L2-043.4">
   <link rel="stylesheet" href="../assets/tokens.css">
@@ -29,8 +29,10 @@
           <option value="signed-out">Signed out</option>
           <option value="session-ended">Session ended</option>
           <option value="session-unsaved">Session ended with unsaved changes</option>
+          <option value="session-save-unknown">Session ended during a save</option>
           <option value="deep-link">Sign in to continue</option>
           <option value="error">Service error</option>
+          <option value="unreachable">Can't reach Mission Control</option>
         </select>
       </label>
       <a href="../index.html">All mocks</a>
@@ -38,15 +40,18 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">There is no registration, password reset, or "remember me": accounts are provisioned by an administrator and the session lives in memory only. Success opens Home (or the requested page).</p>
-    <p class="mock-note" data-when="validation" hidden>Client-side checks run on submit. Focus moves to the error summary; each item links to its field. The email is kept; the password is never trimmed.</p>
+    <p class="mock-note" data-when="default">There is no registration, password reset, or "remember me": accounts are provisioned by an administrator and the session lives in memory only. Success opens Home (or the requested page) in place of this page in the browser history, so Back doesn't return to the sign-in form; this address opened while signed in goes straight to Home.</p>
+    <p class="mock-note" data-when="validation" hidden>Client-side checks run on submit. With two problems, focus moves to the error summary, and each item links to its field; a single problem, or a server 400 naming one field, moves focus to that field, which reads its error. The email is kept; the password is never trimmed.</p>
     <p class="mock-note" data-when="submitting" hidden>The button shows progress and ignores repeat clicks, so only one request is sent.</p>
     <p class="mock-note" data-when="invalid" hidden>Unknown email, wrong password, inactive account, and a lead contact without an account all show this same message. The password field is cleared; the email is kept.</p>
     <p class="mock-note" data-when="throttled" hidden>After five failed attempts for an email within 15 minutes, sign-in pauses for 15 minutes. The time shown comes from the 429 response's retry timing, the remaining pause, so a later attempt shows less time left. Unknown emails are throttled the same way, so the message never confirms that an account exists.</p>
-    <p class="mock-note" data-when="session-ended" hidden>Shown after the 30-minute token expires, after a reload, or when the API answers 401 because the account was deactivated or its password was replaced (credential version changed). A role change instead answers 403 and shows the "Your access changed" toast. No contact or work data is shown until sign-in succeeds.</p>
-    <p class="mock-note" data-when="session-unsaved" hidden>Shown when the session ended while a form had unsaved input. Nothing is reported as saved.</p>
+    <p class="mock-note" data-when="signed-out" hidden>Shown after Sign out, and after you replace your own password, which signs you out so you can sign in with the new one. The session ends as this page opens: the token and capability summary are cleared from memory, and no contact or work data stays on screen.</p>
+    <p class="mock-note" data-when="session-ended" hidden>Shown after the 30-minute token expires, after a reload, or when the API answers 401 because the account was deactivated or its password was replaced (credential version changed). A role change doesn't end the session: the API answers 403 only to what the new role can't do, and that page or dialog explains it. No contact or work data is shown until sign-in succeeds. A card move, reorder, status change, or other change made outside a form that was still waiting for its answer also ends here: after sign-in its page reads the saved state again, which shows whether the change was made.</p>
+    <p class="mock-note" data-when="session-unsaved" hidden>Shown when the session ended while a form had unsaved input that was never saved, including a save the API refused with 401. Nothing is reported as saved.</p>
+    <p class="mock-note" data-when="session-save-unknown" hidden>Shown when the session ended (expiry, or a 401 on another request) while a form or dialog's save was still waiting for its answer, or after a save that got no answer and wasn't confirmed since. Ending the session cancels the request in the browser but can't undo it on the server, so the save may or may not have been made. Nothing is reported as saved or as lost. A card move, reorder, status change, or other change made outside a form shows the session-ended message instead.</p>
     <p class="mock-note" data-when="deep-link" hidden>Opened from a protected link while signed out. The message does not name the record; after sign-in the requested page opens if the account can see it.</p>
-    <p class="mock-note" data-when="error" hidden>Unexpected server failure. The reference ID matches the server's diagnostic record and can be copied for support.</p>
+    <p class="mock-note" data-when="error" hidden>Unexpected server failure. The reference ID matches the server's diagnostic record and can be copied for support. The email and password are kept, so Sign in tries again. The alert is announced; focus stays on Sign in.</p>
+    <p class="mock-note" data-when="unreachable" hidden>The sign-in request got no response, for example because the connection dropped. No answer arrived, so there is no reference ID and no session. The email and password are kept, and Sign in tries again only when pressed; nothing retries by itself. The alert is announced; focus stays on Sign in. The application's offline banner belongs to signed-in pages, so it doesn't appear here.</p>
   </div>
 
   <main class="mc-auth" id="main" tabindex="-1">
@@ -80,6 +85,13 @@
             <div class="mc-alert__body">
               <p class="mc-alert__title">Your session ended before your changes were saved</p>
               <p class="mc-alert__text">Sign in again, then re-enter anything you hadn't saved.</p>
+            </div>
+          </div>
+          <div class="mc-alert mc-alert--warning" data-when="session-save-unknown" hidden>
+            <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">Your session ended while a save was in progress</p>
+              <p class="mc-alert__text">We can't confirm whether it was saved. After you sign in, check the record before re-entering your changes.</p>
             </div>
           </div>
           <div class="mc-alert" data-when="deep-link" hidden>
@@ -116,6 +128,13 @@
               </p>
             </div>
           </div>
+          <div class="mc-alert mc-alert--danger" data-when="unreachable" hidden>
+            <span class="mc-icon mc-icon--wifi-off" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">We couldn't reach Mission Control</p>
+              <p class="mc-alert__text">Check your connection and try again.</p>
+            </div>
+          </div>
 
           <div class="mc-error-summary" tabindex="-1" data-when="validation" hidden aria-labelledby="login-errors-title">
             <p class="mc-error-summary__title" id="login-errors-title"><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Fix 2 problems to sign in</p>
@@ -129,22 +148,24 @@
         <form class="mc-form" novalidate aria-label="Sign in" data-goto-state="submitting">
           <div class="mc-field">
             <label class="mc-label" for="login-email">Email</label>
-            <input class="mc-input" id="login-email" name="email" type="email" autocomplete="username" spellcheck="false"
+            <input class="mc-input" id="login-email" name="email" type="email" autocomplete="username" spellcheck="false" required
               data-attr-validation="value=quinntyne@|aria-invalid=true|aria-describedby=login-email-error"
               data-attr-submitting="value=quinntynebrown@gmail.com|readonly"
               data-attr-invalid="value=quinntynebrown@gmail.com"
               data-attr-throttled="value=quinntynebrown@gmail.com"
-              data-attr-error="value=quinntynebrown@gmail.com">
+              data-attr-error="value=quinntynebrown@gmail.com"
+              data-attr-unreachable="value=quinntynebrown@gmail.com">
             <p class="mc-field-error" id="login-email-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Enter an email address like name@example.org</p>
           </div>
 
           <div class="mc-field">
             <label class="mc-label" for="login-password">Password</label>
             <div class="mc-input-group">
-              <input class="mc-input" id="login-password" name="password" type="password" autocomplete="current-password"
+              <input class="mc-input" id="login-password" name="password" type="password" autocomplete="current-password" required
                 data-attr-validation="aria-invalid=true|aria-describedby=login-password-error"
                 data-attr-submitting="value=MockPassword!|readonly"
-                data-attr-error="value=MockPassword!">
+                data-attr-error="value=MockPassword!"
+                data-attr-unreachable="value=MockPassword!">
               <button class="mc-button" type="button" data-toggle-password aria-controls="login-password" aria-pressed="false" aria-label="Show password">
                 <span class="mc-icon mc-icon--eye" aria-hidden="true"></span>
               </button>

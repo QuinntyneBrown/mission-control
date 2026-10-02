@@ -13,103 +13,132 @@ skinparam package {
   FontColor #101828
   BackgroundColor #F9FAFB
 }
-title Class structure - Sign in and end a session
+title Class structure - Sign in and end a session: client session protocol
 skinparam class {
   BorderColor #344054
   FontColor #101828
   BackgroundColor #F9FAFB
 }
-class LoginPage {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
+package "frontend/projects/mission-control" {
+  class LoginPage {
+    +notice: Signal<LoginNotice?>
+    +onSignedIn(): Promise<void>
+  }
+  note left of LoginPage
+    onSignedIn: clear loginNotice; await
+    refreshCapabilities(); navigate to requestedPath
+    only if currentSession().capabilities permit
+    it, otherwise /home, with replaceUrl. /login
+    opened while a session is held redirects to /home,
+    except a SignedOut caller's navigation, which
+    carries router state { signOut: true }.
+  end note
+  class RouteContext <<root provider>> {
+    +requestedPath: Signal<string?>
+    +workspaceId: Signal<Guid?>
+    +ancestorIds: Signal<Guid[]>
+    +loginNotice: Signal<LoginNotice?>
+  }
+  note right of RouteContext
+    Route identifiers and the login notice only;
+    no protected data. Owned by the navigation slice.
+  end note
+  enum LoginNotice {
+    SignedOut
+    SessionEnded
+    SessionUnsaved
+    SessionSaveUnknown
+    DeepLink
+  }
 }
-class SessionView {
-  +state: Signal<FeatureState>
-  +submit(): void
+package "frontend/projects/domain" {
+  class SessionView {
+    +state: Signal<FeatureState>
+    +submit(): Promise<void>
+    +signedIn: Output<void>
+  }
+  note bottom of SessionView
+    Sign-in states: validation, submitting, invalid
+    (password cleared), throttled, error (500, reference ID)
+    and unreachable (no response, no reference ID). The
+    email is always kept; Sign in resends only when pressed.
+  end note
 }
-interface ISessionService {
-  +login(request: LoginCommand): Promise<FeatureResult>
-  +check_access(request: GetCurrentSessionQuery): Promise<FeatureResult>
-  +logout(): void
+package "frontend/projects/api" {
+  interface ISessionService {
+    +generation: Signal<number>
+    +signedIn: Signal<bool>
+    +currentSession: Signal<CurrentSession?>
+    +endReason: Signal<SessionEndReason?>
+    +offline: Signal<bool>
+    +login(request: LoginCommand): Promise<void>
+    +refreshCapabilities(): Promise<CurrentSession | null>
+    +end(reason: SessionEndReason): void
+  }
+  note right of ISessionService
+    end(reason) is the only session-end path.
+    Without a session it does nothing. Otherwise it
+    increments generation; clears token, summary and
+    expiry timer; aborts in-flight protected requests;
+    then sets endReason. ApplicationShell navigates on
+    Expired or Unauthorized only; a SignedOut caller
+    (Sign out, or ReplacePasswordDialog after an own
+    password replacement) navigates to /login first,
+    with router state { signOut: true }, which the
+    /login guard lets through, and then calls end().
+    Every navigation to /login uses replaceUrl.
+    refreshCapabilities() shares one in-flight request.
+    login() rejects with the 400, 401, 429 or 500 result,
+    or a no-response error (unreachable state).
+    offline: set when a request gets no response, cleared
+    by the next response; shown only by ApplicationShell.
+  end note
+  class SessionService {
+    -http: HttpClient
+    -token: string?
+    -expiryTimer: number?
+    -refreshInFlight: Promise<CurrentSession | null>?
+    -ended: Subject<void>
+    +bearer(): string?
+  }
+  class sessionInterceptor <<HttpInterceptorFn>> {
+    +intercept(request: HttpRequest, next: HttpHandlerFn): Observable<HttpEvent>
+  }
+  note bottom of sessionInterceptor
+    Captures generation N when sending.
+    401 at generation N: end(Unauthorized), once; that
+    request rejects with its 401, not SessionEndedError
+    (nothing written; login shows session-unsaved if dirty).
+    Generation ended while in flight (aborted or late):
+    discard; resources keep state, mutation promises reject
+    with SessionEndedError; no logout. Only a FormDraft
+    reporting pending or unconfirmed yields
+    session-save-unknown; any other mutation ends on
+    session-ended and its view rereads.
+    403 at generation N: refreshCapabilities(); 403 passes on.
+  end note
+  enum SessionEndReason {
+    SignedOut
+    Expired
+    Unauthorized
+  }
+  class SessionEndedError
+  class CurrentSession {
+    +accountId: Guid
+    +displayName: string
+    +email: string
+    +role: AccountRole
+    +capabilities: string[]
+  }
 }
-note right of ISessionService
-  logout() is client-only: clears the in-memory
-  token and protected cached data (L2-003.2).
-end note
-class SessionService {
-  -http: HttpClient
-  -token: Signal<string?>
-  -generation: number
-}
-class SessionsController {
-  -sender: ISender
-}
-class UserAccount {
-  +id: Guid
-  +normalizedEmail: string
-  +passwordHash: string
-  +active: bool
-  +role: AccountRole
-  +credentialVersion: long
-  +verifyPassword(password: string): bool
-}
-class CurrentSession {
-  +accountId: Guid
-  +displayName: string
-  +role: AccountRole
-  +capabilities: string[]
-}
-class LoginAttempt {
-  +emailDigest: string
-  +failureInstantsUtc: DateTimeOffset[]
-  +blockedUntilUtc: DateTimeOffset?
-}
-class JwtOptions {
-  +issuer: string
-  +audience: string
-  +signingKey: string
-  +lifetime: TimeSpan
-  +clockSkew: TimeSpan = 0
-}
-interface IMissionControlDataSession {
-  +query(specification): Task<ReadResult>
-  +commit(expectedVersion: long): Task<void>
-}
-class MissionControlDataSession {
-  -connection: DbConnection
-}
-LoginPage --> SessionView : composes
-SessionView ..> ISessionService : inject token
+LoginPage --> SessionView : composes; handles signedIn
+LoginPage --> RouteContext : reads loginNotice, requestedPath
+LoginPage ..> ISessionService : inject SESSION_SERVICE; refreshCapabilities(), currentSession
+RouteContext --> LoginNotice
+SessionView ..> ISessionService : inject SESSION_SERVICE
 ISessionService <|.. SessionService
-IMissionControlDataSession <|.. MissionControlDataSession
-class LoginCommand {
-  +email: string
-  +password: string
-}
-class LoginCommandHandler {
-  +handle(request: LoginCommand): Task<FeatureResult>
-}
-SessionsController ..> LoginCommand : dispatches
-LoginCommandHandler ..> LoginCommand : handles
-LoginCommandHandler --> UserAccount : loads / verifies
-LoginCommandHandler --> LoginAttempt : records failures / throttle
-LoginCommandHandler ..> JwtOptions : issues token
-LoginCommandHandler ..> IMissionControlDataSession : uses
-class GetCurrentSessionQuery {
-  +subject: Guid
-}
-class GetCurrentSessionQueryHandler {
-  +handle(request: GetCurrentSessionQuery): Task<FeatureResult>
-}
-SessionsController ..> GetCurrentSessionQuery : dispatches
-GetCurrentSessionQueryHandler ..> GetCurrentSessionQuery : handles
-GetCurrentSessionQueryHandler --> CurrentSession : projects
-GetCurrentSessionQueryHandler ..> IMissionControlDataSession : uses
-
-enum AccountRole {
-  Administrator
-  Collaborator
-}
-UserAccount --> AccountRole : SQL authority
-CurrentSession --> AccountRole
+ISessionService --> SessionEndReason
+sessionInterceptor ..> SessionService : bearer(), generation, end(), refreshCapabilities()
+sessionInterceptor ..> SessionEndedError : rejects with
+SessionService ..> CurrentSession : holds summary
 @enduml

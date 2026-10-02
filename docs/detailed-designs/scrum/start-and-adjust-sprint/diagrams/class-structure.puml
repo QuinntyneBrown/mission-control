@@ -14,70 +14,21 @@ skinparam package {
   BackgroundColor #F9FAFB
 }
 title Class structure - Start a sprint and change its active scope
+left to right direction
 skinparam class {
   BorderColor #344054
   FontColor #101828
   BackgroundColor #F9FAFB
 }
-class SprintsPage {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
-}
-class SprintView {
-  +state: Signal<FeatureState>
-  +submit(): void
-}
-interface ISprintService {
-  +start(request: StartSprintCommand): Promise<FeatureResult>
-  +scope(request: ChangeSprintScopeCommand): Promise<FeatureResult>
-}
-class SprintService {
-  -http: HttpClient
-}
 class SprintsController {
   -sender: ISender
 }
-class Sprint {
-  +id: Guid
-  +workspaceId: Guid
-  +name: string
-  +goal: string
-  +startDate: DateOnly
-  +endDate: DateOnly
-  +status: SprintStatus
-  +startedAtUtc: DateTimeOffset?
-  +startedByUserId: Guid?
-  +startedByName: string?
-  +closedAtUtc: DateTimeOffset?
-  +closedByUserId: Guid?
-  +closedByName: string?
-  +version: long
-  +start(at: DateTimeOffset, actorId: Guid): void
-  +changeScope(add: Guid[], remove: Guid[], at: DateTimeOffset, actorId: Guid): SprintScopeChange[]
-}
-interface IMissionControlDataSession {
-  +query(specification): Task<ReadResult>
-  +commit(expectedVersion: long): Task<void>
-}
-class MissionControlDataSession {
-  -connection: DbConnection
-}
-SprintsPage --> SprintView : composes
-SprintView ..> ISprintService : inject token
-ISprintService <|.. SprintService
-IMissionControlDataSession <|.. MissionControlDataSession
+
 class StartSprintCommand {
   +workspaceId: Guid
   +sprintId: Guid
   +expectedVersion: long
 }
-class StartSprintCommandHandler {
-  +handle(request: StartSprintCommand): Task<FeatureResult>
-}
-SprintsController ..> StartSprintCommand : dispatches
-StartSprintCommandHandler ..> StartSprintCommand : handles
-StartSprintCommandHandler --> Sprint : loads / applies
-StartSprintCommandHandler ..> IMissionControlDataSession : uses
 class ChangeSprintScopeCommand {
   +workspaceId: Guid
   +sprintId: Guid
@@ -85,36 +36,104 @@ class ChangeSprintScopeCommand {
   +removeStoryIds: Guid[]
   +expectedVersion: long
 }
-class ChangeSprintScopeCommandHandler {
-  +handle(request: ChangeSprintScopeCommand): Task<FeatureResult>
+class SprintSaveResult {
+  +sprintId: Guid
+  +name: string
+  +version: long
+  +storyCount: int
 }
+class StartSprintCommandHandler {
+  +handle(request: StartSprintCommand, ct: CancellationToken): Task<SprintSaveResult>
+}
+class ChangeSprintScopeCommandHandler {
+  +handle(request: ChangeSprintScopeCommand, ct: CancellationToken): Task<SprintSaveResult>
+}
+SprintsController ..> StartSprintCommand : dispatches
 SprintsController ..> ChangeSprintScopeCommand : dispatches
+StartSprintCommandHandler ..> StartSprintCommand : handles
 ChangeSprintScopeCommandHandler ..> ChangeSprintScopeCommand : handles
-ChangeSprintScopeCommandHandler --> Sprint : loads / applies
-ChangeSprintScopeCommandHandler ..> IMissionControlDataSession : uses
 
+class Sprint {
+  +id: Guid
+  +workspaceId: Guid
+  +status: SprintStatus
+  +startedAtUtc: DateTimeOffset?
+  +startedByUserId: Guid?
+  +startedByName: string?
+  +version: long
+  +initialScopeStoryIds: Guid[]
+  +start(at: DateTimeOffset, actorId: Guid): void
+  +changeScope(add: Guid[], remove: Guid[], at: DateTimeOffset, actorId: Guid): SprintScopeChange[]
+}
+class ActiveSprintSlot {
+  +workspaceId: Guid
+  +sprintId: Guid
+}
 class OpenSprintMembership {
   +workspaceId: Guid
   +storyId: Guid
   +sprintId: Guid
 }
-class SprintStoryOutcome {
-  +recordedStoryId: Guid
-  +recordedTitle: string
-  +statusAtClosure: WorkStatus
-  +recordedDestinationId: Guid?
-  +recordedDestinationName: string?
-}
 class SprintScopeChange {
   +sprintId: Guid
   +storyId: Guid
+  +storyKey: string
   +storyTitle: string
   +kind: ScopeChangeKind
   +actorId: Guid
   +actorName: string
   +atUtc: DateTimeOffset
 }
-Sprint "1" *-- "*" SprintStoryOutcome : immutable outcomes at closure
-Sprint "1" *-- "*" SprintScopeChange : actor-attributed changes after start
-Sprint ..> OpenSprintMembership : live allocation / historical source
+StartSprintCommandHandler --> Sprint : start
+ChangeSprintScopeCommandHandler --> Sprint : changeScope
+StartSprintCommandHandler ..> ActiveSprintSlot : claims at start (AddActiveSprintSlot)
+Sprint "1" *-- "*" SprintScopeChange : actor-attributed changes after start (tracked children)
+Sprint "1" *-- "*" OpenSprintMembership : current scope (tracked children)
+
+interface IMissionControlDataSession {
+  +BeginWorkspaceTransactionAsync(workspaceId: Guid, ct: CancellationToken): Task
+  +LoadSprintStartAsync(workspaceId: Guid, sprintId: Guid, ct: CancellationToken): Task<SprintStart?>
+  +LoadScopeChangeAsync(workspaceId: Guid, sprintId: Guid, addStoryIds: Guid[], removeStoryIds: Guid[], ct: CancellationToken): Task<ScopeChange?>
+  +AddActiveSprintSlot(slot: ActiveSprintSlot): void
+  +AddBoardState(board: BoardState): void
+  +AddAuditEvent(auditEvent: AuditEvent): void
+  +SaveChangesAsync(ct: CancellationToken): Task
+}
+note right of IMissionControlDataSession
+Scoped view of the shared port defined in the overview;
+only the members this slice uses. Initial-scope rows,
+OpenSprintMembership rows and SprintScopeChange rows are
+tracked children of the loaded Sprint; board placements are
+tracked children of its BoardState. ActiveSprintSlot and the
+sprint BoardState are aggregate roots. SaveChangesAsync raises
+ConcurrencyConflictException on a stale version (409).
+end note
+class SprintStart {
+  +mode: DeliveryMode
+  +sprint: Sprint
+  +activeSprint: SprintReference?
+}
+note bottom of SprintStart
+activeSprint is the workspace's current active sprint;
+the 409 for an active sprint carries it, so the dialog
+names it and its Review and close action opens that
+sprint's closure.
+end note
+class SprintReference {
+  +sprintId: Guid
+  +name: string
+}
+class ScopeChange {
+  +sprint: Sprint
+  +board: BoardState
+  +storiesToAdd: StoryAllocation[]
+}
+note bottom of ScopeChange
+sprint is loaded with its current memberships
+(those named in removeStoryIds included).
+end note
+StartSprintCommandHandler ..> IMissionControlDataSession : transaction, LoadSprintStartAsync, AddActiveSprintSlot, AddBoardState, AddAuditEvent, save
+ChangeSprintScopeCommandHandler ..> IMissionControlDataSession : transaction, LoadScopeChangeAsync, AddAuditEvent, save
+IMissionControlDataSession ..> SprintStart : loads
+IMissionControlDataSession ..> ScopeChange : loads
 @enduml

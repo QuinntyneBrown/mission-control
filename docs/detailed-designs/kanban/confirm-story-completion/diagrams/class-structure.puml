@@ -19,71 +19,219 @@ skinparam class {
   FontColor #101828
   BackgroundColor #F9FAFB
 }
-class WorkItemDetailPage {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
+set separator none
+package "frontend/projects/mission-control" {
+  class WorkItemDetailPage {
+    +workspaceId: Signal<Guid>
+    +workItemId: Signal<Guid>
+    -prompt: WritableSignal<CompletionPrompt?>
+    -decision: WritableSignal<CompletionDecision?>
+  }
+  note right of WorkItemDetailPage
+    Defined by work create-and-navigate-work.
+    Opens UnfinishedTasksDialog when completionStatus
+    asks for confirmation and drives its prompt from
+    that output (saving, server-count, failed with the
+    reference ID, Settled, Forbidden). Relays confirmed
+    or kept through completionDecision. completionStatus
+    Forbidden shows the "Your access changed" toast
+    through TOAST_SERVICE, without Retry. Dialog close
+    (Settled or Forbidden): focus returns to the status
+    control. Dialog closed with no result (a navigation
+    closed it): relays kept through completionDecision,
+    so the view drops the pending completion without a
+    request. The view's first notFound (a workspace
+    404) calls the layout's refresh().
+  end note
+  class MoveStoryDialog {
+    +request: InputSignal<MoveRequest>
+    +status: InputSignal<MoveStatus?>
+    +chosen: OutputEmitterRef<MoveChoice>
+    +close(result: MoveStoryOutcome?): void
+  }
+  note bottom of MoveStoryDialog
+    Defined by moves; closes with
+    ConfirmationRequired when a Done move
+    needs confirmation.
+  end note
+  class UnfinishedTasksDialog {
+    +prompt: InputSignal<CompletionPrompt>
+    +confirmed: OutputEmitterRef<StoryCompletionCondition>
+    +kept: OutputEmitterRef<void>
+    +close(result: UnfinishedTasksOutcome?): void
+  }
+  note bottom of UnfinishedTasksDialog
+    Also opened by KanbanBoardPage and SprintBoardPage
+    (relayed to BoardView as completionDecision) and by
+    WorkItemFormDialog (relayed to WorkItemForm).
+    Emits to the page or dialog that opened it.
+    Escape is Keep in progress (kept); never dismissed
+    without a choice. Closes itself when prompt
+    reports Settled or Forbidden. A navigation that
+    leaves its page closes it with no result; every
+    opener then relays kept, so the sending component
+    drops its pending change without a request.
+  end note
+  class UnfinishedTasksOutcome {
+    +kind: Settled | Forbidden
+  }
+  class CompletionPrompt {
+    +storyKey: string
+    +storyTitle: string
+    +savedStatus: WorkStatus
+    +condition: StoryCompletionCondition
+    +state: Asking | ServerCount | Saving | Failed | Settled | Forbidden
+    +referenceId: string?
+  }
 }
-class MoveStoryDialog {
-  +destination: Signal<WorkStatus>
-  +position: Signal<int>
-  +move(): void
+package "frontend/projects/domain" {
+  class WorkItemDetailView {
+    +workItemId: InputSignal<Guid>
+    +completionDecision: InputSignal<CompletionDecision?>
+    +completionStatus: OutputEmitterRef<CompletionStatus>
+    +notFound: OutputEmitterRef<void>
+    -detail: ResourceRef<WorkItemDetail>
+  }
+  note right of WorkItemDetailView
+    Defined by the work slice; only the members this
+    slice uses. Its status control sends complete and
+    reports each attempt through completionStatus.
+    Mark story Done resubmits complete with the returned
+    condition; Keep sends nothing and keeps the saved
+    status. An unexpected 403 keeps it and reports
+    Forbidden. Success reloads detail. No response:
+    reload detail once, then Settled and announce the
+    persisted status; if that read fails, the detail
+    shows its load error with Try again. A 404 reports
+    Settled and rereads detail once: item-not-found
+    shows the item's not-found state; workspace-not-found
+    shows Project not found and emits notFound.
+  end note
+  class CompletionStatus {
+    +state: ConfirmationRequired | Saving | Failed | Forbidden | Settled
+    +storyKey: string
+    +storyTitle: string
+    +savedStatus: WorkStatus
+    +condition: StoryCompletionCondition?
+    +referenceId: string?
+  }
+  class CompletionDecision {
+    +markDone: bool
+    +condition: StoryCompletionCondition?
+  }
 }
-class UnfinishedTasksDialog {
-  +storyTitle: string
-  +unfinishedCount: int
-  +keep(): void
-  +markDone(): void
+package "frontend/projects/api" {
+  interface "ResourceRef<T>" as ResourceRef {
+    +value: Signal<T | undefined>
+    +status: Signal<loading | resolved | error>
+    +error: Signal<unknown>
+    +reload(): void
+  }
+  interface IWorkItemService {
+    +workItemResource(query: () => GetWorkItemQuery | undefined): ResourceRef<WorkItemDetail>
+    +complete(command: CompleteStoryCommand): Promise<CompleteStoryResult>
+  }
+  class WorkItemService {
+    -http: HttpClient
+  }
+  interface IToastService {
+    +show(toast: Toast): void
+  }
 }
-note bottom of UnfinishedTasksDialog
-  KanbanBoardPage and SprintBoardPage also open it
-  when a Done move returns 409 unfinished-tasks.
-end note
-class WorkItemView {
-  +state: Signal<FeatureState>
-  +submit(): void
+package "MissionControl.Api" {
+  class WorkItemsController {
+    -sender: ISender
+  }
 }
-interface IWorkItemService {
-  +complete(request: CompleteStoryCommand): Promise<FeatureResult>
+package "MissionControl.Application" {
+  class CompleteStoryCommand {
+    +workspaceId: Guid
+    +storyId: Guid
+    +expectedStoryVersion: long
+    +completionCondition: StoryCompletionCondition?
+  }
+  class CompleteStoryResult {
+    +storyId: Guid
+    +status: WorkStatus
+    +storyVersion: long
+  }
+  class CompleteStoryCommandHandler {
+    +handle(request: CompleteStoryCommand, ct: CancellationToken): Task<CompleteStoryResult>
+  }
+  class StoryStatusTransition {
+    +apply(placements, status, sent?, requestedBoardId?, position?): bool
+  }
+  note bottom of StoryStatusTransition
+    Shared by MoveStoryCommandHandler,
+    UpdateWorkItemCommandHandler and
+    CompleteStoryCommandHandler. Returns false when
+    confirmation is required (nothing changed).
+    Otherwise sets the status, moves every live
+    placement and increments the active sprint's
+    version when the story is a member.
+  end note
+  interface IMissionControlDataSession {
+    +BeginWorkspaceTransactionAsync(workspaceId: Guid, ct: CancellationToken): Task
+    +LoadStoryPlacementsAsync(workspaceId: Guid, storyId: Guid, ct: CancellationToken): Task<StoryPlacements?>
+    +AddAuditEvent(auditEvent: AuditEvent): void
+    +SaveChangesAsync(ct: CancellationToken): Task
+  }
+  class StoryPlacements {
+    +story: WorkItem
+    +boards: IReadOnlyList<BoardState>
+    +completion: StoryCompletionCondition
+  }
+  note bottom of StoryPlacements
+    completion.unfinishedCount is one aggregate over
+    the story's child-task statuses; taskRevision is
+    the story's counter, incremented by task create,
+    status edit, reparent and delete (work slice).
+    A task change increments only taskRevision: the
+    story's version and every sprint's version stay
+    unchanged, so a resubmission passes the version
+    check and a changed condition returns a new 409
+    unfinished-tasks (server-count).
+  end note
 }
-class WorkItemService {
-  -http: HttpClient
+package "MissionControl.Domain" {
+  class StoryCompletionCondition {
+    +storyId: Guid
+    +storyVersion: long
+    +taskRevision: long
+    +unfinishedCount: int
+    +matches(current: StoryCompletionCondition): bool
+  }
+  class StoryCompletionPolicy {
+    +requireConfirmation(sent: StoryCompletionCondition?, current: StoryCompletionCondition): bool
+  }
 }
-class WorkItemsController {
-  -sender: ISender
+package "MissionControl.Infrastructure" {
+  class MissionControlDataSession
 }
-class StoryCompletionCondition {
-  +storyId: Guid
-  +storyVersion: long
-  +taskRevision: long
-  +unfinishedCount: int
-  +matches(current: StoryCompletionCondition): bool
-}
-interface IMissionControlDataSession {
-  +query(specification): Task<ReadResult>
-  +commit(expectedVersion: long): Task<void>
-}
-class MissionControlDataSession {
-  -connection: DbConnection
-}
-WorkItemDetailPage --> WorkItemView : composes
-WorkItemDetailPage --> UnfinishedTasksDialog : opens on 409 unfinished-tasks
-MoveStoryDialog ..> UnfinishedTasksDialog : a refused Done move leads to
-UnfinishedTasksDialog ..> StoryCompletionCondition : shows count; returns it on Mark story Done
-WorkItemView ..> IWorkItemService : inject token
+WorkItemDetailPage --> WorkItemDetailView : composes; inputs and outputs only
+WorkItemDetailPage --> UnfinishedTasksDialog : opens when completionStatus requires confirmation
+WorkItemDetailPage ..> CompletionPrompt : builds from completionStatus
+WorkItemDetailPage ..> IToastService : inject TOAST_SERVICE; access-changed toast
+WorkItemDetailView ..> CompletionStatus : completionStatus output
+WorkItemDetailView ..> CompletionDecision : completionDecision input
+WorkItemDetailView ..> IWorkItemService : inject WORK_ITEM_SERVICE; complete and resubmit
+MoveStoryDialog ..> UnfinishedTasksDialog : closes with ConfirmationRequired; the opener opens
+UnfinishedTasksDialog ..> UnfinishedTasksOutcome : close result
+UnfinishedTasksDialog ..> StoryCompletionCondition : shows count; emits it on Mark story Done
 IWorkItemService <|.. WorkItemService
-IMissionControlDataSession <|.. MissionControlDataSession
-class CompleteStoryCommand {
-  +workspaceId: Guid
-  +storyId: Guid
-  +expectedStoryVersion: long
-  +completionCondition: StoryCompletionCondition?
-}
-class CompleteStoryCommandHandler {
-  +handle(request: CompleteStoryCommand): Task<FeatureResult>
-}
+IWorkItemService ..> ResourceRef : returns per consumer
 WorkItemsController ..> CompleteStoryCommand : dispatches
 CompleteStoryCommandHandler ..> CompleteStoryCommand : handles
-CompleteStoryCommandHandler --> StoryCompletionCondition : loads / applies
+CompleteStoryCommandHandler --> CompleteStoryResult : returns
+CompleteStoryCommandHandler --> StoryStatusTransition : changes status through
+StoryStatusTransition --> StoryCompletionPolicy : checks before any change
+StoryCompletionPolicy ..> StoryCompletionCondition : compares
 CompleteStoryCommandHandler ..> IMissionControlDataSession : uses
+IMissionControlDataSession ..> StoryPlacements : loads tracked
+StoryPlacements --> StoryCompletionCondition
+IMissionControlDataSession <|.. MissionControlDataSession
+CompletionStatus -[hidden]down- ResourceRef
+WorkItemService -[hidden]down- WorkItemsController
+WorkItemsController -[hidden]down- CompleteStoryCommand
 
 @enduml

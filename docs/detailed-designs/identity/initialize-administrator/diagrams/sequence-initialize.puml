@@ -17,33 +17,38 @@ title Behavior - Migrate and seed
 actor "Deployment operator" as actor
 box "Backend - MissionControl.Api host" #D1FADF
   participant "Host startup" as host
-  participant "DatabaseInitializer (hosted service)" as init
+  participant "DatabaseInitializer (BackgroundService)" as init
 end box
 box "Backend - MissionControl.Application and Domain" #ECFDF3
-  participant "EnsureAdministrator / EnsureCityLead handlers" as handler
-  participant "UserAccount / LeadContact" as entity
+  participant "EnsureRequiredSeedsCommandHandler" as handler
+  participant "UserAccount / LeadContact /\nSeedMarker" as entity
   participant "InitializationStatus" as status
 end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   participant "IInitializationLock / IMigrationRunner" as lock
+  participant "IMissionControlDataSession" as store
   database "Mission Control SQL" as db
 end box
 actor -> host : Start an instance with external configuration
-host -> init : Start hosted service
-init -> status : Record Initializing (readiness 503)
-init -> init : Bind InitializationOptions and JwtOptions
+host -> init : Start the background service; the host starts listening without waiting for it
+note right of host
+  While ExecuteAsync runs, GET /health/live answers 200 and
+  GET /health/ready answers 503 (Initializing); see the readiness sequence.
+end note
+init -> status : ExecuteAsync(stoppingToken): record Initializing (readiness 503); create the run's correlation ID
+init -> init : Check the JwtOptions signing material first; bind InitializationOptions
 alt Signing material missing or invalid (L2-036.2)
   init -> status : Record Failed with redacted correlation ID
-  init --> actor : Readiness stays 503; no token can be issued; no secret in diagnostics
+  init --> actor : Readiness stays 503 while the host keeps running (liveness 200) instead of stopping; no token can be issued; no secret in diagnostics
 else Configuration bound
-  init -> lock : Acquire database-wide initialization lock (L2-007.2)
+  init -> lock : AcquireAsync(ct): database-wide initialization lock (L2-007.2)
   lock -> db : Take lock; waits while another instance initializes
   alt SQL unavailable or lock not obtained
     db --> lock : Failure
     init -> status : Record Failed with redacted correlation ID
     init --> actor : Readiness stays 503; no connection string disclosed
   else Lock held
-    init -> lock : Apply only missing versioned migrations (L2-042.2)
+    init -> lock : MigrateAsync(ct): apply only missing versioned migrations (L2-042.2)
     lock -> db : Migrate schema
     alt Migration fails or schema incompatible
       db --> lock : Failure; migration transaction rolls back
@@ -51,28 +56,38 @@ else Configuration bound
       init -> status : Record Failed with redacted correlation ID
       init --> actor : Readiness stays 503
     else Schema current
-      init -> handler : Send EnsureAdministratorCommand and EnsureCityLeadCommand (one seed transaction)
-      handler -> db : Read designated account by normalized email and the City seed marker
-      db --> handler : Existing state
+      init -> handler : Send EnsureRequiredSeedsCommand with the run's correlation ID through MediatR 12.5.0 (one command, one seed transaction)
+      handler -> store : LoadAccountByEmailAsync(designated email, ct); LoadSeedMarkerAsync(CityLeadSeedCompleted, ct)
+      store -> db : Read inside the seed transaction
+      db --> store : Existing state
+      store --> handler : Account or none; marker or none
       alt Designated account absent and bootstrap configuration unavailable (L2-006.3)
         handler --> init : Failure; seed transaction rolls back; no partial account
         init -> lock : Release lock
         init -> status : Record Failed with redacted correlation ID
         init --> actor : Readiness stays 503; no secret exposed
       else Account present, or absent with valid bootstrap configuration
-        handler -> entity : L2-006 / L2-007 create if absent with salted hash; else keep ID, hash, credential version
+        handler -> entity : L2-006 / L2-007 absent: new account with salted hash (AddAccount); present: keep ID, hash, credential version
         entity --> handler : Name Quinntyne Brown, active and Administrator restored
-        handler -> entity : L2-013 first run only: adopt or create City contact without phone; set marker
-        entity --> handler : City seed result, or untouched when the marker exists
-        handler -> db : L2-040 commit account, contact and marker atomically
+        handler -> store : L2-039 AddAuditEvent "Administrator created" (new account) or "Administrator access restored" (names, active flag or role repaired); nothing when the account was already correct; null actor, the run's correlation ID, area Accounts
+        opt No CityLeadSeedCompleted marker (first successful run only)
+          handler -> store : LoadLeadByEmailAndCategoryAsync(designated email, City, ct)
+          store --> handler : Matching City contact or none
+          handler -> entity : L2-013 adopt it unchanged, or create Quinntyne Brown without phone (AddLead); AddSeedMarker
+          handler -> store : L2-039 AddAuditEvent "City contact seeded" only when AddLead ran; null actor, the run's correlation ID, area Leads
+        end
+        handler -> store : L2-040 SaveChangesAsync(ct): account, contact, marker and their audit events commit once, atomically
+        store -> db : Commit the seed transaction
         alt Commit fails (unique email violation included)
-          db --> handler : Roll back all seed changes
+          db --> store : Roll back all seed changes and their audit events
+          store --> handler : Failure
           handler --> init : Failure; a retry rereads the winning account instead of replacing it
           init -> lock : Release lock
           init -> status : Record Failed with redacted correlation ID
           init --> actor : Readiness stays 503
         else Commit succeeds
-          db --> handler : Committed state
+          db --> store : Committed
+          store --> handler : Committed state
           handler --> init : Required seeds complete
           init -> lock : Release lock
           init -> status : Record Ready
@@ -84,7 +99,8 @@ else Configuration bound
 end
 note over init, db
 A later instance waits on the lock, finds migrations applied and the
-account present, changes nothing it does not need to, and reports ready.
+account present, changes nothing it does not need to, records no audit
+event when nothing changed, and reports ready.
 Diagnostics carry operation, UTC time, outcome and correlation ID (L2-043).
 end note
 @enduml

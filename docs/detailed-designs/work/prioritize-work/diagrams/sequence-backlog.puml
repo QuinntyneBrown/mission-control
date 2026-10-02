@@ -4,6 +4,7 @@ skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
 skinparam ArrowColor #344054
+skinparam maxMessageSize 300
 skinparam rectangle {
   BorderColor #344054
   FontColor #101828
@@ -16,7 +17,7 @@ skinparam package {
 title Behavior - Prioritize a story across epics
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "BacklogPage / MovePositionDialog / WorkOrderView" as page
+  participant "BacklogView, or MovePositionDialog / MovePositionForm" as page
   participant "IWorkOrderService / WorkOrderService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -32,46 +33,47 @@ box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
 actor -> page : Drag within the page, Move up / Move down, or Move to position...
-page -> page : Snapshot saved page; compute the absolute target rank (rank 26 up becomes 25 on page 1)
-page -> client : Build typed PrioritizeStoryCommand (story, absolute target position, expected backlog-order version)
+page -> page : BacklogView snapshots its saved page; compute the absolute target rank (rank 26 up becomes 25 on page 1); one move at a time, never debounced
+page -> client : prioritize(PrioritizeStoryCommand: story, absolute target position, expected backlog-order version from BacklogItemPage.orderVersion, carried in MoveTarget for the dialog)
 client -> access : PUT /api/workspaces/{id}/work-order/backlog
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid or expired JWT; deactivated account
   access --> client : 401; audit denial without payloads
-  client --> page : Restore snapshot; clear session; sign in with the backlog as return route
-else Authenticated without permission to prioritize the backlog
-  access --> client : 403; audit denial without payloads
-  client --> page : Restore snapshot; explain that prioritizing is not permitted
-else Authorized
+  client --> page : sessionInterceptor calls SessionService.end(Unauthorized) once for this generation; the promise rejects with its 401 (nothing written); restore snapshot; sign-in shows session-unsaved when a draft was dirty, then returns to the backlog
+else Authenticated active account (profile P: prioritizing needs no capability beyond an active session)
   access -> ctrl : Authorized request
   ctrl -> validation : Send PrioritizeStoryCommand through MediatR 12.5.0
   validation -> validation : Identifiers well formed; target position is a whole number of 1 or more
   alt Malformed request
     validation --> ctrl : 400 field errors; nothing read or changed
     ctrl --> client : Validation ProblemDetails
-    client --> page : Restore snapshot; MovePositionDialog keeps the value and shows the position message
+    client --> page : Restore snapshot; MovePositionDialog keeps the value and focus moves to the position field, which reads its message; no Retry or reference ID
   else Valid request
     validation -> handler : Handle PrioritizeStoryCommand
-    handler -> db : Lock workspace; read the full story backlog order, its count, and its version
-    db --> handler : Ordered story IDs and version
-    alt Workspace or story not found
+    handler -> db : BeginWorkspaceTransactionAsync takes the workspace lock first; LoadBacklogOrderAsync loads the tracked story backlog order, its count, and its version
+    db --> handler : Ordered story IDs and version, or lock-wait timeout
+    alt Workspace lock wait times out
+      handler --> ctrl : 503 with Retry-After; nothing read or changed
+      ctrl --> client : ProblemDetails (unavailable)
+      client --> page : Unavailable save: restore snapshot; highlight the story; Try again resends the same move only when chosen (reorder-failed state)
+    else Workspace or story not found
       handler --> ctrl : 404; nothing changed
       ctrl --> client : ProblemDetails (not found)
-      client --> page : Reload the backlog page without the story; announce that it no longer exists
+      client --> page : BacklogView rereads the page without the story and announces that it no longer exists; after a drag or Move up or Move down the focused row is gone, so focus moves to the row now at that rank, or to the backlog heading when no row is left there; an open dialog closes with NotFound, and BacklogPage increments its refresh counter and shows the toast
     else Story from another workspace, not a story, or position beyond the full count (L2-017.3)
       handler --> ctrl : 400 invalid position or reference; nothing changed
       ctrl --> client : Validation ProblemDetails
-      client --> page : Restore snapshot; "Enter a position from 1 to N" (out-of-range state)
+      client --> page : Restore snapshot; the dialog shows "Enter a position from 1 to N" with focus on the position field (out-of-range state); an inline move shows the reason with Reload backlog, without Try again or a reference ID
     else Stale backlog-order version (L2-041)
       handler --> ctrl : 409 order changed; nothing applied
       ctrl --> client : ProblemDetails (order changed)
-      client --> page : Restore snapshot; highlight the story; "Backlog order changed" alert; Reload backlog only, never resent (reorder-conflict state)
+      client --> page : Restore snapshot; highlight the story; never resent. "Backlog order changed" alert announced without moving focus, because the move controls stay enabled; Reload backlog only, which rereads the page and returns focus to the story's row (reorder-conflict state). Dialog: Reload order receives focus and closes it with Outdated
     else Move permitted
       handler -> entity : L2-017 move the story in the backlog only
       entity --> handler : New priority interval; parents, sibling order, board order, and sprint membership unchanged
-      handler -> db : L2-039 / L2-040 rewrite the interval, bump the backlog-order version, and record success audit in one transaction
+      handler -> db : L2-039 / L2-040 AddAuditEvent, then SaveChangesAsync: rewrite the affected interval, bump the backlog-order version, and record success audit in one transaction; release the lock
       alt Commit fails
         db --> handler : Roll back business state and success audit
         handler --> ctrl : Generic 500 with correlation ID
@@ -80,15 +82,19 @@ else Authorized
       else Commit succeeds
         db --> handler : New backlog-order version
         handler --> ctrl : Committed rank
-        ctrl --> client : 200 with rank, total, and version
-        client --> page : Replace snapshot; follow the story to its page when it crosses a page boundary
-        page --> actor : Announce "Moved {title} to position N of M"
+        ctrl --> client : 200 OrderMoved (rank, total, order version)
+        client --> page : BacklogView rereads the page holding the new rank, following the story across a page boundary; that page becomes the saved snapshot. After Move to position the dialog closes with Moved; BacklogPage increments its refresh counter and passes the result to revealMoved, which does the same
+        page --> actor : Announce "Moved {title} to position N of M"; focus stays on the move control, or moves to the story's row when it landed on another page
       end
     end
   end
 end
+opt No response to the move (timeout or network failure)
+  client --> page : The move may have committed. Inline: BacklogView rereads the page and the reorder-failed alert says "We couldn't confirm whether {title} moved" and where the reread found it, without a reference ID or Try again. Dialog: the failed alert with that title and no reference ID; the form emits unconfirmed, so BacklogPage rereads at once; Try again resends only when pressed, and a 409 to that resend drops "Nothing was applied" and says to reload to see where the story is now
+end
 note over ctrl, db
-All rejection checks run under the lock before any write.
+An unexpected 403 applies nothing; BacklogView restores its snapshot (or MovePositionForm keeps the position) and emits forbidden, and the routed page shows the "Your access changed" toast through TOAST_SERVICE, without Retry or reference ID; the capability refresh still runs.
+All rejection checks run under the lock before any write; a stale version in SaveChangesAsync raises ConcurrencyConflictException, the same 409.
 Unexpected failures return generic 500 plus correlation ID (L2-043).
 Diagnostics exclude secrets and contact payloads.
 end note

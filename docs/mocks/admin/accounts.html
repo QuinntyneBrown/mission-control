@@ -31,9 +31,9 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">Administrator-only. A collaborator never sees the Accounts link, and opening this URL directly shows the <a href="../shell/status-pages.html#state=access-denied">access-denied page</a>. Quinntyne Brown is the designated administrator: there is no Deactivate action for that account. Below 768px each row becomes a labelled card.</p>
+    <p class="mock-note" data-when="default">Administrator-only. A collaborator never sees the Accounts link, and a signed-in collaborator who opens this URL directly sees the <a href="../shell/status-pages.html#state=access-denied">access-denied page</a>. Quinntyne Brown is the designated administrator: there is no Deactivate action for that account. Below 768px each row becomes a labelled card. After an account dialog saves, the list rereads and a toast names the account ("Account added", "Changes saved", "Account deactivated", "Account reactivated", or "Password replaced"); a dialog that finds its account missing closes, and the list rereads with the toast "Account not found". With more than 25 accounts the list reads "Showing 1–25 of N accounts" and shows the lead directory's pager; changing page reads at once.</p>
     <p class="mock-note" data-when="loading" hidden>A skeleton holds the table's shape while accounts load, so the page never looks empty. Screen readers hear "Loading accounts".</p>
-    <p class="mock-note" data-when="error" hidden>The request failed. Try again repeats it; the reference ID matches the server's diagnostic record.</p>
+    <p class="mock-note" data-when="error" hidden>The request failed with a 500, shown here with its reference ID, which matches the server's diagnostic record. A request that got no response reads "Check your connection and try again." without a reference ID, because no response carried one. Try again repeats the request in both cases. A refused page request (400) shows the API's message here instead, without Try again or a reference ID, because repeating it would be refused again. A 403 means you're no longer an administrator: the <a href="../shell/status-pages.html#state=access-denied">access-denied page</a> replaces Accounts.</p>
   </div>
 
   <div class="mc-app">
@@ -118,7 +118,7 @@
 
         <div class="mc-live" role="status" aria-live="polite">
           <div class="mc-results-meta" data-when="default">
-            <span>5 accounts · 4 active, 1 inactive</span><span>Sorted by last name</span>
+            <span>5 accounts</span><span>Sorted by last name</span>
           </div>
           <p class="mc-visually-hidden" data-when="loading" hidden>Loading accounts</p>
         </div>
@@ -224,7 +224,7 @@
         <div class="mc-empty mc-empty--error" role="alert" data-when="error" hidden>
           <span class="mc-empty__icon"><span class="mc-icon mc-icon--alert-circle mc-icon--lg" aria-hidden="true"></span></span>
           <h2 class="mc-empty__title">We couldn't load accounts</h2>
-          <p class="mc-empty__text">Check your connection and try again. If it keeps happening, share the reference ID with whoever supports Mission Control.</p>
+          <p class="mc-empty__text">Something went wrong on our side. Try again, and if it keeps happening, share the reference ID with whoever supports Mission Control.</p>
           <p class="mc-ref">Reference ID <code>3e8b-c71d-05fa</code>
             <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="3e8b-c71d-05fa"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
           </p>

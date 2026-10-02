@@ -3,6 +3,7 @@ skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
+skinparam maxMessageSize 300
 skinparam ArrowColor #344054
 skinparam rectangle {
   BorderColor #344054
@@ -16,7 +17,7 @@ skinparam package {
 title Behavior - Edit planned fields and story scope
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "SprintPlanningPage / SprintFormDialog / SprintView" as page
+  participant "SprintPlanningPage / SprintPlanView\nor SprintFormDialog / SprintForm" as page
   participant "ISprintService / SprintService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,80 +32,98 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Save planned fields (SprintFormDialog) or story selection (SprintPlanningPage)
-page -> client : Build typed SaveSprintPlanCommand with expected sprint version
+actor -> page : Save plan fields (SprintForm) or the pending story changes (SprintPlanView)
+page -> client : SaveSprintPlanCommand: workspace, sprint, expected version, fields, addStoryIds, removeStoryIds\n(SprintForm sends both sets empty; pending sets come from every page and search, including an add or remove pre-mark)
 client -> access : PUT /api/workspaces/{id}/sprints/{sprintId}/plan
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid or expired JWT; deactivated account
   access --> client : 401; audit denial without payloads
-  client --> page : Clear session; sign in with the planning page as return route
-else Authenticated without the required permission
-  access --> client : 403; audit denial without payloads
-  client --> page : Keep input; explain that planning sprints is not permitted
-else Authorized
+  client --> page : SessionService.end(Unauthorized) once; sign in with the planning page as return route
+else Authenticated (profile P: every active role plans sprints)
   access -> ctrl : Authorized request
   ctrl -> validation : Send SaveSprintPlanCommand through MediatR 12.5.0
-  validation -> validation : L2-022 trim; field limits, valid dates, end on or after start, distinct story IDs
-  alt Missing, over-limit or malformed fields; end before start
+  validation -> validation : L2-022 trim; field limits, valid dates, end on or after start;\ndistinct IDs; no story in both sets
+  alt Missing, over-limit or malformed fields; end before start; duplicate or contradictory IDs
     validation --> ctrl : 400 field errors; nothing read or changed
     ctrl --> client : Validation ProblemDetails
-    client --> page : Keep all input; focus the linked error summary
+    client --> page : Keep all input and pending sets; one field error focuses that field, which reads\nits error; several focus the linked error summary; no Retry or reference ID
   else Valid request
     validation -> handler : Handle SaveSprintPlanCommand
-    handler -> db : Lock workspace; read mode, sprint state and version, selected stories and their open memberships
-    db --> handler : Current mode, plan, story statuses and allocations
+    handler -> db : BeginWorkspaceTransactionAsync (workspace lock); LoadPlanChangeAsync:\nmode, Sprint with status and version and the memberships to remove as tracked children,\nstories to add with their open memberships
+    db --> handler : PlanChange
     alt Workspace or sprint not found (or sprint in another workspace)
       handler --> ctrl : 404; nothing changed
       ctrl --> client : ProblemDetails (not found)
-      client --> page : Sprint not found state with Back to sprints
-    else Newly selected Done story or foreign-workspace story (L2-022.2)
-      handler --> ctrl : 400 identifying each story; nothing changed
-      ctrl --> client : Validation ProblemDetails per story
-      client --> page : Keep selection; mark each rejected story with its reason
+      client --> page : SprintForm emits notFound and its dialog closes with Outdated; the opening page rereads.\nPlanning page: Sprint not found with Back to sprints, or Project not found with Back to projects\nwhen its workspace read finds no workspace
     else Workspace in Kanban mode (L2-027.3)
       handler --> ctrl : 409 sprints paused; nothing changed
       ctrl --> client : ProblemDetails (sprints paused)
-      client --> page : Explain the pause; plans stay readable; no retry
-    else Story already in another planned or active sprint (L2-022.3)
-      handler --> ctrl : 409 naming each allocated story and its sprint; nothing changed
-      ctrl --> client : ProblemDetails (already allocated)
-      client --> page : Keep selection; mark the story; save again after removing it
-    else Sprint no longer Planned
+      client --> page : paused: keep the fields and pending sets; the plan shows read-only with the notice in the\nalert region, which takes focus; no retry; SprintForm emits modeChanged and its dialog closes with\nModeChanged: SprintsPage calls ProjectLayoutPage.modeChanged(), SprintPlanningPage increments its\ncounter so the view rereads its header
+    else Sprint no longer Planned (a Closed sprint's history is never altered, L2-026.3)
       handler --> ctrl : 409 sprint started or closed; nothing changed
       ctrl --> client : ProblemDetails (not planned)
-      client --> page : Explain that only planned sprints change here; link to its board or history
+      client --> page : not-planned: an alert replaces the lists and takes focus; only planned sprints change here;\nlink to its board or history; no retry. SprintForm: paused presentation naming the sprint's state;\nit emits outdated, so its dialog closes with Outdated and the opening page rereads
     else Stale sprint version (L2-041.1)
       handler --> ctrl : 409 changed since opened; nothing changed
       ctrl --> client : ProblemDetails (stale version)
-      client --> page : Keep attempted values; read the latest version once; show the comparison; no resubmission
-      page --> actor : Reload latest adopts latest values and version; comparison stays visible
+      client --> page : Keep attempted fields and pending sets; read the latest plan once; no resubmission
+      page --> actor : SprintForm shows the comparison; SprintPlanView rereads header and both lists,\ndrops marks that no longer apply and names them with neutral copy (stale state)
+    else Story to add is Done or from another workspace (L2-022.2); story to remove is not a member
+      handler --> ctrl : 400 identifying each story; nothing changed
+      ctrl --> client : Validation ProblemDetails per story
+      client --> page : Keep pending sets; mark each named story to add with its reason (Now Done) in the\nallocated-conflict presentation; drop each named story to remove from the To remove set and name it\nneutrally ("HCK-126 is no longer in Sprint 9, so it isn't removed"), so Save plan can send the rest
+    else Story to add is in another planned or active sprint (L2-022.3)
+      handler --> ctrl : 409 naming each story and its sprint; nothing changed
+      ctrl --> client : ProblemDetails (already allocated)
+      client --> page : Keep pending sets; mark the story (allocated-conflict state); save again after undoing it
     else Plan accepted
-      handler -> entity : L2-022 editPlan and setScope; keep selected stories that became Done
-      entity --> handler : Valid whole plan
-      handler -> db : L2-039 / L2-040 save fields, replace open membership, success audit in one transaction
+      handler -> entity : L2-022 editPlan(fields); applyPlanDelta(add, remove)
+      note right of entity
+        Only addStoryIds are new allocations.
+        Existing members, Done ones included,
+        stay untouched unless in removeStoryIds.
+      end note
+      entity --> handler : Fields; OpenSprintMembership children added and removed
+      handler -> db : L2-039 / L2-040 AddAuditEvent; SaveChangesAsync: fields, tracked membership children,\nsuccess audit, expected version checked, one transaction
       alt Unique open-membership violation (concurrent allocation, L2-041.2)
         db --> handler : Roll back fields, membership and audit
         handler --> ctrl : 409 naming the story; nothing changed
         ctrl --> client : ProblemDetails (already allocated)
-        client --> page : Keep selection; mark the story
+        client --> page : Keep pending sets; mark the story
       else Commit fails
         db --> handler : Roll back business state and success audit
         handler --> ctrl : Generic 500 with correlation ID
         ctrl --> client : Failure; no successful-save claim
-        client --> page : Keep values and selection; show the reference ID; Save retries
+        client --> page : Keep fields and pending sets; failed state shows the reference ID;\nSave plan sends them again only when chosen
       else Commit succeeds
         db --> handler : New sprint version
-        handler --> ctrl : Saved plan
-        ctrl --> client : 200 with plan and version
-        client --> page : Update signals; removed stories return to the unallocated backlog
-        page --> actor : Announce the saved plan
+        handler --> ctrl : Saved plan header
+        ctrl --> client : 200 with plan header and version
+        client --> page : SprintPlanView: clear pending sets; reread header, candidate page and member page;\nemit planSaved. SprintForm: emit saved; its dialog closes with Saved(SprintSaveResult)
+        page --> actor : SprintPlanView: the page shows the "Sprint planned" toast ("Sprint 9 has 3 stories.").\nSprintForm: the opening page increments its counter and shows the "Changes saved" toast
       end
     end
   end
 end
 note over ctrl, db
+An unexpected 403 (access changed after sign-in) saves nothing; the fields and pending sets stay.
+SprintPlanView emits forbidden and SprintPlanningPage shows the "Your access changed" toast through
+TOAST_SERVICE, without Retry; SprintForm emits forbidden, which its dialog relays while it stays
+open, and the opening page shows the same toast.
+A workspace lock wait beyond the timeout returns 503 with Retry-After and no change;
+the same failed state keeps fields and pending sets, shows the reference ID,
+and sends them again only when Save plan is chosen.
+A save that gets no response is uncertain: the fields and pending sets stay, the alert says
+"We couldn't confirm whether Sprint 9's plan was saved." (no reference ID), and the page rereads
+the header and both lists once, dropping marks that no longer apply under the neutral heading
+"The latest plan is shown below", before Save plan is offered again; a header no longer Planned
+replaces the lists with only its current state ("Sprint 9 is active now.", unconfirmed-active),
+never "Nothing was changed". SprintForm emits unconfirmed,
+which its dialog relays so the opening page rereads at once, and reloads the sprint: a newer
+version shows the comparison under "The latest saved version is shown beside your entries".
+SaveChangesAsync raises ConcurrencyConflictException on a stale version, mapped to the same 409.
 Unexpected failures return generic 500 plus correlation ID (L2-043).
 Diagnostics exclude secrets and contact payloads.
 end note

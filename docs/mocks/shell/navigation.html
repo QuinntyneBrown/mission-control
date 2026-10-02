@@ -12,7 +12,7 @@
   <script src="../assets/mocks.js" defer></script>
 </head>
 <body>
-  <a class="mc-skip-link" href="#main" data-attr-focus="class=mc-skip-link mock-show-skip">Skip to main content</a>
+  <a class="mc-skip-link" href="#main" data-attr-focus="class=mc-skip-link mock-show-skip" data-attr-compact-menu="inert">Skip to main content</a>
 
   <div class="mock-bar" role="region" aria-label="Mock controls">
     <span class="mock-bar__badge">MOCK</span>
@@ -34,14 +34,14 @@
 
   <div class="mock-notes">
     <p class="mock-note" data-when="default">At 992px and wider the sidebar shows labels. From 768–991px it becomes an icon rail; labels stay available to assistive technology. Below 768px a top bar with a menu button replaces it.</p>
-    <p class="mock-note" data-when="collaborator" hidden>Collaborators see Home, Leads, and Projects only. Administration destinations are absent, not disabled; their direct URLs show the access-denied page.</p>
-    <p class="mock-note" data-when="compact-menu" hidden>View below 768px. Choosing a destination closes the menu and moves focus to the new page's heading. Escape or the close button returns focus to the menu button.</p>
-    <p class="mock-note" data-when="user-menu" hidden>Sign out clears the in-memory session and opens the sign-in page with a "You've signed out" message. With unsaved changes, the unsaved-changes dialog appears first.</p>
+    <p class="mock-note" data-when="collaborator" hidden>Collaborators see Home, Leads, and Projects only. Administration destinations are absent, not disabled. Reaching their addresses during a session, for example through browser history after a role change, shows the access-denied page; an address opened before signing in leads to Home after sign-in instead.</p>
+    <p class="mock-note" data-when="compact-menu" hidden>View below 768px. While open, the drawer is modal: the top bar, the skip link, and the page behind are inert and Tab stays in the drawer; Escape, the close button, or a tap on the overlay closes it and returns focus to the menu button. Choosing a destination closes the menu and moves focus to the new page's heading.</p>
+    <p class="mock-note" data-when="user-menu" hidden>The menu shows the name, email, and role from the current session. Sign out clears the in-memory session and opens the sign-in page with a "You've signed out" message. With unsaved changes, the unsaved-changes dialog appears first. With no access summary held, as on the <a href="status-pages.html#state=error">error</a> and <a href="status-pages.html#state=offline">offline</a> status pages before any check succeeded, the menu offers only Sign out, with no name or role, and the navigation lists Home, Leads, and Projects.</p>
     <p class="mock-note" data-when="focus" hidden>The skip link is the first focusable element. Every focusable control shows a 2px focus ring with a 2px offset; here it is shown on the Projects link. After each route change, focus moves to the page heading.</p>
   </div>
 
   <div class="mc-app">
-    <header class="mc-topbar">
+    <header class="mc-topbar" data-attr-compact-menu="inert">
       <button class="mc-button mc-button--quiet mc-button--icon" type="button" data-toggle aria-controls="mc-sidebar" aria-expanded="false" aria-label="Open navigation" data-open-when="compact-menu">
         <span class="mc-icon mc-icon--menu" aria-hidden="true"></span>
       </button>
@@ -109,7 +109,7 @@
       </div>
     </nav>
 
-    <main class="mc-main" id="main" tabindex="-1">
+    <main class="mc-main" id="main" tabindex="-1" data-attr-compact-menu="inert">
       <div class="mc-page">
         <header class="mc-page-header">
           <div class="mc-page-header__main">

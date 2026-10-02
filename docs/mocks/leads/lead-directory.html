@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Lead directory · Mission Control mock</title>
-  <meta name="description" content="Lead directory with search, category filter, pagination, read-only collaborator view, and empty, zero-result, loading, and error states.">
+  <meta name="description" content="Lead directory with search, category filter (including the view opened from a home category card), pagination, read-only collaborator view, and empty, zero-result, loading, and error states.">
   <meta name="mock-area" content="Leads">
   <meta name="mock-requirements" content="L2-005.4, L2-010, L2-012, L2-013, L2-032, L2-034.2, L2-045">
   <link rel="stylesheet" href="../assets/tokens.css">
@@ -23,9 +23,11 @@
         <select data-mock-state>
           <option value="default">Administrator</option>
           <option value="collaborator">Collaborator (read-only)</option>
+          <option value="category">Category from home</option>
           <option value="filtered">Search and category</option>
           <option value="zero-results">Zero results</option>
           <option value="page-2">Page 2</option>
+          <option value="filter-invalid">Filter no longer valid</option>
           <option value="deleted">Lead deleted</option>
           <option value="empty-admin">Empty (administrator)</option>
           <option value="empty-collaborator">Empty (collaborator)</option>
@@ -40,10 +42,16 @@
   <div class="mock-notes">
     <p class="mock-note" data-when="default">25 leads per page, ordered by last name, then first name. Wide screens show a table; below 768px each row becomes a labelled card. Edit and delete are administrator-only.</p>
     <p class="mock-note" data-when="collaborator" hidden>Collaborators can read every contact. Add, edit, and delete are absent, and the notice explains why. Direct API calls are still denied.</p>
-    <p class="mock-note" data-when="filtered" hidden>Search is a trimmed, case-insensitive substring of first, last, or full name, email, or phone. It combines with the category using AND across all pages. Changing either resets to page 1, and screen readers hear "4 leads found". Chip counts are totals for each category across all leads, so they don't change with search or filter.</p>
+    <p class="mock-note" data-when="category" hidden>Home's Prayer card opens /leads?category=prayer, so the directory loads with the Prayer chip pressed (Prayer in the category menu on phones) and no search text; the other category cards open the same view for their own category. All 14 Prayer leads fit on one page, ordered by last name, and the count matches home's Prayer card. Screen readers hear "14 Prayer leads found". Chip counts stay the totals for each category; Clear filter restores the full directory.</p>
+    <p class="mock-note" data-when="filtered" hidden>Search is a trimmed, case-insensitive substring of first, last, or full name, email, or phone. It combines with the category using AND across all pages. Typing searches about 250 ms after the last keystroke, and a newer search cancels the request still in flight; choosing a category or page applies at once. Changing either search or category resets to page 1, and screen readers hear "4 leads found". Chip counts are totals for each category across all leads, so they don't change with search or filter.</p>
     <p class="mock-note" data-when="zero-results" hidden>Home's "Event 0" card opens this view. Screen readers hear "No Event leads found". Clear filter restores the full directory.</p>
-    <p class="mock-note" data-when="deleted" hidden>After a confirmed delete the directory reloads without the lead, the total drops to 36, and a toast confirms what changed. Focus returns to the page heading.</p>
+    <p class="mock-note" data-when="filter-invalid" hidden>The link's category isn't one of the five lead categories (an outdated or edited link such as /leads?category=outreach; a page below 1 behaves the same), so the API answers 400 with a field message instead of a list. The page shows that message with Clear filter, which opens the full directory at page 1. Nothing failed on the server, so there is no Try again and no reference ID, and no chip counts, rows, or paging appear because the response carried none. Screen readers hear the message.</p>
+    <p class="mock-note" data-when="page-2" hidden>Next or page 2 shows leads 26–37 of 37 in the same order; Previous returns to page 1. The page number is part of the route, so the address opens this page again. Screen readers hear the result line.</p>
+    <p class="mock-note" data-when="deleted" hidden>After a confirmed delete the directory reloads without the lead, the total drops to 36, and a toast names the deleted lead. Focus returns to the page heading. If the lead had already been deleted (404), the directory reloads the same way and an info toast says Hana Kim was already deleted; when that 404 answers a repeat of a delete that got no response, the toast neutrally reads "Hana Kim has been deleted." instead, since the first request may have deleted her. Adding or editing a lead from this page also reloads the directory and shows a success toast naming the lead, such as "Lead added — Oliver Hughes was added."</p>
+    <p class="mock-note" data-when="empty-admin" hidden>No leads exist yet. The empty state explains what the directory holds and offers Add lead, the only next step; no counts or paging appear.</p>
+    <p class="mock-note" data-when="empty-collaborator" hidden>No leads exist yet. Collaborators are told that an administrator adds leads instead of being shown an action they can't take.</p>
     <p class="mock-note" data-when="loading" hidden>A skeleton holds the layout while leads load, so the page never looks empty. Category counts appear only with the loaded result. Screen readers hear "Loading leads".</p>
+    <p class="mock-note" data-when="error" hidden>The read got a server error (500), so no rows, counts, or paging are shown as if the directory were empty. Try again repeats the read; the reference ID matches the server's diagnostic record. A read that gets no response shows the same state without a reference ID, and the shell's offline banner appears. Screen readers hear the alert.</p>
   </div>
 
   <div class="mc-app">
@@ -147,11 +155,11 @@
             <label class="mc-label" for="lead-category">Category</label>
             <span class="mc-select-wrap">
               <select class="mc-select" id="lead-category">
-                <option data-attr-filtered="!selected" data-attr-zero-results="!selected" selected>All categories</option>
+                <option data-attr-category="!selected" data-attr-filtered="!selected" data-attr-zero-results="!selected" selected>All categories</option>
                 <option>Create</option>
                 <option>Communication</option>
                 <option>City</option>
-                <option data-attr-filtered="selected">Prayer</option>
+                <option data-attr-category="selected" data-attr-filtered="selected">Prayer</option>
                 <option data-attr-zero-results="selected">Event</option>
               </select>
             </span>
@@ -161,12 +169,12 @@
         <div class="mc-mb-6 mc-hide-compact" data-unless="empty-admin empty-collaborator">
           <p class="mc-label mc-mb-4" id="category-chips-label">Category</p>
           <ul class="mc-chips" aria-labelledby="category-chips-label">
-            <li><button class="mc-chip" type="button" aria-pressed="true" data-attr-filtered="aria-pressed=false" data-attr-zero-results="aria-pressed=false">All <span class="mc-chip__count" data-unless="loading error"><span data-unless="deleted">37</span><span data-when="deleted" hidden>36</span></span></button></li>
-            <li><button class="mc-chip" type="button" aria-pressed="false"><span class="mc-icon mc-icon--category-create" aria-hidden="true"></span>Create <span class="mc-chip__count" data-unless="loading error"><span data-unless="deleted">9</span><span data-when="deleted" hidden>8</span></span></button></li>
-            <li><button class="mc-chip" type="button" aria-pressed="false"><span class="mc-icon mc-icon--category-communication" aria-hidden="true"></span>Communication <span class="mc-chip__count" data-unless="loading error">8</span></button></li>
-            <li><button class="mc-chip" type="button" aria-pressed="false"><span class="mc-icon mc-icon--category-city" aria-hidden="true"></span>City <span class="mc-chip__count" data-unless="loading error">6</span></button></li>
-            <li><button class="mc-chip" type="button" aria-pressed="false" data-attr-filtered="aria-pressed=true"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer <span class="mc-chip__count" data-unless="loading error">14</span></button></li>
-            <li><button class="mc-chip" type="button" aria-pressed="false" data-attr-zero-results="aria-pressed=true"><span class="mc-icon mc-icon--category-event" aria-hidden="true"></span>Event <span class="mc-chip__count" data-unless="loading error">0</span></button></li>
+            <li><button class="mc-chip" type="button" aria-pressed="true" data-attr-category="aria-pressed=false" data-attr-filtered="aria-pressed=false" data-attr-zero-results="aria-pressed=false" data-attr-filter-invalid="aria-pressed=false">All <span class="mc-chip__count" data-unless="loading error filter-invalid"><span data-unless="deleted">37</span><span data-when="deleted" hidden>36</span></span></button></li>
+            <li><button class="mc-chip" type="button" aria-pressed="false"><span class="mc-icon mc-icon--category-create" aria-hidden="true"></span>Create <span class="mc-chip__count" data-unless="loading error filter-invalid"><span data-unless="deleted">9</span><span data-when="deleted" hidden>8</span></span></button></li>
+            <li><button class="mc-chip" type="button" aria-pressed="false"><span class="mc-icon mc-icon--category-communication" aria-hidden="true"></span>Communication <span class="mc-chip__count" data-unless="loading error filter-invalid">8</span></button></li>
+            <li><button class="mc-chip" type="button" aria-pressed="false"><span class="mc-icon mc-icon--category-city" aria-hidden="true"></span>City <span class="mc-chip__count" data-unless="loading error filter-invalid">6</span></button></li>
+            <li><button class="mc-chip" type="button" aria-pressed="false" data-attr-category="aria-pressed=true" data-attr-filtered="aria-pressed=true"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer <span class="mc-chip__count" data-unless="loading error filter-invalid">14</span></button></li>
+            <li><button class="mc-chip" type="button" aria-pressed="false" data-attr-zero-results="aria-pressed=true"><span class="mc-icon mc-icon--category-event" aria-hidden="true"></span>Event <span class="mc-chip__count" data-unless="loading error filter-invalid">0</span></button></li>
           </ul>
         </div>
 
@@ -180,16 +188,21 @@
           <div class="mc-results-meta" data-when="page-2" hidden>
             <span>Showing 26–37 of 37 leads</span><span>Sorted by last name</span>
           </div>
+          <div class="mc-results-meta" data-when="category" hidden>
+            <span><strong>14 Prayer leads found</strong></span>
+            <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-goto-state="default">Clear filter</button>
+          </div>
           <div class="mc-results-meta" data-when="filtered" hidden>
             <span><strong>4 leads found</strong> in Prayer matching “an”</span>
             <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-goto-state="default">Clear search and filter</button>
           </div>
           <p class="mc-visually-hidden" data-when="zero-results" hidden>No Event leads found</p>
           <p class="mc-visually-hidden" data-when="loading" hidden>Loading leads</p>
+          <p class="mc-visually-hidden" data-when="filter-invalid" hidden>Can't filter by this category. “outreach” isn't a lead category.</p>
         </div>
 
         <!-- Results -->
-        <div class="mc-table-wrap" data-when="default collaborator filtered page-2 deleted">
+        <div class="mc-table-wrap" data-when="default collaborator category filtered page-2 deleted">
           <table class="mc-table mc-table--stack">
             <caption class="mc-visually-hidden">Leads</caption>
             <thead>
@@ -213,13 +226,13 @@
                 </td>
               </tr>
               <tr>
-                <td class="mc-table__primary"><a href="lead-detail.html#state=lead">Lucia Alvarez</a></td>
+                <td class="mc-table__primary"><a href="lead-detail.html#state=lead-lucia">Lucia Alvarez</a></td>
                 <td data-label="Category"><span class="mc-pill mc-pill--communication"><span class="mc-icon mc-icon--category-communication" aria-hidden="true"></span>Communication</span></td>
                 <td data-label="Email"><a href="mailto:lucia.alvarez@example.org">lucia.alvarez<wbr>@example.org</a></td>
                 <td data-label="Phone"><a href="tel:+14165550102">+1 416 555 0102</a></td>
                 <td class="mc-table__actions mock-admin-only">
                   <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-form-dialog.html#state=edit" aria-label="Edit Lucia Alvarez"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span></button>
-                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-delete-dialog.html" aria-label="Delete Lucia Alvarez"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-delete-dialog.html#state=blocked" aria-label="Delete Lucia Alvarez"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></button>
                 </td>
               </tr>
               <tr>
@@ -263,13 +276,13 @@
                 </td>
               </tr>
               <tr>
-                <td class="mc-table__primary"><a href="lead-detail.html#state=lead">Rafael Da Silva</a></td>
+                <td class="mc-table__primary"><a href="lead-detail.html#state=lead-rafael">Rafael Da Silva</a></td>
                 <td data-label="Category"><span class="mc-pill mc-pill--city"><span class="mc-icon mc-icon--category-city" aria-hidden="true"></span>City</span></td>
                 <td data-label="Email"><a href="mailto:rafael.dasilva@example.org">rafael.dasilva<wbr>@example.org</a></td>
                 <td data-label="Phone"><a href="tel:+14165550106">+1 416 555 0106</a></td>
                 <td class="mc-table__actions mock-admin-only">
                   <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-form-dialog.html#state=edit" aria-label="Edit Rafael Da Silva"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span></button>
-                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-delete-dialog.html" aria-label="Delete Rafael Da Silva"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-delete-dialog.html#state=blocked" aria-label="Delete Rafael Da Silva"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></button>
                 </td>
               </tr>
               <tr>
@@ -379,7 +392,7 @@
                 <td data-label="Phone"><a href="tel:+14165550117">+1 416 555 0117</a></td>
                 <td class="mc-table__actions mock-admin-only">
                   <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-form-dialog.html#state=edit" aria-label="Edit Grace Mensah"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span></button>
-                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-delete-dialog.html" aria-label="Delete Grace Mensah"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-delete-dialog.html#state=blocked" aria-label="Delete Grace Mensah"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></button>
                 </td>
               </tr>
               <tr>
@@ -585,6 +598,148 @@
                 </td>
               </tr>
             </tbody>
+            <tbody data-when="category" hidden>
+              <tr>
+                <td class="mc-table__primary"><a href="lead-detail.html#state=lead">Samuel Adeyemi</a></td>
+                <td data-label="Category"><span class="mc-pill mc-pill--prayer"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer</span></td>
+                <td data-label="Email"><a href="mailto:samuel.adeyemi@example.org">samuel.adeyemi<wbr>@example.org</a></td>
+                <td data-label="Phone"><a href="tel:+14165550101">+1 416 555 0101</a></td>
+                <td class="mc-table__actions mock-admin-only">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-form-dialog.html#state=edit" aria-label="Edit Samuel Adeyemi"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-delete-dialog.html" aria-label="Delete Samuel Adeyemi"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></button>
+                </td>
+              </tr>
+              <tr>
+                <td class="mc-table__primary"><a href="lead-detail.html#state=lead">Imani Clarke</a></td>
+                <td data-label="Category"><span class="mc-pill mc-pill--prayer"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer</span></td>
+                <td data-label="Email"><a href="mailto:imani.clarke@example.org">imani.clarke<wbr>@example.org</a></td>
+                <td data-label="Phone"><a href="tel:+16475550105">+1 647 555 0105</a></td>
+                <td class="mc-table__actions mock-admin-only">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-form-dialog.html#state=edit" aria-label="Edit Imani Clarke"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-delete-dialog.html" aria-label="Delete Imani Clarke"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></button>
+                </td>
+              </tr>
+              <tr>
+                <td class="mc-table__primary"><a href="lead-detail.html#state=lead">Chidi Eze</a></td>
+                <td data-label="Category"><span class="mc-pill mc-pill--prayer"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer</span></td>
+                <td data-label="Email"><a href="mailto:chidi.eze@example.org">chidi.eze<wbr>@example.org</a></td>
+                <td data-label="Phone"><a href="tel:+14165550108">+1 416 555 0108</a></td>
+                <td class="mc-table__actions mock-admin-only">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-form-dialog.html#state=edit" aria-label="Edit Chidi Eze"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-delete-dialog.html" aria-label="Delete Chidi Eze"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></button>
+                </td>
+              </tr>
+              <tr>
+                <td class="mc-table__primary"><a href="lead-detail.html#state=lead">Mara Johnson</a></td>
+                <td data-label="Category"><span class="mc-pill mc-pill--prayer"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer</span></td>
+                <td data-label="Email"><a href="mailto:mara.johnson@example.org">mara.johnson<wbr>@example.org</a></td>
+                <td data-label="Phone"><a href="tel:+14165550113">+1 416 555 0113</a></td>
+                <td class="mc-table__actions mock-admin-only">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-form-dialog.html#state=edit" aria-label="Edit Mara Johnson"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-delete-dialog.html" aria-label="Delete Mara Johnson"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></button>
+                </td>
+              </tr>
+              <tr>
+                <td class="mc-table__primary"><a href="lead-detail.html#state=lead">Piotr Kowalski</a></td>
+                <td data-label="Category"><span class="mc-pill mc-pill--prayer"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer</span></td>
+                <td data-label="Email"><a href="mailto:piotr.kowalski@example.org">piotr.kowalski<wbr>@example.org</a></td>
+                <td data-label="Phone"><a href="tel:+16475550115">+1 647 555 0115</a></td>
+                <td class="mc-table__actions mock-admin-only">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-form-dialog.html#state=edit" aria-label="Edit Piotr Kowalski"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-delete-dialog.html" aria-label="Delete Piotr Kowalski"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></button>
+                </td>
+              </tr>
+              <tr>
+                <td class="mc-table__primary"><a href="lead-detail.html#state=lead">Grace Mensah</a></td>
+                <td data-label="Category"><span class="mc-pill mc-pill--prayer"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer</span></td>
+                <td data-label="Email"><a href="mailto:grace.mensah@example.org">grace.mensah<wbr>@example.org</a></td>
+                <td data-label="Phone"><a href="tel:+14165550117">+1 416 555 0117</a></td>
+                <td class="mc-table__actions mock-admin-only">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-form-dialog.html#state=edit" aria-label="Edit Grace Mensah"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-delete-dialog.html#state=blocked" aria-label="Delete Grace Mensah"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></button>
+                </td>
+              </tr>
+              <tr>
+                <td class="mc-table__primary"><a href="lead-detail.html#state=lead">Linh Nguyen</a></td>
+                <td data-label="Category"><span class="mc-pill mc-pill--prayer"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer</span></td>
+                <td data-label="Email"><a href="mailto:linh.nguyen@example.org">linh.nguyen<wbr>@example.org</a></td>
+                <td data-label="Phone"><a href="tel:+14165550120">+1 416 555 0120</a></td>
+                <td class="mc-table__actions mock-admin-only">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-form-dialog.html#state=edit" aria-label="Edit Linh Nguyen"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-delete-dialog.html" aria-label="Delete Linh Nguyen"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></button>
+                </td>
+              </tr>
+              <tr>
+                <td class="mc-table__primary"><a href="lead-detail.html#state=lead">Ada Okafor</a></td>
+                <td data-label="Category"><span class="mc-pill mc-pill--prayer"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer</span></td>
+                <td data-label="Email"><a href="mailto:ada.okafor@example.org">ada.okafor<wbr>@example.org</a></td>
+                <td data-label="Phone"><a href="tel:+14165550122">+1 416 555 0122</a></td>
+                <td class="mc-table__actions mock-admin-only">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-form-dialog.html#state=edit" aria-label="Edit Ada Okafor"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-delete-dialog.html" aria-label="Delete Ada Okafor"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></button>
+                </td>
+              </tr>
+              <tr>
+                <td class="mc-table__primary"><a href="lead-detail.html#state=lead">Dmitri Petrov</a></td>
+                <td data-label="Category"><span class="mc-pill mc-pill--prayer"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer</span></td>
+                <td data-label="Email"><a href="mailto:dmitri.petrov@example.org">dmitri.petrov<wbr>@example.org</a></td>
+                <td data-label="Phone"><a href="tel:+14165550125">+1 416 555 0125</a></td>
+                <td class="mc-table__actions mock-admin-only">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-form-dialog.html#state=edit" aria-label="Edit Dmitri Petrov"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-delete-dialog.html" aria-label="Delete Dmitri Petrov"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></button>
+                </td>
+              </tr>
+              <tr>
+                <td class="mc-table__primary"><a href="lead-detail.html#state=lead">Farah Rahman</a></td>
+                <td data-label="Category"><span class="mc-pill mc-pill--prayer"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer</span></td>
+                <td data-label="Email"><a href="mailto:farah.rahman@example.org">farah.rahman<wbr>@example.org</a></td>
+                <td data-label="Phone"><a href="tel:+16475550127">+1 647 555 0127</a></td>
+                <td class="mc-table__actions mock-admin-only">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-form-dialog.html#state=edit" aria-label="Edit Farah Rahman"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-delete-dialog.html" aria-label="Delete Farah Rahman"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></button>
+                </td>
+              </tr>
+              <tr>
+                <td class="mc-table__primary"><a href="lead-detail.html#state=lead">Haruki Sato</a></td>
+                <td data-label="Category"><span class="mc-pill mc-pill--prayer"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer</span></td>
+                <td data-label="Email"><a href="mailto:haruki.sato@example.org">haruki.sato<wbr>@example.org</a></td>
+                <td data-label="Phone"><span class="mc-unset">Not provided</span></td>
+                <td class="mc-table__actions mock-admin-only">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-form-dialog.html#state=edit" aria-label="Edit Haruki Sato"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-delete-dialog.html" aria-label="Delete Haruki Sato"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></button>
+                </td>
+              </tr>
+              <tr>
+                <td class="mc-table__primary"><a href="lead-detail.html#state=lead">Ruth Tan</a></td>
+                <td data-label="Category"><span class="mc-pill mc-pill--prayer"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer</span></td>
+                <td data-label="Email"><a href="mailto:ruth.tan@example.org">ruth.tan<wbr>@example.org</a></td>
+                <td data-label="Phone"><a href="tel:+14165550132">+1 416 555 0132</a></td>
+                <td class="mc-table__actions mock-admin-only">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-form-dialog.html#state=edit" aria-label="Edit Ruth Tan"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-delete-dialog.html" aria-label="Delete Ruth Tan"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></button>
+                </td>
+              </tr>
+              <tr>
+                <td class="mc-table__primary"><a href="lead-detail.html#state=lead">Bilal Usman</a></td>
+                <td data-label="Category"><span class="mc-pill mc-pill--prayer"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer</span></td>
+                <td data-label="Email"><a href="mailto:bilal.usman@example.org">bilal.usman<wbr>@example.org</a></td>
+                <td data-label="Phone"><a href="tel:+14165550134">+1 416 555 0134</a></td>
+                <td class="mc-table__actions mock-admin-only">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-form-dialog.html#state=edit" aria-label="Edit Bilal Usman"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-delete-dialog.html" aria-label="Delete Bilal Usman"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></button>
+                </td>
+              </tr>
+              <tr>
+                <td class="mc-table__primary"><a href="lead-detail.html#state=lead">Amina Yusuf</a></td>
+                <td data-label="Category"><span class="mc-pill mc-pill--prayer"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer</span></td>
+                <td data-label="Email"><a href="mailto:amina.yusuf@example.org">amina.yusuf<wbr>@example.org</a></td>
+                <td data-label="Phone"><a href="tel:+14165550136">+1 416 555 0136</a></td>
+                <td class="mc-table__actions mock-admin-only">
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-form-dialog.html#state=edit" aria-label="Edit Amina Yusuf"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-nav="lead-delete-dialog.html" aria-label="Delete Amina Yusuf"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></button>
+                </td>
+              </tr>
+            </tbody>
             <tbody data-when="filtered" hidden>
               <tr>
                 <td class="mc-table__primary"><a href="lead-detail.html#state=lead">Imani Clarke</a></td>
@@ -661,6 +816,16 @@
           </div>
         </div>
 
+        <!-- Invalid filter in the route query (400) -->
+        <div class="mc-empty mc-empty--neutral mc-empty--compact" data-when="filter-invalid" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--search mc-icon--lg" aria-hidden="true"></span></span>
+          <h2 class="mc-empty__title">Can't filter by this category</h2>
+          <p class="mc-empty__text">“outreach” isn't a lead category. Choose Create, Communication, City, Prayer, or Event, or clear the filter to see all leads.</p>
+          <div class="mc-empty__actions">
+            <button class="mc-button" type="button" data-goto-state="default">Clear filter</button>
+          </div>
+        </div>
+
         <!-- Empty directory -->
         <div class="mc-empty" data-when="empty-admin empty-collaborator" hidden>
           <span class="mc-empty__icon"><span class="mc-icon mc-icon--users mc-icon--lg" aria-hidden="true"></span></span>
@@ -688,7 +853,7 @@
         <div class="mc-empty mc-empty--error" role="alert" data-when="error" hidden>
           <span class="mc-empty__icon"><span class="mc-icon mc-icon--alert-circle mc-icon--lg" aria-hidden="true"></span></span>
           <h2 class="mc-empty__title">We couldn't load leads</h2>
-          <p class="mc-empty__text">Check your connection and try again. If it keeps happening, share the reference ID with your administrator.</p>
+          <p class="mc-empty__text">Try again. If it keeps happening, share the reference ID with your administrator.</p>
           <p class="mc-ref">Reference ID <code>7d41-a2c9-0be3</code>
             <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="7d41-a2c9-0be3"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
           </p>
@@ -702,15 +867,18 @@
     </main>
   </div>
 
-  <div class="mc-toast-region" role="status" aria-live="polite">
-    <div class="mc-toast mc-toast--success" data-when="deleted" hidden>
-      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
-      <div class="mc-toast__body">
-        <p class="mc-toast__title">Lead deleted</p>
-        <p class="mc-toast__text">Hana Kim was removed. No accounts or project work changed.</p>
+  <div class="mc-toast-region">
+    <div class="mc-toast-live" role="status" aria-live="polite">
+      <div class="mc-toast mc-toast--success" data-when="deleted" hidden>
+        <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+        <div class="mc-toast__body">
+          <p class="mc-toast__title">Lead deleted</p>
+          <p class="mc-toast__text">Hana Kim was removed. No accounts or project work changed.</p>
+        </div>
+        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
       </div>
-      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
     </div>
+    <div class="mc-toast-live" role="alert"></div>
   </div>
 </body>
 </html>

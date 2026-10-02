@@ -12,48 +12,55 @@ This design refines the [L2 baseline](../../../specs/L2.md) and its linked L1 sc
 
 ## Description
 
-All named production types are proposed; the repository currently contains requirements and static mocks.
+The [shared design rules](../../README.md#shared-design-rules) apply: proposed type status, Application placement and MediatR `12.5.0`, authentication and validation V, responsive profile R and accessibility, token styling, data ownership and session handling, and incremental ATDD. This page records feature-specific behavior and exceptions only.
 
 | Part | Responsibility and architectural home |
 | --- | --- |
-| `LeadDirectoryPage` | Routed page or dialog owned by `frontend/projects/mission-control`; composes the domain library and presentational components. |
-| `LeadDetailPage` | Routed page for `/leads/:id` in `frontend/projects/mission-control`; composes `LeadView` and owns the not-found and load-error states. |
-| `LeadView` | Domain component in `frontend/projects/domain`; injects `LEAD_SERVICE` and holds feature state in signals. |
-| `ILeadService`, `LEAD_SERVICE` | Interface and token in `frontend/projects/api/lead.service.contract.ts`; the consumer imports the contract only. |
-| `LeadService` | Production HTTP adapter in `api`; owns HTTP calls and observable-to-signal conversion. Composition binds a mock adapter for Chromium Playwright. |
-| `LeadsController` | Thin controller under `backend/src/MissionControl.Api/Controllers`, namespace `MissionControl.Api.Controllers`; binds, dispatches, and returns. |
-| `LeadContact` | Domain entity or Application read projection described below; Domain has no external project dependency. |
-| `IMissionControlDataSession` | Application data port; the Infrastructure adapter runs parameterized queries and transaction commits. |
-
-Commands, queries, handlers, and request validators live in Application feature folders. Each type has its own file; folders and namespaces agree.
-MediatR remains pinned to `12.5.0`. Microsoft.Extensions supplies dependency injection, Options, and Configuration.
+| `LeadDirectoryPage` | Routed page for `/leads` in `frontend/projects/mission-control`; keeps search, category, and page in the route query, reads `currentSession` through `SESSION_SERVICE`, computes `canManageLeads` from the `leads.manage` capability, passes the filters, that flag, and its own `refresh` counter to `LeadDirectoryView`, and opens `LeadFormDialog` and `LeadDeleteDialog` from the view's `createRequested`, `editRequested`, and `deleteRequested` outputs; [Create and edit lead contacts](../maintain-contacts/README.md) and [Delete an unreferenced lead contact](../delete-contact/README.md) define its reaction to each close result. |
+| `LeadDetailPage` | Routed page for `/leads/:id` in `frontend/projects/mission-control`; reads `currentSession` through `SESSION_SERVICE`, composes `LeadDetailView` with `canManageLeads` (`leads.manage`) and its own `refresh` counter, and opens `LeadFormDialog` and `LeadDeleteDialog` from the view's `editRequested` and `deleteRequested` outputs, reacting to their close results as those pages define. |
+| `LeadDirectoryView` | Domain component in `frontend/projects/domain`; injects `LEAD_SERVICE`, owns a `leadsResource` driven by its debounced query signal, and renders rows, chips, paging, and the directory states. Its `canManageLeads` input shows Add lead and each row's Edit and Delete, or hides them and renders the reason: only administrators can add, edit, or delete leads. |
+| `LeadDetailView` | Domain component in `frontend/projects/domain`; injects `LEAD_SERVICE`, owns a `leadResource` for the routed lead, and renders the details, not-found, and load-error states. Its `canManageLeads` input shows Edit and Delete, or hides them and renders the same reason. |
+| `ILeadService`, `LEAD_SERVICE` | Contract and token in `frontend/projects/api/lead.service.contract.ts`; the read members `leadsResource(query)` and `leadResource(query)` return caller-owned `ResourceRef<LeadDirectoryResult>` and `ResourceRef<LeadDetailResult>`. Consumers import the contract only. |
+| `LeadService` | Production HTTP adapter in `api`; creates each resource in the consumer's injection context, converts observables to signals or promises, aborts a superseded read when the query signal changes, and cancels reads on consumer destroy; no shared mutable state. |
+| `LeadsController` | Thin controller under `backend/src/MissionControl.Api/Controllers`, namespace `MissionControl.Api.Controllers`. |
+| `LeadContact` | Domain entity read through the projections below. |
+| `IMissionControlDataSession` | Shared Application data port defined in the [overview](../../README.md#data-access-and-security-ports); this slice uses only its typed read queries. |
 
 `GET /api/leads` applies trimmed case-insensitive substring search to first name, last name, combined full name, email, and phone.
 Category and search combine with AND before counting or paging. Literal wildcard characters are escaped for SQL substring matching; parameters remain data.
 The stable order is last name, first name, then ID. Pages default to 25 and cap at 100; invalid sizes return `400`.
-`ListLeadsQuery` results carry the page, the total matching count, and five zero-filled `categoryTotals` over all persisted leads.
+An unknown category or a page below 1 in the route query returns the same `400` with a field message, for example from an outdated or edited link.
+`LeadDirectoryView` then shows `filter-invalid`: the message with Clear filter, which opens the full directory at page 1, and no Try again or reference ID, because nothing failed on the server.
+That state shows no rows, paging, or chip counts, since the response carried none.
+`ListLeadsQuery` results carry the page, the total matching count, and five zero-filled `categoryTotals` over all persisted leads, each a `CategoryCount` (category and count), the type home coverage also uses.
 Search and category never change `categoryTotals`, so category chip counts stay stable while filtering. Loading and error states show no counts.
-Search/filter state uses route query parameters so home category links preserve context. Every change resets page one.
-The adapter ignores older search responses after a newer search begins.
+`ListLeadsQueryHandler` reads the page rows, total matching count, and category totals in one snapshot-isolation read transaction, so the three agree.
+The provider-specific isolation setting is chosen at the SQL gate. Rows carry only directory columns; no per-row query runs.
+
+Search/filter state uses route query parameters so home category links preserve context: home's Prayer card opens `/leads?category=prayer` with the Prayer chip pressed and only Prayer leads, whose total matches home's Prayer count (`category` mock state). A search or category change resets page one.
+Browser Back or Forward between two directory queries changes only the route query, so `LeadDirectoryPage` stays active and runs no `canDeactivate`: an open lead dialog stays open with its draft while the view reads the restored query.
+`LeadDirectoryView` emits `filtersChanged` as the person types or chooses, and `LeadDirectoryPage` writes the route query, which returns as the view's `filters` input.
+The view's query signal applies the shared search rule: typed search reaches it once the text has been stable for about `250` ms, while category, page, and Clear filter change it at once.
+`leadsResource` reads each new query, and `LeadService` aborts the superseded HTTP request inside the adapter, so a late response never replaces newer rows.
+After a committed create, edit, or delete, `LeadDirectoryPage` increments the view's `refresh` input, and the view reloads its resource.
 A loaded result is announced in the status region, including zero results such as "No Event leads found". Zero results offer Clear filter.
 
-`LeadDetailPage` owns `/leads/:id` and displays saved values, explicit Not provided phone text, and City Lead identity.
-`GetLeadQuery` also returns `responsibleWorkspaces` (ID, name, and mode) for the Responsible for card. An empty list reads as no project responsibility.
-A nonexistent or malformed lead ID returns `404`; the page shows "Lead not found" with Back to leads.
+`LeadDetailPage` owns `/leads/:id`; `LeadDetailView` reads the lead through `leadResource` and displays saved values, explicit Not provided phone text, and City Lead identity.
+After a committed edit the page increments the view's `refresh` input, and the view reloads its resource.
+`GetLeadQuery` also returns `responsibleWorkspaceCount` and `responsibleWorkspaces`: at most 10 workspaces (ID, name, mode) naming the lead responsible, ordered by name then ID.
+The lead row, the count, and that preview come from one snapshot read, so the card never contradicts itself.
+The Responsible for card shows the count and the preview. Whenever the count is at least 1, the card adds a "View all projects led by" link naming the lead (`lead`, `lead-rafael`, and `lead-lucia` mock states).
+That link opens `/projects?responsibleLeadId={leadId}`, the project list filtered through `ListWorkspacesQuery.responsibleLeadId`, so every responsible workspace stays reachable.
+A zero count reads as no project responsibility and shows no link.
+A nonexistent lead ID returns `404`, and so does a malformed one, which matches no API route under the `{id:guid}` route constraint; malformed identifiers in a query string or request body return `400` instead.
+On a `404` the resource reports the error and the view shows "Lead not found" with Back to leads.
+Other read failures show the load-error state with Try again, which calls `reload()`; a `500` adds its reference ID, and a read that gets no response shows none while the shell's offline banner appears.
 A contact is labeled City Lead when its category is City and its normalized email equals the configured designated email (`InitializationOptions`); the unique email/category index guarantees at most one.
 Read projections expose `isCityLead`; the label never reflects any account's role. It uses the City category styling, not a role or permission badge.
 Email/phone links open local `mailto:` / `tel:` clients; Mission Control sends no messages.
+Links to other routes, such as a lead's details, a responsible project, View all projects led by, and Back to leads, are router links the views render from IDs in their results. Actions that open a dialog and filter or page changes leave a view through outputs, which its page maps to the dialog or the route query.
 Below `768px` directory rows become labeled cards. Initial loading skeletons differ from empty data, zero results, and request errors.
-Collaborators retain read access while contact mutation controls remain unavailable with a readable explanation.
-
-The authenticated API evaluates current SQL permissions before feature dispatch. Validation V maps invalid fields to `400`, absent authentication to `401`, forbidden access to `403`, missing records to `404`, and conflicts to `409`.
-Unexpected errors return a generic `500` with a correlation ID. Structured diagnostics exclude secrets and contact payloads.
-
-Responsive profile R covers `320`, `375`, `576`, `768`, `992`, `1200`, and `1920` CSS-pixel widths at `800` pixels high.
-Forms stack on compact screens; dialogs become sheets below `576px`. Templates, styles, and classes remain separate files.
-Component styles read `var(--mc-<role>)` from the mirrored authoritative design-system tokens.
-Keyboard actions include visible focus, named controls, modal focus containment, trigger focus restoration, and destination-heading focus after navigation.
-Field errors connect to inputs; asynchronous results use status or alert announcements. Status text supplements color; primary touch targets measure at least `44×44` CSS pixels.
+Collaborators retain read access. Without `leads.manage` the pages pass `canManageLeads` as false, so contact mutation controls are absent and the views explain why; the API still answers `403`.
 
 | Behavior | Proposed boundary | Request / handler |
 | --- | --- | --- |
@@ -62,12 +69,9 @@ Field errors connect to inputs; asynchronous results use status or alert announc
 
 Mock input and review references:
 
-- [Lead directory · Mission Control mock](../../../mocks/leads/lead-directory.html); review states: `default`, `collaborator`, `filtered`, `zero-results`, `page-2`, `deleted`, `empty-admin`, `empty-collaborator`, `loading`, `error`.
-- [Lead details · Mission Control mock](../../../mocks/leads/lead-detail.html); review states: `default`, `lead`, `saved`, `collaborator`, `not-found`, `loading`, `error`.
-
-Implementation proceeds one behavior at a time using the linked Given-When-Then criteria. An API integration acceptance check first fails for the expected missing behavior.
-A Chromium Playwright check uses one page object per screen and a mock service bound through the same token. Tests express intent; page objects own selectors.
-The smallest implementation turns those checks green before the next behavior begins. Relevant regression checks follow each slice; no architecture tests are introduced.
+- [Lead directory · Mission Control mock](../../../mocks/leads/lead-directory.html); review states: `default`, `collaborator`, `category`, `filtered`, `zero-results`, `page-2`, `filter-invalid`, `deleted`, `empty-admin`, `empty-collaborator`, `loading`, `error`.
+- [Lead details · Mission Control mock](../../../mocks/leads/lead-detail.html); review states: `default`, `lead`, `lead-rafael`, `lead-lucia`, `saved`, `collaborator`, `not-found`, `loading`, `error`.
+- [Projects · Mission Control mock](../../../mocks/projects/project-list.html); review states: `default`, `collaborator`, `many`, `by-lead`, `by-lead-rafael`, `by-lead-lucia`, `lead-filter-invalid`, `empty-admin`, `empty-collaborator`, `loading`, `error`.
 
 ## Requirements
 
@@ -75,11 +79,14 @@ Requirement text and identifiers below are copied verbatim from L2, including th
 
 | L2 ID | Refines (L1) | Requirement |
 | --- | --- | --- |
+| `L2-005` | `L1-001` | The API and UI must apply permission profile P. Lead category or contact creation must not create a login or change a user's authorization. |
 | `L2-010` | `L1-003` | The directory must show names, category, email, and phone with a readable empty phone value and link to lead details. Search must use a trimmed, case-insensitive substring of first name, last name, combined full name, email, or phone; category filter and search must combine using AND. Default ordering is last name, first name, then stable ID. Pagination follows L2-045. |
 | `L2-013` | `L1-003` | Initial seeding must create a separate City contact for Quinntyne Brown at the designated email with no phone supplied. Existing matching City contacts must not be duplicated or have later contact edits reset by startup. |
+| `L2-029` | `L1-007` | Primary navigation must reach Home, Leads, and Projects, with account management visible only to administrators. Work details must expose their workspace and parent path. Direct routes must enforce authentication and handle missing records. |
 | `L2-030` | `L1-008` | Every login/session, account-management, lead CRUD, workspace, hierarchy, backlog, board, sprint, home, and navigation workflow must satisfy responsive profile R. Compact layouts must stack form fields and summary cards and provide local board scrolling or a column selector. Larger layouts must use available space without overlapping controls. Vertical page scrolling is permitted. |
 | `L2-032` | `L1-008` | Production views must use the application design tokens and consistent typography, spacing, focus, form, and status patterns. Loading, empty data, zero search results, and request errors must be distinguishable and offer relevant actions. Visual review is for application UX; design artifacts themselves remain exempt from automated tests. |
 | `L2-034` | `L1-009` | Application controls must expose programmatic names and roles. Inputs must have associated labels; field errors must identify their inputs. Pages must expose main/navigation regions and a coherent heading hierarchy. Asynchronous outcomes must be announced without relying only on visual changes. |
+| `L2-037` | `L1-010` | The backend must independently enforce validation V, permission profile P, and record relationship rules. Data access must treat user text as data, and Angular must render user text without executing markup or scripts. CORS must permit only configured frontend origins. Public registration must not be exposed. |
 | `L2-045` | `L1-013` | Directories, workspace lists, backlogs, and history lists must default to 25 records per page and cap requested page size at 100. Invalid sizes must return 400. Results must include total matching count and stable ordering. Boards/hierarchies must load bounded batches of at most 100 and allow access to every matching item; counts must reflect the full dataset rather than just loaded records. |
 
 ## Diagrams

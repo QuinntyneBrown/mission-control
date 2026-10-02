@@ -1,0 +1,99 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam maxMessageSize 300
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Behavior - Search active assignee choices
+actor "Administrator or Collaborator" as actor
+box "Frontend - Mission Control application" #E0F2FE
+  participant "WorkItemFormDialog / WorkItemForm" as page
+  participant "IAssigneeService / AssigneeService" as client
+  participant "IWorkItemService / WorkItemService" as items
+end box
+box "Backend - MissionControl.Api" #D1FADF
+  participant "CurrentAccountAuthorization" as access
+  participant "AssigneeChoicesController" as ctrl
+  participant "WorkItemsController" as wctrl
+end box
+box "Backend - MissionControl.Application and Domain" #ECFDF3
+  participant "ValidationBehavior" as validation
+  participant "ListAssigneeChoicesQueryHandler" as handler
+  participant "UpdateWorkItemCommandHandler / CreateWorkItemCommandHandler" as save
+end box
+box "Backend - MissionControl.Infrastructure" #FFF4E5
+  database "Mission Control SQL" as db
+end box
+actor -> page : Type "ma" in the Assignee combobox
+page -> page : Debounce searchText about 250 ms into assigneeQuery { workspaceId, search "ma", page 1, pageSize 25 }; the rest of the draft is untouched
+page -> client : The form's assigneeChoicesResource sees the new query
+opt An older search is still in flight
+  client -> client : Abort the superseded request inside api, so it never updates the form
+end
+client -> access : GET /api/workspaces/{workspaceId}/assignee-choices?search=ma&page=1&pageSize=25
+access -> access : L2-002 validate signature, issuer, audience, subject, expiry
+access -> db : Read current status, role and credential version
+db --> access : Current account access
+alt Missing, invalid or expired JWT; deactivated account
+  access --> client : 401
+  client --> page : sessionInterceptor calls SessionService.end(Unauthorized) once for this generation; the resource read is cancelled; sign in returns to the item
+else Authenticated active Administrator or Collaborator (L2-005, profile P)
+  access -> ctrl : Forward; no account-management permission is needed and /api/accounts stays administrator-only
+  ctrl -> validation : Send ListAssigneeChoicesQuery through MediatR 12.5.0
+  validation -> validation : L2-045 page 1 or more; page size 1-100, default 25; search trimmed, at most 200 characters
+  alt Invalid page or page size, or search longer than 200 characters
+    validation --> ctrl : 400 field errors; nothing read
+    ctrl --> client : Validation ProblemDetails (search field)
+    client --> page : Resource status error carrying the field message
+    page --> actor : The field message under the combobox, for example "Search with 200 characters or fewer"; no Retry and no reference ID, because the same search would be refused again; draft and current choice kept
+  else Valid request
+    validation -> handler : Handle ListAssigneeChoicesQuery
+    handler -> db : ListActiveAssigneeChoicesAsync: active accounts whose display name contains the search, case-insensitive; order by display name, then ID; one page and the total count in one statement
+    db --> handler : Account IDs and display names; total matching count
+    alt Workspace not found
+      handler --> ctrl : 404
+      ctrl --> client : ProblemDetails (not found)
+      client --> page : WorkItemForm emits notFound; the dialog closes with NotFound, and the page calls the layout's refresh(), so the header and the view show the project's not-found presentation with Back to projects
+    else Rows read
+      handler --> ctrl : AssigneeChoicePage (items, total count, page, page size); no email, role, or status
+      ctrl --> client : 200
+      client --> page : Resource value resolves; only this form's assignee choices change
+      alt One or more matches
+        page --> actor : Options Mateo Silva and Priya Raman; announce "2 people found" (assignee-search state)
+      else Zero matches; inactive people are never returned
+        page --> actor : "No active people match", announced politely; current choice unchanged (assignee-no-match state)
+      end
+    end
+  end
+end
+opt Lookup fails unexpectedly (500 or 503 with correlation ID, or no response)
+  client --> page : Resource status error
+  page --> actor : Field-level "We couldn't search people" with Retry, which calls reload(), and the reference ID only when the server answered; current choice and draft kept; Save stays available (assignee-failed state)
+end
+actor -> page : Pick a person, then save
+note over actor, page : An administrator deactivates the chosen person before the save arrives
+page -> items : update(UpdateWorkItemCommand) or create(CreateWorkItemCommand) with assigneeId
+items -> wctrl : PUT or POST work item; authorization and validation as in the edit and create sequences
+wctrl -> save : Handle the command
+save -> db : BeginWorkspaceTransactionAsync takes the workspace lock first; LoadAccountStatusAsync(assigneeId)
+db --> save : Account inactive
+save --> wctrl : 400 assignee field error; nothing changed (L2-016.2)
+wctrl --> items : Validation ProblemDetails (assignee field)
+items --> page : Reject the save
+page --> actor : Focus moves to the assignee field, which reads its error; no Retry or reference ID; every other value kept; a new search offers active people only (rejected state)
+note over ctrl, db
+Search is a read: it is debounced and superseded reads are cancelled. Saves are never debounced or retried automatically.
+An unchanged inactive assignee is not revalidated; only a new or changed choice must be active.
+Unexpected failures return generic 500 plus correlation ID (L2-043).
+end note
+@enduml

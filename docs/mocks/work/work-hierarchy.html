@@ -23,6 +23,7 @@
         <select data-mock-state>
           <option value="default">Administrator</option>
           <option value="move-menu">Row menu open</option>
+          <option value="move-failed">Move didn't save</option>
           <option value="collaborator">Collaborator</option>
           <option value="empty">Empty project</option>
           <option value="large">Large set (bounded batches)</option>
@@ -36,14 +37,15 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">Initiative → Epic → Story → Task as an outline. Each toggle reports its expanded state. Move up and Move down change sibling order only and are announced, for example "Book AV for demo day moved to position 2 of 6". Below 768px they move into the row menu. The mock draws a representative part of the project, not all 24 stories and 55 tasks. The project header and tabs stay pinned while the tab content scrolls; on phones only the tabs stay pinned.</p>
+    <p class="mock-note" data-when="default">Initiative → Epic → Story → Task as an outline. Each toggle reports its expanded state. Move up and Move down change sibling order only and are announced, for example "Book AV for demo day moved to position 2 of 6". Below 768px they move into the row menu. At either end of the siblings, Move up or Move down stays focusable and is marked unavailable (aria-disabled), so focus stays put when a move reaches the end. The mock draws a representative part of the project, not all 24 stories and 55 tasks. The project header and tabs stay pinned while the tab content scrolls; on phones only the tabs stay pinned.</p>
     <p class="mock-note" data-when="move-menu" hidden>The row menu holds every action, so nothing depends on hover or dragging. Below 768px it also holds Move up and Move down, marked unavailable at either end of the siblings. Move to position… covers reorders that cross pages. Delete appears only for administrators and opens a confirmation that names the item.</p>
-    <p class="mock-note" data-when="collaborator" hidden>Collaborators can add, edit, move, and reorder work. Delete is shown disabled with the reason; the API still refuses it.</p>
-    <p class="mock-note" data-when="empty" hidden>Youth Coding Night is a new Scrum project with no work yet. Both roles can add the first initiative. With no work and no sprint history, the project can still be deleted.</p>
-    <p class="mock-note" data-when="large" hidden>Shown with a larger dataset. Children load in bounded batches of up to 100; counts always come from the full data. Loading more keeps focus on the button and announces "100 more stories loaded".</p>
-    <p class="mock-note" data-when="batch-error" hidden>The failed batch leaves loaded items in place and offers Retry with a reference ID.</p>
+    <p class="mock-note" data-when="move-failed" hidden>Move up on “Book AV for demo day” didn't save: the API answered 500, or 503 because the project was busy, and nothing changed. The row stays where it was saved (6 of 6), the alert is announced with the reference ID, and focus stays on the Move up button. Try again resends the same move; nothing retries automatically. A move the API refuses (400, for example a position outside the siblings) keeps the saved order the same way, but this alert shows the server's reason with Reload order instead of Try again, and no reference ID, because sending it again would be refused again. A stale sibling order (409) uses this same presentation with the title “The order changed” and Reload order instead of Try again: nothing is resent, the move controls stay enabled, so the alert is announced without moving focus, and Reload order reloads the branch's loaded window and returns focus to the story's row. A move that gets no response may have saved, so the branch rereads its loaded window and this alert reads “We couldn't confirm whether Book AV for demo day moved” and says where the reread found it (for example “Book AV for demo day is 2 of 6 now.”), never that the order didn't change; the row shows no “didn't save” message, and there is no reference ID or Try again, because the reread shows the saved order. If the story was deleted meanwhile, the API answers 404 instead: nothing moves, the branch reloads without it, and the announcement says it no longer exists; its Move up button went with it, so focus moves to the branch's parent row, here Venue and logistics (for an initiative, to the Work heading). Reordering needs only an active session, so a 403 is unexpected: the row returns to its saved place without this alert, and the page shows the "Your access changed" toast, without Retry or a reference ID.</p>
+    <p class="mock-note" data-when="collaborator" hidden>Collaborators can add, edit, move, and reorder work. The project header shows the same notice on every project tab, and Project actions is absent. Delete in each row menu is shown disabled with the reason; the API still refuses it.</p>
+    <p class="mock-note" data-when="empty" hidden>Youth Coding Night is a new Scrum project with no work yet. Both roles can add the first initiative. With no work and no sprint history, the project can still be deleted. Its tabs and project actions open Youth Coding Night's own states: no sprints on the board and the Sprints tab, and a switch to Kanban with nothing to move.</p>
+    <p class="mock-note" data-when="large" hidden>Shown with a larger dataset. Children load in batches of 25, and the API never returns more than 100 at a time; counts always come from the full data, never from the rows on screen. Load 25 more keeps focus on the button and announces "25 more stories loaded". When the last batch loads, the button goes away, so focus moves to the first newly loaded story. Collapsing a branch releases its loaded children and keeps focus on its toggle; expanding it again loads the first batch afresh.</p>
+    <p class="mock-note" data-when="batch-error" hidden>Load 25 more failed (500, 503, or no response). The loaded stories stay in place, and the alert replaces the Load 25 more button, so focus moves to its Retry. The reference ID appears only when the server answered and matches its diagnostic record; with no response there is none. Retry asks for the same batch again.</p>
     <p class="mock-note" data-when="loading" hidden>A skeleton outline holds the layout while work loads. Screen readers hear "Loading work".</p>
-    <p class="mock-note" data-when="error" hidden>The outline couldn't load, so no stale work is shown. The reference ID matches the server's diagnostic record; Try again reloads the outline.</p>
+    <p class="mock-note" data-when="error" hidden>The outline couldn't load (a 500, a busy 503, or no response), so no stale work is shown. Try again reloads the outline, and the project header rereads with it in case it failed too. The reference ID appears only when the server answered and matches its diagnostic record; with no response there is none. A project that no longer exists, from a stale link or deleted after the outline opened (a 404 on expanding a branch, Load more, a reload, or the reread after a move), is not a load failure: the header keeps only the breadcrumb and the outline shows "Project not found" with Back to projects and no Try again or reference ID, the same presentation as the <a href="../projects/project-overview.html#state=not-found">project overview's Not found state</a>.</p>
   </div>
 
   <div class="mc-app">
@@ -126,7 +128,7 @@
               <h1 class="mc-page-header__title" tabindex="-1"><span data-unless="empty">Community Hackathon 2026</span><span data-when="empty" hidden>Youth Coding Night</span></h1>
               <div class="mc-page-header__meta">
                 <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
-                <span data-unless="empty">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Rafael Da Silva</a></span>
+                <span data-unless="empty">Responsible lead: <a href="../leads/lead-detail.html#state=lead-rafael">Rafael Da Silva</a></span>
                 <span data-when="empty" hidden>Responsible lead: <span class="mc-unset">Not set</span></span>
               </div>
             </div>
@@ -140,7 +142,7 @@
                 </button>
                 <div class="mc-menu" id="project-actions">
                   <button class="mc-menu__item" type="button" data-nav="../projects/project-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit project</button>
-                  <button class="mc-menu__item" type="button" data-nav="../projects/mode-change-dialog.html#state=blocked" data-attr-empty="data-nav=../projects/mode-change-dialog.html#state=to-kanban"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
+                  <button class="mc-menu__item" type="button" data-nav="../projects/mode-change-dialog.html#state=blocked" data-attr-empty="data-nav=../projects/mode-change-dialog.html#state=to-kanban-empty"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
                   <div class="mc-menu__separator"></div>
                   <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="../projects/project-delete-dialog.html#state=blocked" data-attr-empty="data-nav=../projects/project-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
                 </div>
@@ -152,26 +154,42 @@
               <li><a class="mc-tabs__link" href="../projects/project-overview.html" data-attr-empty="href=../projects/project-overview.html#state=new-empty"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</a></li>
               <li><a class="mc-tabs__link" href="work-hierarchy.html" aria-current="page" data-attr-empty="href=work-hierarchy.html#state=empty"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</a></li>
               <li><a class="mc-tabs__link" href="../backlog/backlog.html" data-attr-empty="href=../backlog/backlog.html#state=empty"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</a></li>
-              <li><a class="mc-tabs__link" href="../scrum/sprint-board.html" data-attr-empty="href=../scrum/sprint-board.html#state=no-active"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</a></li>
-              <li><a class="mc-tabs__link" href="../scrum/sprints.html" data-attr-empty="href=../scrum/sprints.html#state=no-sprints"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</a></li>
+              <li><a class="mc-tabs__link" href="../scrum/sprint-board.html" data-attr-empty="href=../scrum/sprint-board.html#state=no-sprints"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</a></li>
+              <li><a class="mc-tabs__link" href="../scrum/sprints.html" data-attr-empty="href=../scrum/sprints.html#state=empty"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</a></li>
             </ul>
           </nav>
+        </div>
+
+        <div class="mc-alert mc-alert--neutral mc-alert--page mock-collaborator-only">
+          <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
+          <div class="mc-alert__body">
+            <p class="mc-alert__text">Only administrators can change project settings. You can add and update work, move cards, and run sprints.</p>
+          </div>
         </div>
 
         <div class="mc-live" role="status" aria-live="polite">
           <p class="mc-visually-hidden" data-when="loading" hidden>Loading work</p>
         </div>
 
-        <div class="mc-alert mc-alert--neutral mc-alert--page mock-collaborator-only">
-          <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
-          <div class="mc-alert__body">
-            <p class="mc-alert__text">You can add, edit, and reorder work. Only administrators can delete it.</p>
+        <div class="mc-live" role="alert">
+          <div class="mc-alert mc-alert--danger mc-alert--page" data-when="move-failed" hidden>
+            <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">Couldn't move “Book AV for demo day”</p>
+              <p class="mc-alert__text">The order under Venue and logistics didn't change. Book AV for demo day is still 6 of 6.</p>
+              <p class="mc-ref">Reference ID <code>3e7d-a512-c06b</code>
+                <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="3e7d-a512-c06b"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+              </p>
+              <div class="mc-alert__actions">
+                <button class="mc-button mc-button--sm" type="button" data-goto-state="default"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again</button>
+              </div>
+            </div>
           </div>
         </div>
 
         <section aria-labelledby="work-heading" data-unless="empty loading error">
           <div class="mc-section__header">
-            <h2 class="mc-section__title" id="work-heading">Work</h2>
+            <h2 class="mc-section__title" id="work-heading" tabindex="-1">Work</h2>
             <a class="mc-link mc-text-sm" href="work-list.html">View as a filtered list</a>
           </div>
           <div class="mc-card mc-tree-card">
@@ -185,7 +203,7 @@
                 <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Initiative</span><span>HCK-101</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">QB</span>Quinntyne Brown</span><span>2 epics</span></div>
               </div>
               <div class="mc-tree__actions">
-                <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Grow Toronto's builder community” up" disabled><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Grow Toronto's builder community” up" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
                 <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Grow Toronto's builder community” down"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
                 <div class="mc-menu-anchor">
                   <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-101" aria-expanded="false" aria-label="Actions for Grow Toronto's builder community"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
@@ -213,7 +231,7 @@
                     <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Epic</span><span>HCK-104</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span><span><span data-unless="large batch-error">14 stories</span><span data-when="large batch-error" hidden>340 stories</span></span></div>
                   </div>
                   <div class="mc-tree__actions">
-                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Hackathon team formation” up" disabled><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Hackathon team formation” up" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
                     <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Hackathon team formation” down"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-104" aria-expanded="false" aria-label="Actions for Hackathon team formation"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
@@ -242,7 +260,7 @@
                         <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Story</span><span>HCK-112</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span><span>5 tasks · 2 done</span><span><span class="mc-icon mc-icon--sprint mc-icon--sm" aria-hidden="true"></span> Sprint 8</span></div>
                       </div>
                       <div class="mc-tree__actions">
-                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Volunteers can join a build team” up" disabled><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Volunteers can join a build team” up" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
                         <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Volunteers can join a build team” down"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
                         <div class="mc-menu-anchor">
                           <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-112" aria-expanded="false" aria-label="Actions for Volunteers can join a build team"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
@@ -271,7 +289,7 @@
                             <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Task</span><span>HCK-113</span><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span></div>
                           </div>
                           <div class="mc-tree__actions">
-                            <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Design the team sign-up form” up" disabled><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                            <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Design the team sign-up form” up" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
                             <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Design the team sign-up form” down"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
                             <div class="mc-menu-anchor">
                               <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-113" aria-expanded="false" aria-label="Actions for Design the team sign-up form"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
@@ -384,7 +402,7 @@
                           </div>
                           <div class="mc-tree__actions">
                             <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Publish team list for mentors” up"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
-                            <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Publish team list for mentors” down" disabled><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                            <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Publish team list for mentors” down" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
                             <div class="mc-menu-anchor">
                               <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-117" aria-expanded="false" aria-label="Actions for Publish team list for mentors"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                               <div class="mc-menu" id="menu-hck-117">
@@ -455,7 +473,7 @@
                               <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span>Move down</button>
                               <button class="mc-menu__item" type="button" data-nav="move-position-dialog.html"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                               <div class="mc-menu__separator"></div>
-                              <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=has-children"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
+                              <button class="mc-menu__item mc-menu__item--danger mock-admin-only" type="button" data-nav="work-item-delete-dialog.html#state=in-sprint-done"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete</button>
                               <span class="mc-menu__item mock-collaborator-only" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Delete<span class="mc-menu__hint">Only administrators can delete work</span></span></span>
                           </div>
                         </div>
@@ -472,7 +490,7 @@
                       </div>
                       <div class="mc-tree__actions">
                         <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Mentor matching survey” up"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
-                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Mentor matching survey” down" disabled><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Mentor matching survey” down" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
                         <div class="mc-menu-anchor">
                           <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-110" aria-expanded="false" aria-label="Actions for Mentor matching survey"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                           <div class="mc-menu" id="menu-hck-110">
@@ -493,8 +511,8 @@
                   </li>
                   <li data-when="large" hidden>
                     <div class="mc-tree__more mc-cluster">
-                      <span class="mc-text-sm mc-muted">Showing 100 of 340 stories</span>
-                      <button class="mc-button mc-button--sm" type="button" data-goto-state="batch-error"><span class="mc-icon mc-icon--chevron-down" aria-hidden="true"></span>Load 100 more</button>
+                      <span class="mc-text-sm mc-muted">Showing 25 of 340 stories</span>
+                      <button class="mc-button mc-button--sm" type="button" data-goto-state="batch-error"><span class="mc-icon mc-icon--chevron-down" aria-hidden="true"></span>Load 25 more</button>
                     </div>
                   </li>
                   <li data-when="batch-error" hidden>
@@ -503,7 +521,7 @@
                         <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
                         <div class="mc-alert__body">
                           <p class="mc-alert__title">Couldn't load more stories</p>
-                          <p class="mc-alert__text">The 100 stories already shown are still here. Showing 100 of 340.</p>
+                          <p class="mc-alert__text">The 25 stories already shown are still here. Showing 25 of 340.</p>
                           <p class="mc-ref">Reference ID <code>e81c-3a07-d95b</code>
               <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="e81c-3a07-d95b"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
             </p>
@@ -519,16 +537,16 @@
                   <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-tree__toggle" type="button" aria-expanded="true" aria-label="Children of Venue and logistics"><span class="mc-icon mc-icon--chevron-right" aria-hidden="true"></span></button>
                   <span class="mc-type mc-type--epic" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--epic" aria-hidden="true"></span></span><span class="mc-type__label">Epic</span></span>
                   <div class="mc-tree__main">
-                    <a class="mc-tree__title" href="work-item-detail.html#state=epic"><span class="mc-visually-hidden">Epic: </span>Venue and logistics</a>
+                    <a class="mc-tree__title" href="work-hierarchy.html"><span class="mc-visually-hidden">Epic: </span>Venue and logistics</a>
                     <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Epic</span><span>HCK-105</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span><span>6 stories</span></div>
                   </div>
                   <div class="mc-tree__actions">
                     <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Venue and logistics” up"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
-                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Venue and logistics” down" disabled><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Venue and logistics” down" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-105" aria-expanded="false" aria-label="Actions for Venue and logistics"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="menu-hck-105">
-                          <a class="mc-menu__item" href="work-item-detail.html#state=epic"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                          <a class="mc-menu__item" href="work-hierarchy.html"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
                           <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                           <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-story"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add story</button>
                           <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
@@ -552,7 +570,7 @@
                         <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Story</span><span>HCK-120</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-unset">Unassigned</span><span>No tasks</span><span>Not in a sprint</span></div>
                       </div>
                       <div class="mc-tree__actions">
-                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Confirm venue accessibility checklist” up" disabled><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Confirm venue accessibility checklist” up" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
                         <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Confirm venue accessibility checklist” down"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
                         <div class="mc-menu-anchor">
                           <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-120" aria-expanded="false" aria-label="Actions for Confirm venue accessibility checklist"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
@@ -608,10 +626,11 @@
                       <div class="mc-tree__main">
                         <a class="mc-tree__title" href="work-item-detail.html"><span class="mc-visually-hidden">Story: </span>Book AV for demo day</a>
                         <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Story</span><span>HCK-121</span><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">MS</span>Mateo Silva</span><span>2 tasks · 1 done</span><span><span class="mc-icon mc-icon--sprint mc-icon--sm" aria-hidden="true"></span> Sprint 8</span></div>
+                        <p class="mc-field-error" data-when="move-failed" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Move didn't save. Still 6 of 6.</p>
                       </div>
                       <div class="mc-tree__actions">
                         <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Book AV for demo day” up"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
-                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Book AV for demo day” down" disabled><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Book AV for demo day” down" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
                         <div class="mc-menu-anchor">
                           <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-121" aria-expanded="false" aria-label="Actions for Book AV for demo day" data-open-when="move-menu"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                           <div class="mc-menu" id="menu-hck-121">
@@ -639,16 +658,16 @@
               <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-tree__toggle" type="button" aria-expanded="true" aria-label="Children of Demo day showcase"><span class="mc-icon mc-icon--chevron-right" aria-hidden="true"></span></button>
               <span class="mc-type mc-type--initiative" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--initiative" aria-hidden="true"></span></span><span class="mc-type__label">Initiative</span></span>
               <div class="mc-tree__main">
-                <a class="mc-tree__title" href="work-item-detail.html#state=initiative"><span class="mc-visually-hidden">Initiative: </span>Demo day showcase</a>
+                <a class="mc-tree__title" href="work-hierarchy.html"><span class="mc-visually-hidden">Initiative: </span>Demo day showcase</a>
                 <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Initiative</span><span>HCK-102</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-unset">Unassigned</span><span>2 epics</span></div>
               </div>
               <div class="mc-tree__actions">
                 <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Demo day showcase” up"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
-                <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Demo day showcase” down" disabled><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Demo day showcase” down" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
                 <div class="mc-menu-anchor">
                   <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-102" aria-expanded="false" aria-label="Actions for Demo day showcase"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                   <div class="mc-menu" id="menu-hck-102">
-                      <a class="mc-menu__item" href="work-item-detail.html#state=initiative"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                      <a class="mc-menu__item" href="work-hierarchy.html"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
                       <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                       <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-epic"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add epic</button>
                       <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
@@ -667,16 +686,16 @@
                   <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-tree__toggle" type="button" aria-expanded="true" aria-label="Children of Judging and feedback"><span class="mc-icon mc-icon--chevron-right" aria-hidden="true"></span></button>
                   <span class="mc-type mc-type--epic" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--epic" aria-hidden="true"></span></span><span class="mc-type__label">Epic</span></span>
                   <div class="mc-tree__main">
-                    <a class="mc-tree__title" href="work-item-detail.html#state=epic"><span class="mc-visually-hidden">Epic: </span>Judging and feedback</a>
+                    <a class="mc-tree__title" href="work-hierarchy.html"><span class="mc-visually-hidden">Epic: </span>Judging and feedback</a>
                     <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Epic</span><span>HCK-106</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-unset">Unassigned</span><span>4 stories</span></div>
                   </div>
                   <div class="mc-tree__actions">
-                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Judging and feedback” up" disabled><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Judging and feedback” up" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
                     <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Judging and feedback” down"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-106" aria-expanded="false" aria-label="Actions for Judging and feedback"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="menu-hck-106">
-                          <a class="mc-menu__item" href="work-item-detail.html#state=epic"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                          <a class="mc-menu__item" href="work-hierarchy.html"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
                           <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                           <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-story"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add story</button>
                           <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
@@ -700,7 +719,7 @@
                         <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Story</span><span>HCK-122</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span><span>4 tasks · 0 done</span><span><span class="mc-icon mc-icon--sprint mc-icon--sm" aria-hidden="true"></span> Sprint 9</span></div>
                       </div>
                       <div class="mc-tree__actions">
-                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Judges can score demos” up" disabled><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Judges can score demos” up" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
                         <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Judges can score demos” down"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
                         <div class="mc-menu-anchor">
                           <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-122" aria-expanded="false" aria-label="Actions for Judges can score demos"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
@@ -730,7 +749,7 @@
                       </div>
                       <div class="mc-tree__actions">
                         <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “&lt;script&gt;alert(1)&lt;/script&gt; feedback form” up"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
-                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “&lt;script&gt;alert(1)&lt;/script&gt; feedback form” down" disabled><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “&lt;script&gt;alert(1)&lt;/script&gt; feedback form” down" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
                         <div class="mc-menu-anchor">
                           <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-123" aria-expanded="false" aria-label="Actions for &lt;script&gt;alert(1)&lt;/script&gt; feedback form"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                           <div class="mc-menu" id="menu-hck-123">
@@ -756,16 +775,16 @@
                   <span class="mc-tree__spacer"></span>
                   <span class="mc-type mc-type--epic" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--epic" aria-hidden="true"></span></span><span class="mc-type__label">Epic</span></span>
                   <div class="mc-tree__main">
-                    <a class="mc-tree__title" href="work-item-detail.html#state=epic"><span class="mc-visually-hidden">Epic: </span>Sponsor outreach</a>
+                    <a class="mc-tree__title" href="work-hierarchy.html"><span class="mc-visually-hidden">Epic: </span>Sponsor outreach</a>
                     <div class="mc-tree__meta"><span class="mc-tree__type-word" aria-hidden="true">Epic</span><span>HCK-107</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span><span class="mc-unset">Unassigned</span><span>No stories</span></div>
                   </div>
                   <div class="mc-tree__actions">
                     <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Sponsor outreach” up"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
-                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Sponsor outreach” down" disabled><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move “Sponsor outreach” down" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
                     <div class="mc-menu-anchor">
                       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="menu-hck-107" aria-expanded="false" aria-label="Actions for Sponsor outreach"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                       <div class="mc-menu" id="menu-hck-107">
-                          <a class="mc-menu__item" href="work-item-detail.html#state=epic"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
+                          <a class="mc-menu__item" href="work-hierarchy.html"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span>Open</a>
                           <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
                           <button class="mc-menu__item" type="button" data-nav="work-item-form-dialog.html#state=create-story"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add story</button>
                           <button class="mc-menu__item" type="button" data-nav="reparent-dialog.html"><span class="mc-icon mc-icon--reparent" aria-hidden="true"></span>Move to another parent</button>
@@ -807,7 +826,7 @@
         <div class="mc-empty mc-empty--error" role="alert" data-when="error" hidden>
           <span class="mc-empty__icon"><span class="mc-icon mc-icon--alert-circle mc-icon--lg" aria-hidden="true"></span></span>
           <h2 class="mc-empty__title">We couldn't load this project's work</h2>
-          <p class="mc-empty__text">Check your connection and try again. If it keeps happening, share the reference ID with your administrator.</p>
+          <p class="mc-empty__text">Try again. If it keeps happening, share the reference ID with your administrator.</p>
           <p class="mc-ref">Reference ID <code>4b9e-07c2-a1f6</code>
               <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="4b9e-07c2-a1f6"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
             </p>

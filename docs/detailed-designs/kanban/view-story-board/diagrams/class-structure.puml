@@ -19,57 +19,262 @@ skinparam class {
   FontColor #101828
   BackgroundColor #F9FAFB
 }
-class KanbanBoardPage {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
+set separator none
+package "frontend/projects/mission-control" {
+  class KanbanBoardPage {
+    +workspaceId: Signal<Guid>
+    -layout: ProjectLayoutPage
+    -canChangeMode: Signal<boolean>
+    -empty: WritableSignal<boolean>
+    -counter: WritableSignal<number>
+    -boardRefresh: Signal<number>
+    +draft: Signal<DraftState>
+    +openForm(context: WorkItemFormContext): void
+  }
+  note right of KanbanBoardPage
+    boardRefresh = counter() + layout.revision(), bound
+    to BoardView.refresh. Board tab create action,
+    registered with layout.setTabAction({ label, run })
+    and cleared on destroy: Add story, or Add initiative
+    while empty; it and addRequested call openForm, which
+    opens WorkItemFormDialog (workspace and type; no parent).
+    WorkItemFormOutcome: Saved increments counter and shows
+    the added-item toast naming title (and a story's epic
+    from parentTitle); NotFound calls
+    layout.refresh(); no result changes nothing. While open,
+    unconfirmed increments counter and forbidden shows the
+    "Your access changed" toast (no Retry).
+    changeModeRequested calls layout.openDialog(ChangeMode);
+    modeChanged calls layout.modeChanged(); the first
+    notFound calls layout.refresh() (later ones are ignored);
+    every retryRequested calls layout.refresh(), so the
+    header and the board reread together.
+    FormDraft delegates to an open WorkItemFormDialog,
+    else to layout.draft(); the board route's canDeactivate
+    is UnsavedChangesGuard.
+  end note
+  class ProjectLayoutPage {
+    +canChangeMode: Signal<boolean>
+    +revision: Signal<number>
+    +draft: Signal<DraftState>
+    +refresh(): void
+    +openDialog(kind: WorkspaceActionKind): void
+    +setTabAction(action: TabAction?): void
+    +modeChanged(): void
+  }
+  note bottom of ProjectLayoutPage
+    Defined by projects/manage-workspaces;
+    reached through inject(ProjectLayoutPage).
+  end note
+  interface FormDraft {
+    +draft: Signal<DraftState>
+  }
+  class WorkItemFormDialog {
+    +context: InputSignal<WorkItemFormContext>
+    +unconfirmed: OutputEmitterRef<void>
+    +forbidden: OutputEmitterRef<void>
+    +close(result: WorkItemFormOutcome?): void
+  }
+  note bottom of WorkItemFormDialog
+    Defined by work create-and-navigate-work;
+    WorkItemFormOutcome: Saved(saved, title,
+    parentTitle) or NotFound; no result: dismissed.
+  end note
 }
-class BoardView {
-  +state: Signal<FeatureState>
-  +submit(): void
+package "frontend/projects/domain" {
+  class BoardView {
+    +workspaceId: InputSignal<Guid>
+    +sprintBoard: InputSignal<boolean>
+    +refresh: InputSignal<number>
+    +canChangeMode: InputSignal<boolean>
+    +modeChanged: OutputEmitterRef<void>
+    +emptyChange: OutputEmitterRef<boolean>
+    +addRequested: OutputEmitterRef<WorkItemFormContext>
+    +changeModeRequested: OutputEmitterRef<void>
+    +notFound: OutputEmitterRef<void>
+    +retryRequested: OutputEmitterRef<void>
+    -query: WritableSignal<BoardQuery?>
+    -board: ResourceRef<BoardResult>
+    -acknowledged: WritableSignal<BoardResult?>
+    -generation: WritableSignal<int>
+    +loadMore(status: WorkStatus): void
+    +reloadBoard(): void
+  }
+  note right of BoardView
+    Read members only; move members are in move-story-cards.
+    board = boardResource(() => query()), created in the
+    field initializer. A changed query aborts the superseded
+    read; destroying the view cancels any read in flight.
+    A resolved value is adopted only while its board ID and
+    the query's generation are current: a first read replaces
+    acknowledged, a Load more batch appends to its column.
+    One board read at a time; batches stay while the board is open.
+    A refresh change reloads the first batch with a new
+    generation, after any pending move settles.
+    A mode-changed 409 emits modeChanged.
+    Kanban only: emptyChange when every column total becomes
+    or stops being zero; the empty state's Add initiative emits
+    addRequested (an initiative); sprintsPaused shows the paused
+    alert, whose Change delivery mode (canChangeMode only)
+    emits changeModeRequested.
+    A workspace 404 on any read shows the project's
+    not-found state (no Try again or reference ID) and
+    emits notFound. A failed first read's Try again
+    emits retryRequested.
+    On the sprint board (sprintBoard true) the view reads
+    activeSprintBoardResource instead; the other query stays undefined.
+    Sprint board only (sprint execution): removeRequested and
+    sprintLoaded, which emits null only while a first-batch
+    read (opening, refresh, Reload board) loads or after it
+    failed; Load more and re-reads after a move emit it
+    with their result's header (never null in between).
+  end note
 }
-interface IBoardService {
-  +read(request: GetKanbanBoardQuery): Promise<FeatureResult>
+package "frontend/projects/components" {
+  class StoryCard {
+    +card: InputSignal<StoryCardData>
+    +detailLink: InputSignal<string>
+    +estimate: InputSignal<int?>
+    +moveState: InputSignal<Idle | Paused | Saving | Restored>
+    +first: InputSignal<boolean>
+    +last: InputSignal<boolean>
+    +moveClicked: OutputEmitterRef<void>
+    +stepRequested: OutputEmitterRef<Up | Down>
+  }
+  class StoryCardData {
+    +key: string
+    +title: string
+    +epicTitle: string
+    +status: WorkStatus
+    +assigneeName: string?
+    +completedTasks: int
+    +totalTasks: int
+  }
+  note bottom of StoryCardData
+    The card's own input type; BoardCard matches it.
+    Presentational: imports no other project. The
+    estimate is passed on the sprint board only.
+  end note
 }
-class BoardService {
-  -http: HttpClient
+package "frontend/projects/api" {
+  interface "ResourceRef<T>" as ResourceRef {
+    +value: Signal<T | undefined>
+    +status: Signal<loading | resolved | error>
+    +error: Signal<unknown>
+    +reload(): void
+  }
+  interface IBoardService {
+    +boardResource(query: () => BoardQuery | undefined): ResourceRef<BoardResult>
+    +activeSprintBoardResource(query: () => ActiveSprintBoardQuery | undefined): ResourceRef<ActiveSprintBoardResult>
+  }
+  class BoardService {
+    -http: HttpClient
+  }
+  interface IToastService {
+    +show(toast: Toast): void
+  }
+  note bottom of BoardService
+    Creates the resource in the consumer's injection
+    context; HttpClient and RxJS stay inside api.
+    Sends BoardQuery as GetKanbanBoardQuery and
+    ActiveSprintBoardQuery as GetActiveSprintBoardQuery,
+    each without the generation.
+  end note
+  class BoardQuery {
+    +workspaceId: Guid
+    +status: WorkStatus?
+    +page: int
+    +pageSize: int
+    +generation: int
+  }
+  class ActiveSprintBoardQuery {
+    +workspaceId: Guid
+    +status: WorkStatus?
+    +page: int
+    +pageSize: int
+    +generation: int
+  }
+  note bottom of ActiveSprintBoardQuery
+    Sprint board client query (sprint execution);
+    the generation stays in the client.
+  end note
 }
-class BoardsController {
-  -sender: ISender
+package "MissionControl.Api" {
+  class BoardsController {
+    -sender: ISender
+  }
 }
-class BoardCard {
-  +storyId: Guid
-  +title: string
-  +assigneeName: string?
-  +status: WorkStatus
-  +position: int
-  +completedTasks: int
-  +totalTasks: int
-  +storyVersion: long
-  +boardVersion: long
+package "MissionControl.Application" {
+  class GetKanbanBoardQuery {
+    +workspaceId: Guid
+    +status: WorkStatus?
+    +page: int
+    +pageSize: int
+  }
+  class GetKanbanBoardQueryHandler {
+    +handle(request: GetKanbanBoardQuery, ct: CancellationToken): Task<BoardResult>
+  }
+  class BoardResult {
+    +boardId: Guid
+    +boardVersion: long
+    +sprintsPaused: bool
+    +columns: BoardColumn[]
+  }
+  note bottom of BoardResult
+    sprintsPaused: Kanban board while the workspace
+    keeps planned or closed sprints; always false on
+    a sprint board.
+  end note
+  class BoardColumn {
+    +status: WorkStatus
+    +totalCount: int
+    +cards: BoardCard[]
+  }
+  class BoardCard {
+    +storyId: Guid
+    +key: string
+    +title: string
+    +epicTitle: string
+    +assigneeName: string?
+    +status: WorkStatus
+    +position: int
+    +completedTasks: int
+    +totalTasks: int
+    +estimate: int?
+    +storyVersion: long
+  }
+  note bottom of BoardCard
+    No description. Task counts come from one
+    set-based aggregate per batch, never per card;
+    the epic title comes from the parent row in the
+    same statement. Sprint boards show the estimate.
+  end note
+  interface IMissionControlDataSession {
+    +LoadWorkspaceModeAsync(workspaceId: Guid, ct: CancellationToken): Task<DeliveryMode?>
+    +LoadKanbanBoardAsync(workspaceId: Guid, status: WorkStatus?, page: int, pageSize: int, ct: CancellationToken): Task<BoardResult>
+  }
 }
-interface IMissionControlDataSession {
-  +query(specification): Task<ReadResult>
-  +commit(expectedVersion: long): Task<void>
+package "MissionControl.Infrastructure" {
+  class MissionControlDataSession
 }
-class MissionControlDataSession {
-  -connection: DbConnection
-}
-KanbanBoardPage --> BoardView : composes
-BoardView ..> IBoardService : inject token
+KanbanBoardPage --> BoardView : composes; inputs and outputs only
+KanbanBoardPage ..> ProjectLayoutPage : revision; setTabAction(Add story); openDialog(ChangeMode); modeChanged(); refresh()
+KanbanBoardPage --> WorkItemFormDialog : openForm; from the create action or addRequested
+FormDraft <|.. KanbanBoardPage : delegates to the open dialog, else the layout's
+BoardView ..> IBoardService : inject BOARD_SERVICE
+BoardView ..> BoardQuery : drives
+BoardView --> StoryCard : renders each card; maps its outputs
+StoryCard ..> StoryCardData : card input
+KanbanBoardPage ..> IToastService : inject TOAST_SERVICE; added-item toast
 IBoardService <|.. BoardService
+IBoardService ..> ResourceRef : returns per consumer
+BoardService ..> GetKanbanBoardQuery : sends
+BoardResult *-- BoardColumn
+BoardColumn *-- BoardCard
 IMissionControlDataSession <|.. MissionControlDataSession
-class GetKanbanBoardQuery {
-  +workspaceId: Guid
-  +status: WorkStatus?
-  +page: int
-  +pageSize: int
-}
-class GetKanbanBoardQueryHandler {
-  +handle(request: GetKanbanBoardQuery): Task<FeatureResult>
-}
 BoardsController ..> GetKanbanBoardQuery : dispatches
 GetKanbanBoardQueryHandler ..> GetKanbanBoardQuery : handles
-GetKanbanBoardQueryHandler --> BoardCard : loads / applies
+GetKanbanBoardQueryHandler --> BoardResult : returns
 GetKanbanBoardQueryHandler ..> IMissionControlDataSession : uses
 
 @enduml

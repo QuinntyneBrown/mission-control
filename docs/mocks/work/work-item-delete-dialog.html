@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Delete work item · Mission Control mock</title>
-  <meta name="description" content="Delete confirmation for work items: leaf task, blocked by children, blocked by an open sprint, story with closed-sprint history, deleting, and failure.">
+  <meta name="description" content="Delete confirmation for work items: leaf task, blocked by children, blocked by a planned sprint (also while sprints are paused), by an active sprint, or as a Done story in an active sprint, story with closed-sprint history, deleting, and failure.">
   <meta name="mock-area" content="Work hierarchy">
-  <meta name="mock-requirements" content="L2-018, L2-031.5, L2-033.2, L2-040.3, L2-043.4">
+  <meta name="mock-requirements" content="L2-018, L2-027.3, L2-031.5, L2-033.2, L2-040.3, L2-043.4">
   <link rel="stylesheet" href="../assets/tokens.css">
   <link rel="stylesheet" href="../assets/mocks.css">
   <script src="../assets/mocks.js" defer></script>
@@ -21,7 +21,10 @@
         <select data-mock-state>
           <option value="default">Leaf task</option>
           <option value="has-children">Blocked: has children</option>
-          <option value="in-sprint">Blocked: in an open sprint</option>
+          <option value="in-planned-sprint">Blocked: in a planned sprint</option>
+          <option value="in-paused-sprint">Blocked: planned sprint, sprints paused</option>
+          <option value="in-sprint">Blocked: in the active sprint</option>
+          <option value="in-sprint-done">Blocked: Done in the active sprint</option>
           <option value="history">Story with sprint history</option>
           <option value="deleting">Deleting</option>
           <option value="failed">Delete failed</option>
@@ -32,12 +35,15 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">Administrators only. Focus starts on Cancel. Escape or Cancel closes without changes and returns focus to the Delete action. After deletion the item leaves every view and counts update.</p>
-    <p class="mock-note" data-when="has-children" hidden>No cascade: the server returns a conflict until the children are moved or deleted, and the dialog explains the next step.</p>
-    <p class="mock-note" data-when="in-sprint" hidden>A story in a planned or active sprint can't be deleted. The link opens the sprint's scope dialog with this story selected for removal.</p>
-    <p class="mock-note" data-when="history" hidden>Closed sprint history keeps the recorded title and outcome even after the story is deleted.</p>
-    <p class="mock-note" data-when="deleting" hidden>Both buttons wait while the request runs; repeat clicks are ignored.</p>
-    <p class="mock-note" data-when="failed" hidden>Nothing was deleted. "Try again" resends the same request.</p>
+    <p class="mock-note" data-when="default">Administrators only. The dialog names the item from the page that opened it and reads nothing first; the server checks every rule when Delete is pressed. Focus starts on Cancel. Escape or Cancel closes without changes and returns focus to the Delete action. After deletion the item leaves every view and counts update. When the API answers 409 instead, the blocker explanation replaces the confirmation inside the dialog's alert region and becomes its description; Delete gives way to Close, so focus moves to Close.</p>
+    <p class="mock-note" data-when="has-children" hidden>No cascade: the server returns a conflict until the children are moved or deleted, and the dialog explains the next step. Delete gives way to Close, so focus moves to Close and the explanation is announced.</p>
+    <p class="mock-note" data-when="in-planned-sprint" hidden>A story in a planned sprint can't be deleted. The API answers 409 naming Sprint 9 and its Planned state. "Change Sprint 9's plan" closes this dialog and opens the sprint's plan (its address carries <code>?remove=</code> with the story) with Demo order and timing schedule marked To remove once the plan confirms it is still a member; saving the plan returns the story to the backlog, and then it can be deleted. Nothing retries automatically. Focus moves to Close and the explanation is announced.</p>
+    <p class="mock-note" data-when="in-paused-sprint" hidden>Prayer Wall App uses Kanban with its sprints kept, and Report a post for review (PRW-114) is in the kept Sprint 3 plan. The API answers 409 naming Sprint 3, its Planned state, and that sprints are paused, so the plan can't change until the project uses Scrum again. The dialog explains this and offers Close. Change delivery mode appears with the permission to change the delivery mode, which every administrator has; it closes this dialog and opens Prayer Wall App's Change delivery mode dialog. Close returns to Prayer Wall App. Nothing retries automatically. Focus moves to Close and the explanation is announced.</p>
+    <p class="mock-note" data-when="in-sprint" hidden>An unfinished story in the active sprint can't be deleted. "Remove from Sprint 8" closes this dialog, and the page opens Sprint 8's scope dialog with this story selected for removal; the removal is recorded as a scope change. After that the story can be deleted. Focus moves to Close and the explanation is announced.</p>
+    <p class="mock-note" data-when="in-sprint-done" hidden>A Done story can't be removed from an active sprint; it stays with the sprint's outcomes. The API answers 409 naming every blocker it found, here Sprint 8 (Active, story Done) and the story's 2 tasks, so the dialog explains both and offers only Close. Once Sprint 8 closes and the tasks are gone, the story can be deleted and the sprint's history keeps its recorded outcome. Focus moves to Close and the explanation is announced.</p>
+    <p class="mock-note" data-when="history" hidden>Closed sprint history keeps the recorded title and outcome even after the story is deleted. Every story deletion says so; the dialog doesn't look up which closed sprints included the story.</p>
+    <p class="mock-note" data-when="deleting" hidden>Both buttons wait while the request runs; repeat clicks are ignored, and focus stays on the busy Delete button. If the item was already deleted, the API answers 404: the dialog closes, the list reloads without it, and the announcement says it was already deleted.</p>
+    <p class="mock-note" data-when="failed" hidden>The API answered 500, or 503 because the project was busy, so nothing was deleted. The alert is announced with the reference ID, and focus stays on the button, now "Try again", which resends the same request only when pressed. A deletion that gets no response may have gone through, so this alert reads "We couldn't confirm whether the task was deleted", with no reference ID and no claim that nothing was deleted; the page behind rereads at once, and Try again sends again only when pressed, which finds the task already deleted if the first request went through: the dialog closes with the neutral info toast "“Publish team list for mentors” has been deleted." rather than saying it was already deleted, since the first request may have deleted it. If the role changed while the dialog was open, the API answers 403 instead: the dialog stays open, this alert says "Only administrators can delete work" with no reference ID, the dialog's description then points to that explanation, Delete stays unavailable, and focus moves to Cancel.</p>
   </div>
 
   <div class="mock-screen">
@@ -64,6 +70,7 @@
         </div>
         <div class="mc-main">
           <div class="mc-page">
+            <div data-unless="in-paused-sprint">
             <div class="mc-page-header">
               <div class="mc-page-header__main">
                 <p class="mc-h1">Community Hackathon 2026</p>
@@ -112,48 +119,108 @@
                 </div>
               </div>
             </div>
+            </div>
+            <div data-when="in-paused-sprint" hidden>
+            <div class="mc-page-header">
+              <div class="mc-page-header__main">
+                <p class="mc-h1">Prayer Wall App</p>
+                <div class="mc-page-header__meta"><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span><span>Responsible lead: Grace Mensah</span></div>
+              </div>
+              <div class="mc-page-header__actions"><span class="mc-button mc-button--primary"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add initiative</span></div>
+            </div>
+            <div class="mc-tabs">
+              <span class="mc-tabs__link"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</span>
+              <span class="mc-tabs__link" aria-current="page"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</span>
+              <span class="mc-tabs__link"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</span>
+              <span class="mc-tabs__link"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</span>
+              <span class="mc-tabs__link"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</span>
+            </div>
+            <div class="mc-card">
+              <div class="mc-stack mc-stack--xs">
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--initiative" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--initiative" aria-hidden="true"></span></span><span class="mc-type__label">Initiative</span></span>
+                  <div class="mc-tree__main"><span class="mc-tree__title">A caring prayer wall</span></div>
+                </div>
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--epic" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--epic" aria-hidden="true"></span></span><span class="mc-type__label">Epic</span></span>
+                  <div class="mc-tree__main"><span class="mc-tree__title">Moderation</span></div>
+                </div>
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--story" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--story" aria-hidden="true"></span></span><span class="mc-type__label">Story</span></span>
+                  <div class="mc-tree__main"><span class="mc-tree__title">Report a post for review</span><span class="mc-tree__meta"><span>PRW-114</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span></span></div>
+                </div>
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--story" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--story" aria-hidden="true"></span></span><span class="mc-type__label">Story</span></span>
+                  <div class="mc-tree__main"><span class="mc-tree__title">Moderator queue</span><span class="mc-tree__meta"><span>PRW-115</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span></span></div>
+                </div>
+                <div class="mc-tree__row">
+                  <span class="mc-tree__spacer"></span>
+                  <span class="mc-type mc-type--story" aria-hidden="true"><span class="mc-type__icon"><span class="mc-icon mc-icon--story" aria-hidden="true"></span></span><span class="mc-type__label">Story</span></span>
+                  <div class="mc-tree__main"><span class="mc-tree__title">Plain-language community guidelines</span><span class="mc-tree__meta"><span>PRW-118</span><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span></span></div>
+                </div>
+              </div>
+            </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
     <div class="mc-backdrop">
-      <section class="mc-dialog mc-dialog--sm" role="alertdialog" aria-modal="true" aria-labelledby="delete-title" aria-describedby="delete-text">
+      <section class="mc-dialog mc-dialog--sm" role="alertdialog" aria-modal="true" aria-labelledby="delete-title" aria-describedby="delete-text"
+        data-attr-has-children="aria-describedby=delete-blocked-text" data-attr-in-planned-sprint="aria-describedby=delete-blocked-text" data-attr-in-paused-sprint="aria-describedby=delete-blocked-text" data-attr-in-sprint="aria-describedby=delete-blocked-text" data-attr-in-sprint-done="aria-describedby=delete-blocked-text">
         <header class="mc-dialog__header">
-          <span class="mc-dialog__icon mc-dialog__icon--danger" data-unless="has-children in-sprint"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></span>
-          <span class="mc-dialog__icon mc-dialog__icon--warning" data-when="has-children in-sprint" hidden><span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span></span>
+          <span class="mc-dialog__icon mc-dialog__icon--danger" data-unless="has-children in-planned-sprint in-paused-sprint in-sprint in-sprint-done"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span></span>
+          <span class="mc-dialog__icon mc-dialog__icon--warning" data-when="has-children in-planned-sprint in-paused-sprint in-sprint in-sprint-done" hidden><span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span></span>
           <div class="mc-dialog__heading">
             <h2 class="mc-dialog__title" id="delete-title">
               <span data-when="default deleting failed">Delete “Publish team list for mentors”?</span>
               <span data-when="has-children" hidden>“Hackathon team formation” can't be deleted yet</span>
+              <span data-when="in-planned-sprint" hidden>“Demo order and timing schedule” can't be deleted yet</span>
+              <span data-when="in-paused-sprint" hidden>“Report a post for review” can't be deleted yet</span>
               <span data-when="in-sprint" hidden>“Mentors can see team needs” can't be deleted yet</span>
+              <span data-when="in-sprint-done" hidden>“Teams can register a project idea” can't be deleted yet</span>
               <span data-when="history" hidden>Delete “Confirm venue accessibility checklist”?</span>
             </h2>
           </div>
         </header>
         <div class="mc-dialog__body">
-          <div id="delete-text">
-            <p data-when="default deleting failed">Task HCK-117 will be removed from “Volunteers can join a build team”, and the story's task count will update. This can't be undone.</p>
-            <p data-when="has-children" hidden>This epic has 14 stories. Move them to another epic or delete them first. Nothing is deleted automatically.</p>
-            <p data-when="in-sprint" hidden>It's in Sprint 8, which is active. Remove it from the sprint first, then delete it.</p>
-            <p data-when="history" hidden>Story HCK-120 will be removed from Venue and logistics. It was part of Sprint 7, and that sprint's history will keep its recorded title and outcome. This can't be undone.</p>
-          </div>
           <div class="mc-live" role="alert">
+            <div id="delete-blocked-text" data-when="has-children in-planned-sprint in-paused-sprint in-sprint in-sprint-done" hidden>
+              <p data-when="has-children" hidden>This epic has 14 stories. Move them to another epic or delete them first. Nothing is deleted automatically.</p>
+              <p data-when="in-planned-sprint" hidden>It's planned for Sprint 9, which hasn't started. Change Sprint 9's plan to remove it, then delete it.</p>
+              <p data-when="in-paused-sprint" hidden>It's planned for Sprint 3, and sprints are paused while this project uses Kanban. Switch the project back to Scrum to change its plan, then delete the story.</p>
+              <p data-when="in-sprint" hidden>It's in Sprint 8, which is active. Remove it from the sprint first, then delete it.</p>
+              <div class="mc-stack mc-stack--sm" data-when="in-sprint-done" hidden>
+                <p>It's Done in Sprint 8, which is still active, so it stays with that sprint until Sprint 8 closes. After that it can be deleted, and Sprint 8's history keeps its outcome.</p>
+                <p>It also has 2 tasks. Delete them or move them to another story first.</p>
+              </div>
+            </div>
             <div class="mc-alert mc-alert--danger" data-when="failed" hidden>
               <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
               <div class="mc-alert__body">
                 <p class="mc-alert__title">We couldn't delete this task</p>
                 <p class="mc-alert__text">Nothing was deleted. Try again.</p>
                 <p class="mc-ref">Reference ID <code>d29a-6f03-b4e8</code>
-              <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="d29a-6f03-b4e8"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
-            </p>
+                  <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="d29a-6f03-b4e8"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                </p>
               </div>
             </div>
           </div>
+          <div id="delete-text" data-unless="has-children in-planned-sprint in-paused-sprint in-sprint in-sprint-done">
+            <p data-when="default deleting failed">Task HCK-117 will be removed from “Volunteers can join a build team”, and the story's task count will update. This can't be undone.</p>
+            <p data-when="history" hidden>Story HCK-120 will be removed from Venue and logistics. Closed sprints that included it keep its recorded title and outcome in their history. This can't be undone.</p>
+          </div>
         </div>
         <footer class="mc-dialog__footer">
-          <button class="mc-button" type="button" data-nav="work-hierarchy.html" data-unless="has-children in-sprint" data-attr-deleting="disabled">Cancel</button>
-          <button class="mc-button" type="button" data-nav="work-hierarchy.html" data-when="has-children in-sprint" hidden>Close</button>
+          <button class="mc-button" type="button" data-nav="work-hierarchy.html" data-unless="has-children in-planned-sprint in-paused-sprint in-sprint in-sprint-done" data-attr-deleting="disabled">Cancel</button>
+          <button class="mc-button" type="button" data-nav="work-hierarchy.html" data-attr-in-paused-sprint="data-nav=../projects/project-overview.html#state=kanban-preserved" data-when="has-children in-planned-sprint in-paused-sprint in-sprint in-sprint-done" hidden>Close</button>
+          <button class="mc-button mc-button--primary" type="button" data-when="in-planned-sprint" hidden data-nav="../scrum/sprint-planning.html#state=paged">Change Sprint 9's plan</button>
+          <button class="mc-button mc-button--primary" type="button" data-when="in-paused-sprint" hidden data-nav="../projects/mode-change-dialog.html#state=to-scrum"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
           <button class="mc-button mc-button--primary" type="button" data-when="in-sprint" hidden data-nav="../scrum/sprint-scope-dialog.html#state=remove">Remove from Sprint 8</button>
           <button class="mc-button mc-button--danger" type="button" data-when="default deleting failed" data-goto-state="deleting" data-attr-deleting="aria-busy=true|aria-disabled=true">
             <span class="mc-spinner" aria-hidden="true" data-when="deleting" hidden></span>

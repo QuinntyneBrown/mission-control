@@ -4,6 +4,7 @@ skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
 skinparam ArrowColor #344054
+skinparam maxMessageSize 300
 skinparam rectangle {
   BorderColor #344054
   FontColor #101828
@@ -16,7 +17,7 @@ skinparam package {
 title Behavior - Create workspace
 actor "Administrator" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "ProjectListPage\nProjectFormDialog / WorkspaceView" as page
+  participant "ProjectListPage or HomePage\nProjectFormDialog / WorkspaceForm" as page
   participant "IWorkspaceService / WorkspaceService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,19 +32,24 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : New project; enter name, description, mode, optional lead
-page -> page : Disable repeat submission; show saving progress
-page -> client : Build typed CreateWorkspaceCommand
+actor -> page : New project on Projects or Home (shown only with workspaces.manage); enter name, description, mode, optional lead (LeadPicker reads choices through its own leadsResource)
+opt LeadPicker's choices read fails (500 with correlation ID, or no response)
+  page --> actor : lead-search-failed: field-level alert under Responsible lead with Retry (reload()) and, for a 500, the reference ID; the chosen lead and the draft stay intact; Save project stays available
+end
+page -> page : Disable repeat submission; show saving progress; draftChange reports pending
+page -> client : create(CreateWorkspaceCommand) returns a promise
 client -> access : POST /api/workspaces
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid, or expired JWT; inactive account
   access --> client : 401; audit denial without payloads
-  client --> page : Clear in-memory session; require login; nothing created
+  client -> client : sessionInterceptor: a 401 for the current session generation calls SessionService.end(Unauthorized) once
+  client --> page : The promise rejects with the 401; nothing created; sign-in reports the unsaved draft
 else Collaborator (profile P: no workspace creation)
   access --> client : 403; audit denial without payloads
-  client --> page : Close dialog; explain that only administrators add projects; nothing created
+  client -> client : sessionInterceptor calls SessionService.refreshCapabilities() (one in flight)
+  client --> page : The promise rejects with the 403; forbidden state: keep the dialog and every value; explain that only administrators can save project settings; Save project unavailable, so focus moves to the alert; no reference ID; nothing created; controls follow currentSession
 else Administrator
   access -> ctrl : Authorized request
   ctrl -> validation : Send CreateWorkspaceCommand through MediatR 12.5.0
@@ -51,38 +57,41 @@ else Administrator
   alt Invalid fields
     validation --> ctrl : 400 field errors; nothing created
     ctrl --> client : Validation ProblemDetails
-    client --> page : Show field errors and summary; focus the summary; keep valid input
+    client --> page : The promise rejects; show field errors; keep valid input; no Retry or reference ID; one field error focuses that field, which reads its error; several focus the linked error summary
   else Valid request
     validation -> handler : Handle CreateWorkspaceCommand
-    handler -> db : Begin transaction; check optional responsible lead still exists
+    handler -> db : Check optional responsible lead still exists
     db --> handler : Lead row or none
     alt Selected lead no longer exists
       handler --> ctrl : 400 responsibleLeadId field error; nothing created
       ctrl --> client : Validation ProblemDetails
-      client --> page : Show missing-lead alert and field error; keep every other value
+      client --> page : The promise rejects; lead-missing: show the alert and field error; focus Responsible lead, which reads its error; no Retry or reference ID; keep every other value
     else Lead exists or none chosen
       handler -> entity : L2-014 create workspace with required initial mode
       entity --> handler : New workspace, version 1
-      handler -> db : L2-039 / L2-040 insert workspace and success audit; one transaction
+      handler -> db : L2-039 / L2-040 SaveChangesAsync: insert workspace and success audit; one transaction
       alt Restrictive lead FK rejects a racing lead deletion
         db --> handler : Roll back insert and audit
         handler --> ctrl : Same 400 responsibleLeadId field error; nothing created
         ctrl --> client : Validation ProblemDetails
-        client --> page : Show missing-lead alert and field error; keep every other value
+        client --> page : The promise rejects; lead-missing as above; focus Responsible lead; keep every other value
       else Commit fails unexpectedly
         db --> handler : Roll back insert and audit
         handler --> ctrl : Generic 500 with correlation ID
         ctrl --> client : Failure; no successful-save claim
-        client --> page : Show save-failed alert with reference ID; keep every value; Save project retries
+        client --> page : The promise rejects; failed state: announce the save-failed alert with reference ID; keep every value; Save project keeps focus and retries only when pressed
       else Commit succeeds
         db --> handler : Workspace ID and version
-        handler --> ctrl : 201 Created with ID
+        handler --> ctrl : 201 Created with SavedWorkspaceResult (id, version, name)
         ctrl --> client : Success response
-        client --> page : Close dialog; open the new overview
-        page --> actor : Empty overview, "Project created" toast; focus the project heading
+        client --> page : The promise resolves with SavedWorkspaceResult; WorkspaceForm emits saved; the dialog closes with Saved(SavedWorkspaceResult); ProjectListPage or HomePage navigates to the new overview, whose view reads it afresh
+        page --> actor : Empty overview; the opening page shows the "Project created" toast naming the project from SavedWorkspaceResult through TOAST_SERVICE; focus the project heading
       end
     end
   end
+end
+opt No response to the create (timeout or network failure)
+  client --> page : The create may have committed: keep every value; the failed alert reads "We couldn't confirm whether the project was created" without a reference ID; WorkspaceForm emits unconfirmed, which the dialog relays, so ProjectListPage or HomePage increments its refresh counter and the list (or Home's Projects section) rereads at once; Save project resends only when pressed, after the reread shows whether the project exists
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).

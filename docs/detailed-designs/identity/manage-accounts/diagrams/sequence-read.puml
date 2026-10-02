@@ -14,9 +14,10 @@ skinparam package {
   BackgroundColor #F9FAFB
 }
 title Behavior - Read account directory and details
+skinparam maxMessageSize 300
 actor "Administrator" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "AccountsPage / AccountDetailPage / AccountView" as page
+  participant "AccountsPage / AccountView, or\nAccountDetailPage / AccountDetailView" as page
   participant "IAccountService / AccountService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -25,48 +26,48 @@ box "Backend - MissionControl.Api" #D1FADF
 end box
 box "Backend - MissionControl.Application and Domain" #ECFDF3
   participant "ValidationBehavior" as validation
-  participant "GetAccountQueryHandler" as handler
+  participant "ListAccountsQueryHandler /\nGetAccountQueryHandler" as handler
   participant "UserAccount" as entity
 end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   participant "IAuditEventWriter" as audit
   database "Mission Control SQL" as db
 end box
-actor -> page : Open /accounts or /accounts/:id
+actor -> page : Open /accounts or /accounts/:id, or the page increments its refresh counter after a dialog outcome
 page -> page : Show loading skeleton
-page -> client : Build typed GetAccountQuery (id, or page and pageSize)
-client -> access : GET /api/accounts[/{id}]
+page -> client : AccountView: accountsResource(ListAccountsQuery); AccountDetailView: accountResource(GetAccountQuery { id }); a refresh change calls reload() on the view's resource
+client -> access : GET /api/accounts or GET /api/accounts/{id}
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry (zero clock skew)
-access -> db : Read current status, role and credential version
+access -> db : LoadAccountAccessAsync: current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid or expired JWT; inactive or missing account; credential version changed
-  access -> audit : Append Denied audit (restricted append; no payload)
+  access -> audit : AppendRestrictedAsync(Denied); no payload
   access --> client : 401
-  client --> page : Clear in-memory session; open login (session-ended) with this route to return to
-else Authenticated Collaborator (profile P: no account management)
-  access -> audit : Append Denied audit (restricted append; no payload)
+  client --> page : sessionInterceptor: end(Unauthorized) once for this generation; the read rejects with its 401; login opens (session-ended) with this route to return to
+else Authenticated Collaborator (profile P: no accounts.manage)
+  access -> audit : AppendRestrictedAsync(Denied); no payload
   access --> client : 403
-  client --> page : Show access-denied page; no account data shown
+  client --> page : refreshCapabilities() (deduplicated); AccountView or AccountDetailView emits forbidden; its page calls inject(ApplicationShell).showStatus(AccessDenied); no account data shown
 else Administrator
   access -> ctrl : Authorized request
-  ctrl -> validation : Send GetAccountQuery through MediatR 12.5.0
-  validation -> validation : L2-045 page at least 1; pageSize 1-100 (default 25)
-  alt Invalid page or page size
+  ctrl -> validation : Send ListAccountsQuery or GetAccountQuery through MediatR 12.5.0
+  validation -> validation : ListAccountsQuery: L2-045 page at least 1; pageSize 1-100 (default 25). A malformed {id:guid} matches no route (404)
+  alt Invalid page or page size (directory only)
     validation --> ctrl : 400 field errors; nothing read
     ctrl --> client : Validation ProblemDetails
-    client --> page : Error state with the message; Try again reloads page 1 at 25 rows
+    client --> page : AccountView shows the API page-size message in place of the list; no Try again or reference ID, since repeating the request would be refused again (the view itself only requests valid pages)
   else Valid request
-    validation -> handler : Handle GetAccountQuery
-    handler -> db : Read one account by ID, or a bounded page ordered by name then ID with total count
-    db --> handler : Rows and total, or no row
-    alt Requested account ID not found
+    validation -> handler : Handle the query
+    handler -> db : ListAccountsAsync(page, pageSize, designatedEmail): bounded page ordered by last name, first name, then ID with a window total; or LoadAccountDetailAsync(id, designatedEmail); designatedEmail comes from InitializationOptions
+    db --> handler : Rows and total, or one account, or no row
+    alt GetAccountQuery: account ID not found
       handler --> ctrl : 404; nothing read
       ctrl --> client : NotFound ProblemDetails
-      client --> page : not-found state with a link back to Accounts
+      client --> page : AccountDetailView not-found state with a link back to Accounts
     else Records found
       handler -> entity : Project safe summaries; exclude password hash and credential material
-      entity --> handler : Names, email, role, active, version, designated flag
-      handler --> ctrl : 200 with summaries and full matching count
+      entity --> handler : Names, email, role, active, inactive-since date, version, and designated (normalized email equals designatedEmail); detail adds the creation date and creator name
+      handler --> ctrl : 200 AccountSummaryPage with the full matching count, or 200 AccountDetail
       ctrl --> client : Success response
       client --> page : Update signals; designated account shows protected status
       page --> actor : Accounts list or details; focus the page heading
@@ -75,7 +76,8 @@ else Administrator
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043);
-Accounts shows its error state with the reference ID and Try again.
+the list or detail view shows its error state with Try again and that reference ID.
+A read that gets no response shows the same error state without a reference ID.
 Diagnostics exclude secrets and contact payloads.
 end note
 @enduml

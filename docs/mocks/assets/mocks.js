@@ -18,7 +18,7 @@
  *   data-board-column="todo" aria-controls="board-id"   compact column selector
  *   data-toggle-password aria-controls="input-id"       show/hide password
  *   data-copy="text"                    copies text to the clipboard
- *   data-toast="template-id"            shows a toast from a <template>
+ *   data-toast="template-id"            shows a toast from a <template> (three visible per region)
  *   data-dismiss                        removes the closest .mc-toast
  */
 (function () {
@@ -28,6 +28,7 @@
   var root = doc.documentElement;
   var originals = new WeakMap();
   var attrTargets = [];
+  var toastSequence = 0;
   var FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
   function words(value) {
@@ -54,6 +55,28 @@
     root.style.setProperty('--mock-bar-height', barHeight + 'px');
     root.style.setProperty('--mock-chrome-height', chrome + 'px');
     root.style.setProperty('--mock-sticky-height', stickyHeight() + 'px');
+    root.style.setProperty('--mock-sheet-footer-height', sheetFooterHeight() + 'px');
+    root.style.setProperty('--mock-toast-height', toastHeight() + 'px');
+  }
+
+  // Height of a visible sheet dialog's pinned footer (form dialogs below 576px).
+  function sheetFooterHeight() {
+    var height = 0;
+    doc.querySelectorAll('.mc-dialog--sheet .mc-dialog__footer').forEach(function (footer) {
+      if (footer.offsetParent !== null && getComputedStyle(footer).position === 'sticky') {
+        height = Math.max(height, footer.offsetHeight);
+      }
+    });
+    return height;
+  }
+
+  // Height of the fixed toast region while it shows at least one toast.
+  function toastHeight() {
+    var region = doc.querySelector('.mc-toast-region:not(.mc-toast-region--static)');
+    if (!region || !region.querySelector('.mc-toast:not([hidden])')) {
+      return 0;
+    }
+    return region.offsetHeight;
   }
 
   // Height of the app's own pinned chrome (compact top bar plus a pinned
@@ -232,10 +255,29 @@
     if (!template || !region) {
       return;
     }
-    region.appendChild(template.content.cloneNode(true));
-    while (region.children.length > 3) {
-      region.removeChild(region.firstElementChild);
+    // Errors and warnings go to the assertive container, everything else to the polite one.
+    var content = template.content.cloneNode(true);
+    var toast = content.querySelector('.mc-toast');
+    var urgent = toast && (toast.classList.contains('mc-toast--danger') || toast.classList.contains('mc-toast--warning'));
+    var target = region.querySelector(urgent ? '.mc-toast-live[role="alert"]' : '.mc-toast-live[role="status"]') || region;
+    if (toast) {
+      toastSequence += 1;
+      toast.setAttribute('data-toast-seq', String(toastSequence));
     }
+    target.appendChild(content);
+    // At most three toasts are visible across the whole region, counting both
+    // live containers; the oldest goes first. Toasts present in the markup are
+    // older than any shown here and keep their document order.
+    var visible = Array.prototype.filter.call(region.querySelectorAll('.mc-toast'), function (item) {
+      return !item.hidden;
+    });
+    visible.sort(function (a, b) {
+      return Number(a.getAttribute('data-toast-seq') || 0) - Number(b.getAttribute('data-toast-seq') || 0);
+    });
+    while (visible.length > 3) {
+      visible.shift().remove();
+    }
+    measureBar();
   }
 
   function copyText(button) {
@@ -338,6 +380,7 @@
       var item = dismiss.closest('.mc-toast');
       if (item) {
         item.remove();
+        measureBar();
       }
     }
   }

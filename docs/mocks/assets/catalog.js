@@ -38,12 +38,20 @@ window.MOCK_CATALOG = [
         "label": "Session ended with unsaved changes"
       },
       {
+        "id": "session-save-unknown",
+        "label": "Session ended during a save"
+      },
+      {
         "id": "deep-link",
         "label": "Sign in to continue"
       },
       {
         "id": "error",
         "label": "Service error"
+      },
+      {
+        "id": "unreachable",
+        "label": "Can't reach Mission Control"
       }
     ]
   },
@@ -147,7 +155,7 @@ window.MOCK_CATALOG = [
       },
       {
         "id": "error",
-        "label": "Load failed"
+        "label": "Every section failed"
       },
       {
         "id": "section-error",
@@ -169,6 +177,10 @@ window.MOCK_CATALOG = [
         "label": "Collaborator (read-only)"
       },
       {
+        "id": "category",
+        "label": "Category from home"
+      },
+      {
         "id": "filtered",
         "label": "Search and category"
       },
@@ -179,6 +191,10 @@ window.MOCK_CATALOG = [
       {
         "id": "page-2",
         "label": "Page 2"
+      },
+      {
+        "id": "filter-invalid",
+        "label": "Filter no longer valid"
       },
       {
         "id": "deleted",
@@ -214,6 +230,14 @@ window.MOCK_CATALOG = [
       {
         "id": "lead",
         "label": "Lead with a project"
+      },
+      {
+        "id": "lead-rafael",
+        "label": "Rafael Da Silva (City, Scrum project)"
+      },
+      {
+        "id": "lead-lucia",
+        "label": "Lucia Alvarez (Communication, Kanban project)"
       },
       {
         "id": "saved",
@@ -263,8 +287,24 @@ window.MOCK_CATALOG = [
         "label": "Save failed"
       },
       {
+        "id": "forbidden",
+        "label": "Not allowed to save"
+      },
+      {
         "id": "duplicate",
         "label": "Duplicate email and category"
+      },
+      {
+        "id": "edit-loading",
+        "label": "Edit · loading"
+      },
+      {
+        "id": "edit-load-failed",
+        "label": "Edit · couldn't load"
+      },
+      {
+        "id": "edit-not-found",
+        "label": "Edit · lead not found"
       },
       {
         "id": "edit",
@@ -327,6 +367,22 @@ window.MOCK_CATALOG = [
       {
         "id": "many",
         "label": "Many projects (page 1 of 3)"
+      },
+      {
+        "id": "by-lead",
+        "label": "Filtered by responsible lead"
+      },
+      {
+        "id": "by-lead-rafael",
+        "label": "Filtered by lead (Rafael Da Silva)"
+      },
+      {
+        "id": "by-lead-lucia",
+        "label": "Filtered by lead (Lucia Alvarez)"
+      },
+      {
+        "id": "lead-filter-invalid",
+        "label": "Lead filter no longer valid"
       },
       {
         "id": "empty-admin",
@@ -403,6 +459,10 @@ window.MOCK_CATALOG = [
         "label": "Choosing a responsible lead"
       },
       {
+        "id": "lead-search-failed",
+        "label": "Lead search failed"
+      },
+      {
         "id": "validation",
         "label": "Validation errors"
       },
@@ -419,6 +479,18 @@ window.MOCK_CATALOG = [
         "label": "Save failed"
       },
       {
+        "id": "forbidden",
+        "label": "Not allowed to save"
+      },
+      {
+        "id": "edit-loading",
+        "label": "Edit · loading"
+      },
+      {
+        "id": "edit-load-failed",
+        "label": "Edit · couldn't load"
+      },
+      {
         "id": "edit",
         "label": "Edit"
       },
@@ -429,6 +501,10 @@ window.MOCK_CATALOG = [
       {
         "id": "conflict-reloaded",
         "label": "Conflict · latest loaded"
+      },
+      {
+        "id": "deleted",
+        "label": "Project deleted meanwhile"
       }
     ]
   },
@@ -481,6 +557,10 @@ window.MOCK_CATALOG = [
         "label": "Blocked by work and history"
       },
       {
+        "id": "blocked-paused",
+        "label": "Blocked by work and paused sprints"
+      },
+      {
         "id": "blocked-work",
         "label": "Blocked by work only"
       },
@@ -506,6 +586,10 @@ window.MOCK_CATALOG = [
       {
         "id": "move-menu",
         "label": "Row menu open"
+      },
+      {
+        "id": "move-failed",
+        "label": "Move didn't save"
       },
       {
         "id": "collaborator",
@@ -547,6 +631,10 @@ window.MOCK_CATALOG = [
         "label": "Zero results"
       },
       {
+        "id": "filter-invalid",
+        "label": "Filter in the link not recognized"
+      },
+      {
         "id": "loading",
         "label": "Loading"
       },
@@ -564,6 +652,10 @@ window.MOCK_CATALOG = [
       {
         "id": "default",
         "label": "Story"
+      },
+      {
+        "id": "status-failed",
+        "label": "Status change failed"
       },
       {
         "id": "initiative",
@@ -621,8 +713,32 @@ window.MOCK_CATALOG = [
         "label": "Add story"
       },
       {
+        "id": "parent-search",
+        "label": "Parent search results"
+      },
+      {
+        "id": "parent-no-match",
+        "label": "Parent search · no matches"
+      },
+      {
+        "id": "parent-failed",
+        "label": "Parent search failed"
+      },
+      {
         "id": "create-task",
         "label": "Add task"
+      },
+      {
+        "id": "edit-loading",
+        "label": "Edit · loading"
+      },
+      {
+        "id": "edit-load-failed",
+        "label": "Edit · couldn't load"
+      },
+      {
+        "id": "edit-not-found",
+        "label": "Edit · no longer exists"
       },
       {
         "id": "edit",
@@ -631,6 +747,18 @@ window.MOCK_CATALOG = [
       {
         "id": "edit-inactive-assignee",
         "label": "Edit story · inactive assignee kept"
+      },
+      {
+        "id": "assignee-search",
+        "label": "Assignee search results"
+      },
+      {
+        "id": "assignee-no-match",
+        "label": "Assignee search · no matches"
+      },
+      {
+        "id": "assignee-failed",
+        "label": "Assignee search failed"
       },
       {
         "id": "validation",
@@ -670,6 +798,26 @@ window.MOCK_CATALOG = [
       {
         "id": "default",
         "label": "Choose a new parent"
+      },
+      {
+        "id": "loading",
+        "label": "Loading the story"
+      },
+      {
+        "id": "load-failed",
+        "label": "Story couldn't load"
+      },
+      {
+        "id": "not-found",
+        "label": "Story no longer exists"
+      },
+      {
+        "id": "no-match",
+        "label": "Search · no matches"
+      },
+      {
+        "id": "targets-failed",
+        "label": "Epic list couldn't load"
       },
       {
         "id": "rejected",
@@ -730,8 +878,20 @@ window.MOCK_CATALOG = [
         "label": "Blocked: has children"
       },
       {
+        "id": "in-planned-sprint",
+        "label": "Blocked: in a planned sprint"
+      },
+      {
+        "id": "in-paused-sprint",
+        "label": "Blocked: planned sprint, sprints paused"
+      },
+      {
         "id": "in-sprint",
-        "label": "Blocked: in an open sprint"
+        "label": "Blocked: in the active sprint"
+      },
+      {
+        "id": "in-sprint-done",
+        "label": "Blocked: Done in the active sprint"
       },
       {
         "id": "history",
@@ -820,8 +980,20 @@ window.MOCK_CATALOG = [
         "label": "Move failed"
       },
       {
+        "id": "move-refused",
+        "label": "Move refused (400)"
+      },
+      {
+        "id": "move-forbidden",
+        "label": "Access changed (403)"
+      },
+      {
         "id": "conflict",
         "label": "Board changed"
+      },
+      {
+        "id": "reread-failed",
+        "label": "Move unconfirmed, reload failed"
       },
       {
         "id": "empty",
@@ -834,6 +1006,10 @@ window.MOCK_CATALOG = [
       {
         "id": "load-more",
         "label": "Load more"
+      },
+      {
+        "id": "batch-error",
+        "label": "Next batch failed"
       },
       {
         "id": "card-menu",
@@ -952,6 +1128,18 @@ window.MOCK_CATALOG = [
         "label": "Save failed"
       },
       {
+        "id": "paused",
+        "label": "Sprints paused (409)"
+      },
+      {
+        "id": "edit-loading",
+        "label": "Edit · loading"
+      },
+      {
+        "id": "edit-load-failed",
+        "label": "Edit · couldn't load"
+      },
+      {
         "id": "edit",
         "label": "Edit planned sprint"
       },
@@ -962,6 +1150,10 @@ window.MOCK_CATALOG = [
       {
         "id": "conflict-reloaded",
         "label": "Conflict · latest loaded"
+      },
+      {
+        "id": "unconfirmed-changed",
+        "label": "Save unconfirmed · latest shown"
       }
     ]
   },
@@ -975,6 +1167,10 @@ window.MOCK_CATALOG = [
         "label": "Planned sprint"
       },
       {
+        "id": "paged",
+        "label": "Large plan, page 2"
+      },
+      {
         "id": "done-story",
         "label": "Done story not allowed"
       },
@@ -983,16 +1179,48 @@ window.MOCK_CATALOG = [
         "label": "Story already in another sprint"
       },
       {
+        "id": "stale",
+        "label": "Plan changed meanwhile"
+      },
+      {
         "id": "saving",
         "label": "Saving plan"
+      },
+      {
+        "id": "failed",
+        "label": "Save failed"
+      },
+      {
+        "id": "unconfirmed-changed",
+        "label": "Save unconfirmed · latest plan shown"
+      },
+      {
+        "id": "unconfirmed-active",
+        "label": "Save unconfirmed · now active"
+      },
+      {
+        "id": "paused",
+        "label": "Kanban mode (read-only)"
+      },
+      {
+        "id": "not-planned",
+        "label": "Sprint no longer planned"
       },
       {
         "id": "not-found",
         "label": "Sprint not found"
       },
       {
+        "id": "project-not-found",
+        "label": "Project not found"
+      },
+      {
         "id": "loading",
         "label": "Loading"
+      },
+      {
+        "id": "error",
+        "label": "Load failed"
       }
     ]
   },
@@ -1004,6 +1232,22 @@ window.MOCK_CATALOG = [
       {
         "id": "default",
         "label": "Confirm start"
+      },
+      {
+        "id": "loading",
+        "label": "Loading sprint"
+      },
+      {
+        "id": "load-failed",
+        "label": "Couldn't load sprint"
+      },
+      {
+        "id": "stale",
+        "label": "Sprint changed meanwhile"
+      },
+      {
+        "id": "not-planned",
+        "label": "Already started"
       },
       {
         "id": "blocked-active",
@@ -1020,6 +1264,10 @@ window.MOCK_CATALOG = [
       {
         "id": "failed",
         "label": "Start failed"
+      },
+      {
+        "id": "unconfirmed-active",
+        "label": "Start unconfirmed · now active"
       }
     ]
   },
@@ -1033,8 +1281,20 @@ window.MOCK_CATALOG = [
         "label": "Administrator"
       },
       {
+        "id": "pending",
+        "label": "Move saving"
+      },
+      {
         "id": "scope-log",
         "label": "Scope changes"
+      },
+      {
+        "id": "scope-log-loading",
+        "label": "Scope changes · loading"
+      },
+      {
+        "id": "scope-log-failed",
+        "label": "Scope changes · couldn't load"
       },
       {
         "id": "no-stories",
@@ -1043,6 +1303,10 @@ window.MOCK_CATALOG = [
       {
         "id": "no-active",
         "label": "No active sprint"
+      },
+      {
+        "id": "no-planned",
+        "label": "No active sprint, none planned"
       },
       {
         "id": "no-sprints",
@@ -1076,8 +1340,28 @@ window.MOCK_CATALOG = [
         "label": "Add stories"
       },
       {
+        "id": "paged",
+        "label": "Many stories, page 2"
+      },
+      {
         "id": "remove",
         "label": "Remove a story"
+      },
+      {
+        "id": "loading",
+        "label": "Loading sprint"
+      },
+      {
+        "id": "load-failed",
+        "label": "Couldn't load sprint"
+      },
+      {
+        "id": "stale",
+        "label": "Sprint changed meanwhile"
+      },
+      {
+        "id": "allocated",
+        "label": "Story already in another sprint"
       },
       {
         "id": "closed",
@@ -1090,6 +1374,14 @@ window.MOCK_CATALOG = [
       {
         "id": "failed",
         "label": "Save failed"
+      },
+      {
+        "id": "unconfirmed-added",
+        "label": "Change unconfirmed · already added"
+      },
+      {
+        "id": "unconfirmed-closed",
+        "label": "Change unconfirmed · now closed"
       }
     ]
   },
@@ -1101,6 +1393,14 @@ window.MOCK_CATALOG = [
       {
         "id": "default",
         "label": "Choose destinations"
+      },
+      {
+        "id": "loading",
+        "label": "Loading review"
+      },
+      {
+        "id": "many-unfinished",
+        "label": "Many unfinished stories"
       },
       {
         "id": "unresolved",
@@ -1116,7 +1416,15 @@ window.MOCK_CATALOG = [
       },
       {
         "id": "conflict",
-        "label": "Membership changed"
+        "label": "Sprint changed during review"
+      },
+      {
+        "id": "review-failed",
+        "label": "Review couldn't load"
+      },
+      {
+        "id": "already-closed",
+        "label": "Already closed"
       },
       {
         "id": "closing",
@@ -1125,6 +1433,10 @@ window.MOCK_CATALOG = [
       {
         "id": "failed",
         "label": "Close failed"
+      },
+      {
+        "id": "unconfirmed-closed",
+        "label": "Close unconfirmed · now closed"
       }
     ]
   },
@@ -1144,6 +1456,10 @@ window.MOCK_CATALOG = [
       {
         "id": "not-found",
         "label": "Sprint not found"
+      },
+      {
+        "id": "project-not-found",
+        "label": "Project not found"
       },
       {
         "id": "loading",
@@ -1198,6 +1514,10 @@ window.MOCK_CATALOG = [
       {
         "id": "loading",
         "label": "Loading"
+      },
+      {
+        "id": "error",
+        "label": "Load failed"
       }
     ]
   },
@@ -1231,6 +1551,14 @@ window.MOCK_CATALOG = [
         "label": "Account added"
       },
       {
+        "id": "edit-loading",
+        "label": "Edit · loading"
+      },
+      {
+        "id": "edit-load-failed",
+        "label": "Edit · couldn't load"
+      },
+      {
         "id": "edit",
         "label": "Edit names and role"
       },
@@ -1260,6 +1588,14 @@ window.MOCK_CATALOG = [
       {
         "id": "own",
         "label": "Your own password"
+      },
+      {
+        "id": "loading",
+        "label": "Loading account"
+      },
+      {
+        "id": "load-failed",
+        "label": "Couldn't load account"
       },
       {
         "id": "validation",
@@ -1293,6 +1629,14 @@ window.MOCK_CATALOG = [
         "label": "Reactivate"
       },
       {
+        "id": "loading",
+        "label": "Loading account"
+      },
+      {
+        "id": "load-failed",
+        "label": "Couldn't load account"
+      },
+      {
         "id": "blocked",
         "label": "Designated administrator (409)"
       },
@@ -1320,8 +1664,20 @@ window.MOCK_CATALOG = [
         "label": "Recent events"
       },
       {
+        "id": "actor-search",
+        "label": "Searching for an actor"
+      },
+      {
+        "id": "actor-failed",
+        "label": "Actor search failed"
+      },
+      {
         "id": "filtered-zero",
         "label": "No matching events"
+      },
+      {
+        "id": "invalid-range",
+        "label": "To date before From (400)"
       },
       {
         "id": "loading",

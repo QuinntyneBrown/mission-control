@@ -20,24 +20,77 @@ skinparam class {
   BackgroundColor #F9FAFB
 }
 class LeadDirectoryPage {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
+  +filters: Signal<LeadFilters>
+  +canManageLeads: Signal<boolean>
+  -refresh: WritableSignal<number>
 }
+note bottom of LeadDirectoryPage
+  Route query holds search, category, and page,
+  so home category links keep their context.
+  canManageLeads = leads.manage in
+  currentSession.capabilities.
+end note
 class LeadDetailPage {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
+  +leadId: Signal<Guid>
+  +canManageLeads: Signal<boolean>
+  -refresh: WritableSignal<number>
 }
-class LeadView {
-  +state: Signal<FeatureState>
-  +submit(): void
+class LeadFilters {
+  +search: string
+  +category: LeadCategory?
+  +page: int
+}
+class LeadDirectoryView {
+  +filters: InputSignal<LeadFilters>
+  +refresh: InputSignal<number>
+  +canManageLeads: InputSignal<boolean>
+  +filtersChanged: OutputEmitterRef<LeadFilters>
+  +createRequested: OutputEmitterRef<void>
+  +editRequested: OutputEmitterRef<LeadSummary>
+  +deleteRequested: OutputEmitterRef<LeadSummary>
+  -settledSearch: Signal<string>
+  -query: Signal<ListLeadsQuery>
+  -leads: ResourceRef<LeadDirectoryResult>
+}
+note right of LeadDirectoryView
+  settledSearch follows filters.search once it has
+  been stable for about 250 ms; category, page, and
+  Clear filter reach the query at once. A changed
+  refresh calls leads.reload(). canManageLeads
+  false hides Add lead, Edit, and Delete and shows
+  the reason. A 400 for the route query shows
+  filter-invalid with Clear filter.
+end note
+class LeadDetailView {
+  +leadId: InputSignal<Guid>
+  +refresh: InputSignal<number>
+  +canManageLeads: InputSignal<boolean>
+  +editRequested: OutputEmitterRef<LeadDetailResult>
+  +deleteRequested: OutputEmitterRef<LeadDetailResult>
+  -lead: ResourceRef<LeadDetailResult>
+}
+interface "ResourceRef<T>" as ResourceRef {
+  +value: Signal<T | undefined>
+  +status: Signal<loading | resolved | error>
+  +error: Signal<unknown>
+  +reload(): void
 }
 interface ILeadService {
-  +search(request: ListLeadsQuery): Promise<LeadDirectoryResult>
-  +read(request: GetLeadQuery): Promise<LeadDetailResult>
+  +leadsResource(query: () => ListLeadsQuery | undefined): ResourceRef<LeadDirectoryResult>
+  +leadResource(query: () => GetLeadQuery | undefined): ResourceRef<LeadDetailResult>
 }
 class LeadService {
   -http: HttpClient
 }
+interface ISessionService {
+  +currentSession: Signal<CurrentSession?>
+}
+note bottom of LeadService
+  Creates each resource in the consumer's injection
+  context. A changed query unsubscribes the superseded
+  request, which cancels it; destroying the consumer
+  cancels any read in flight. No shared mutable state.
+end note
 class LeadsController {
   -sender: ISender
 }
@@ -55,17 +108,25 @@ class InitializationOptions {
   +designatedEmail: string
 }
 interface IMissionControlDataSession {
-  +query(specification): Task<ReadResult>
-  +commit(expectedVersion: long): Task<void>
+  +ListLeadsAsync(query: ListLeadsQuery, ct: CancellationToken): Task<LeadDirectoryResult>
+  +LoadLeadDetailAsync(id: Guid, ct: CancellationToken): Task<LeadDetailResult?>
 }
-class MissionControlDataSession {
-  -connection: DbConnection
-}
-LeadDirectoryPage --> LeadView : composes
-LeadDetailPage --> LeadView : composes
-LeadView ..> ILeadService : inject token
+note bottom of IMissionControlDataSession
+  Scoped view of the shared port; only the typed reads
+  this slice uses. Each read uses one snapshot.
+end note
+class MissionControlDataSession
+LeadDirectoryPage --> LeadDirectoryView : composes; inputs and outputs only
+LeadDetailPage --> LeadDetailView : composes; inputs and outputs only
+LeadDirectoryPage ..> LeadFilters : route query
+LeadDirectoryPage ..> ISessionService : inject SESSION_SERVICE
+LeadDetailPage ..> ISessionService : inject SESSION_SERVICE
+LeadDirectoryView ..> ILeadService : inject LEAD_SERVICE
+LeadDetailView ..> ILeadService : inject LEAD_SERVICE
 ILeadService <|.. LeadService
+ILeadService ..> ResourceRef : returns per consumer
 IMissionControlDataSession <|.. MissionControlDataSession
+IMissionControlDataSession ..> LeadContact : projects from
 class ListLeadsQuery {
   +search: string?
   +category: LeadCategory?
@@ -73,7 +134,7 @@ class ListLeadsQuery {
   +pageSize: int
 }
 class ListLeadsQueryHandler {
-  +handle(request: ListLeadsQuery): Task<LeadDirectoryResult>
+  +handle(request: ListLeadsQuery, ct: CancellationToken): Task<LeadDirectoryResult>
 }
 class LeadSummary {
   +id: Guid
@@ -84,7 +145,7 @@ class LeadSummary {
   +category: LeadCategory
   +isCityLead: bool
 }
-class CategoryTotal {
+class CategoryCount {
   +category: LeadCategory
   +count: int
 }
@@ -93,26 +154,26 @@ class LeadDirectoryResult {
   +totalCount: int
   +page: int
   +pageSize: int
-  +categoryTotals: CategoryTotal[5]
+  +categoryTotals: CategoryCount[5]
 }
 note bottom of LeadDirectoryResult
+  Rows, total, and categoryTotals share one snapshot.
   categoryTotals: all five categories, zero-filled,
   over all persisted leads; search and category
   do not change them.
 end note
 LeadDirectoryResult *-- LeadSummary
-LeadDirectoryResult *-- CategoryTotal
+LeadDirectoryResult *-- CategoryCount
 LeadsController ..> ListLeadsQuery : dispatches
 ListLeadsQueryHandler ..> ListLeadsQuery : handles
-ListLeadsQueryHandler --> LeadContact : reads
 ListLeadsQueryHandler ..> LeadDirectoryResult : returns
-ListLeadsQueryHandler ..> IMissionControlDataSession : uses
+ListLeadsQueryHandler ..> IMissionControlDataSession : ListLeadsAsync
 ListLeadsQueryHandler ..> InitializationOptions : IOptions; City Lead email
 class GetLeadQuery {
   +id: Guid
 }
 class GetLeadQueryHandler {
-  +handle(request: GetLeadQuery): Task<LeadDetailResult>
+  +handle(request: GetLeadQuery, ct: CancellationToken): Task<LeadDetailResult>
 }
 class ResponsibleWorkspace {
   +id: Guid
@@ -128,18 +189,21 @@ class LeadDetailResult {
   +category: LeadCategory
   +version: long
   +isCityLead: bool
-  +responsibleWorkspaces: ResponsibleWorkspace[]
+  +responsibleWorkspaceCount: int
+  +responsibleWorkspaces: ResponsibleWorkspace[0..10]
 }
 note bottom of LeadDetailResult
   isCityLead: category is City and normalized email
   equals the designated email; never an account role.
+  responsibleWorkspaces: first 10 by name then ID.
+  Count >= 1 adds View all to
+  /projects?responsibleLeadId={id}.
 end note
-LeadDetailResult *-- ResponsibleWorkspace
+LeadDetailResult *-- "0..10" ResponsibleWorkspace
 LeadsController ..> GetLeadQuery : dispatches
 GetLeadQueryHandler ..> GetLeadQuery : handles
-GetLeadQueryHandler --> LeadContact : reads
 GetLeadQueryHandler ..> LeadDetailResult : returns; 404 when missing
-GetLeadQueryHandler ..> IMissionControlDataSession : uses
+GetLeadQueryHandler ..> IMissionControlDataSession : LoadLeadDetailAsync
 GetLeadQueryHandler ..> InitializationOptions : IOptions; City Lead email
 
 enum LeadCategory {

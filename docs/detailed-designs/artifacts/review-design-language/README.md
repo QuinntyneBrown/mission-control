@@ -13,21 +13,31 @@ This design refines the [L2 baseline](../../../specs/L2.md) and its linked L1 sc
 
 ## Description
 
+The [shared design rules](../../README.md#shared-design-rules) apply: proposed type status, Application placement and MediatR `12.5.0`, authentication and validation V, responsive profile R and accessibility, token styling, data ownership and session handling, and incremental ATDD. This page records feature-specific behavior and exceptions only.
+Exception: as an L2-047 design artifact, the design system has no ATDD and no automated tests; production workflows receive their own behavioral acceptance checks.
+
 The proposed `design-system/` contains its own `package.json`, build command, static catalog, token stylesheet, breakpoint source, and control/layout specimens.
 `--mc-` is the shared prefix already used by `docs/mocks/assets/tokens.css`.
 The initial catalog adopts color, spacing, typography, radius, focus, elevation, size, and motion roles from that provisional stylesheet.
-Its copy becomes authoritative; frontend and mocks mirror it through a documented copy step and manual review.
-Missing roles are added to the authoritative stylesheet before component styles use them.
+Its copy becomes authoritative. Missing roles are added to the authoritative stylesheet before component styles use them.
 
 The static build bundles the token reference and examples without depending on the API or Angular application's runtime.
 The hosting destination, build tooling, deployment command, and maintainer are `<TO SUPPLY>`.
 CSS custom properties cannot supply media-query conditions, so the design system publishes named breakpoints from its package as Sass mixins.
 Its breakpoint source follows profile R: `sm`, `md`, `lg`, and `xl` start at 576, 768, 992, and 1200 pixels, `xs` lies below 576, and `short` covers viewports under 560 pixels tall.
-Component stylesheets reference only those names, for example `@include mc-bp.up(md)`. Literal widths exist once, in the design system's breakpoint source, which the front end mirrors with the tokens.
+Component stylesheets reference only those names, for example `@include mc-bp.up(md)`. Literal widths exist once, in the design system's breakpoint source.
 Component rules read tokens for every dimension, font, spacing, and color.
+
+The build emits the two mirror sources: `dist/tokens.css` holds every `--mc-` custom property, and `dist/_breakpoints.scss` holds the named breakpoint mixins.
+A `sync-tokens` script copies both without changing them. In `frontend/`, `npm run sync-tokens` writes `frontend/styles/tokens.css` and `frontend/styles/_breakpoints.scss`.
+For the mocks, `node docs/mocks/sync-tokens.mjs` writes `docs/mocks/assets/tokens.css` and `docs/mocks/assets/_breakpoints.scss`.
+Each copy starts with a header comment naming the source design-system version from `design-system/package.json` and the latest commit that changed `design-system/`.
+The script refuses to run while `design-system/` has uncommitted changes, so that header identifies the exact source. Mirrored files are never edited by hand.
+Review confirms a mirror by rebuilding the design system at the recorded commit, rerunning `sync-tokens`, and checking that the mirrored files are unchanged.
+The script is build tooling and the comparison is manual review; neither introduces a test.
+
 Manual review opens the built site independently and resizes through each profile R width from 320 to 1920 pixels, including control focus and compact/expanded specimens.
 Contrast, status text, touch size, and zoom examples communicate the proposed accessibility baseline.
-This artifact has no ATDD or automated tests; production workflows receive their own behavioral acceptance checks.
 
 | Behavior | Proposed boundary | Review operation |
 | --- | --- | --- |
@@ -50,19 +60,19 @@ Requirement text and identifiers below are copied verbatim from L2, including th
 
 ## Diagrams
 
-The context view identifies the reviewer and the standalone artifact.
+The context view identifies the reviewer, the standalone artifact, and the token mirrors that copy it.
 
 ![Review the standalone design language: c4 context](diagrams/c4-context.png)
 
-The container view separates editable static sources and their independent review site.
+The container view separates the editable sources, their build output, and the frontend and mock mirrors.
 
 ![Review the standalone design language: c4 container](diagrams/c4-container.png)
 
-The component view shows the static catalog, examples, token source, and named breakpoint source.
+The component view shows the static catalog, examples, token and breakpoint sources, their built mirror sources, and the `sync-tokens` copies.
 
 ![Review the standalone design language: c4 component](diagrams/c4-component.png)
 
-The class view models source metadata and its composition; these are artifact concepts rather than production services.
+The class view models source metadata, its composition, and the provenance of each mirrored file; these are artifact concepts rather than production services.
 
 ![Review the standalone design language: class structure](diagrams/class-structure.png)
 

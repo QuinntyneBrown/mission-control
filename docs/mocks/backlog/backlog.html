@@ -39,17 +39,17 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">One priority order for all 24 stories, independent of the work hierarchy and of board column order. Drag a row by its handle, or use Move up and Move down (in the row menu below 768px) or Move to position…. Screen readers hear "Moved Book AV for demo day to position 1 of 24". 25 stories per page; this project fits on one page. The project header and tabs stay pinned while the tab content scrolls; on phones only the tabs stay pinned.</p>
-    <p class="mock-note" data-when="add-to-sprint" hidden>Only unfinished stories that aren't already in a planned or active sprint can be added. Adding to the active sprint is a scope change recorded in its history with the person and time. Done stories show the option disabled with the reason.</p>
-    <p class="mock-note" data-when="kanban" hidden>Kanban projects keep the same priority order but have no sprints, so rows show no sprint information and no Add to sprint.</p>
-    <p class="mock-note" data-when="kanban-preserved" hidden>This project switched from Scrum to Kanban with its sprints kept. Sprint membership is read-only and adding to a sprint is disabled until the project returns to Scrum.</p>
-    <p class="mock-note" data-when="collaborator" hidden>Collaborators can reorder the backlog and add stories to sprints. Project settings are administrator-only, so Project actions is absent.</p>
-    <p class="mock-note" data-when="paged" hidden>Shown with a larger dataset: 350 stories, 25 per page, so this is page 2 of 14. Ranks are absolute across pages. Move up on rank 26 moves the story to rank 25 on page 1 and is announced, for example "Moved Team size limits shown at sign-up to position 25 of 350, on page 1"; Move down on rank 50 does the same toward page 3. Dragging stays within the visible page; Move to position… reaches any rank from 1 to 350. Totals count every story, not just this page. Only page 2 is drawn, so the other page links stay here.</p>
-    <p class="mock-note" data-when="empty" hidden>A new Scrum project with no stories and no sprints yet. Both roles can add work, so the action is offered to collaborators too. Once stories exist they can be prioritized here and added to a sprint from each row's menu.</p>
-    <p class="mock-note" data-when="reorder-failed" hidden>The save failed, so the list returns to its last saved order and the story that was moved is highlighted. Screen readers hear "Couldn't move Confirm venue accessibility checklist. Order restored." Focus stays on the move control; Try again sends the same move.</p>
-    <p class="mock-note" data-when="reorder-conflict" hidden>The backlog order changed after it loaded, so the order version no longer matched and the API answered 409. Nothing was applied and the move is never resent, because a position chosen from an outdated order could land somewhere unintended. The list keeps the order it showed and highlights the story; any further move from it would be refused the same way. Focus moves to Reload backlog, which loads the latest order and returns focus to the story's row.</p>
+    <p class="mock-note" data-when="default">One priority order for all 24 stories, independent of the work hierarchy and of board column order. Drag a row by its handle, or use Move up and Move down (in the row menu below 768px) or Move to position…. Screen readers hear "Moved Book AV for demo day to position 1 of 24". At the top or bottom of the order, Move up or Move down stays focusable and is marked unavailable (aria-disabled), so focus stays put when a move reaches the end. 25 stories per page; this project fits on one page. The project header and tabs stay pinned while the tab content scrolls; on phones only the tabs stay pinned.</p>
+    <p class="mock-note" data-when="add-to-sprint" hidden>Only unfinished stories that aren't already in a planned or active sprint can be added. The menu lists the sprints the backlog page returned with its rows: the active sprint first, then up to 25 planned sprints by start date. Sprint 8 · Active opens Sprint 8's scope dialog with Volunteer thank-you notes (HCK-130) already chosen once its read confirms the story can still be added; adding it is a scope change recorded in the sprint's history with the person and time. Sprint 9 · Planned opens Sprint 9's plan with HCK-130 marked To add, and nothing is saved until Save plan. The backlog reloads after the scope dialog saves, and reads afresh when you come back from the plan. Done stories show the option disabled with the reason; a Done story still in Sprint 8 says it stays with the sprint's outcomes and links to the Sprint 8 board. A Scrum project with no active or planned sprint has nothing to offer, so every row shows Add to sprint unavailable with “No active or planned sprint yet” and a link to the Sprints tab, where either role can plan one.</p>
+    <p class="mock-note" data-when="kanban" hidden>Kanban projects keep the same priority order but have no sprints, so rows show no sprint information and no Add to sprint. Church Website Refresh has never had sprints: its Overview and Board tabs open its own states, switching it to Scrum has no sprint history to restore, and its 60 work items block deletion.</p>
+    <p class="mock-note" data-when="kanban-preserved" hidden>This project switched from Scrum to Kanban with its sprints kept. Sprint membership is read-only and marked paused, and adding to a sprint is disabled until an administrator switches the project back to Scrum. The banner's Change delivery mode appears only for administrators and opens the project's Change delivery mode dialog. Its tabs open Prayer Wall App's own states: the overview with paused sprints, the Kanban board, and the paused Sprints tab; deleting it is blocked by its work and kept sprints.</p>
+    <p class="mock-note" data-when="collaborator" hidden>Collaborators can reorder the backlog and add stories to sprints. Project settings are administrator-only, so Project actions is absent and the notice under the project header, the same on every project tab, says why.</p>
+    <p class="mock-note" data-when="paged" hidden>Shown with a larger dataset: 350 stories, 25 per page, so this is page 2 of 14. Ranks are absolute across pages. Move up on rank 26 moves the story to rank 25 on page 1 and is announced, for example "Moved Team size limits shown at sign-up to position 25 of 350, on page 1"; the backlog shows page 1, and because the row left page 2, focus moves to the moved story's row on page 1. Move down on rank 50 does the same toward page 3. Dragging stays within the visible page; Move to position… reaches any rank from 1 to 350. Totals count every story, not just this page. Only page 2 is drawn, so the other page links stay here.</p>
+    <p class="mock-note" data-when="empty" hidden>A new Scrum project with no stories and no sprints yet. Both roles can add work, so the action is offered to collaborators too. Once stories exist they can be prioritized here and added to a sprint from each row's menu. Youth Coding Night's tabs and project actions open its own states: no sprints on the board and the Sprints tab, and a switch to Kanban with nothing to move.</p>
+    <p class="mock-note" data-when="reorder-failed" hidden>The save failed, so the list returns to its last saved order and the story that was moved is highlighted. A busy project is handled the same way: when the project's change lock can't be taken in time the API answers 503 and nothing changes. Screen readers hear "Couldn't move Confirm venue accessibility checklist. Order restored." Focus stays on the move control; Try again sends the same move, and nothing is retried automatically. A move the API refuses (400, for example a position outside the order) restores the saved order the same way, but this alert shows the server's reason with Reload backlog instead of Try again, and no reference ID, because sending it again would be refused again. A move that gets no response may have saved, so the backlog rereads the page and this alert reads "We couldn't confirm whether Confirm venue accessibility checklist moved" and says where the reread found it, never that it wasn't moved or that the order was restored, with no reference ID or Try again, because the reread shows the saved order. If the story was deleted meanwhile, the API answers 404 instead: nothing moves, the backlog reloads without it, and the announcement says it no longer exists; its move control went with it, so focus moves to the row now at that rank, or to the Backlog heading when no row is left there. Reordering needs only an active session, so a 403 is unexpected: the list returns to its saved order without this alert, and the page shows the "Your access changed" toast, without Retry or a reference ID.</p>
+    <p class="mock-note" data-when="reorder-conflict" hidden>The backlog order changed after it loaded, so the order version no longer matched and the API answered 409. Nothing was applied and the move is never resent, because a position chosen from an outdated order could land somewhere unintended. The list keeps the order it showed and highlights the story; any further move from it would be refused the same way. The move controls stay enabled, so the alert is announced without moving focus; Reload backlog loads the latest order and returns focus to the story's row.</p>
     <p class="mock-note" data-when="loading" hidden>Skeleton rows hold the layout while the backlog loads, so it never looks empty. Screen readers hear "Loading backlog".</p>
-    <p class="mock-note" data-when="error" hidden>The reference ID matches the server's diagnostic record.</p>
+    <p class="mock-note" data-when="error" hidden>The backlog couldn't load (a 500, a busy 503, or no response), so no stale order is shown. Try again reloads the backlog, and the project header rereads with it in case it failed too. The reference ID appears only when the server answered and matches its diagnostic record; with no response there is none. A project that no longer exists, from a stale link or deleted after the backlog opened (a 404 on a page change, a reload, or the reread after a move), is not a load failure: the header keeps only the breadcrumb and the backlog shows "Project not found" with Back to projects and no Try again or reference ID, the same presentation as the <a href="../projects/project-overview.html#state=not-found">project overview's Not found state</a>.</p>
   </div>
 
   <div class="mc-app">
@@ -132,11 +132,11 @@
               <h1 class="mc-page-header__title" tabindex="-1"><span data-unless="kanban kanban-preserved empty">Community Hackathon 2026</span><span data-when="kanban" hidden>Church Website Refresh</span><span data-when="kanban-preserved" hidden>Prayer Wall App</span><span data-when="empty" hidden>Youth Coding Night</span></h1>
               <div class="mc-page-header__meta" data-unless="kanban kanban-preserved empty">
                 <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
-                <span>Responsible lead: <a href="../leads/lead-detail.html#state=lead">Rafael Da Silva</a></span>
+                <span>Responsible lead: <a href="../leads/lead-detail.html#state=lead-rafael">Rafael Da Silva</a></span>
               </div>
               <div class="mc-page-header__meta" data-when="kanban" hidden>
                 <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
-                <span>Responsible lead: <a href="../leads/lead-detail.html#state=lead">Lucia Alvarez</a></span>
+                <span>Responsible lead: <a href="../leads/lead-detail.html#state=lead-lucia">Lucia Alvarez</a></span>
               </div>
               <div class="mc-page-header__meta" data-when="kanban-preserved" hidden>
                 <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
@@ -160,31 +160,40 @@
                 </button>
                 <div class="mc-menu" id="project-actions">
                   <button class="mc-menu__item" type="button" data-nav="../projects/project-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit project</button>
-                  <button class="mc-menu__item" type="button" data-nav="../projects/mode-change-dialog.html#state=blocked" data-attr-kanban="data-nav=../projects/mode-change-dialog.html#state=to-scrum" data-attr-kanban-preserved="data-nav=../projects/mode-change-dialog.html#state=to-scrum" data-attr-empty="data-nav=../projects/mode-change-dialog.html#state=to-kanban"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
+                  <button class="mc-menu__item" type="button" data-nav="../projects/mode-change-dialog.html#state=blocked" data-attr-kanban="data-nav=../projects/mode-change-dialog.html#state=to-scrum-empty" data-attr-kanban-preserved="data-nav=../projects/mode-change-dialog.html#state=to-scrum" data-attr-empty="data-nav=../projects/mode-change-dialog.html#state=to-kanban-empty"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
                   <div class="mc-menu__separator"></div>
-                  <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="../projects/project-delete-dialog.html#state=blocked" data-attr-empty="data-nav=../projects/project-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
+                  <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="../projects/project-delete-dialog.html#state=blocked" data-attr-kanban="data-nav=../projects/project-delete-dialog.html#state=blocked-work" data-attr-kanban-preserved="data-nav=../projects/project-delete-dialog.html#state=blocked-paused" data-attr-empty="data-nav=../projects/project-delete-dialog.html"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
                 </div>
               </div>
             </div>
           </header>
           <nav class="mc-project-tabs" aria-label="Project sections">
             <ul class="mc-tabs">
-              <li><a class="mc-tabs__link" href="../projects/project-overview.html" data-attr-empty="href=../projects/project-overview.html#state=new-empty"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</a></li>
+              <li><a class="mc-tabs__link" href="../projects/project-overview.html" data-attr-kanban="href=../projects/project-overview.html#state=kanban" data-attr-kanban-preserved="href=../projects/project-overview.html#state=kanban-preserved" data-attr-empty="href=../projects/project-overview.html#state=new-empty"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</a></li>
               <li><a class="mc-tabs__link" href="../work/work-hierarchy.html" data-attr-empty="href=../work/work-hierarchy.html#state=empty"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</a></li>
               <li><a class="mc-tabs__link" href="../backlog/backlog.html" aria-current="page"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</a></li>
-              <li><a class="mc-tabs__link" href="../scrum/sprint-board.html" data-attr-kanban="href=../kanban/kanban-board.html" data-attr-kanban-preserved="href=../kanban/kanban-board.html" data-attr-empty="href=../scrum/sprint-board.html#state=no-active"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</a></li>
-              <li data-unless="kanban"><a class="mc-tabs__link" href="../scrum/sprints.html" data-attr-empty="href=../scrum/sprints.html#state=no-sprints"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</a></li>
+              <li><a class="mc-tabs__link" href="../scrum/sprint-board.html" data-attr-kanban="href=../kanban/kanban-board.html" data-attr-kanban-preserved="href=../kanban/kanban-board.html#state=preserved" data-attr-empty="href=../scrum/sprint-board.html#state=no-sprints"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</a></li>
+              <li data-unless="kanban"><a class="mc-tabs__link" href="../scrum/sprints.html" data-attr-kanban-preserved="href=../scrum/sprints.html#state=kanban-paused" data-attr-empty="href=../scrum/sprints.html#state=empty"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</a></li>
             </ul>
           </nav>
         </div>
 
-        <h2 class="mc-visually-hidden">Backlog</h2>
+        <div class="mc-alert mc-alert--neutral mc-alert--page mock-collaborator-only">
+          <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
+          <div class="mc-alert__body">
+            <p class="mc-alert__text">Only administrators can change project settings. You can add and update work, move cards, and run sprints.</p>
+          </div>
+        </div>
+
+        <div class="mc-section__header">
+          <h2 class="mc-section__title" id="backlog-heading" tabindex="-1">Backlog</h2>
+        </div>
 
         <div class="mc-alert mc-alert--page" data-when="kanban-preserved" hidden>
           <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
           <div class="mc-alert__body">
             <p class="mc-alert__title">Sprints are paused while this project uses Kanban</p>
-            <p class="mc-alert__text">Sprint 3 (planned) and the history of Sprints 1 and 2 are kept. Switch the project back to Scrum to plan or start sprints.</p>
+            <p class="mc-alert__text">This project's planned sprints and sprint history are kept. An administrator can switch the project back to Scrum to plan or start sprints.</p>
             <div class="mc-alert__actions">
               <button class="mc-button mc-button--sm mock-admin-only" type="button" data-nav="../projects/mode-change-dialog.html#state=to-scrum"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
               <a class="mc-button mc-button--sm" href="../scrum/sprints.html#state=kanban-paused"><span class="mc-icon mc-icon--history" aria-hidden="true"></span>View sprint history</a>
@@ -249,7 +258,7 @@
                   </p>
                 </div>
                 <div class="mc-cluster mc-cluster--sm">
-                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Volunteers can join a build team" disabled><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Volunteers can join a build team" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
                   <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Volunteers can join a build team"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
                   <div class="mc-menu-anchor">
                     <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-112" aria-expanded="false" aria-label="More actions for Volunteers can join a build team"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
@@ -380,8 +389,8 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Add to sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -493,7 +502,7 @@
                   <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Confirm venue accessibility checklist" data-goto-state="reorder-failed"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
                   <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Confirm venue accessibility checklist"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
                   <div class="mc-menu-anchor">
-                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-120" aria-expanded="false" aria-label="More actions for Confirm venue accessibility checklist" data-open-when="add-to-sprint"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-120" aria-expanded="false" aria-label="More actions for Confirm venue accessibility checklist"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                     <div class="mc-menu" id="row-menu-HCK-120">
                     <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
                     <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
@@ -501,8 +510,8 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Add to sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -532,8 +541,8 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Add to sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -563,8 +572,8 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Add to sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -594,8 +603,8 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Add to sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -617,7 +626,7 @@
                   <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Volunteer thank-you notes"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
                   <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Volunteer thank-you notes"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
                   <div class="mc-menu-anchor">
-                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-130" aria-expanded="false" aria-label="More actions for Volunteer thank-you notes"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
+                    <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-130" aria-expanded="false" aria-label="More actions for Volunteer thank-you notes" data-open-when="add-to-sprint"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                     <div class="mc-menu" id="row-menu-HCK-130">
                     <button class="mc-menu__item" type="button" data-nav="../work/work-item-detail.html"><span class="mc-icon mc-icon--story" aria-hidden="true"></span>Open story</button>
                     <button class="mc-menu__item mc-show-compact" type="button"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span>Move up</button>
@@ -625,8 +634,8 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Add to sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html#state=paged"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -656,7 +665,7 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-board.html"><span class="mc-icon mc-icon--board" aria-hidden="true"></span><span class="mc-menu__item-text">Open Sprint 8 board<span class="mc-menu__hint">Already in Sprint 8. Change its scope there.</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-board.html"><span class="mc-icon mc-icon--board" aria-hidden="true"></span><span class="mc-menu__item-text">Open Sprint 8 board<span class="mc-menu__hint">Done in Sprint 8. It stays with the sprint's outcomes.</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -686,7 +695,7 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-board.html"><span class="mc-icon mc-icon--board" aria-hidden="true"></span><span class="mc-menu__item-text">Open Sprint 8 board<span class="mc-menu__hint">Already in Sprint 8. Change its scope there.</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-board.html"><span class="mc-icon mc-icon--board" aria-hidden="true"></span><span class="mc-menu__item-text">Open Sprint 8 board<span class="mc-menu__hint">Done in Sprint 8. It stays with the sprint's outcomes.</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -946,7 +955,7 @@
                 </div>
                 <div class="mc-cluster mc-cluster--sm">
                   <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Registration confirmation email copy"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
-                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Registration confirmation email copy" disabled><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Registration confirmation email copy" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
                   <div class="mc-menu-anchor">
                     <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-HCK-139" aria-expanded="false" aria-label="More actions for Registration confirmation email copy"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                     <div class="mc-menu" id="row-menu-HCK-139">
@@ -1081,8 +1090,8 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Add to sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -1112,8 +1121,8 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Add to sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -1143,7 +1152,7 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-board.html"><span class="mc-icon mc-icon--board" aria-hidden="true"></span><span class="mc-menu__item-text">Open Sprint 8 board<span class="mc-menu__hint">Already in Sprint 8. Change its scope there.</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-board.html"><span class="mc-icon mc-icon--board" aria-hidden="true"></span><span class="mc-menu__item-text">Open Sprint 8 board<span class="mc-menu__hint">Done in Sprint 8. It stays with the sprint's outcomes.</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -1173,8 +1182,8 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Add to sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -1204,8 +1213,8 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Add to sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -1235,8 +1244,8 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Add to sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -1326,8 +1335,8 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Add to sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -1357,8 +1366,8 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Add to sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -1388,8 +1397,8 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Add to sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -1449,8 +1458,8 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Add to sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -1480,8 +1489,8 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Add to sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -1541,8 +1550,8 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Add to sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -1572,8 +1581,8 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Add to sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -1603,8 +1612,8 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Add to sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -1634,8 +1643,8 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Add to sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -1665,8 +1674,8 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Add to sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -1696,8 +1705,8 @@
                     <button class="mc-menu__item" type="button" data-nav="../work/move-position-dialog.html#state=backlog"><span class="mc-icon mc-icon--arrow-up-down" aria-hidden="true"></span>Move to position…</button>
                     <div class="mc-menu__separator"></div>
                     <p class="mc-menu__label">Add to sprint</p>
-                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-scope-dialog.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8 · Active<span class="mc-menu__hint">Recorded as a scope change</span></span></button>
+                    <button class="mc-menu__item" type="button" data-nav="../scrum/sprint-planning.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9 · Planned<span class="mc-menu__hint">Oct 13 – Oct 23, 2026</span></span></button>
                     </div>
                   </div>
                 </div>
@@ -1768,7 +1777,7 @@
                   </p>
                 </div>
                 <div class="mc-cluster mc-cluster--sm">
-                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Event listing component" disabled><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Event listing component" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
                   <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Event listing component"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
                   <div class="mc-menu-anchor">
                     <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-WEB-115" aria-expanded="false" aria-label="More actions for Event listing component"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
@@ -2159,7 +2168,7 @@
                 </div>
                 <div class="mc-cluster mc-cluster--sm">
                   <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Interview two church admins"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
-                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Interview two church admins" disabled><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Interview two church admins" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
                   <div class="mc-menu-anchor">
                     <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-WEB-114" aria-expanded="false" aria-label="More actions for Interview two church admins"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                     <div class="mc-menu" id="row-menu-WEB-114">
@@ -2188,7 +2197,7 @@
                   </p>
                 </div>
                 <div class="mc-cluster mc-cluster--sm">
-                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Mark a prayer as answered" disabled><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Mark a prayer as answered" aria-disabled="true"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
                   <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Mark a prayer as answered"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
                   <div class="mc-menu-anchor">
                     <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-PRW-112" aria-expanded="false" aria-label="More actions for Mark a prayer as answered"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
@@ -2519,7 +2528,7 @@
                 </div>
                 <div class="mc-cluster mc-cluster--sm">
                   <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move up: Readable mobile layout"><span class="mc-icon mc-icon--arrow-up" aria-hidden="true"></span></button>
-                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Readable mobile layout" disabled><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm mc-hide-compact" type="button" aria-label="Move down: Readable mobile layout" aria-disabled="true"><span class="mc-icon mc-icon--arrow-down" aria-hidden="true"></span></button>
                   <div class="mc-menu-anchor">
                     <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="row-menu-PRW-111" aria-expanded="false" aria-label="More actions for Readable mobile layout"><span class="mc-icon mc-icon--more" aria-hidden="true"></span></button>
                     <div class="mc-menu" id="row-menu-PRW-111">
@@ -2560,7 +2569,7 @@
         <div class="mc-empty mc-empty--error" role="alert" data-when="error" hidden>
           <span class="mc-empty__icon"><span class="mc-icon mc-icon--alert-circle mc-icon--lg" aria-hidden="true"></span></span>
           <h3 class="mc-empty__title">We couldn't load the backlog</h3>
-          <p class="mc-empty__text">Check your connection and try again. If it keeps happening, share the reference ID with your administrator.</p>
+          <p class="mc-empty__text">Try again. If it keeps happening, share the reference ID with your administrator.</p>
           <p class="mc-ref">Reference ID <code>4e6b-d2a8-17f0</code>
             <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="4e6b-d2a8-17f0"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
           </p>

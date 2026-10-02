@@ -1,0 +1,245 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+set separator none
+title Frontend classes - Edit, assign, and reparent work
+package "frontend/projects/mission-control" {
+  class WorkItemDetailPage {
+    +workItemId: Signal<Guid>
+    -revision: WritableSignal<number>
+    +onAction(action: WorkItemAction): void
+  }
+  class WorkHierarchyPage {
+    +workspaceId: Signal<Guid>
+    -revision: WritableSignal<number>
+    +onAction(action: WorkItemAction): void
+  }
+  note bottom of WorkHierarchyPage
+    Child routes work/:itemId and work of
+    ProjectLayoutPage. Both pages implement
+    FormDraft by delegating to the open dialog,
+    else to layout.draft().
+    Edit opens WorkItemFormDialog; Reparent opens
+    ReparentDialog. ReparentOutcome: Moved
+    increments revision and shows the "Moved"
+    toast; NotFound calls layout.refresh(), and the
+    detail page opens the work outline. A dialog's
+    unconfirmed increments revision at once; its
+    forbidden (unexpected 403) shows the "Your
+    access changed" toast through TOAST_SERVICE.
+  end note
+  interface FormDraft {
+    +draft: Signal<DraftState>
+  }
+  class WorkItemFormDialog {
+    +context: InputSignal<WorkItemFormContext>
+    +draft: Signal<DraftState>
+    +unconfirmed: OutputEmitterRef<void>
+    +forbidden: OutputEmitterRef<void>
+    -prompt: Signal<CompletionPrompt?>
+    -decision: Signal<CompletionDecision?>
+    +close(result: WorkItemFormOutcome?): void
+  }
+  class ReparentDialog {
+    +target: InputSignal<WorkItemTarget>
+    +draft: Signal<DraftState>
+    +unconfirmed: OutputEmitterRef<void>
+    +forbidden: OutputEmitterRef<void>
+    +close(result: ReparentOutcome?): void
+  }
+  class WorkItemFormOutcome {
+    +kind: Saved | NotFound
+    +saved: WorkItemSaved?
+    +title: string?
+    +parentTitle: string?
+  }
+  class ReparentOutcome {
+    +kind: Moved | NotFound
+    +moved: WorkItemMoved?
+    +title: string?
+  }
+  note bottom of ReparentOutcome
+    Moved on the form's moved; NotFound on
+    notFound; no result: dismissed. The form's
+    unconfirmed and forbidden are relayed as the
+    dialog's own outputs while it stays open.
+    WorkItemFormOutcome is defined by Create and
+    navigate the work hierarchy.
+  end note
+  class UnfinishedTasksDialog {
+    +prompt: InputSignal<CompletionPrompt>
+    +confirmed: OutputEmitterRef<StoryCompletionCondition>
+    +kept: OutputEmitterRef<void>
+    +close(result: UnfinishedTasksOutcome?): void
+  }
+  note bottom of UnfinishedTasksDialog
+    Owned by kanban confirm-story-completion.
+    UnfinishedTasksOutcome: Settled or Forbidden;
+    Escape is Keep in progress (kept).
+    WorkItemFormDialog builds its prompt from
+    completionStatus: ConfirmationRequired opens
+    it (ServerCount when already open), Saving
+    and Failed(referenceId) update it, Forbidden
+    closes it and emits the dialog's forbidden (the
+    page shows the "Your access changed" toast),
+    Settled closes it. Either outcome returns focus
+    to the Status field. Closed with no result by a
+    navigation: kept is relayed, so nothing is sent.
+  end note
+}
+package "frontend/projects/domain" {
+  class WorkItemDetailView {
+    +workItemId: InputSignal<Guid>
+    +refresh: InputSignal<number>
+    +actionRequested: OutputEmitterRef<WorkItemAction>
+    -detail: ResourceRef<WorkItemDetail>
+    +setStatus(itemId: Guid, status: WorkStatus): Promise<void>
+  }
+  class WorkItemForm {
+    +context: InputSignal<WorkItemFormContext>
+    +completionDecision: InputSignal<CompletionDecision?>
+    +saved: OutputEmitterRef<WorkItemSavedResult>
+    +notFound: OutputEmitterRef<void>
+    +unconfirmed: OutputEmitterRef<void>
+    +completionStatus: OutputEmitterRef<CompletionStatus>
+    +forbidden: OutputEmitterRef<void>
+    +draftChange: OutputEmitterRef<DraftState>
+    -draft: Signal<WorkItemDraft>
+    -searchText: Signal<string>
+    -assigneeQuery: Signal<ListAssigneeChoicesQuery | undefined>
+    -assigneeChoices: ResourceRef<AssigneeChoicePage>
+    -item: ResourceRef<WorkItemDetail>
+    -comparison: Signal<FieldComparison[]>
+    -submit: Signal<FeatureState<WorkItemSaved>>
+    +reloadLatest(): void
+  }
+  class CompletionStatus {
+    +state: ConfirmationRequired | Saving | Failed | Forbidden | Settled
+    +storyKey: string
+    +storyTitle: string
+    +savedStatus: WorkStatus
+    +condition: StoryCompletionCondition?
+    +referenceId: string?
+  }
+  class ReparentForm {
+    +target: InputSignal<WorkItemTarget>
+    +moved: OutputEmitterRef<WorkItemMoved>
+    +notFound: OutputEmitterRef<void>
+    +unconfirmed: OutputEmitterRef<void>
+    +forbidden: OutputEmitterRef<void>
+    +draftChange: OutputEmitterRef<DraftState>
+    -item: ResourceRef<WorkItemDetail>
+    -searchText: Signal<string>
+    -targetQuery: Signal<GetWorkItemsQuery | undefined>
+    -targets: ResourceRef<WorkItemPage>
+    -selection: Signal<Guid?>
+    -submit: Signal<FeatureState<WorkItemMoved>>
+  }
+  note bottom of ReparentForm
+    item = workItemResource for the moved item: its
+    ancestors give the current path, its version the
+    expected version. Move stays disabled until it
+    resolves; a failed read offers Try again =
+    item.reload(); a read 404 shows not-found with
+    Back to work (notFound). searchText is debounced
+    about 250 ms into targetQuery (title or parent
+    title). Zero matches show "No epics match" with
+    Clear search. A failed targets read (500, 503, or
+    no response) shows a field-level alert with Retry
+    = targets.reload(), and the reference ID when the
+    server answered, keeping the path, selection, and
+    preview. A deleted target (400) is dropped, the
+    selection cleared, and focus moves to the choices.
+    A 409 moves focus to Reload story, which reloads
+    item and targets. A move with no response reloads
+    them once, shows the failed alert saying it
+    couldn't confirm (no reference ID), and emits
+    unconfirmed; a target that the reread shows as
+    the current parent is cleared, and nothing says
+    the story didn't move. A move 404 shows
+    not-found. Dirty
+    once a target is chosen.
+  end note
+  note bottom of WorkItemForm
+    Edit: item = workItemResource(...) for the edited
+    item; the fields stay disabled until the first
+    resolved value starts the draft; a failed read
+    offers Try again = item.reload(); a read 404 shows
+    edit-not-found with Back to work (notFound). A
+    stale 409 calls item.reload() once. An edit with
+    no response shows the failed alert saying it
+    couldn't confirm (no reference ID), calls
+    item.reload() once, and emits unconfirmed; a
+    stale 409 after it shows the comparison with
+    "The latest saved version is shown beside your
+    entries", never "haven't been saved". A
+    save 404 shows edit-not-found. Add: the query is
+    undefined, so
+    nothing is read. searchText is debounced about
+    250 ms into assigneeQuery; a 400 search refusal
+    shows its field message without Retry or
+    reference ID. A current inactive assignee stays
+    selected but is never offered. A Done edit with
+    unfinished tasks reports through completionStatus
+    and resubmits with the condition from
+    completionDecision; a resubmission with no
+    response reloads the item once and settles.
+  end note
+}
+package "frontend/projects/api" {
+  interface IWorkItemService {
+    +workItemResource(query: () => GetWorkItemQuery | undefined): ResourceRef<WorkItemDetail>
+    +workItemsResource(query: () => GetWorkItemsQuery | undefined): ResourceRef<WorkItemPage>
+    +update(command: UpdateWorkItemCommand): Promise<WorkItemSaved>
+    +reparent(command: ReparentWorkItemCommand): Promise<WorkItemMoved>
+  }
+  class WorkItemService {
+    -http: HttpClient
+  }
+  interface IAssigneeService {
+    +assigneeChoicesResource(query: () => ListAssigneeChoicesQuery | undefined): ResourceRef<AssigneeChoicePage>
+  }
+  class AssigneeService {
+    -http: HttpClient
+  }
+  note bottom of AssigneeService
+    Creates the resource in the consumer's injection
+    context; a changed query aborts the superseded
+    request; consumer destroy cancels it.
+  end note
+}
+WorkItemDetailPage ..|> FormDraft
+WorkHierarchyPage ..|> FormDraft
+WorkItemFormDialog ..|> FormDraft
+ReparentDialog ..|> FormDraft
+WorkItemDetailPage --> WorkItemDetailView : composes; refresh = revision + layout revision
+WorkItemDetailPage ..> WorkItemFormDialog : opens on Edit
+WorkItemDetailPage ..> ReparentDialog : opens on Reparent
+WorkHierarchyPage ..> WorkItemFormDialog : opens on Edit
+WorkHierarchyPage ..> ReparentDialog : opens on Reparent
+WorkItemFormDialog --> WorkItemForm : hosts; inputs and outputs only
+ReparentDialog --> ReparentForm : hosts; inputs and outputs only
+WorkItemFormDialog ..> WorkItemFormOutcome : close(result)
+ReparentDialog ..> ReparentOutcome : close(result)
+WorkItemFormDialog ..> UnfinishedTasksDialog : drives prompt from completionStatus; relays confirmed or kept as completionDecision
+WorkItemForm ..> CompletionStatus : emits
+WorkItemDetailView ..> IWorkItemService : inject WORK_ITEM_SERVICE
+WorkItemForm ..> IWorkItemService : inject WORK_ITEM_SERVICE
+WorkItemForm ..> IAssigneeService : inject ASSIGNEE_SERVICE
+ReparentForm ..> IWorkItemService : inject WORK_ITEM_SERVICE
+IWorkItemService <|.. WorkItemService
+IAssigneeService <|.. AssigneeService
+@enduml

@@ -10,5 +10,5 @@ System_Boundary(mc, "Mission Control") {
 }
 Rel(actor, web, "Uses")
 Rel(web, api, "Requests feature behavior", "HTTPS / JSON")
-Rel(api, db, "Reads persisted totals in read transactions", "Parameterized SQL")
+Rel(api, db, "Reads each section in one statement or one snapshot read transaction", "Parameterized SQL")
 @enduml

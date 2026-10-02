@@ -1,0 +1,167 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Frontend classes - Close a sprint and resolve unfinished work
+top to bottom direction
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+class SprintBoardPage {
+  -header: WritableSignal<ActiveSprintHeader?>
+  +draft: Signal<DraftState>
+  +openCloseSprint(sprintId: Guid): void
+}
+note left of SprintBoardPage
+Close sprint in the header card passes
+header().sprintId from BoardView
+sprintLoaded (execute-sprint-work);
+a StartSprintOutcome CloseSprint passes
+the sprint it names; offerSprintsLink = true.
+Closed, Outdated, unconfirmed and forbidden:
+as for SprintsPage (Outdated rereads the board).
+end note
+class SprintsPage {
+  +draft: Signal<DraftState>
+  +openCloseSprint(sprintId: Guid): void
+}
+class SprintPlanningPage {
+  +draft: Signal<DraftState>
+  +openCloseSprint(sprintId: Guid): void
+}
+note right of SprintsPage
+SprintListView emits closeRequested(sprintId)
+from the active sprint card (plan-sprints);
+SprintPlanningPage opens the dialog only for a
+StartSprintOutcome CloseSprint. offerSprintsLink:
+false from SprintsPage (the dialog is over the
+Sprints tab), true from SprintPlanningPage.
+Each page:
+Closed -> open its history with the
+"Sprint 8 closed" toast and counts;
+Outdated -> own counter + 1 (reread);
+while the dialog is open: unconfirmed ->
+counter + 1 at once; forbidden -> "Your
+access changed" toast, without Retry.
+All delegate draft to the open dialog;
+SprintsPage and SprintBoardPage fall back
+to inject(ProjectLayoutPage).draft().
+end note
+class ProjectLayoutPage {
+  +refresh(): void
+}
+note left of ProjectLayoutPage
+When ModeChangeDialog closes with
+CloseSprint(SprintReference) (change-delivery-mode),
+the layout opens the dialog with its sprintId;
+offerSprintsLink = active child route is not
+sprints. Closed -> refresh()
+and the "Sprint 8 closed" toast with its counts;
+Outdated -> refresh(); while the dialog is
+open: unconfirmed -> refresh() at once;
+forbidden -> "Your access changed" toast,
+without Retry.
+end note
+class CloseSprintDialog {
+  +sprintId: InputSignal<Guid>
+  +offerSprintsLink: InputSignal<boolean>
+  +draft: Signal<DraftState>
+  +unconfirmed: OutputEmitterRef<void>
+  +forbidden: OutputEmitterRef<void>
+  +requestClose(): Promise<void>
+  +close(outcome: CloseSprintOutcome?): void
+}
+note right of CloseSprintDialog
+Passes sprintId and offerSprintsLink to the form.
+close(Closed(result)) on closed; close(Outdated)
+when it closes after outdated, or at once on
+notFound; close() on cancelled, Close or Escape
+means dismissed.
+draft = latest draftChange of the form.
+Relays the form's unconfirmed and forbidden
+as its own outputs and stays open with every
+choice.
+Cancel, Close or Escape on a dirty draft opens
+UnsavedChangesDialog (CancelForm).
+end note
+class CloseSprintOutcome {
+  +kind: Closed | Outdated
+  +closed: SprintCloseResult?
+}
+class SprintCloseResult {
+  +sprintId: Guid
+  +name: string
+  +historyRoute: string
+  +doneCount: int
+  +returnedCount: int
+  +carriedOver: CarryoverCount[]
+}
+class SprintClosureForm {
+  +sprintId: InputSignal<Guid>
+  +offerSprintsLink: InputSignal<boolean>
+  -review: ResourceRef<SprintClosureReview>
+  -page: WritableSignal<int>
+  -setAllTo: WritableSignal<CarryoverDestination?>
+  -overrides: WritableSignal<Map<Guid, CarryoverDestination>>
+  -reviewedVersion: WritableSignal<long>
+  +closed: OutputEmitterRef<SprintCloseResult>
+  +outdated: OutputEmitterRef<void>
+  +notFound: OutputEmitterRef<void>
+  +unconfirmed: OutputEmitterRef<void>
+  +forbidden: OutputEmitterRef<void>
+  +cancelled: OutputEmitterRef<void>
+  +draftChange: OutputEmitterRef<DraftState>
+  +submit(): Promise<void>
+}
+note right of SprintClosureForm
+Close sprint stays disabled until the review resolves;
+a failed read offers Try again = review.reload() and Cancel.
+A 409 for a sprint that is not Active (Planned or Closed)
+shows already-closed naming its state and emits outdated;
+a 404 emits notFound; an unexpected 403 keeps every
+choice and emits forbidden. No response on close: "We couldn't
+confirm whether Sprint 8 closed"; emits unconfirmed; review
+read once: Closed shows the neutral "Sprint 8 is closed now."
+(unconfirmed-closed) and emits outdated.
+draftChange is dirty once Set all or an override is chosen.
+View sprints renders only while offerSprintsLink is true;
+without it, Close is the first action and takes focus.
+Story titles and View sprints are router links: with
+choices made, leaving asks first; the dialog then closes
+with no result once the navigation completes.
+end note
+interface ISprintService {
+  +closureReviewResource(query: () => GetSprintClosureReviewQuery | undefined): ResourceRef<SprintClosureReview>
+  +close(command: CloseSprintCommand): Promise<SprintCloseResult>
+}
+note right of ISprintService
+The review is a caller-owned signal resource;
+it aborts a superseded page read. Close returns
+a promise. No RxJS type crosses api.
+end note
+class SprintService {
+  -http: HttpClient
+}
+SprintBoardPage ..> CloseSprintDialog : opens with header().sprintId
+SprintsPage ..> CloseSprintDialog : opens from closeRequested(sprintId)
+SprintPlanningPage ..> CloseSprintDialog : opens on StartSprintOutcome CloseSprint
+ProjectLayoutPage ..> CloseSprintDialog : opens on ModeChangeOutcome CloseSprint(sprint)
+CloseSprintDialog --> SprintClosureForm : composes
+CloseSprintDialog ..> CloseSprintOutcome : close result
+CloseSprintOutcome --> SprintCloseResult
+SprintClosureForm ..> ISprintService : inject token
+ISprintService <|.. SprintService
+@enduml

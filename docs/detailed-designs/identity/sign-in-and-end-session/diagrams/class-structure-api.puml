@@ -1,0 +1,160 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Sign in and end a session: login and current-access API
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+left to right direction
+package "backend/src" {
+  class SessionsController <<Api>> {
+    -sender: ISender
+  }
+  class CurrentAccountAuthorization <<Api>> {
+    -session: IMissionControlDataSession
+    -audit: IAuditEventWriter
+  }
+  note right of CurrentAccountAuthorization
+    Every protected request: validate the JWT (zero clock
+    skew), then LoadAccountAccessAsync. Missing, inactive or
+    credential-version mismatch: 401; role lacks the
+    capability: 403. Both append Denied before dispatch,
+    with the area, operation, entity type and entity-ID
+    route parameter that the action's audit metadata
+    declares beside its capability policy.
+  end note
+  class AccountAccess {
+    +accountId: Guid
+    +active: bool
+    +role: AccountRole
+    +credentialVersion: long
+  }
+  class LoginCommand {
+    +email: string
+    +password: string
+  }
+  class LoginCommandHandler {
+    +handle(request: LoginCommand, ct: CancellationToken): Task<LoginResult>
+  }
+  class LoginResult {
+    +accessToken: string
+    +expiresAtUtc: DateTimeOffset
+  }
+  interface IPasswordHashService {
+    +verify(password: string, passwordHash: string?): bool
+  }
+  note right of IPasswordHashService
+    A null hash (unknown account) is verified
+    against a dummy hash and returns false.
+  end note
+  interface IAccessTokenIssuer {
+    +issue(accountId: Guid, credentialVersion: long): LoginResult
+  }
+  class PasswordHashService <<Infrastructure>>
+  class JwtAccessTokenIssuer <<Infrastructure>> {
+    -options: IOptions<JwtOptions>
+  }
+  class JwtOptions <<Infrastructure Options>> {
+    +issuer: string
+    +audience: string
+    +signingKey: string
+    +lifetime: TimeSpan
+  }
+  note bottom of JwtOptions
+    No fallback key. At startup DatabaseInitializer
+    checks the signing material first and records
+    Failed (readiness 503) instead of stopping the host.
+  end note
+  class GetCurrentSessionQuery {
+    +subject: Guid
+  }
+  class GetCurrentSessionQueryHandler {
+    +handle(request: GetCurrentSessionQuery, ct: CancellationToken): Task<CurrentSession>
+  }
+  class CurrentSession {
+    +accountId: Guid
+    +displayName: string
+    +email: string
+    +role: AccountRole
+    +capabilities: string[]
+  }
+  class UserAccount <<Domain>> {
+    +id: Guid
+    +normalizedEmail: string
+    +passwordHash: string
+    +active: bool
+    +role: AccountRole
+    +credentialVersion: long
+  }
+  class LoginAttempt <<Domain>> {
+    +emailDigest: string
+    +failureInstantsUtc: DateTimeOffset[]
+    +blockedUntilUtc: DateTimeOffset?
+    +recordFailure(nowUtc: DateTimeOffset): void
+    +reset(): void
+  }
+  enum AccountRole {
+    Administrator
+    Collaborator
+  }
+  interface IMissionControlDataSession {
+    +LoadAccountByEmailAsync(normalizedEmail: string, ct: CancellationToken): Task<UserAccount?>
+    +LoadLoginAttemptAsync(emailDigest: string, ct: CancellationToken): Task<LoginAttempt>
+    +LoadCurrentSessionAsync(accountId: Guid, ct: CancellationToken): Task<CurrentSession?>
+    +LoadAccountAccessAsync(accountId: Guid, ct: CancellationToken): Task<AccountAccess?>
+    +AddAuditEvent(auditEvent: AuditEvent): void
+    +SaveChangesAsync(ct: CancellationToken): Task
+  }
+  note bottom of IMissionControlDataSession
+    Scoped view of the shared port: only the members this
+    slice uses. LoadLoginAttemptAsync locks the per-key row
+    (creating it when absent) so failure counts update atomically.
+    AddAuditEvent registers the successful-login audit;
+    SaveChangesAsync commits it with the reset failure window.
+  end note
+  interface IAuditEventWriter {
+    +AppendRestrictedAsync(auditEvent: AuditEvent, ct: CancellationToken): Task
+  }
+  note bottom of IAuditEventWriter
+    Denied and Throttled only, outside any
+    business transaction; never a success audit.
+  end note
+}
+SessionsController ..> LoginCommand : dispatches
+SessionsController ..> GetCurrentSessionQuery : dispatches
+LoginCommandHandler ..> LoginCommand : handles
+LoginCommandHandler ..> IPasswordHashService : verifies
+LoginCommandHandler ..> IAccessTokenIssuer : issues
+LoginCommandHandler ..> IMissionControlDataSession : loads account and attempt; AddAuditEvent (success); saves
+LoginCommandHandler ..> IAuditEventWriter : Denied, Throttled
+CurrentAccountAuthorization ..> IMissionControlDataSession : LoadAccountAccessAsync
+CurrentAccountAuthorization ..> IAuditEventWriter : Denied
+CurrentAccountAuthorization ..> AccountAccess : decides 401 / 403
+CurrentAccountAuthorization ..> SessionsController : authorizes GET /api/session
+LoginCommandHandler --> LoginAttempt : records failures / throttle
+LoginCommandHandler ..> UserAccount : reads hash, status, version
+IAccessTokenIssuer --> LoginResult
+IPasswordHashService <|.. PasswordHashService
+IAccessTokenIssuer <|.. JwtAccessTokenIssuer
+JwtAccessTokenIssuer --> JwtOptions : binds
+GetCurrentSessionQueryHandler ..> GetCurrentSessionQuery : handles
+GetCurrentSessionQueryHandler ..> IMissionControlDataSession : reads projection
+GetCurrentSessionQueryHandler --> CurrentSession : returns
+UserAccount --> AccountRole : SQL authority
+CurrentSession --> AccountRole
+AccountAccess --> AccountRole
+@enduml

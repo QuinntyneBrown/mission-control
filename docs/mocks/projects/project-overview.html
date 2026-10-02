@@ -37,14 +37,15 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">Counts come from every persisted item, not the visible page; each number opens the matching filtered work list. Community Hackathon 2026 has an active sprint, so Project actions › Change delivery mode explains that it must close first. The project header and tabs stay pinned while the tab content scrolls; on phones only the tabs stay pinned.</p>
-    <p class="mock-note" data-when="kanban" hidden>Church Website Refresh has never had sprints, so it has no Sprints tab; Board opens the continuous Kanban board. Its 60 work items block deletion, and switching it to Scrum has no sprint history to restore.</p>
+    <p class="mock-note" data-when="default">Counts come from every persisted item, not the visible page; each number opens the matching filtered work list. Community Hackathon 2026 has an active sprint, so Project actions › Change delivery mode explains that it must close first. The project header, tabs, and Project actions are the same on every project tab; they stay pinned while the tab content scrolls, and on phones only the tabs stay pinned. Board opens the sprint board here and the Kanban board in Kanban projects.</p>
+    <p class="mock-note" data-when="kanban" hidden>Church Website Refresh has never had sprints, so it has no Sprints tab; Board opens the continuous Kanban board. Its 60 work items block deletion once Delete project is confirmed, and switching it to Scrum has no sprint history to restore.</p>
     <p class="mock-note" data-when="new-empty" hidden>Shown right after "New project" saves. The empty state explains the hierarchy and offers the next step; the toast confirms the project was created.</p>
     <p class="mock-note" data-when="new-empty-collaborator" hidden>Collaborators can add work, so they get the same "Add initiative" action, but no project settings.</p>
-    <p class="mock-note" data-when="kanban-preserved" hidden>Switching Scrum → Kanban keeps sprint plans and history. They stay readable under Sprints, but can't be planned or started until an administrator switches back to Scrum.</p>
+    <p class="mock-note" data-when="kanban-preserved" hidden>Switching Scrum → Kanban keeps sprint plans and history. They stay readable under Sprints, but can't be planned or started until an administrator switches back to Scrum. Change delivery mode appears only for administrators; the banner tells everyone else who can switch. Delete project opens its confirmation; confirming returns 409, and the dialog explains that the kept sprints and work block deletion.</p>
     <p class="mock-note" data-when="collaborator" hidden>Collaborators read everything here and can work in every tab. Project actions (edit, delivery mode, delete) are absent, and the notice explains why.</p>
-    <p class="mock-note" data-when="not-found" hidden>A deleted or mistyped project link (API 404) shows this page with a permitted way back.</p>
+    <p class="mock-note" data-when="not-found" hidden>A deleted or mistyped project link (API 404) shows this page with a permitted way back. The same state follows when Change delivery mode finds the project deleted (404): the dialog closes, the header keeps only the breadcrumb, and the tab shows this message with Back to projects. Edit project instead returns to Projects with the info toast "Community Hackathon 2026 has been deleted."</p>
     <p class="mock-note" data-when="loading" hidden>Skeletons hold the header, tabs, and cards while the project loads. Screen readers hear "Loading project".</p>
+    <p class="mock-note" data-when="error" hidden>Both of the project's reads got a server error (500). In place of the name, tabs, and Project actions, the header shows the breadcrumb with its compact alert "We couldn't load this project's details" under it, and the tab shows this message instead of an empty layout. Either Try again rereads the header and this tab together, and each reference ID matches its own request's diagnostic record. When only the header's read fails (a 500, a busy 503, or no response) and this tab's read succeeds, the same compact alert sits under the breadcrumb above the tab's content, which stays usable; on every project tab the header behaves this way. A read that gets no response shows the same alerts without reference IDs, and the shell's offline banner appears. A header 404 shows only the breadcrumb, with no alert, as in Not found. Focus moves to the heading and screen readers hear the alerts.</p>
   </div>
 
   <div class="mc-app">
@@ -128,7 +129,7 @@
               <h1 class="mc-page-header__title" tabindex="-1">Community Hackathon 2026</h1>
               <div class="mc-page-header__meta">
                 <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
-                <span>Responsible lead: <a href="../leads/lead-detail.html#state=lead">Rafael Da Silva</a></span>
+                <span>Responsible lead: <a href="../leads/lead-detail.html#state=lead-rafael">Rafael Da Silva</a></span>
               </div>
             </div>
             <div class="mc-page-header__actions mock-admin-only">
@@ -170,7 +171,7 @@
                 <p class="mc-prose">Plan and run Toronto's fall build weekend: teams, venues, volunteers, and demo day.</p>
                 <dl class="mc-dl">
                   <dt>Delivery mode</dt><dd><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span></dd>
-                  <dt>Responsible lead</dt><dd><a href="../leads/lead-detail.html#state=lead">Rafael Da Silva</a></dd>
+                  <dt>Responsible lead</dt><dd><a href="../leads/lead-detail.html#state=lead-rafael">Rafael Da Silva</a></dd>
                   <dt>Project key</dt><dd class="mc-mono">HCK</dd>
                   <dt>Work items</dt><dd>85</dd>
                 </dl>
@@ -187,10 +188,10 @@
                     <tr><th scope="col">Type</th><th scope="col">To Do</th><th scope="col">In Progress</th><th scope="col">Done</th><th scope="col">Total</th></tr>
                   </thead>
                   <tbody>
-                    <tr><th scope="row">Initiatives</th><td><a href="../work/work-list.html?project=hck&amp;type=initiative&amp;status=todo" aria-label="1 initiative in To Do">1</a></td><td><a href="../work/work-list.html?project=hck&amp;type=initiative&amp;status=progress" aria-label="1 initiative in In Progress">1</a></td><td class="mc-muted">0</td><td><a href="../work/work-list.html?project=hck&amp;type=initiative" aria-label="2 initiatives in total">2</a></td></tr>
-                    <tr><th scope="row">Epics</th><td><a href="../work/work-list.html?project=hck&amp;type=epic&amp;status=todo" aria-label="3 epics in To Do">3</a></td><td><a href="../work/work-list.html?project=hck&amp;type=epic&amp;status=progress" aria-label="1 epic in In Progress">1</a></td><td class="mc-muted">0</td><td><a href="../work/work-list.html?project=hck&amp;type=epic" aria-label="4 epics in total">4</a></td></tr>
-                    <tr><th scope="row">Stories</th><td><a href="../work/work-list.html?project=hck&amp;type=story&amp;status=todo" aria-label="9 stories in To Do">9</a></td><td><a href="../work/work-list.html?project=hck&amp;type=story&amp;status=progress" aria-label="4 stories in In Progress">4</a></td><td><a href="../work/work-list.html?project=hck&amp;type=story&amp;status=done" aria-label="11 stories in Done">11</a></td><td><a href="../work/work-list.html?project=hck&amp;type=story" aria-label="24 stories in total">24</a></td></tr>
-                    <tr><th scope="row">Tasks</th><td><a href="../work/work-list.html?project=hck&amp;type=task&amp;status=todo" aria-label="18 tasks in To Do">18</a></td><td><a href="../work/work-list.html?project=hck&amp;type=task&amp;status=progress" aria-label="6 tasks in In Progress">6</a></td><td><a href="../work/work-list.html?project=hck&amp;type=task&amp;status=done" aria-label="31 tasks in Done">31</a></td><td><a href="../work/work-list.html?project=hck&amp;type=task" aria-label="55 tasks in total">55</a></td></tr>
+                    <tr><th scope="row">Initiatives</th><td><a href="../work/work-list.html?project=hck&amp;type=initiative&amp;status=todo" aria-label="1 initiative in To Do">1</a></td><td><a href="../work/work-list.html?project=hck&amp;type=initiative&amp;status=in-progress" aria-label="1 initiative in In Progress">1</a></td><td class="mc-muted">0</td><td><a href="../work/work-list.html?project=hck&amp;type=initiative" aria-label="2 initiatives in total">2</a></td></tr>
+                    <tr><th scope="row">Epics</th><td><a href="../work/work-list.html?project=hck&amp;type=epic&amp;status=todo" aria-label="3 epics in To Do">3</a></td><td><a href="../work/work-list.html?project=hck&amp;type=epic&amp;status=in-progress" aria-label="1 epic in In Progress">1</a></td><td class="mc-muted">0</td><td><a href="../work/work-list.html?project=hck&amp;type=epic" aria-label="4 epics in total">4</a></td></tr>
+                    <tr><th scope="row">Stories</th><td><a href="../work/work-list.html?project=hck&amp;type=story&amp;status=todo" aria-label="9 stories in To Do">9</a></td><td><a href="../work/work-list.html?project=hck&amp;type=story&amp;status=in-progress" aria-label="4 stories in In Progress">4</a></td><td><a href="../work/work-list.html?project=hck&amp;type=story&amp;status=done" aria-label="11 stories in Done">11</a></td><td><a href="../work/work-list.html?project=hck&amp;type=story" aria-label="24 stories in total">24</a></td></tr>
+                    <tr><th scope="row">Tasks</th><td><a href="../work/work-list.html?project=hck&amp;type=task&amp;status=todo" aria-label="18 tasks in To Do">18</a></td><td><a href="../work/work-list.html?project=hck&amp;type=task&amp;status=in-progress" aria-label="6 tasks in In Progress">6</a></td><td><a href="../work/work-list.html?project=hck&amp;type=task&amp;status=done" aria-label="31 tasks in Done">31</a></td><td><a href="../work/work-list.html?project=hck&amp;type=task" aria-label="55 tasks in total">55</a></td></tr>
                   </tbody>
                 </table>
             </section>
@@ -239,7 +240,7 @@
               <h1 class="mc-page-header__title" tabindex="-1">Church Website Refresh</h1>
               <div class="mc-page-header__meta">
                 <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
-                <span>Responsible lead: <a href="../leads/lead-detail.html#state=lead">Lucia Alvarez</a></span>
+                <span>Responsible lead: <a href="../leads/lead-detail.html#state=lead-lucia">Lucia Alvarez</a></span>
               </div>
             </div>
             <div class="mc-page-header__actions mock-admin-only">
@@ -273,7 +274,7 @@
                 <p class="mc-prose">Refresh partner church websites with accessible templates and a simple publishing guide.</p>
                 <dl class="mc-dl">
                   <dt>Delivery mode</dt><dd><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span></dd>
-                  <dt>Responsible lead</dt><dd><a href="../leads/lead-detail.html#state=lead">Lucia Alvarez</a></dd>
+                  <dt>Responsible lead</dt><dd><a href="../leads/lead-detail.html#state=lead-lucia">Lucia Alvarez</a></dd>
                   <dt>Project key</dt><dd class="mc-mono">WEB</dd>
                   <dt>Work items</dt><dd>60</dd>
                 </dl>
@@ -290,10 +291,10 @@
                     <tr><th scope="col">Type</th><th scope="col">To Do</th><th scope="col">In Progress</th><th scope="col">Done</th><th scope="col">Total</th></tr>
                   </thead>
                   <tbody>
-                    <tr><th scope="row">Initiatives</th><td class="mc-muted">0</td><td><a href="../work/work-list.html?project=web&amp;type=initiative&amp;status=progress" aria-label="1 initiative in In Progress">1</a></td><td class="mc-muted">0</td><td><a href="../work/work-list.html?project=web&amp;type=initiative" aria-label="1 initiatives in total">1</a></td></tr>
-                    <tr><th scope="row">Epics</th><td><a href="../work/work-list.html?project=web&amp;type=epic&amp;status=todo" aria-label="1 epic in To Do">1</a></td><td><a href="../work/work-list.html?project=web&amp;type=epic&amp;status=progress" aria-label="1 epic in In Progress">1</a></td><td><a href="../work/work-list.html?project=web&amp;type=epic&amp;status=done" aria-label="1 epic in Done">1</a></td><td><a href="../work/work-list.html?project=web&amp;type=epic" aria-label="3 epics in total">3</a></td></tr>
-                    <tr><th scope="row">Stories</th><td><a href="../work/work-list.html?project=web&amp;type=story&amp;status=todo" aria-label="6 stories in To Do">6</a></td><td><a href="../work/work-list.html?project=web&amp;type=story&amp;status=progress" aria-label="3 stories in In Progress">3</a></td><td><a href="../work/work-list.html?project=web&amp;type=story&amp;status=done" aria-label="7 stories in Done">7</a></td><td><a href="../work/work-list.html?project=web&amp;type=story" aria-label="16 stories in total">16</a></td></tr>
-                    <tr><th scope="row">Tasks</th><td><a href="../work/work-list.html?project=web&amp;type=task&amp;status=todo" aria-label="12 tasks in To Do">12</a></td><td><a href="../work/work-list.html?project=web&amp;type=task&amp;status=progress" aria-label="5 tasks in In Progress">5</a></td><td><a href="../work/work-list.html?project=web&amp;type=task&amp;status=done" aria-label="23 tasks in Done">23</a></td><td><a href="../work/work-list.html?project=web&amp;type=task" aria-label="40 tasks in total">40</a></td></tr>
+                    <tr><th scope="row">Initiatives</th><td class="mc-muted">0</td><td><a href="../work/work-list.html?project=web&amp;type=initiative&amp;status=in-progress" aria-label="1 initiative in In Progress">1</a></td><td class="mc-muted">0</td><td><a href="../work/work-list.html?project=web&amp;type=initiative" aria-label="1 initiatives in total">1</a></td></tr>
+                    <tr><th scope="row">Epics</th><td><a href="../work/work-list.html?project=web&amp;type=epic&amp;status=todo" aria-label="1 epic in To Do">1</a></td><td><a href="../work/work-list.html?project=web&amp;type=epic&amp;status=in-progress" aria-label="1 epic in In Progress">1</a></td><td><a href="../work/work-list.html?project=web&amp;type=epic&amp;status=done" aria-label="1 epic in Done">1</a></td><td><a href="../work/work-list.html?project=web&amp;type=epic" aria-label="3 epics in total">3</a></td></tr>
+                    <tr><th scope="row">Stories</th><td><a href="../work/work-list.html?project=web&amp;type=story&amp;status=todo" aria-label="6 stories in To Do">6</a></td><td><a href="../work/work-list.html?project=web&amp;type=story&amp;status=in-progress" aria-label="3 stories in In Progress">3</a></td><td><a href="../work/work-list.html?project=web&amp;type=story&amp;status=done" aria-label="7 stories in Done">7</a></td><td><a href="../work/work-list.html?project=web&amp;type=story" aria-label="16 stories in total">16</a></td></tr>
+                    <tr><th scope="row">Tasks</th><td><a href="../work/work-list.html?project=web&amp;type=task&amp;status=todo" aria-label="12 tasks in To Do">12</a></td><td><a href="../work/work-list.html?project=web&amp;type=task&amp;status=in-progress" aria-label="5 tasks in In Progress">5</a></td><td><a href="../work/work-list.html?project=web&amp;type=task&amp;status=done" aria-label="23 tasks in Done">23</a></td><td><a href="../work/work-list.html?project=web&amp;type=task" aria-label="40 tasks in total">40</a></td></tr>
                   </tbody>
                 </table>
             </section>
@@ -341,7 +342,7 @@
                   <button class="mc-menu__item" type="button" data-nav="project-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit project</button>
                   <button class="mc-menu__item" type="button" data-nav="mode-change-dialog.html#state=to-scrum"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
                   <div class="mc-menu__separator"></div>
-                  <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="project-delete-dialog.html#state=blocked"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
+                  <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="project-delete-dialog.html#state=blocked-paused"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
                 </div>
               </div>
             </div>
@@ -361,7 +362,7 @@
           <span class="mc-icon mc-icon--history" aria-hidden="true"></span>
           <div class="mc-alert__body">
             <p class="mc-alert__title">Sprints are paused while this project uses Kanban</p>
-            <p class="mc-alert__text">Sprint 3's plan and the history of Sprints 1 and 2 are kept. Switch back to Scrum to plan or start sprints again.</p>
+            <p class="mc-alert__text">Sprint 3's plan and the history of Sprints 1 and 2 are kept. An administrator can switch the project back to Scrum to plan or start sprints.</p>
             <div class="mc-alert__actions">
               <button class="mc-button mc-button--sm mock-admin-only" type="button" data-nav="mode-change-dialog.html#state=to-scrum"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
               <button class="mc-button mc-button--sm" type="button" data-nav="../scrum/sprints.html#state=kanban-paused">View sprint history</button>
@@ -393,10 +394,10 @@
                     <tr><th scope="col">Type</th><th scope="col">To Do</th><th scope="col">In Progress</th><th scope="col">Done</th><th scope="col">Total</th></tr>
                   </thead>
                   <tbody>
-                    <tr><th scope="row">Initiatives</th><td class="mc-muted">0</td><td><a href="../work/work-list.html?project=prw&amp;type=initiative&amp;status=progress" aria-label="1 initiative in In Progress">1</a></td><td class="mc-muted">0</td><td><a href="../work/work-list.html?project=prw&amp;type=initiative" aria-label="1 initiatives in total">1</a></td></tr>
-                    <tr><th scope="row">Epics</th><td><a href="../work/work-list.html?project=prw&amp;type=epic&amp;status=todo" aria-label="1 epic in To Do">1</a></td><td><a href="../work/work-list.html?project=prw&amp;type=epic&amp;status=progress" aria-label="1 epic in In Progress">1</a></td><td class="mc-muted">0</td><td><a href="../work/work-list.html?project=prw&amp;type=epic" aria-label="2 epics in total">2</a></td></tr>
-                    <tr><th scope="row">Stories</th><td><a href="../work/work-list.html?project=prw&amp;type=story&amp;status=todo" aria-label="5 stories in To Do">5</a></td><td><a href="../work/work-list.html?project=prw&amp;type=story&amp;status=progress" aria-label="2 stories in In Progress">2</a></td><td><a href="../work/work-list.html?project=prw&amp;type=story&amp;status=done" aria-label="5 stories in Done">5</a></td><td><a href="../work/work-list.html?project=prw&amp;type=story" aria-label="12 stories in total">12</a></td></tr>
-                    <tr><th scope="row">Tasks</th><td><a href="../work/work-list.html?project=prw&amp;type=task&amp;status=todo" aria-label="9 tasks in To Do">9</a></td><td><a href="../work/work-list.html?project=prw&amp;type=task&amp;status=progress" aria-label="4 tasks in In Progress">4</a></td><td><a href="../work/work-list.html?project=prw&amp;type=task&amp;status=done" aria-label="15 tasks in Done">15</a></td><td><a href="../work/work-list.html?project=prw&amp;type=task" aria-label="28 tasks in total">28</a></td></tr>
+                    <tr><th scope="row">Initiatives</th><td class="mc-muted">0</td><td><a href="../work/work-list.html?project=prw&amp;type=initiative&amp;status=in-progress" aria-label="1 initiative in In Progress">1</a></td><td class="mc-muted">0</td><td><a href="../work/work-list.html?project=prw&amp;type=initiative" aria-label="1 initiatives in total">1</a></td></tr>
+                    <tr><th scope="row">Epics</th><td><a href="../work/work-list.html?project=prw&amp;type=epic&amp;status=todo" aria-label="1 epic in To Do">1</a></td><td><a href="../work/work-list.html?project=prw&amp;type=epic&amp;status=in-progress" aria-label="1 epic in In Progress">1</a></td><td class="mc-muted">0</td><td><a href="../work/work-list.html?project=prw&amp;type=epic" aria-label="2 epics in total">2</a></td></tr>
+                    <tr><th scope="row">Stories</th><td><a href="../work/work-list.html?project=prw&amp;type=story&amp;status=todo" aria-label="5 stories in To Do">5</a></td><td><a href="../work/work-list.html?project=prw&amp;type=story&amp;status=in-progress" aria-label="2 stories in In Progress">2</a></td><td><a href="../work/work-list.html?project=prw&amp;type=story&amp;status=done" aria-label="5 stories in Done">5</a></td><td><a href="../work/work-list.html?project=prw&amp;type=story" aria-label="12 stories in total">12</a></td></tr>
+                    <tr><th scope="row">Tasks</th><td><a href="../work/work-list.html?project=prw&amp;type=task&amp;status=todo" aria-label="9 tasks in To Do">9</a></td><td><a href="../work/work-list.html?project=prw&amp;type=task&amp;status=in-progress" aria-label="4 tasks in In Progress">4</a></td><td><a href="../work/work-list.html?project=prw&amp;type=task&amp;status=done" aria-label="15 tasks in Done">15</a></td><td><a href="../work/work-list.html?project=prw&amp;type=task" aria-label="28 tasks in total">28</a></td></tr>
                   </tbody>
                 </table>
             </section>
@@ -531,10 +532,22 @@
       <!-- Error -->
       <div data-when="error" hidden>
         <nav class="mc-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="project-list.html">Projects</a></li></ol></nav>
+        <div class="mc-alert mc-alert--danger" role="alert">
+          <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+          <div class="mc-alert__body">
+            <p class="mc-alert__title">We couldn't load this project's details</p>
+            <p class="mc-ref">Reference ID <code>3b7f-60e2-c918</code>
+              <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="3b7f-60e2-c918"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+            </p>
+            <div class="mc-alert__actions">
+              <button class="mc-button mc-button--sm" type="button" data-goto-state="loading"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again</button>
+            </div>
+          </div>
+        </div>
         <div class="mc-empty mc-empty--error mc-mt-6" role="alert">
           <span class="mc-empty__icon"><span class="mc-icon mc-icon--alert-circle mc-icon--lg" aria-hidden="true"></span></span>
           <h1 class="mc-empty__title" tabindex="-1">We couldn't load this project</h1>
-          <p class="mc-empty__text">Check your connection and try again. If it keeps happening, share the reference ID with your administrator.</p>
+          <p class="mc-empty__text">Try again. If it keeps happening, share the reference ID with your administrator.</p>
           <p class="mc-ref">Reference ID <code>9e05-d3a1-77c4</code>
                   <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="9e05-d3a1-77c4"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
                 </p>
@@ -548,15 +561,18 @@
     </main>
   </div>
 
-  <div class="mc-toast-region" role="status" aria-live="polite">
-    <div class="mc-toast mc-toast--success" data-when="new-empty" hidden>
-      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
-      <div class="mc-toast__body">
-        <p class="mc-toast__title">Project created</p>
-        <p class="mc-toast__text">Youth Coding Night is ready. Add an initiative to get started.</p>
+  <div class="mc-toast-region">
+    <div class="mc-toast-live" role="status" aria-live="polite">
+      <div class="mc-toast mc-toast--success" data-when="new-empty" hidden>
+        <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+        <div class="mc-toast__body">
+          <p class="mc-toast__title">Project created</p>
+          <p class="mc-toast__text">Youth Coding Night is ready. Add an initiative to get started.</p>
+        </div>
+        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
       </div>
-      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
     </div>
+    <div class="mc-toast-live" role="alert"></div>
   </div>
 </body>
 </html>

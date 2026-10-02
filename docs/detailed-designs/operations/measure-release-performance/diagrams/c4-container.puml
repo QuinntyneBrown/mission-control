@@ -4,21 +4,24 @@ LAYOUT_WITH_LEGEND()
 title Containers - Measure release workflow performance
 Person(actor, "Release operator", "Completes the environment manifest and starts each run")
 System_Boundary(tooling, "Mission Control release tooling") {
-  Container(loadRunner, "API load runner", ".NET console - backend/src/MissionControl.Operations", "fixture and load verbs; post-load invariant reads")
-  Container(coldRunner, "Cold-view runner", "Playwright library / Chromium - e2e/performance", "30 fresh-context runs per view; reuses e2e/page-objects")
-  Container(records, "Performance records", "JSON in docs/operations/performance", "EnvironmentManifest, PerformanceResult, ColdViewResult")
+  Container(loadRunner, "API load runner", ".NET console - backend/src/MissionControl.Operations", "fixture and load verbs; three load scenarios; invariant reads")
+  Container(browserRunners, "Browser runners", "Playwright library / Chromium - e2e/performance", "Cold views (30 runs per view) and large-workspace retention; reuse e2e/page-objects")
+  Container(records, "Performance records", "JSON in docs/operations/performance", "EnvironmentManifest, PerformanceResult, ColdViewResult, RetentionResult")
 }
 System_Boundary(env, "Isolated L2-046 measurement environment") {
   Container(web, "Mission Control web app", "Angular production build", "HTTP adapters bound to every service token")
-  Container(api, "MissionControl.Api (performance instance)", ".NET", "Existing endpoints; Server-Timing enabled")
+  Container(api, "MissionControl.Api (performance instance)", ".NET", "Existing endpoints; request timing enabled")
+  Container(diagnostics, "Restricted timing records", "Structured diagnostics", "RequestTimingRecord per request")
   ContainerDb(db, "Isolated SQL target", "Selected SQL provider", "Fixture restored before each run")
 }
 Rel(actor, loadRunner, "Runs fixture / load")
-Rel(actor, coldRunner, "Runs cold views")
-Rel(loadRunner, api, "25 sessions x 1 request/s; invariant reads", "HTTPS")
-Rel(coldRunner, web, "Drives fresh Chromium contexts", "HTTPS")
+Rel(actor, browserRunners, "Runs cold views and retention")
+Rel(loadRunner, api, "25 open-loop sessions x 1 request/s; invariant reads", "HTTPS")
+Rel(api, diagnostics, "Writes on response completed")
+Rel(loadRunner, diagnostics, "Reads; joins by correlation ID")
+Rel(browserRunners, web, "Drives fresh Chromium contexts", "HTTPS")
 Rel(web, api, "Production HTTP adapters", "HTTPS")
 Rel(api, db, "Reads / commits", "Parameterized SQL")
 Rel(loadRunner, records, "Writes PerformanceResult")
-Rel(coldRunner, records, "Writes ColdViewResult")
+Rel(browserRunners, records, "Writes ColdViewResult and RetentionResult")
 @enduml

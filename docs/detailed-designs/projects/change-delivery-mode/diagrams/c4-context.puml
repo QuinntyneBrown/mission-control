@@ -2,7 +2,7 @@
 !include <C4/C4_Context>
 LAYOUT_WITH_LEGEND()
 title System context - Change workspace delivery mode
-Person(actor, "Authorized user", "Change workspace delivery mode")
+Person(actor, "Administrator", "Change workspace delivery mode")
 System(mc, "Mission Control", "FaithTech Toronto contacts and project delivery")
 Rel(actor, mc, "Change workspace delivery mode")
 @enduml

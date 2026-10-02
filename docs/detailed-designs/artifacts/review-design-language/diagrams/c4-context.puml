@@ -2,7 +2,10 @@
 !include <C4/C4_Context>
 LAYOUT_WITH_LEGEND()
 title System context - Review the standalone design language
-Person(reviewer, "Design reviewer", "Reviews static design language and proposed workflows")
-System(artifact, "Review the standalone design language", "Static artifact without application database writes")
+Person(reviewer, "Design reviewer", "Reviews tokens, specimens, and mirror provenance")
+System(artifact, "Review the standalone design language", "Standalone static site built from design-system/; no application runtime dependency")
+System_Ext(consumers, "Token mirrors", "frontend/styles and docs/mocks/assets copies written by sync-tokens")
 Rel(reviewer, artifact, "Reviews manually")
+Rel(consumers, artifact, "Copy dist/tokens.css and dist/_breakpoints.scss")
+Rel(reviewer, consumers, "Checks provenance by rebuilding and resyncing")
 @enduml

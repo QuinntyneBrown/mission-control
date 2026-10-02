@@ -3,6 +3,7 @@ skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
+skinparam maxMessageSize 300
 skinparam ArrowColor #344054
 skinparam rectangle {
   BorderColor #344054
@@ -32,15 +33,16 @@ box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
 actor -> page : Open the Board tab of a Kanban project
-page -> page : Show skeleton columns; announce "Loading board"
-page -> client : Build typed GetKanbanBoardQuery (batch of 25 per column)
-client -> access : GET /api/workspaces/{id}/board
+page -> page : Set the BoardQuery to the first batch of 25 per column with the current request generation; show skeleton columns; announce "Loading board"
+page -> client : boardResource (created once in BoardView's injection context) reads the new query
+client -> access : GET /api/workspaces/{id}/board (GetKanbanBoardQuery: the BoardQuery without its generation)
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid or expired JWT; deactivated account
   access --> client : 401; audit denial without payloads
-  client --> page : Clear session; sign in with the board as return route
+  client -> client : sessionInterceptor: a 401 for the current session generation calls SessionService.end(Unauthorized) once
+  client --> page : Navigation to sign-in destroys BoardView, which cancels its read; the board is kept as the return route
 else Authenticated (every active role reads boards)
   access -> ctrl : Authorized request
   ctrl -> validation : Send GetKanbanBoardQuery through MediatR 12.5.0
@@ -48,35 +50,54 @@ else Authenticated (every active role reads boards)
   alt Unknown status or batch size outside 1-100
     validation --> ctrl : 400 field / page-size message; nothing read
     ctrl --> client : Validation ProblemDetails
-    client --> page : Keep loaded cards; show the column load error with Retry
+    client --> page : Resource status error (400 refusal; repeating it would fail again); keep loaded cards; the column alert, or the board load error on a first read, shows the message with Reload board (new first-batch query); no Retry and no reference ID
   else Valid request
     validation -> handler : Handle GetKanbanBoardQuery
-    handler -> db : Read workspace existence and delivery mode
+    handler -> db : LoadWorkspaceModeAsync: workspace existence and delivery mode
     db --> handler : Workspace or none
     alt Workspace not found
       handler --> ctrl : 404; nothing read
       ctrl --> client : ProblemDetails (not found)
-      client --> page : Not-found state with link back to Projects
+      client --> page : Resource status error (404), on opening or on a later read after the project was deleted; BoardView shows the project's not-found presentation ("Project not found", Back to projects; no Try again or reference ID) and emits notFound
+      page -> page : On the first notFound only, KanbanBoardPage calls the layout's refresh(): the header re-reads once and keeps only the breadcrumb
     else Workspace now uses Scrum
-      handler --> ctrl : 409 mode changed; nothing read
+      handler --> ctrl : 409 mode-changed; nothing read
       ctrl --> client : ProblemDetails (mode changed)
-      client --> page : Re-read the project; Board tab shows the sprint board
+      client --> page : Resource status error (409 mode-changed); BoardView emits modeChanged
+      page -> page : KanbanBoardPage calls ProjectLayoutPage.modeChanged(): the header reloads and BoardModeGuard re-matches the Board tab to SprintBoardPage
     else Kanban workspace
-      handler -> db : L2-019 read story-only batches ordered by (Status, Position), story ID tie-breaker; full column counts; task counts
-      db --> handler : Bounded rows and full matching counts
-      handler -> entity : Project status, assignee or Unassigned, completed/total tasks
-      entity --> handler : Board projection with board version
-      handler --> ctrl : Board result
-      ctrl --> client : 200 with columns, full counts and versions
-      client --> page : Set board signals; empty columns stay visible and say so
-      page --> actor : Board with full counts; Load 25 more where a column has more
+      handler -> db : L2-019 LoadKanbanBoardAsync: story-only batches ordered by (Status, Position), story ID tie-breaker, with key and parent epic title; full column counts; sprintsPaused (kept planned or closed sprints)
+      handler -> db : Task counts in one set-based aggregate grouped by the batch's story IDs (no per-card query)
+      db --> handler : Bounded rows without descriptions, full matching counts, task counts
+      handler -> entity : Project key, epic title, status, assignee or Unassigned, completed/total tasks, estimate
+      entity --> handler : BoardCard projections
+      handler --> ctrl : BoardResult with board ID and board version
+      ctrl --> client : 200 with board ID, columns, full counts and versions
+      client --> page : Resource status resolved; value holds the BoardResult for the current query
+      alt Board ID or query generation no longer current (board left, reloaded, or a move started)
+        page -> page : Ignore the value; no state change
+      else Current
+        page -> page : Fold the value into the latest acknowledged state; counts come from the full totals, not rendered cards; emptyChange when every total becomes or stops being zero
+        page --> actor : Board with full counts; empty columns stay visible and say so; Load 25 more where a column has more; paused-sprints alert when sprintsPaused
+      end
     end
   end
 end
+note over page, client
+Load more sets the query to the next batch of one column with the current generation;
+the resolved batch is appended to that column only and stays while the board is open.
+A changed query aborts the superseded read inside the adapter. One board read runs at a time,
+and Load more is unavailable while a move is pending.
+end note
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).
-First load: "We couldn't load the board" with reference ID and Try again.
-A later batch failure keeps loaded cards and offers Retry for that column.
+First load (500, 503, or no response): "We couldn't load the board"
+with Try again, which emits retryRequested; KanbanBoardPage calls
+the layout's refresh(), so the header, which may have failed too,
+rereads with the board. A later batch failure keeps loaded cards and shows a
+column alert with Retry for that batch; it replaces Load more, so
+focus moves to Retry. Either shows the reference ID only when the
+response carried one (500 or 503), never after no response.
 Diagnostics exclude secrets and contact payloads.
 end note
 @enduml

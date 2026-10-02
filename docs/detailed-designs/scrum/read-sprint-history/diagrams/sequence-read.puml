@@ -3,6 +3,7 @@ skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
+skinparam maxMessageSize 300
 skinparam ArrowColor #344054
 skinparam rectangle {
   BorderColor #344054
@@ -16,7 +17,7 @@ skinparam package {
 title Behavior - Read recorded closure outcomes
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "SprintHistoryPage / SprintView" as page
+  participant "SprintHistoryPage / SprintHistoryView" as page
   participant "ISprintService / SprintService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -25,56 +26,68 @@ box "Backend - MissionControl.Api" #D1FADF
 end box
 box "Backend - MissionControl.Application and Domain" #ECFDF3
   participant "ValidationBehavior" as validation
-  participant "GetSprintHistoryQueryHandler" as handler
-  participant "SprintSnapshot" as entity
+  participant "GetSprintHistoryQueryHandler\nGetSprintOutcomesQueryHandler\nGetSprintScopeChangesQueryHandler" as handler
 end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
 actor -> page : Open a closed sprint from the Sprints tab history list
-page -> client : Build typed GetSprintHistoryQuery with outcome page and page size
-client -> access : GET /api/workspaces/{id}/sprints/{sprintId}/history
+page -> page : SprintHistoryPage reads the workspace (IWorkspaceService.workspaceResource) for the breadcrumb\nand the project name; a workspace 404 shows Project not found with Back to projects (project-not-found)
+page -> client : Three caller-owned resources: header, outcomes page 1, scope changes page 1 (page size 25)
+client -> access : GET .../sprints/{sprintId}/history, .../history/outcomes, .../history/scope-changes
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid or expired JWT; deactivated account
   access --> client : 401; audit denial without payloads
-  client --> page : Clear session; sign in with this history route as return route
-else Authenticated without the required permission
-  access --> client : 403; audit denial without payloads
-  client --> page : Access-denied state; nothing loaded
-else Authorized
+  client --> page : SessionService.end(Unauthorized) once; sign in with this history route as return route
+else Authenticated (profile P: every active role reads sprints)
   access -> ctrl : Authorized request
-  ctrl -> validation : Send GetSprintHistoryQuery through MediatR 12.5.0
-  validation -> validation : L2-045 page size 1-100, default 25
+  ctrl -> validation : Send the typed query through MediatR 12.5.0
+  validation -> validation : L2-045 page 1 or more; page size 1-100, default 25
   alt Invalid page or page size
     validation --> ctrl : 400 field errors; nothing read
     ctrl --> client : Validation ProblemDetails
-    client --> page : Load-failed state; Try again uses the default page size
+    client --> page : That section shows the page-size message without Try again or reference ID\n(the view always sends page size 25, so only direct API callers meet this)
   else Valid request
-    validation -> handler : Handle GetSprintHistoryQuery
-    handler -> db : L2-026 read closure snapshot, scope log, and one bounded page of recorded outcomes
-    db --> handler : Snapshot and full outcome counts
-    alt No closure snapshot (sprint missing, in another workspace, or not closed)
+    validation -> handler : Handle the query
+    handler -> db : L2-026 LoadSprintHistoryHeaderAsync (snapshot header with the initial scope count),\nor ListSprintOutcomesAsync (recorded order, then story ID) / ListSprintScopeChangesAsync (newest first by\natUtc, then story ID): one page with its total in one statement
+    db --> handler : Recorded rows and totals, or no snapshot
+    alt Workspace missing (the page's workspace read also answers 404)
       handler --> ctrl : 404
       ctrl --> client : ProblemDetails (not found)
-      client --> page : Sprint not found state with Back to sprints
+      client --> page : Project not found with Back to projects, decided by the page's workspace read
+    else Sprint missing or in another workspace; or a header or outcome read of a sprint not closed
+      handler --> ctrl : 404
+      ctrl --> client : ProblemDetails (not found)
+      client --> page : Sprint not found state with Back to sprints, naming the project
     else Snapshot found
-      handler -> db : Look up which recorded story IDs still exist and their current titles
-      db --> handler : Live story IDs and titles (links and renamed notes only)
-      handler -> entity : Keep recorded titles, statuses, destinations, actors; mark stories deleted after closure
-      entity --> handler : Read-only history view
-      handler --> ctrl : History with full completed and unfinished counts
-      ctrl --> client : 200 with history
-      client --> page : Deleted stories show recorded ID, title, status and a Deleted label, without a link
-      page --> actor : Present recorded fields, start and close actors, scope changes, outcomes
+      opt Outcome page (batched lookup, never per row)
+        handler -> db : One batched lookup: which of this page's recorded story IDs still exist, and their current titles
+        db --> handler : Live IDs and titles (links and renamed notes only)
+      end
+      handler --> ctrl : Header with full completed, carried-over and returned counts;\nor a page of recorded rows with its total
+      ctrl --> client : 200
+      client --> page : Each resource updates its own value signal; deleted stories show recorded ID, title,\nstatus and a Deleted label without a link; scope changes show recorded text only
+      page --> actor : Present recorded fields, start and close actors, scope changes, outcomes, and any pager
     end
   end
+end
+opt Try again after a failed read
+  actor -> page : Choose Try again
+  page -> page : SprintHistoryView emits retryRequested; the page reloads its workspace resource and increments\nits counter, so the view's refresh input rereads all three resources together
+end
+loop Change page in outcomes or scope changes
+  actor -> page : Choose a page in one list
+  page -> client : That list's page signal changes; its resource aborts a superseded read
+  client --> page : New page of that list only; the header and the other list are unchanged
 end
 note over ctrl, db
 History stays readable in Kanban mode. No snapshot edit endpoint exists;
 closed-sprint mutations return 409 (L2-026.3).
-Unexpected failures return generic 500 plus correlation ID (L2-043).
+Unexpected failures return generic 500 plus correlation ID (L2-043);
+the page shows Load failed with the reference ID and Try again; a read
+that gets no response shows the same state without a reference ID.
 Diagnostics exclude secrets and contact payloads.
 end note
 @enduml

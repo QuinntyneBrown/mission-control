@@ -17,21 +17,35 @@ set separator none
 title Class structure - Measure release workflow performance
 package "backend/src/MissionControl.Operations" {
   class SeedPerformanceFixtureOperation {
-    +run(options: PerformanceOptions): void
+    +RunAsync(options: PerformanceOptions, ct: CancellationToken): Task
   }
   class MeasureApiLoadOperation {
-    +run(options: PerformanceOptions, manifest: EnvironmentManifest): PerformanceResult
+    +RunAsync(options: PerformanceOptions, manifest: EnvironmentManifest, ct: CancellationToken): Task<PerformanceResult>
   }
   class PerformanceOptions {
     +apiBaseUrl: string
     +sessionAccounts: string[]
+    +scenario: LoadScenario
     +warmUp: TimeSpan
     +duration: TimeSpan
     +requestsPerSecondPerSession: int
-    +readShare: decimal
+    +operationMix: Map<string, decimal>
+    +minimumSuccessfulSamples: int
+    +timingRecordsLocation: string
+  }
+  enum LoadScenario {
+    Baseline
+    SharedWorkspaceContention
+    LargeHotWorkspace
   }
   class PerformanceResult {
+    +scenario: LoadScenario
     +environmentManifest: EnvironmentManifest
+    +offeredRequestsPerSecond: decimal
+    +completedRequestsPerSecond: decimal
+    +maxScheduleLagMilliseconds: decimal
+    +clockSource: string
+    +percentileMethod: string
     +operationClasses: OperationClassResult[]
     +invariantFailures: string[]
     +outcome: MeasurementOutcome
@@ -39,41 +53,40 @@ package "backend/src/MissionControl.Operations" {
   class OperationClassResult {
     +operationClass: string
     +isWrite: bool
-    +count: long
-    +p95ServerMilliseconds: decimal
-    +status4xx: long
-    +unexpected5xx: long
+    +expectedSuccessStatuses: int[]
+    +expectedRejectionStatuses: int[]
+    +offeredCount: long
+    +completedCount: long
+    +successCount: long
+    +p95SuccessServerMilliseconds: decimal
+    +expectedRejectionCount: long
+    +p95RejectionServerMilliseconds: decimal
+    +unexpectedStatusCount: long
+    +transportErrorCount: long
+    +missingTimingRecordCount: long
+    +p95LockWaitMilliseconds: decimal
+    +p95ExecutionMilliseconds: decimal
+    +p95TimeToHeadersMilliseconds: decimal
+    +p95ResponseBytes: long
   }
   enum MeasurementOutcome {
     NotRun
     Passed
     Failed
     OtherEnvironment
+    Reported
   }
-}
-package "backend/src/MissionControl.Api" {
-  class ServerTimingMiddleware {
-    +invoke(context: HttpContext): Task
+  class TimingRecordEntry {
+    +correlationId: string
+    +operation: string
+    +status: int
+    +serverMilliseconds: decimal
+    +timeToHeadersMilliseconds: decimal
+    +lockWaitMilliseconds: decimal?
+    +sqlCommandCount: int
+    +{static} parse(jsonLine: string): TimingRecordEntry
   }
-  class ServerTimingOptions {
-    +enabled: bool
-  }
-}
-package "e2e/performance" {
-  class MeasureColdViewsOperation {
-    +run(manifest: EnvironmentManifest): ColdViewResult[]
-  }
-  class ColdViewResult {
-    +view: string
-    +runs: number
-    +failedRuns: number
-    +p95UsableMilliseconds: number
-    +environmentManifest: EnvironmentManifest
-    +outcome: MeasurementOutcome
-  }
-}
-package "docs/operations/performance/<run>" {
-  class EnvironmentManifest {
+  class "EnvironmentManifest" as OpsManifest <<record>> {
     +frameworkVersions: string[]
     +browserVersion: string
     +sqlProviderVersion: string
@@ -82,21 +95,136 @@ package "docs/operations/performance/<run>" {
     +hardware: string
     +networkProfile: string
     +matchesL2046Profile: bool
+    +{static} parse(json: string): EnvironmentManifest
   }
 }
-note bottom of ServerTimingOptions
+package "backend/src/MissionControl.Api" {
+  class RequestTimingMiddleware {
+    +InvokeAsync(context: HttpContext): Task
+  }
+  class RequestTimingOptions {
+    +enabled: bool
+    +recordsLocation: string
+  }
+  class RequestTimingRecord {
+    +correlationId: string
+    +operation: string
+    +status: int
+    +serverMilliseconds: decimal
+    +timeToHeadersMilliseconds: decimal
+    +lockWaitMilliseconds: decimal?
+    +sqlCommandCount: int
+  }
+}
+package "e2e/performance" {
+  class MeasureColdViewsOperation {
+    +run(manifest: EnvironmentManifest): Promise<ColdViewResult[]>
+  }
+  class ColdViewResult {
+    +view: string
+    +startView: string
+    +runs: number
+    +failedRuns: number
+    +p95ShellUsableMilliseconds: number
+    +p95AuthenticatedMilliseconds: number
+    +p95ColdViewMilliseconds: number
+    +p95FreshJourneyMilliseconds: number
+    +gateInterpretation: string
+    +clockSource: string
+    +environmentManifest: EnvironmentManifest
+    +outcome: MeasurementOutcome
+  }
+  class MeasureRetentionOperation {
+    +run(manifest: EnvironmentManifest): Promise<RetentionResult>
+  }
+  class RetentionResult {
+    +workspace: string
+    +steps: string[]
+    +renderedCardCounts: number[]
+    +renderedNodeCounts: number[]
+    +heapBytesAfterCollection: number[]
+    +failedExpectations: string[]
+    +environmentManifest: EnvironmentManifest
+    +outcome: MeasurementOutcome
+  }
+  interface "EnvironmentManifest" as WebManifest {
+    +frameworkVersions: string[]
+    +browserVersion: string
+    +sqlProviderVersion: string
+    +configuration: string
+    +fixture: string
+    +hardware: string
+    +networkProfile: string
+    +matchesL2046Profile: boolean
+  }
+  enum "MeasurementOutcome" as WebOutcome {
+    NotRun
+    Passed
+    Failed
+    OtherEnvironment
+    Reported
+  }
+}
+package "docs/operations/performance/<run>" {
+  class "Environment manifest (JSON)" as ManifestJson <<operator-completed>> {
+    frameworkVersions
+    browserVersion
+    sqlProviderVersion
+    configuration
+    fixture
+    hardware
+    networkProfile
+    matchesL2046Profile
+  }
+}
+note bottom of ManifestJson
+Completed by the operator in the run
+folder. Each runner parses it by field
+name into its own EnvironmentManifest
+(one file each); no type is shared.
+end note
+note bottom of WebOutcome
+TypeScript twin of the Operations
+MeasurementOutcome, same values,
+in its own e2e/performance file.
+end note
+note bottom of RequestTimingOptions
 Enabled only for the measurement
 instance; off by default.
 end note
+note bottom of RequestTimingRecord
+Written at HttpResponse.OnCompleted:
+entry to completed response.
+Server-Timing (time to headers)
+is a diagnostic only.
+end note
+note bottom of TimingRecordEntry
+Operations-local: parses one JSON
+timing line by field name. Operations
+references no Mission Control project.
+end note
+note bottom of ColdViewResult
+p95ColdViewMilliseconds gates L2-046.2
+(proposed interpretation of a cold
+frontend cache); the others are reported.
+end note
 SeedPerformanceFixtureOperation ..> PerformanceOptions : consumes
 MeasureApiLoadOperation ..> PerformanceOptions : consumes
+PerformanceOptions --> LoadScenario
 MeasureApiLoadOperation --> PerformanceResult : records
-PerformanceResult *-- "8" OperationClassResult : one per read/write class
+PerformanceResult *-- "1..*" OperationClassResult : one per class
 PerformanceResult --> MeasurementOutcome
-PerformanceResult --> EnvironmentManifest
-MeasureApiLoadOperation ..> ServerTimingMiddleware : reads Server-Timing app;dur
-ServerTimingMiddleware ..> ServerTimingOptions : consumes
+PerformanceResult --> OpsManifest
+OpsManifest ..> ManifestJson : parses by field name
+WebManifest ..> ManifestJson : parsed by field name
+WebOutcome .. MeasurementOutcome : same values
+MeasureApiLoadOperation ..> TimingRecordEntry : parses timing lines; joins by correlation ID
+RequestTimingMiddleware ..> RequestTimingOptions : consumes
+RequestTimingMiddleware --> RequestTimingRecord : writes
 MeasureColdViewsOperation --> ColdViewResult : records one per view
-ColdViewResult --> EnvironmentManifest
-ColdViewResult ..> MeasurementOutcome : same values
+MeasureRetentionOperation --> RetentionResult : records
+ColdViewResult --> WebManifest
+RetentionResult --> WebManifest
+ColdViewResult --> WebOutcome
+RetentionResult --> WebOutcome : NotRun, Reported, or Failed
 @enduml

@@ -32,38 +32,49 @@ box "Backend - MissionControl.Infrastructure" #FFF4E5
 end box
 actor -> page : Open /home, or Retry in Lead coverage
 page -> page : state = Loading; section keeps its shape with skeletons (L2-032.1)
-page -> client : leads(GetLeadCoverageQuery)
+page -> client : leadCoverageResource(() => GetLeadCoverageQuery) reads on view creation, or reload() on Retry or a refresh change
 client -> access : GET /api/home/lead-coverage
+alt No response: the connection dropped or the request timed out
+  client --> page : state = Failed, no reference ID; sessionInterceptor sets offline, so ApplicationShell shows the offline banner
+  page --> actor : Section alert with Retry and no reference ID; other sections stay
+else Response received
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt 401: token absent, invalid or expired; account deactivated or credential version changed
   access --> client : 401 ProblemDetails; denial audited without payloads
-  client -> client : Clear in-memory session and protected caches (L2-003)
-  client --> page : Unauthenticated
-  page --> actor : AuthenticationGuard stores /home; sign-in shows "Your session ended"
+  alt Request's generation is still current
+    client -> client : sessionInterceptor calls end(Unauthorized), once (L2-003)
+    client --> page : Resource keeps its state (401); section unchanged
+    page --> actor : ApplicationShell stores /home and opens sign-in: "Your session ended"
+  else Session already ended (another section's 401 came first)
+    client --> page : Discarded: the read resource keeps its state; no second session end
+  end
 else Authenticated (profile P: every active role reads leads, so no 403 path)
   access -> ctrl : Authenticated request
   ctrl -> handler : Send GetLeadCoverageQuery through MediatR 12.5.0 (no request fields)
-  handler -> db : L2-028 one read transaction: count all persisted leads grouped by category
+  handler -> db : L2-028 one grouped count statement over all persisted leads by category (one snapshot)
   alt SQL unavailable or unexpected failure
     db --> handler : Exception
     handler --> ctrl : Unhandled failure
-    ctrl --> client : 500 with correlation ID; diagnostic record written (L2-043)
+    ctrl --> client : 500; X-Correlation-ID header carries the reference ID; diagnostic record written (L2-043)
     client --> page : state = Failed(referenceId)
     page --> actor : Section alert with reference ID and Retry; other sections stay
   else Counts read
     db --> handler : Counts for categories that have leads
     handler -> projection : Fill absent categories with 0; order Create, Communication, City, Prayer, Event
-    projection --> handler : Five CategoryCount entries
+    projection --> handler : Five CategoryCount entries and their totalCount
     handler --> ctrl : LeadCoverage
     ctrl --> client : 200 LeadCoverage
     client --> page : state = Ready(LeadCoverage)
-    page --> actor : Five category cards, zeros shown; each opens the filtered directory (L2-028.1, L2-028.2)
+    page --> actor : Five category cards, zeros shown, and the total in the hint; each card opens the filtered directory (L2-028.1, L2-028.2)
   end
 end
+end
 note over page, db
-Lead coverage is one of three independent section requests.
-If every section request fails, HomePage shows the full-page error with one Try again.
+Lead coverage is one of three independent section requests; each view owns its own state.
+If every section request fails, each section shows its own error with its reference ID and Retry;
+HomePage holds no section state and shows no page-level error.
+A response that arrives after the session ended is discarded and changes no state.
 end note
 @enduml

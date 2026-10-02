@@ -14,30 +14,196 @@ skinparam package {
   BackgroundColor #F9FAFB
 }
 title Class structure - Plan sprints and allocate stories
+left to right direction
 skinparam class {
   BorderColor #344054
   FontColor #101828
   BackgroundColor #F9FAFB
 }
-class SprintPlanningPage {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
-}
-class SprintView {
-  +state: Signal<FeatureState>
-  +submit(): void
-}
-interface ISprintService {
-  +create(request: CreateSprintCommand): Promise<FeatureResult>
-  +save_plan(request: SaveSprintPlanCommand): Promise<FeatureResult>
-  +read(request: GetSprintPlanQuery): Promise<FeatureResult>
-}
-class SprintService {
-  -http: HttpClient
-}
 class SprintsController {
   -sender: ISender
 }
+
+class CreateSprintCommand {
+  +workspaceId: Guid
+  +name: string
+  +goal: string
+  +startDate: DateOnly
+  +endDate: DateOnly
+}
+class SaveSprintPlanCommand {
+  +workspaceId: Guid
+  +sprintId: Guid
+  +expectedVersion: long
+  +name: string
+  +goal: string
+  +startDate: DateOnly
+  +endDate: DateOnly
+  +addStoryIds: Guid[]
+  +removeStoryIds: Guid[]
+}
+class ListSprintsQuery {
+  +workspaceId: Guid
+  +plannedPage: int
+  +closedPage: int
+  +pageSize: int
+}
+class GetSprintPlanQuery {
+  +workspaceId: Guid
+  +sprintId: Guid
+}
+class GetSprintCandidatesQuery {
+  +workspaceId: Guid
+  +sprintId: Guid
+  +search: string?
+  +storyId: Guid?
+  +eligibleOnly: bool
+  +page: int
+  +pageSize: int
+}
+class GetSprintMembersQuery {
+  +workspaceId: Guid
+  +sprintId: Guid
+  +storyId: Guid?
+  +page: int
+  +pageSize: int
+}
+class CreateSprintCommandHandler {
+  +handle(request: CreateSprintCommand, ct: CancellationToken): Task<SprintSaveResult>
+}
+class SaveSprintPlanCommandHandler {
+  +handle(request: SaveSprintPlanCommand, ct: CancellationToken): Task<SprintSaveResult>
+}
+class ListSprintsQueryHandler {
+  +handle(request: ListSprintsQuery, ct: CancellationToken): Task<SprintListResult>
+}
+class GetSprintPlanQueryHandler {
+  +handle(request: GetSprintPlanQuery, ct: CancellationToken): Task<SprintPlanResult>
+}
+class GetSprintCandidatesQueryHandler {
+  +handle(request: GetSprintCandidatesQuery, ct: CancellationToken): Task<SprintCandidatePage>
+}
+class GetSprintMembersQueryHandler {
+  +handle(request: GetSprintMembersQuery, ct: CancellationToken): Task<SprintMemberPage>
+}
+SprintsController ..> CreateSprintCommand : dispatches
+SprintsController ..> SaveSprintPlanCommand : dispatches
+SprintsController ..> ListSprintsQuery : dispatches
+SprintsController ..> GetSprintPlanQuery : dispatches
+SprintsController ..> GetSprintCandidatesQuery : dispatches
+SprintsController ..> GetSprintMembersQuery : dispatches
+CreateSprintCommandHandler ..> CreateSprintCommand : handles
+SaveSprintPlanCommandHandler ..> SaveSprintPlanCommand : handles
+ListSprintsQueryHandler ..> ListSprintsQuery : handles
+GetSprintPlanQueryHandler ..> GetSprintPlanQuery : handles
+GetSprintCandidatesQueryHandler ..> GetSprintCandidatesQuery : handles
+GetSprintMembersQueryHandler ..> GetSprintMembersQuery : handles
+
+class SprintListResult {
+  +mode: DeliveryMode
+  +active: SprintListItem?
+  +planned: SprintListItem[]
+  +plannedTotal: int
+  +plannedPage: int
+  +closed: SprintListItem[]
+  +closedTotal: int
+  +closedPage: int
+  +pageSize: int
+}
+class SprintListItem {
+  +sprintId: Guid
+  +name: string
+  +status: SprintStatus
+  +goal: string
+  +startDate: DateOnly
+  +endDate: DateOnly
+  +storyCount: int
+  +doneCount: int
+  +points: int
+  +carriedOverCount: int
+  +returnedCount: int
+}
+note bottom of SprintListResult
+Planned: one page by start date, then ID, with their total.
+Closed: one page, newest closure first, then ID, with their total.
+Each list pages independently (default 25, at most 100).
+Item counts and points are server-computed; carried-over
+and returned counts apply to closed sprints.
+end note
+class SprintPlanResult {
+  +sprintId: Guid
+  +name: string
+  +goal: string
+  +startDate: DateOnly
+  +endDate: DateOnly
+  +status: SprintStatus
+  +version: long
+  +memberCount: int
+  +memberPoints: int
+  +mode: DeliveryMode
+}
+enum SprintStatus {
+  Planned
+  Active
+  Closed
+}
+class SprintReference {
+  +sprintId: Guid
+  +name: string
+}
+SprintListResult *-- SprintListItem
+SprintListItem --> SprintStatus
+SprintPlanResult --> SprintStatus
+ListSprintsQueryHandler --> SprintListResult : returns
+GetSprintPlanQueryHandler --> SprintPlanResult : returns
+class SprintCandidatePage {
+  +items: SprintCandidate[]
+  +total: int
+  +eligibleTotal: int
+  +page: int
+  +pageSize: int
+}
+class SprintCandidate {
+  +storyId: Guid
+  +key: string
+  +title: string
+  +epicTitle: string
+  +status: WorkStatus
+  +assigneeName: string?
+  +assigneeActive: bool
+  +estimate: int?
+  +availability: CandidateAvailability
+  +otherSprint: SprintReference?
+}
+enum CandidateAvailability {
+  Eligible
+  Done
+  InAnotherOpenSprint
+}
+class SprintSaveResult {
+  +sprintId: Guid
+  +name: string
+  +version: long
+  +storyCount: int
+}
+note bottom of SprintSaveResult
+Returned by create, plan save, start and scope change;
+name and storyCount let the opening page's toast name
+the sprint ("Sprint 9 has 3 stories").
+end note
+SprintCandidatePage *-- SprintCandidate
+SprintCandidate --> CandidateAvailability
+SprintCandidate --> SprintReference : in another open sprint
+GetSprintCandidatesQueryHandler --> SprintCandidatePage : returns
+note bottom of SprintCandidatePage
+SprintMemberPage has the same shape for saved members
+(no availability), plus the total points of every member.
+total - eligibleTotal is the count that can't be added.
+eligibleOnly = true (scope dialog) returns eligible rows only.
+storyId narrows the page to one story: a candidate for a
+pre-marked addition, a current member for a pre-marked removal.
+end note
+
 class Sprint {
   +id: Guid
   +workspaceId: Guid
@@ -46,84 +212,56 @@ class Sprint {
   +startDate: DateOnly
   +endDate: DateOnly
   +status: SprintStatus
-  +startedAtUtc: DateTimeOffset?
-  +startedByUserId: Guid?
-  +startedByName: string?
-  +closedAtUtc: DateTimeOffset?
-  +closedByUserId: Guid?
-  +closedByName: string?
   +version: long
+  +memberships: OpenSprintMembership[]
   +editPlan(name: string, goal: string, dates: DateRange): void
-  +setScope(storyIds: Guid[]): void
+  +applyPlanDelta(add: StoryAllocation[], remove: Guid[]): void
 }
-interface IMissionControlDataSession {
-  +query(specification): Task<ReadResult>
-  +commit(expectedVersion: long): Task<void>
-}
-class MissionControlDataSession {
-  -connection: DbConnection
-}
-SprintPlanningPage --> SprintView : composes
-SprintView ..> ISprintService : inject token
-ISprintService <|.. SprintService
-IMissionControlDataSession <|.. MissionControlDataSession
-class CreateSprintCommand {
-  +workspaceId: Guid
-  +name: string
-  +goal: string
-  +startDate: DateOnly
-  +endDate: DateOnly
-}
-class CreateSprintCommandHandler {
-  +handle(request: CreateSprintCommand): Task<FeatureResult>
-}
-SprintsController ..> CreateSprintCommand : dispatches
-CreateSprintCommandHandler ..> CreateSprintCommand : handles
-CreateSprintCommandHandler --> Sprint : loads / applies
-CreateSprintCommandHandler ..> IMissionControlDataSession : uses
-class SaveSprintPlanCommand {
-  +workspaceId: Guid
-  +sprintId: Guid
-  +name: string
-  +goal: string
-  +startDate: DateOnly
-  +endDate: DateOnly
-  +storyIds: Guid[]
-  +expectedVersion: long
-}
-class SaveSprintPlanCommandHandler {
-  +handle(request: SaveSprintPlanCommand): Task<FeatureResult>
-}
-SprintsController ..> SaveSprintPlanCommand : dispatches
-SaveSprintPlanCommandHandler ..> SaveSprintPlanCommand : handles
-SaveSprintPlanCommandHandler --> Sprint : loads / applies
-SaveSprintPlanCommandHandler ..> IMissionControlDataSession : uses
-class GetSprintPlanQuery {
-  +workspaceId: Guid
-  +sprintId: Guid?
-  +page: int
-  +pageSize: int
-}
-class GetSprintPlanQueryHandler {
-  +handle(request: GetSprintPlanQuery): Task<FeatureResult>
-}
-SprintsController ..> GetSprintPlanQuery : dispatches
-GetSprintPlanQueryHandler ..> GetSprintPlanQuery : handles
-GetSprintPlanQueryHandler --> Sprint : loads / applies
-GetSprintPlanQueryHandler ..> IMissionControlDataSession : uses
-
 class OpenSprintMembership {
   +workspaceId: Guid
   +storyId: Guid
   +sprintId: Guid
 }
-class SprintStoryOutcome {
-  +recordedStoryId: Guid
-  +recordedTitle: string
-  +statusAtClosure: WorkStatus
-  +recordedDestinationId: Guid?
-  +recordedDestinationName: string?
+interface IMissionControlDataSession {
+  +BeginWorkspaceTransactionAsync(workspaceId: Guid, ct: CancellationToken): Task
+  +LoadWorkspaceAsync(workspaceId: Guid, ct: CancellationToken): Task<Workspace?>
+  +AddSprint(sprint: Sprint): void
+  +LoadPlanChangeAsync(workspaceId: Guid, sprintId: Guid, addStoryIds: Guid[], removeStoryIds: Guid[], ct: CancellationToken): Task<PlanChange?>
+  +AddAuditEvent(auditEvent: AuditEvent): void
+  +ListSprintsAsync(query: ListSprintsQuery, ct: CancellationToken): Task<SprintListResult?>
+  +LoadSprintPlanAsync(query: GetSprintPlanQuery, ct: CancellationToken): Task<SprintPlanResult?>
+  +ListSprintCandidatesAsync(query: GetSprintCandidatesQuery, ct: CancellationToken): Task<SprintCandidatePage?>
+  +ListSprintMembersAsync(query: GetSprintMembersQuery, ct: CancellationToken): Task<SprintMemberPage?>
+  +SaveChangesAsync(ct: CancellationToken): Task
 }
-Sprint "1" *-- "*" SprintStoryOutcome : immutable outcomes at closure
-Sprint ..> OpenSprintMembership : live allocation / historical source
+note right of IMissionControlDataSession
+Scoped view of the shared port defined in the overview;
+only the members this slice uses. Sprint is an aggregate
+root (AddSprint); its OpenSprintMembership rows are tracked
+children that SaveChangesAsync inserts and deletes.
+end note
+class PlanChange {
+  +mode: DeliveryMode
+  +sprint: Sprint
+  +storiesToAdd: StoryAllocation[]
+}
+note bottom of PlanChange
+sprint is loaded with the memberships named
+in removeStoryIds as tracked children.
+end note
+CreateSprintCommandHandler --> Sprint : creates
+SaveSprintPlanCommandHandler --> Sprint : editPlan / applyPlanDelta
+Sprint "1" *-- "*" OpenSprintMembership : saved members (tracked children)
+CreateSprintCommandHandler ..> IMissionControlDataSession : transaction, LoadWorkspaceAsync, AddSprint, AddAuditEvent, save
+SaveSprintPlanCommandHandler ..> IMissionControlDataSession : transaction, LoadPlanChangeAsync, AddAuditEvent, save
+IMissionControlDataSession ..> PlanChange : loads
+ListSprintsQueryHandler ..> IMissionControlDataSession : typed list
+GetSprintPlanQueryHandler ..> IMissionControlDataSession : typed read
+GetSprintCandidatesQueryHandler ..> IMissionControlDataSession : typed list
+GetSprintMembersQueryHandler ..> IMissionControlDataSession : typed list
+note bottom of SaveSprintPlanCommandHandler
+Only addStoryIds are new allocations (unfinished, same workspace,
+not in another open sprint). Existing members, Done ones included,
+stay untouched unless listed in removeStoryIds.
+end note
 @enduml

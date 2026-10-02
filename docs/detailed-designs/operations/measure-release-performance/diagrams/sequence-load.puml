@@ -20,28 +20,29 @@ box "Release tooling - backend/src/MissionControl.Operations" #E0F2FE
   participant "MeasureApiLoadOperation" as load
 end box
 box "Backend - MissionControl.Api (performance instance)" #D1FADF
-  participant "ServerTimingMiddleware" as timing
+  participant "RequestTimingMiddleware" as timing
   participant "Existing feature endpoints" as api
+  participant "Restricted timing records" as records
 end box
 box "Selected SQL provider" #FFF4E5
-  database "Isolated SQL target\n(L2-046 fixture)" as db
+  database "Isolated SQL target\n(scenario fixture)" as db
 end box
 box "Release records - docs/operations/performance" #ECFDF3
   participant "PerformanceResult" as result
 end box
-actor -> console : load (EnvironmentManifest; fixture restored; Server-Timing enabled)
+actor -> console : load (EnvironmentManifest; LoadScenario; fixture restored; request timing enabled)
 console -> load : Run with bound PerformanceOptions
 load -> timing : GET /health/ready; list totals for leads, workspaces, work items
 timing -> api : Pipeline
 api -> db : Parameterized reads
 db --> api : Counts
 api --> load : Readiness and total counts
-break Readiness 503 or totals differ from 1,000 leads / 50 workspaces / 10,000 work items
+break Readiness 503 or totals differ from 1,000 leads (including the seeded City contact) / 50 workspaces / 10,000 work items
   load --> console : Not started: fixture not ready
   console -> result : Outcome NotRun; no latency recorded
   console --> actor : Restore the fixture into an empty target and restart the API
 end
-load -> timing : POST /api/sessions for 25 session accounts
+load -> timing : POST /api/sessions for 5 Administrator and 20 Collaborator accounts
 timing -> api : Pipeline
 api --> load : Access tokens
 break Any 401 or 429
@@ -49,28 +50,74 @@ break Any 401 or 429
   console -> result : Outcome NotRun
   console --> actor : Check session accounts, secrets, and throttling
 end
-loop 1 minute warm-up, then 10 measured minutes: 25 sessions x 1 request/s
-  load -> timing : L2-046 60% reads / 40% permitted writes on allocated records
+loop 1 minute warm-up, then 10 measured minutes: open-loop schedule, 25 sessions x 1 request/s
+  load -> timing : Scheduled request from the mix (60% reads / 40% permitted writes); never delayed by a slow response
+  note over load, api
+  Every write is valid when sent, so Baseline expects only each class's success status:
+  lead edits keep email and category; work edits leave status unchanged (never a story Done);
+  card moves go between To Do and In Progress, or to Done only with no unfinished tasks;
+  sprint planning saves the owned planned sprint (SaveSprintPlanCommand),
+  alternately adding and removing one pool story.
+  end note
+  opt LargeHotWorkspace
+    note over load, api
+    Ordinary writes stay in each session's own workspaces.
+    Backlog, board-batch, and sprint-history reads target the hot workspace.
+    Every 30 s one Collaborator session adds a long-distance reorder:
+    last backlog story to the top, then back on the next turn.
+    Expects 200; 409 / 503 reported as rejections.
+    end note
+  end
   timing -> api : Authenticated pipeline; thin controller; MediatR handler
-  api -> db : Parameterized reads / transactional writes
+  api -> db : Parameterized reads / workspace lock first, then versioned writes
   db --> api : Rows / commit
-  api --> timing : Response
-  timing --> load : Status and Server-Timing app;dur (server time only)
-  load -> load : Measured window only: per-class count, duration, 4xx, unexpected 5xx
+  api --> timing : Response written
+  timing --> load : Status, X-Correlation-ID, diagnostic Server-Timing (time to headers)
+  timing -> records : On response completed: RequestTimingRecord (server ms, lock wait, SQL commands)
+  load -> load : Log scheduled and sent times, status, bytes, correlation ID; no retry
 end
-load -> timing : Post-load invariant reads: paged GET work items, backlog, boards, sprints, history
+opt LargeHotWorkspace: after the measured window, every scheduled request (card moves included) stopped
+  load -> timing : Read every page of the hot sprint's closure review
+  timing -> api : Pipeline
+  api -> db : Parameterized reads
+  db --> api : Unfinished stories, total, planned destination, reviewed revision
+  api --> load : 200 review pages
+  load -> timing : Close the hot sprint: reviewed revision; every returned unfinished story carried to the planned sprint
+  timing -> api : Pipeline; workspace lock first
+  alt Lock acquired and reviewed revision current
+    api -> db : Close, carry stories, record history and audit in one transaction
+    db --> api : Commit
+    api --> load : 200 closed sprint
+  else Reviewed revision stale (409) or lock wait timed out (503)
+    api --> load : 409 or 503; no partial change
+    load -> load : Count as a reported rejection; no retry
+  end
+  timing -> records : On response completed: RequestTimingRecord per review page and close
+end
+load -> records : Read JSON timing lines from the configured diagnostics location
+records --> load : Lines parsed by field name into TimingRecordEntry values (Operations-local; no Api type)
+load -> load : Discard warm-up; join by correlation ID; classify each response once:\nsuccess / expected rejection / unexpected 4xx-5xx / transport error / missing timing record
+load -> timing : Post-load invariant reads: paged work items, backlog, boards, sprints, history, acknowledged writes
 timing -> api : Pipeline
 api -> db : Parameterized reads
 db --> api : Rows and total counts
 api --> load : Pages with total counts
-load -> load : L2-046.3 identity, typed parents, order, sprint membership, unchanged closed history
-load --> console : Per-class count, p95 server ms, 4xx, 5xx; invariant results
-console -> result : Record classes, invariant results, manifest, outcome
-alt Missing Server-Timing, transport error, unexpected 5xx, invariant failure, or any class p95 > 500 ms
+load -> load : L2-046.3 identity, typed parents, order, at most one active sprint, one open sprint per story,\nearlier closed history unchanged, acknowledged writes stored, carried stories in the planned sprint
+load --> console : Per class: offered/completed, success p95, rejection p95, lock wait / execution p95, counts
+console -> result : Scenario, classes, rates, nearest-rank p95, Stopwatch clock, invariants, manifest, outcome
+alt SharedWorkspaceContention or LargeHotWorkspace
+  alt Unexpected status, transport error, missing timing record, or invariant failure
+    console --> actor : Outcome Failed for this scenario; causes named
+  else Otherwise
+    console --> actor : Outcome Reported: conflicts, lock timeouts, lock wait vs execution, heavy samples; no L2-046 claim
+  end
+else Baseline: unexpected status, transport error, missing timing record, schedule lag, or invariant failure
   console --> actor : Outcome Failed; failing classes or rules named; no passing claim
-else Manifest differs from the L2-046 profile
+else Baseline: any class below 500 successful samples or successful p95 > 500 ms
+  console --> actor : Outcome Failed; workload not executed as specified or budget missed
+else Baseline: manifest differs from the L2-046 profile
   console --> actor : Outcome OtherEnvironment; recorded separately, never labeled passing
-else Every class within budget on the stated profile
-  console --> actor : Outcome Passed for this run; proposed budget met
+else Baseline: every class within budget on the stated profile
+  console --> actor : Outcome Passed for this run; L2-046.1 proposed budget met
 end
 @enduml

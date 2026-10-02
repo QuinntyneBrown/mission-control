@@ -23,7 +23,7 @@
       <p class="mc-eyebrow">FaithTech Toronto · Design artifact</p>
       <h1>Mission Control workflow mocks</h1>
       <p class="mc-muted">Static HTML mocks of every page, dialog, notification, and pop-up described in the
-        <a href="../PRD.md">PRD</a> and <a href="../specs/L2.md">L2 requirements</a>: 40 mocks with 267 states.
+        <a href="../PRD.md">PRD</a> and <a href="../specs/L2.md">L2 requirements</a>: 40 mocks with 356 states.
         Use the <strong>State</strong> menu in each mock's dark MOCK bar to switch between its states, or follow a state link below.</p>
     </header>
 
@@ -114,7 +114,7 @@
               <h3 class="mc-h4"><a href="auth/login.html">Sign in</a></h3>
               <span class="mc-pill">Page</span>
             </div>
-            <p class="mc-text-sm mc-muted">Sign-in page with validation, submission, generic failure, throttling, sign-out, session-ended, deep-link, and service-error states.</p>
+            <p class="mc-text-sm mc-muted">Sign-in page with validation, submission, generic failure, throttling, sign-out, session-ended, interrupted-save, deep-link, service-error, and no-response states.</p>
             <p class="mc-text-xs mc-muted">L2-001, L2-003, L2-005.3, L2-029.3, L2-031, L2-036, L2-037.5, L2-038, L2-043.4</p>
             <ul class="mock-index__states" aria-label="States of Sign in">
               <li><a href="auth/login.html#state=default">Default</a></li>
@@ -125,8 +125,10 @@
               <li><a href="auth/login.html#state=signed-out">Signed out</a></li>
               <li><a href="auth/login.html#state=session-ended">Session ended</a></li>
               <li><a href="auth/login.html#state=session-unsaved">Session ended with unsaved changes</a></li>
+              <li><a href="auth/login.html#state=session-save-unknown">Session ended during a save</a></li>
               <li><a href="auth/login.html#state=deep-link">Sign in to continue</a></li>
               <li><a href="auth/login.html#state=error">Service error</a></li>
+              <li><a href="auth/login.html#state=unreachable">Can't reach Mission Control</a></li>
             </ul>
             <p class="mc-text-sm"><a href="viewer.html?mock=auth%2Flogin.html">Preview at 320–1920px</a></p>
           </li>
@@ -158,7 +160,7 @@
               <span class="mc-pill">Page</span>
             </div>
             <p class="mc-text-sm mc-muted">Signed-in status pages: not found, access denied, unexpected error with a reference ID, and can't reach Mission Control.</p>
-            <p class="mc-text-xs mc-muted">L2-002.4, L2-004.5, L2-010.4, L2-029.3, L2-029.4, L2-032.3, L2-033.4, L2-043.1, L2-043.4</p>
+            <p class="mc-text-xs mc-muted">L2-002.4, L2-004.5, L2-029.3, L2-029.4, L2-032.3, L2-033.4, L2-043.1, L2-043.4</p>
             <ul class="mock-index__states" aria-label="States of Status pages">
               <li><a href="shell/status-pages.html#state=not-found">Not found</a></li>
               <li><a href="shell/status-pages.html#state=access-denied">Access denied</a></li>
@@ -201,7 +203,7 @@
               <li><a href="home/home.html#state=first-run-collaborator">First run (collaborator)</a></li>
               <li><a href="home/home.html#state=no-active-sprints">No active sprints</a></li>
               <li><a href="home/home.html#state=loading">Loading</a></li>
-              <li><a href="home/home.html#state=error">Load failed</a></li>
+              <li><a href="home/home.html#state=error">Every section failed</a></li>
               <li><a href="home/home.html#state=section-error">Projects section failed</a></li>
             </ul>
             <p class="mc-text-sm"><a href="viewer.html?mock=home%2Fhome.html">Preview at 320–1920px</a></p>
@@ -217,14 +219,16 @@
               <h3 class="mc-h4"><a href="leads/lead-directory.html">Lead directory</a></h3>
               <span class="mc-pill">Page</span>
             </div>
-            <p class="mc-text-sm mc-muted">Lead directory with search, category filter, pagination, read-only collaborator view, and empty, zero-result, loading, and error states.</p>
+            <p class="mc-text-sm mc-muted">Lead directory with search, category filter (including the view opened from a home category card), pagination, read-only collaborator view, and empty, zero-result, loading, and error states.</p>
             <p class="mc-text-xs mc-muted">L2-005.4, L2-010, L2-012, L2-013, L2-032, L2-034.2, L2-045</p>
             <ul class="mock-index__states" aria-label="States of Lead directory">
               <li><a href="leads/lead-directory.html#state=default">Administrator</a></li>
               <li><a href="leads/lead-directory.html#state=collaborator">Collaborator (read-only)</a></li>
+              <li><a href="leads/lead-directory.html#state=category">Category from home</a></li>
               <li><a href="leads/lead-directory.html#state=filtered">Search and category</a></li>
               <li><a href="leads/lead-directory.html#state=zero-results">Zero results</a></li>
               <li><a href="leads/lead-directory.html#state=page-2">Page 2</a></li>
+              <li><a href="leads/lead-directory.html#state=filter-invalid">Filter no longer valid</a></li>
               <li><a href="leads/lead-directory.html#state=deleted">Lead deleted</a></li>
               <li><a href="leads/lead-directory.html#state=empty-admin">Empty (administrator)</a></li>
               <li><a href="leads/lead-directory.html#state=empty-collaborator">Empty (collaborator)</a></li>
@@ -238,11 +242,13 @@
               <h3 class="mc-h4"><a href="leads/lead-detail.html">Lead details</a></h3>
               <span class="mc-pill">Page</span>
             </div>
-            <p class="mc-text-sm mc-muted">Lead detail page showing contact details, the City Lead, responsible projects, a saved confirmation, read-only collaborator view, and not-found, loading, and error states.</p>
+            <p class="mc-text-sm mc-muted">Lead detail page showing contact details, the City Lead, responsible projects (including Rafael Da Silva and Lucia Alvarez), a saved confirmation, read-only collaborator view, and not-found, loading, and error states.</p>
             <p class="mc-text-xs mc-muted">L2-005.4, L2-010.1, L2-010.4, L2-011, L2-012, L2-013, L2-029.4, L2-032, L2-043.4</p>
             <ul class="mock-index__states" aria-label="States of Lead details">
               <li><a href="leads/lead-detail.html#state=default">City Lead (Quinntyne Brown)</a></li>
               <li><a href="leads/lead-detail.html#state=lead">Lead with a project</a></li>
+              <li><a href="leads/lead-detail.html#state=lead-rafael">Rafael Da Silva (City, Scrum project)</a></li>
+              <li><a href="leads/lead-detail.html#state=lead-lucia">Lucia Alvarez (Communication, Kanban project)</a></li>
               <li><a href="leads/lead-detail.html#state=saved">Changes saved</a></li>
               <li><a href="leads/lead-detail.html#state=collaborator">Collaborator (read-only)</a></li>
               <li><a href="leads/lead-detail.html#state=not-found">Not found</a></li>
@@ -257,14 +263,18 @@
               <span class="mc-pill mc-pill--info">Dialog</span>
             </div>
             <p class="mc-text-sm mc-muted">Lead form dialog for adding and editing contacts: validation, saving, failure, duplicate email and category, edit conflict with the latest version reloaded for comparison, and a lead deleted while editing.</p>
-            <p class="mc-text-xs mc-muted">L2-009, L2-011, L2-013, L2-031, L2-033.2, L2-034.1, L2-041.3, L2-043.4</p>
+            <p class="mc-text-xs mc-muted">L2-005.2, L2-009, L2-011, L2-031, L2-033.2, L2-034.1, L2-041.3, L2-043.4</p>
             <ul class="mock-index__states" aria-label="States of Add or edit lead">
               <li><a href="leads/lead-form-dialog.html#state=add">Add (empty)</a></li>
               <li><a href="leads/lead-form-dialog.html#state=add-international">Add with international phone</a></li>
               <li><a href="leads/lead-form-dialog.html#state=validation">Validation errors</a></li>
               <li><a href="leads/lead-form-dialog.html#state=saving">Saving</a></li>
               <li><a href="leads/lead-form-dialog.html#state=failed">Save failed</a></li>
+              <li><a href="leads/lead-form-dialog.html#state=forbidden">Not allowed to save</a></li>
               <li><a href="leads/lead-form-dialog.html#state=duplicate">Duplicate email and category</a></li>
+              <li><a href="leads/lead-form-dialog.html#state=edit-loading">Edit · loading</a></li>
+              <li><a href="leads/lead-form-dialog.html#state=edit-load-failed">Edit · couldn't load</a></li>
+              <li><a href="leads/lead-form-dialog.html#state=edit-not-found">Edit · lead not found</a></li>
               <li><a href="leads/lead-form-dialog.html#state=edit">Edit</a></li>
               <li><a href="leads/lead-form-dialog.html#state=conflict">Edit conflict</a></li>
               <li><a href="leads/lead-form-dialog.html#state=conflict-reloaded">Conflict · latest loaded</a></li>
@@ -299,12 +309,16 @@
               <h3 class="mc-h4"><a href="projects/project-list.html">Projects</a></h3>
               <span class="mc-pill">Page</span>
             </div>
-            <p class="mc-text-sm mc-muted">Project list with mode, responsible lead, story progress, and active sprint, plus collaborator, paged, empty, loading, and error states.</p>
+            <p class="mc-text-sm mc-muted">Project list with mode, responsible lead, story progress, and active sprint, plus collaborator, paged, filtered-by-lead (Grace Mensah, Rafael Da Silva, Lucia Alvarez), invalid lead filter or page, empty, loading, and error states.</p>
             <p class="mc-text-xs mc-muted">L2-005.4, L2-014, L2-028, L2-032, L2-043.4, L2-045</p>
             <ul class="mock-index__states" aria-label="States of Projects">
               <li><a href="projects/project-list.html#state=default">Administrator</a></li>
               <li><a href="projects/project-list.html#state=collaborator">Collaborator</a></li>
               <li><a href="projects/project-list.html#state=many">Many projects (page 1 of 3)</a></li>
+              <li><a href="projects/project-list.html#state=by-lead">Filtered by responsible lead</a></li>
+              <li><a href="projects/project-list.html#state=by-lead-rafael">Filtered by lead (Rafael Da Silva)</a></li>
+              <li><a href="projects/project-list.html#state=by-lead-lucia">Filtered by lead (Lucia Alvarez)</a></li>
+              <li><a href="projects/project-list.html#state=lead-filter-invalid">Lead filter no longer valid</a></li>
               <li><a href="projects/project-list.html#state=empty-admin">Empty (administrator)</a></li>
               <li><a href="projects/project-list.html#state=empty-collaborator">Empty (collaborator)</a></li>
               <li><a href="projects/project-list.html#state=loading">Loading</a></li>
@@ -337,18 +351,23 @@
               <h3 class="mc-h4"><a href="projects/project-form-dialog.html">New or edit project</a></h3>
               <span class="mc-pill mc-pill--info">Dialog</span>
             </div>
-            <p class="mc-text-sm mc-muted">Project form dialog: name, description, delivery mode, and a searchable responsible lead, with validation, missing lead, saving, failure, edit, edit-conflict, and latest-loaded conflict states.</p>
+            <p class="mc-text-sm mc-muted">Project form dialog: name, description, delivery mode, and a searchable responsible lead, with a failed lead search, validation, missing lead, saving, failure, edit, edit-conflict, latest-loaded conflict, and project-deleted-while-editing states.</p>
             <p class="mc-text-xs mc-muted">L2-014, L2-027, L2-031, L2-033.2, L2-034.1, L2-041.3, L2-043.4</p>
             <ul class="mock-index__states" aria-label="States of New or edit project">
               <li><a href="projects/project-form-dialog.html#state=create">New project (empty)</a></li>
               <li><a href="projects/project-form-dialog.html#state=lead-picker">Choosing a responsible lead</a></li>
+              <li><a href="projects/project-form-dialog.html#state=lead-search-failed">Lead search failed</a></li>
               <li><a href="projects/project-form-dialog.html#state=validation">Validation errors</a></li>
               <li><a href="projects/project-form-dialog.html#state=lead-missing">Chosen lead no longer exists</a></li>
               <li><a href="projects/project-form-dialog.html#state=saving">Saving</a></li>
               <li><a href="projects/project-form-dialog.html#state=failed">Save failed</a></li>
+              <li><a href="projects/project-form-dialog.html#state=forbidden">Not allowed to save</a></li>
+              <li><a href="projects/project-form-dialog.html#state=edit-loading">Edit · loading</a></li>
+              <li><a href="projects/project-form-dialog.html#state=edit-load-failed">Edit · couldn't load</a></li>
               <li><a href="projects/project-form-dialog.html#state=edit">Edit</a></li>
               <li><a href="projects/project-form-dialog.html#state=conflict">Edit conflict</a></li>
               <li><a href="projects/project-form-dialog.html#state=conflict-reloaded">Conflict · latest loaded</a></li>
+              <li><a href="projects/project-form-dialog.html#state=deleted">Project deleted meanwhile</a></li>
             </ul>
             <p class="mc-text-sm"><a href="viewer.html?mock=projects%2Fproject-form-dialog.html">Preview at 320–1920px</a></p>
           </li>
@@ -375,11 +394,12 @@
               <h3 class="mc-h4"><a href="projects/project-delete-dialog.html">Delete project</a></h3>
               <span class="mc-pill mc-pill--info">Dialog</span>
             </div>
-            <p class="mc-text-sm mc-muted">Delete-project confirmation naming the project, with the blocks for projects that have work and sprints or work alone, progress, and failure.</p>
-            <p class="mc-text-xs mc-muted">L2-005, L2-014.3, L2-031.5, L2-033.2, L2-040.3, L2-043.4</p>
+            <p class="mc-text-sm mc-muted">Delete-project confirmation naming the project, with the blocks for projects that have work and sprints, work and paused sprints, or work alone, progress, and failure.</p>
+            <p class="mc-text-xs mc-muted">L2-005, L2-014.3, L2-031.5, L2-033.2, L2-043.4</p>
             <ul class="mock-index__states" aria-label="States of Delete project">
               <li><a href="projects/project-delete-dialog.html#state=default">Confirm (empty project)</a></li>
               <li><a href="projects/project-delete-dialog.html#state=blocked">Blocked by work and history</a></li>
+              <li><a href="projects/project-delete-dialog.html#state=blocked-paused">Blocked by work and paused sprints</a></li>
               <li><a href="projects/project-delete-dialog.html#state=blocked-work">Blocked by work only</a></li>
               <li><a href="projects/project-delete-dialog.html#state=deleting">Deleting</a></li>
               <li><a href="projects/project-delete-dialog.html#state=failed">Delete failed</a></li>
@@ -402,6 +422,7 @@
             <ul class="mock-index__states" aria-label="States of Work hierarchy">
               <li><a href="work/work-hierarchy.html#state=default">Administrator</a></li>
               <li><a href="work/work-hierarchy.html#state=move-menu">Row menu open</a></li>
+              <li><a href="work/work-hierarchy.html#state=move-failed">Move didn't save</a></li>
               <li><a href="work/work-hierarchy.html#state=collaborator">Collaborator</a></li>
               <li><a href="work/work-hierarchy.html#state=empty">Empty project</a></li>
               <li><a href="work/work-hierarchy.html#state=large">Large set (bounded batches)</a></li>
@@ -421,6 +442,7 @@
             <ul class="mock-index__states" aria-label="States of Work list">
               <li><a href="work/work-list.html#state=default">Stories in progress</a></li>
               <li><a href="work/work-list.html#state=zero-results">Zero results</a></li>
+              <li><a href="work/work-list.html#state=filter-invalid">Filter in the link not recognized</a></li>
               <li><a href="work/work-list.html#state=loading">Loading</a></li>
               <li><a href="work/work-list.html#state=error">Load failed</a></li>
             </ul>
@@ -435,6 +457,7 @@
             <p class="mc-text-xs mc-muted">L2-005.4, L2-015, L2-016, L2-018, L2-021, L2-029.2, L2-029.4, L2-032, L2-034, L2-037.2</p>
             <ul class="mock-index__states" aria-label="States of Work item detail">
               <li><a href="work/work-item-detail.html#state=default">Story</a></li>
+              <li><a href="work/work-item-detail.html#state=status-failed">Status change failed</a></li>
               <li><a href="work/work-item-detail.html#state=initiative">Initiative</a></li>
               <li><a href="work/work-item-detail.html#state=epic">Epic</a></li>
               <li><a href="work/work-item-detail.html#state=task">Task</a></li>
@@ -452,15 +475,24 @@
               <h3 class="mc-h4"><a href="work/work-item-form-dialog.html">Add or edit work item</a></h3>
               <span class="mc-pill mc-pill--info">Dialog</span>
             </div>
-            <p class="mc-text-sm mc-muted">Work item form dialog for initiatives, epics, stories, and tasks: parents, assignee, dates, estimate, a kept inactive assignee, validation, rejected assignee, deleted parent, saving, failure, and edit conflict with the latest version loaded.</p>
-            <p class="mc-text-xs mc-muted">L2-004, L2-015, L2-016, L2-031, L2-033.2, L2-034.1, L2-041.3, L2-041.4, L2-043.4</p>
+            <p class="mc-text-sm mc-muted">Work item form dialog for initiatives, epics, stories, and tasks: searchable parents with results, no matches, and a failed search, a searchable active-people assignee with results, no matches, and a failed lookup, dates, estimate, a kept inactive assignee, validation, rejected assignee, deleted parent, saving, failure, and edit conflict with the latest version loaded.</p>
+            <p class="mc-text-xs mc-muted">L2-004, L2-005, L2-015, L2-016, L2-031, L2-032, L2-033.2, L2-034.1, L2-041.3, L2-041.4, L2-043.4, L2-045</p>
             <ul class="mock-index__states" aria-label="States of Add or edit work item">
               <li><a href="work/work-item-form-dialog.html#state=create-initiative">Add initiative</a></li>
               <li><a href="work/work-item-form-dialog.html#state=create-epic">Add epic (parent prefilled)</a></li>
               <li><a href="work/work-item-form-dialog.html#state=create-story">Add story</a></li>
+              <li><a href="work/work-item-form-dialog.html#state=parent-search">Parent search results</a></li>
+              <li><a href="work/work-item-form-dialog.html#state=parent-no-match">Parent search · no matches</a></li>
+              <li><a href="work/work-item-form-dialog.html#state=parent-failed">Parent search failed</a></li>
               <li><a href="work/work-item-form-dialog.html#state=create-task">Add task</a></li>
+              <li><a href="work/work-item-form-dialog.html#state=edit-loading">Edit · loading</a></li>
+              <li><a href="work/work-item-form-dialog.html#state=edit-load-failed">Edit · couldn't load</a></li>
+              <li><a href="work/work-item-form-dialog.html#state=edit-not-found">Edit · no longer exists</a></li>
               <li><a href="work/work-item-form-dialog.html#state=edit">Edit story</a></li>
               <li><a href="work/work-item-form-dialog.html#state=edit-inactive-assignee">Edit story · inactive assignee kept</a></li>
+              <li><a href="work/work-item-form-dialog.html#state=assignee-search">Assignee search results</a></li>
+              <li><a href="work/work-item-form-dialog.html#state=assignee-no-match">Assignee search · no matches</a></li>
+              <li><a href="work/work-item-form-dialog.html#state=assignee-failed">Assignee search failed</a></li>
               <li><a href="work/work-item-form-dialog.html#state=validation">Validation errors</a></li>
               <li><a href="work/work-item-form-dialog.html#state=rejected">Inactive assignee rejected</a></li>
               <li><a href="work/work-item-form-dialog.html#state=parent-deleted">Parent deleted meanwhile</a></li>
@@ -476,10 +508,15 @@
               <h3 class="mc-h4"><a href="work/reparent-dialog.html">Move to another parent</a></h3>
               <span class="mc-pill mc-pill--info">Dialog</span>
             </div>
-            <p class="mc-text-sm mc-muted">Reparent dialog that moves a story to another epic in the same project with a path preview, deleted-target rejection, edit conflict, saving, and failure states.</p>
+            <p class="mc-text-sm mc-muted">Reparent dialog that moves a story to another epic in the same project with a searchable list and match count, a path preview, loading, load-failed, and no-longer-exists reads, no-match, a failed epic list, deleted-target rejection, edit conflict, saving, and failure states.</p>
             <p class="mc-text-xs mc-muted">L2-016.3, L2-016.4, L2-031, L2-033.2, L2-040.2</p>
             <ul class="mock-index__states" aria-label="States of Move to another parent">
               <li><a href="work/reparent-dialog.html#state=default">Choose a new parent</a></li>
+              <li><a href="work/reparent-dialog.html#state=loading">Loading the story</a></li>
+              <li><a href="work/reparent-dialog.html#state=load-failed">Story couldn't load</a></li>
+              <li><a href="work/reparent-dialog.html#state=not-found">Story no longer exists</a></li>
+              <li><a href="work/reparent-dialog.html#state=no-match">Search · no matches</a></li>
+              <li><a href="work/reparent-dialog.html#state=targets-failed">Epic list couldn't load</a></li>
               <li><a href="work/reparent-dialog.html#state=rejected">Target no longer valid</a></li>
               <li><a href="work/reparent-dialog.html#state=conflict">Story changed meanwhile</a></li>
               <li><a href="work/reparent-dialog.html#state=saving">Moving</a></li>
@@ -508,12 +545,15 @@
               <h3 class="mc-h4"><a href="work/work-item-delete-dialog.html">Delete work item</a></h3>
               <span class="mc-pill mc-pill--info">Dialog</span>
             </div>
-            <p class="mc-text-sm mc-muted">Delete confirmation for work items: leaf task, blocked by children, blocked by an open sprint, story with closed-sprint history, deleting, and failure.</p>
-            <p class="mc-text-xs mc-muted">L2-018, L2-031.5, L2-033.2, L2-040.3, L2-043.4</p>
+            <p class="mc-text-sm mc-muted">Delete confirmation for work items: leaf task, blocked by children, blocked by a planned sprint (also while sprints are paused), by an active sprint, or as a Done story in an active sprint, story with closed-sprint history, deleting, and failure.</p>
+            <p class="mc-text-xs mc-muted">L2-018, L2-027.3, L2-031.5, L2-033.2, L2-040.3, L2-043.4</p>
             <ul class="mock-index__states" aria-label="States of Delete work item">
               <li><a href="work/work-item-delete-dialog.html#state=default">Leaf task</a></li>
               <li><a href="work/work-item-delete-dialog.html#state=has-children">Blocked: has children</a></li>
-              <li><a href="work/work-item-delete-dialog.html#state=in-sprint">Blocked: in an open sprint</a></li>
+              <li><a href="work/work-item-delete-dialog.html#state=in-planned-sprint">Blocked: in a planned sprint</a></li>
+              <li><a href="work/work-item-delete-dialog.html#state=in-paused-sprint">Blocked: planned sprint, sprints paused</a></li>
+              <li><a href="work/work-item-delete-dialog.html#state=in-sprint">Blocked: in the active sprint</a></li>
+              <li><a href="work/work-item-delete-dialog.html#state=in-sprint-done">Blocked: Done in the active sprint</a></li>
               <li><a href="work/work-item-delete-dialog.html#state=history">Story with sprint history</a></li>
               <li><a href="work/work-item-delete-dialog.html#state=deleting">Deleting</a></li>
               <li><a href="work/work-item-delete-dialog.html#state=failed">Delete failed</a></li>
@@ -559,17 +599,21 @@
               <h3 class="mc-h4"><a href="kanban/kanban-board.html">Kanban board</a></h3>
               <span class="mc-pill">Page</span>
             </div>
-            <p class="mc-text-sm mc-muted">Kanban board with story cards, drag and accessible Move controls, a compact column selector, and dragging, saving, failed, conflict, empty, load-more, paused-sprint, loading, and error states.</p>
-            <p class="mc-text-xs mc-muted">L2-005.4, L2-019, L2-020, L2-021, L2-027.3, L2-030.3, L2-032, L2-033, L2-034.2, L2-035.4, L2-045.4</p>
+            <p class="mc-text-sm mc-muted">Kanban board with story cards, drag and accessible Move controls, a compact column selector, and dragging, saving, failed, refused, access-changed, conflict, unconfirmed-move, empty, load-more, failed-batch, collaborator, paused-sprint, loading, and error states.</p>
+            <p class="mc-text-xs mc-muted">L2-005.4, L2-019, L2-020, L2-021, L2-027.3, L2-030.3, L2-032, L2-033, L2-034.2, L2-035.4, L2-043.4, L2-045.4</p>
             <ul class="mock-index__states" aria-label="States of Kanban board">
               <li><a href="kanban/kanban-board.html#state=default">Board</a></li>
               <li><a href="kanban/kanban-board.html#state=dragging">Dragging a card</a></li>
               <li><a href="kanban/kanban-board.html#state=pending">Move saving</a></li>
               <li><a href="kanban/kanban-board.html#state=move-failed">Move failed</a></li>
+              <li><a href="kanban/kanban-board.html#state=move-refused">Move refused (400)</a></li>
+              <li><a href="kanban/kanban-board.html#state=move-forbidden">Access changed (403)</a></li>
               <li><a href="kanban/kanban-board.html#state=conflict">Board changed</a></li>
+              <li><a href="kanban/kanban-board.html#state=reread-failed">Move unconfirmed, reload failed</a></li>
               <li><a href="kanban/kanban-board.html#state=empty">Empty board</a></li>
               <li><a href="kanban/kanban-board.html#state=empty-column">Empty column</a></li>
               <li><a href="kanban/kanban-board.html#state=load-more">Load more</a></li>
+              <li><a href="kanban/kanban-board.html#state=batch-error">Next batch failed</a></li>
               <li><a href="kanban/kanban-board.html#state=card-menu">Card menu open</a></li>
               <li><a href="kanban/kanban-board.html#state=collaborator">Collaborator</a></li>
               <li><a href="kanban/kanban-board.html#state=preserved">Kanban with paused sprints</a></li>
@@ -635,16 +679,20 @@
               <h3 class="mc-h4"><a href="scrum/sprint-form-dialog.html">Plan or edit sprint</a></h3>
               <span class="mc-pill mc-pill--info">Dialog</span>
             </div>
-            <p class="mc-text-sm mc-muted">Sprint details dialog for planning a new sprint or editing a planned one: validation, saving, failure, and edit conflict.</p>
-            <p class="mc-text-xs mc-muted">L2-022.1, L2-022.2, L2-022.4, L2-031, L2-033.2, L2-034.1, L2-041.3, L2-043.4</p>
+            <p class="mc-text-sm mc-muted">Sprint details dialog for planning a new sprint or editing a planned one: validation, saving, failure, sprints paused in Kanban mode, edit loading, edit conflict, and the comparison after an unconfirmed save.</p>
+            <p class="mc-text-xs mc-muted">L2-022.1, L2-022.2, L2-022.4, L2-027.3, L2-031, L2-033.2, L2-034.1, L2-041.3, L2-043.4</p>
             <ul class="mock-index__states" aria-label="States of Plan or edit sprint">
               <li><a href="scrum/sprint-form-dialog.html#state=create">Plan (new sprint)</a></li>
               <li><a href="scrum/sprint-form-dialog.html#state=validation">Validation errors</a></li>
               <li><a href="scrum/sprint-form-dialog.html#state=saving">Saving</a></li>
               <li><a href="scrum/sprint-form-dialog.html#state=failed">Save failed</a></li>
+              <li><a href="scrum/sprint-form-dialog.html#state=paused">Sprints paused (409)</a></li>
+              <li><a href="scrum/sprint-form-dialog.html#state=edit-loading">Edit · loading</a></li>
+              <li><a href="scrum/sprint-form-dialog.html#state=edit-load-failed">Edit · couldn't load</a></li>
               <li><a href="scrum/sprint-form-dialog.html#state=edit">Edit planned sprint</a></li>
               <li><a href="scrum/sprint-form-dialog.html#state=conflict">Edit conflict</a></li>
               <li><a href="scrum/sprint-form-dialog.html#state=conflict-reloaded">Conflict · latest loaded</a></li>
+              <li><a href="scrum/sprint-form-dialog.html#state=unconfirmed-changed">Save unconfirmed · latest shown</a></li>
             </ul>
             <p class="mc-text-sm"><a href="viewer.html?mock=scrum%2Fsprint-form-dialog.html">Preview at 320–1920px</a></p>
           </li>
@@ -653,15 +701,24 @@
               <h3 class="mc-h4"><a href="scrum/sprint-planning.html">Plan sprint stories</a></h3>
               <span class="mc-pill">Page</span>
             </div>
-            <p class="mc-text-sm mc-muted">Sprint planning page for Sprint 9: add and remove eligible backlog stories, with Done-story, conflicting-allocation, saving, not-found, and loading states.</p>
-            <p class="mc-text-xs mc-muted">L2-017, L2-022, L2-023.2, L2-030, L2-031, L2-032, L2-041.2</p>
+            <p class="mc-text-sm mc-muted">Sprint planning page for Sprint 9: search and page eligible backlog stories and sprint members, add and remove stories as pending changes saved together, with paged (including stories pre-marked on arrival), Done-story, conflicting-allocation, changed-meanwhile, saving, save-failed, unconfirmed-save (latest plan shown, or the sprint now active), Kanban read-only, not-planned, not-found, loading, and load-failed states.</p>
+            <p class="mc-text-xs mc-muted">L2-017, L2-022, L2-023.2, L2-027.3, L2-029.4, L2-030, L2-031, L2-032, L2-041.2, L2-045</p>
             <ul class="mock-index__states" aria-label="States of Plan sprint stories">
               <li><a href="scrum/sprint-planning.html#state=default">Planned sprint</a></li>
+              <li><a href="scrum/sprint-planning.html#state=paged">Large plan, page 2</a></li>
               <li><a href="scrum/sprint-planning.html#state=done-story">Done story not allowed</a></li>
               <li><a href="scrum/sprint-planning.html#state=allocated-conflict">Story already in another sprint</a></li>
+              <li><a href="scrum/sprint-planning.html#state=stale">Plan changed meanwhile</a></li>
               <li><a href="scrum/sprint-planning.html#state=saving">Saving plan</a></li>
+              <li><a href="scrum/sprint-planning.html#state=failed">Save failed</a></li>
+              <li><a href="scrum/sprint-planning.html#state=unconfirmed-changed">Save unconfirmed · latest plan shown</a></li>
+              <li><a href="scrum/sprint-planning.html#state=unconfirmed-active">Save unconfirmed · now active</a></li>
+              <li><a href="scrum/sprint-planning.html#state=paused">Kanban mode (read-only)</a></li>
+              <li><a href="scrum/sprint-planning.html#state=not-planned">Sprint no longer planned</a></li>
               <li><a href="scrum/sprint-planning.html#state=not-found">Sprint not found</a></li>
+              <li><a href="scrum/sprint-planning.html#state=project-not-found">Project not found</a></li>
               <li><a href="scrum/sprint-planning.html#state=loading">Loading</a></li>
+              <li><a href="scrum/sprint-planning.html#state=error">Load failed</a></li>
             </ul>
             <p class="mc-text-sm"><a href="viewer.html?mock=scrum%2Fsprint-planning.html">Preview at 320–1920px</a></p>
           </li>
@@ -670,14 +727,19 @@
               <h3 class="mc-h4"><a href="scrum/start-sprint-dialog.html">Start sprint</a></h3>
               <span class="mc-pill mc-pill--info">Dialog</span>
             </div>
-            <p class="mc-text-sm mc-muted">Start-sprint confirmation with the recorded initial scope, plus blocked (another sprint active, Kanban mode), starting, and failed states.</p>
+            <p class="mc-text-sm mc-muted">Start-sprint confirmation with the recorded initial scope, plus loading, load-failed, changed-meanwhile, already-started, blocked (another sprint active, Kanban mode), starting, failed, and unconfirmed-start states.</p>
             <p class="mc-text-xs mc-muted">L2-023.1, L2-023.2, L2-027.3, L2-031.2, L2-033.2, L2-043.4</p>
             <ul class="mock-index__states" aria-label="States of Start sprint">
               <li><a href="scrum/start-sprint-dialog.html#state=default">Confirm start</a></li>
+              <li><a href="scrum/start-sprint-dialog.html#state=loading">Loading sprint</a></li>
+              <li><a href="scrum/start-sprint-dialog.html#state=load-failed">Couldn't load sprint</a></li>
+              <li><a href="scrum/start-sprint-dialog.html#state=stale">Sprint changed meanwhile</a></li>
+              <li><a href="scrum/start-sprint-dialog.html#state=not-planned">Already started</a></li>
               <li><a href="scrum/start-sprint-dialog.html#state=blocked-active">Another sprint is active</a></li>
               <li><a href="scrum/start-sprint-dialog.html#state=blocked-kanban">Project uses Kanban</a></li>
               <li><a href="scrum/start-sprint-dialog.html#state=starting">Starting</a></li>
               <li><a href="scrum/start-sprint-dialog.html#state=failed">Start failed</a></li>
+              <li><a href="scrum/start-sprint-dialog.html#state=unconfirmed-active">Start unconfirmed · now active</a></li>
             </ul>
             <p class="mc-text-sm"><a href="viewer.html?mock=scrum%2Fstart-sprint-dialog.html">Preview at 320–1920px</a></p>
           </li>
@@ -686,13 +748,17 @@
               <h3 class="mc-h4"><a href="scrum/sprint-board.html">Sprint board</a></h3>
               <span class="mc-pill">Page</span>
             </div>
-            <p class="mc-text-sm mc-muted">Active sprint board for Sprint 8 with the sprint goal, scope changes, Remove from sprint, compact column selector, empty, no-active, no-sprints, failed-move, loading, and error states.</p>
+            <p class="mc-text-sm mc-muted">Active sprint board for Sprint 8 with the sprint goal, scope changes with their own loading and failed panel states, Remove from sprint, compact column selector, one saving move at a time, empty, no-active, none-planned, no-sprints, failed-move, loading, and error states; other move outcomes share the Kanban board's presentations.</p>
             <p class="mc-text-xs mc-muted">L2-019.4, L2-020, L2-021, L2-023, L2-024, L2-030.3, L2-032, L2-033, L2-045.4</p>
             <ul class="mock-index__states" aria-label="States of Sprint board">
               <li><a href="scrum/sprint-board.html#state=default">Administrator</a></li>
+              <li><a href="scrum/sprint-board.html#state=pending">Move saving</a></li>
               <li><a href="scrum/sprint-board.html#state=scope-log">Scope changes</a></li>
+              <li><a href="scrum/sprint-board.html#state=scope-log-loading">Scope changes · loading</a></li>
+              <li><a href="scrum/sprint-board.html#state=scope-log-failed">Scope changes · couldn't load</a></li>
               <li><a href="scrum/sprint-board.html#state=no-stories">Active sprint with no stories</a></li>
               <li><a href="scrum/sprint-board.html#state=no-active">No active sprint</a></li>
+              <li><a href="scrum/sprint-board.html#state=no-planned">No active sprint, none planned</a></li>
               <li><a href="scrum/sprint-board.html#state=no-sprints">New project, no sprints</a></li>
               <li><a href="scrum/sprint-board.html#state=move-failed">Move failed</a></li>
               <li><a href="scrum/sprint-board.html#state=collaborator">Collaborator</a></li>
@@ -706,14 +772,21 @@
               <h3 class="mc-h4"><a href="scrum/sprint-scope-dialog.html">Change sprint scope</a></h3>
               <span class="mc-pill mc-pill--info">Dialog</span>
             </div>
-            <p class="mc-text-sm mc-muted">Active sprint scope dialog for adding or removing stories, with a closed-meanwhile conflict, saving, and failure.</p>
+            <p class="mc-text-sm mc-muted">Active sprint scope dialog for adding or removing stories: search and page the stories that can be added, a story preselected from the backlog (covered by the add state), loading and load-failed reads, changed-meanwhile, already-allocated, and closed-meanwhile conflicts, saving, failure, and re-reads after an unconfirmed change that find a chosen story already added or the sprint closed.</p>
             <p class="mc-text-xs mc-muted">L2-022.3, L2-023.3, L2-023.4, L2-031, L2-033.2, L2-043.4</p>
             <ul class="mock-index__states" aria-label="States of Change sprint scope">
               <li><a href="scrum/sprint-scope-dialog.html#state=add">Add stories</a></li>
+              <li><a href="scrum/sprint-scope-dialog.html#state=paged">Many stories, page 2</a></li>
               <li><a href="scrum/sprint-scope-dialog.html#state=remove">Remove a story</a></li>
+              <li><a href="scrum/sprint-scope-dialog.html#state=loading">Loading sprint</a></li>
+              <li><a href="scrum/sprint-scope-dialog.html#state=load-failed">Couldn't load sprint</a></li>
+              <li><a href="scrum/sprint-scope-dialog.html#state=stale">Sprint changed meanwhile</a></li>
+              <li><a href="scrum/sprint-scope-dialog.html#state=allocated">Story already in another sprint</a></li>
               <li><a href="scrum/sprint-scope-dialog.html#state=closed">Sprint closed meanwhile</a></li>
               <li><a href="scrum/sprint-scope-dialog.html#state=saving">Saving</a></li>
               <li><a href="scrum/sprint-scope-dialog.html#state=failed">Save failed</a></li>
+              <li><a href="scrum/sprint-scope-dialog.html#state=unconfirmed-added">Change unconfirmed · already added</a></li>
+              <li><a href="scrum/sprint-scope-dialog.html#state=unconfirmed-closed">Change unconfirmed · now closed</a></li>
             </ul>
             <p class="mc-text-sm"><a href="viewer.html?mock=scrum%2Fsprint-scope-dialog.html">Preview at 320–1920px</a></p>
           </li>
@@ -722,16 +795,21 @@
               <h3 class="mc-h4"><a href="scrum/close-sprint-dialog.html">Close sprint</a></h3>
               <span class="mc-pill mc-pill--info">Dialog</span>
             </div>
-            <p class="mc-text-sm mc-muted">Close-sprint dialog requiring a destination for each unfinished story, with unresolved, all-done, no-planned-sprint, conflict, closing, and failed states.</p>
-            <p class="mc-text-xs mc-muted">L2-024, L2-025, L2-026, L2-030, L2-031, L2-033.2, L2-041.2, L2-043.4</p>
+            <p class="mc-text-sm mc-muted">Close-sprint dialog requiring a destination for each unfinished story, with a Set all destination plus per-story choices kept across pages, and loading, many-unfinished, unresolved, all-done, no-planned-sprint, conflict, review-failed, already-closed, closing, failed, and unconfirmed-close states.</p>
+            <p class="mc-text-xs mc-muted">L2-024, L2-025, L2-026, L2-030, L2-031, L2-033.2, L2-041.2, L2-043.4, L2-045</p>
             <ul class="mock-index__states" aria-label="States of Close sprint">
               <li><a href="scrum/close-sprint-dialog.html#state=default">Choose destinations</a></li>
+              <li><a href="scrum/close-sprint-dialog.html#state=loading">Loading review</a></li>
+              <li><a href="scrum/close-sprint-dialog.html#state=many-unfinished">Many unfinished stories</a></li>
               <li><a href="scrum/close-sprint-dialog.html#state=unresolved">Unresolved stories</a></li>
               <li><a href="scrum/close-sprint-dialog.html#state=all-done">All stories done</a></li>
               <li><a href="scrum/close-sprint-dialog.html#state=no-planned">No planned sprint</a></li>
-              <li><a href="scrum/close-sprint-dialog.html#state=conflict">Membership changed</a></li>
+              <li><a href="scrum/close-sprint-dialog.html#state=conflict">Sprint changed during review</a></li>
+              <li><a href="scrum/close-sprint-dialog.html#state=review-failed">Review couldn't load</a></li>
+              <li><a href="scrum/close-sprint-dialog.html#state=already-closed">Already closed</a></li>
               <li><a href="scrum/close-sprint-dialog.html#state=closing">Closing</a></li>
               <li><a href="scrum/close-sprint-dialog.html#state=failed">Close failed</a></li>
+              <li><a href="scrum/close-sprint-dialog.html#state=unconfirmed-closed">Close unconfirmed · now closed</a></li>
             </ul>
             <p class="mc-text-sm"><a href="viewer.html?mock=scrum%2Fclose-sprint-dialog.html">Preview at 320–1920px</a></p>
           </li>
@@ -746,6 +824,7 @@
               <li><a href="scrum/sprint-history.html#state=default">Closed sprint</a></li>
               <li><a href="scrum/sprint-history.html#state=renamed">Story renamed since</a></li>
               <li><a href="scrum/sprint-history.html#state=not-found">Sprint not found</a></li>
+              <li><a href="scrum/sprint-history.html#state=project-not-found">Project not found</a></li>
               <li><a href="scrum/sprint-history.html#state=loading">Loading</a></li>
               <li><a href="scrum/sprint-history.html#state=error">Load failed</a></li>
             </ul>
@@ -776,14 +855,15 @@
               <h3 class="mc-h4"><a href="admin/account-detail.html">Account details</a></h3>
               <span class="mc-pill">Page</span>
             </div>
-            <p class="mc-text-sm mc-muted">Administrator view of one sign-in account: an ordinary collaborator, the protected designated administrator, an inactive account, and not-found and loading states.</p>
-            <p class="mc-text-xs mc-muted">L2-004, L2-005.2, L2-008, L2-013.3, L2-029.4, L2-032, L2-034</p>
+            <p class="mc-text-sm mc-muted">Administrator view of one sign-in account: an ordinary collaborator, the protected designated administrator, an inactive account, and not-found, loading, and load-failed states.</p>
+            <p class="mc-text-xs mc-muted">L2-004, L2-005.2, L2-008, L2-013.3, L2-029.4, L2-032, L2-034, L2-043.4</p>
             <ul class="mock-index__states" aria-label="States of Account details">
               <li><a href="admin/account-detail.html#state=default">Collaborator account</a></li>
               <li><a href="admin/account-detail.html#state=designated">Designated administrator</a></li>
               <li><a href="admin/account-detail.html#state=inactive">Inactive account</a></li>
               <li><a href="admin/account-detail.html#state=not-found">Not found</a></li>
               <li><a href="admin/account-detail.html#state=loading">Loading</a></li>
+              <li><a href="admin/account-detail.html#state=error">Load failed</a></li>
             </ul>
             <p class="mc-text-sm"><a href="viewer.html?mock=admin%2Faccount-detail.html">Preview at 320–1920px</a></p>
           </li>
@@ -801,6 +881,8 @@
               <li><a href="admin/account-form-dialog.html#state=saving">Saving</a></li>
               <li><a href="admin/account-form-dialog.html#state=failed">Save failed</a></li>
               <li><a href="admin/account-form-dialog.html#state=created">Account added</a></li>
+              <li><a href="admin/account-form-dialog.html#state=edit-loading">Edit · loading</a></li>
+              <li><a href="admin/account-form-dialog.html#state=edit-load-failed">Edit · couldn't load</a></li>
               <li><a href="admin/account-form-dialog.html#state=edit">Edit names and role</a></li>
               <li><a href="admin/account-form-dialog.html#state=designated">Edit designated administrator</a></li>
               <li><a href="admin/account-form-dialog.html#state=conflict">Edit conflict</a></li>
@@ -813,11 +895,13 @@
               <h3 class="mc-h4"><a href="admin/replace-password-dialog.html">Replace password</a></h3>
               <span class="mc-pill mc-pill--info">Dialog</span>
             </div>
-            <p class="mc-text-sm mc-muted">Administrator dialog for replacing an account's password, including replacing your own, with validation, saving, failure, and account-changed states.</p>
+            <p class="mc-text-sm mc-muted">Administrator dialog for replacing an account's password, including replacing your own, with reading the account on open and validation, saving, failure, and account-changed states.</p>
             <p class="mc-text-xs mc-muted">L2-004.4, L2-008.3, L2-031, L2-033.2, L2-034.1, L2-036, L2-041.3, L2-043.4</p>
             <ul class="mock-index__states" aria-label="States of Replace password">
               <li><a href="admin/replace-password-dialog.html#state=default">Another person's password</a></li>
               <li><a href="admin/replace-password-dialog.html#state=own">Your own password</a></li>
+              <li><a href="admin/replace-password-dialog.html#state=loading">Loading account</a></li>
+              <li><a href="admin/replace-password-dialog.html#state=load-failed">Couldn't load account</a></li>
               <li><a href="admin/replace-password-dialog.html#state=validation">Too short</a></li>
               <li><a href="admin/replace-password-dialog.html#state=saving">Saving</a></li>
               <li><a href="admin/replace-password-dialog.html#state=failed">Save failed</a></li>
@@ -830,11 +914,13 @@
               <h3 class="mc-h4"><a href="admin/account-status-dialog.html">Deactivate or reactivate account</a></h3>
               <span class="mc-pill mc-pill--info">Dialog</span>
             </div>
-            <p class="mc-text-sm mc-muted">Confirmation dialog for deactivating or reactivating an account, the designated administrator conflict, a stale-version conflict, and saving and failure states.</p>
+            <p class="mc-text-sm mc-muted">Confirmation dialog for deactivating or reactivating an account: reading the account on open, the designated administrator conflict, a stale-version conflict, and saving and failure states.</p>
             <p class="mc-text-xs mc-muted">L2-002.3, L2-004, L2-008.1, L2-031.5, L2-033.2, L2-039.2, L2-041.3, L2-043.4</p>
             <ul class="mock-index__states" aria-label="States of Deactivate or reactivate account">
               <li><a href="admin/account-status-dialog.html#state=deactivate">Deactivate</a></li>
               <li><a href="admin/account-status-dialog.html#state=reactivate">Reactivate</a></li>
+              <li><a href="admin/account-status-dialog.html#state=loading">Loading account</a></li>
+              <li><a href="admin/account-status-dialog.html#state=load-failed">Couldn't load account</a></li>
               <li><a href="admin/account-status-dialog.html#state=blocked">Designated administrator (409)</a></li>
               <li><a href="admin/account-status-dialog.html#state=saving">Deactivating</a></li>
               <li><a href="admin/account-status-dialog.html#state=failed">Deactivation failed</a></li>
@@ -851,7 +937,10 @@
             <p class="mc-text-xs mc-muted">L2-029, L2-032, L2-034, L2-036.5, L2-039, L2-043, L2-045</p>
             <ul class="mock-index__states" aria-label="States of Audit log">
               <li><a href="admin/audit-log.html#state=default">Recent events</a></li>
+              <li><a href="admin/audit-log.html#state=actor-search">Searching for an actor</a></li>
+              <li><a href="admin/audit-log.html#state=actor-failed">Actor search failed</a></li>
               <li><a href="admin/audit-log.html#state=filtered-zero">No matching events</a></li>
+              <li><a href="admin/audit-log.html#state=invalid-range">To date before From (400)</a></li>
               <li><a href="admin/audit-log.html#state=loading">Loading</a></li>
               <li><a href="admin/audit-log.html#state=error">Load failed</a></li>
             </ul>

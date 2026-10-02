@@ -2,22 +2,22 @@
 !include <C4/C4_Component>
 LAYOUT_WITH_LEGEND()
 title Components - Change workspace delivery mode
-Container(web, "Mission Control web client", "Angular", "ProjectOverviewPage, ModeChangeDialog / WorkspaceView")
+Container(web, "Mission Control web client", "Angular", "ProjectLayoutPage / ProjectHeaderView, ModeChangeDialog / ModeChangeForm, BoardModeGuard")
 ContainerDb(db, "Mission Control database", "SQL", "Versioned feature records and audit events")
 Container_Boundary(api, "MissionControl.Api runtime") {
   Component(ctrl, "WorkspacesController", "API boundary", "Binds request and dispatches through MediatR 12.5.0")
   Component(access, "CurrentAccountAuthorization", "API authentication / authorization", "Validates JWT and checks current SQL account access")
   Component(validation, "ValidationBehavior", "Application pipeline", "Invokes request validators")
   Component(entity, "Workspace", "Domain entity", "Delivery mode, version, and active-sprint rule")
-  Component(store, "MissionControlDataSession", "Infrastructure", "Implements Application data port; commits transactions")
-Rel(web, access, "Calls through IWorkspaceService / WorkspaceService", "HTTPS")
+  Component(store, "MissionControlDataSession", "Infrastructure", "Implements IMissionControlDataSession: typed reads, workspace lock, SaveChangesAsync")
+Rel(web, access, "Switches through IWorkspaceService.changeMode (WorkspaceService)", "HTTPS")
 Rel(access, db, "Checks current access for protected requests", "SQL")
-Rel(access, ctrl, "Forwards authorized request; login remains public")
+Rel(access, ctrl, "Forwards authorized request")
 Rel(ctrl, validation, "Sends typed request")
 Component(h0, "ChangeDeliveryModeCommandHandler", "Application / MediatR", "Confirm delivery mode change")
 Rel(validation, h0, "Dispatches validated request")
-Rel(h0, entity, "Reads / applies domain behavior")
-Rel(h0, store, "Loads / persists state")
+Rel(h0, entity, "changeMode(destination, activeSprint)")
+Rel(h0, store, "Takes workspace lock; reads active sprint; saves mode with audit")
 }
 Rel(store, db, "Executes bounded queries / atomic writes", "SQL")
 @enduml

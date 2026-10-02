@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>New or edit project · Mission Control mock</title>
-  <meta name="description" content="Project form dialog: name, description, delivery mode, and a searchable responsible lead, with validation, missing lead, saving, failure, edit, edit-conflict, and latest-loaded conflict states.">
+  <meta name="description" content="Project form dialog: name, description, delivery mode, and a searchable responsible lead, with a failed lead search, validation, missing lead, saving, failure, edit, edit-conflict, latest-loaded conflict, and project-deleted-while-editing states.">
   <meta name="mock-area" content="Projects">
   <meta name="mock-requirements" content="L2-014, L2-027, L2-031, L2-033.2, L2-034.1, L2-041.3, L2-043.4">
   <link rel="stylesheet" href="../assets/tokens.css">
@@ -21,13 +21,18 @@
         <select data-mock-state>
           <option value="create">New project (empty)</option>
           <option value="lead-picker">Choosing a responsible lead</option>
+          <option value="lead-search-failed">Lead search failed</option>
           <option value="validation">Validation errors</option>
           <option value="lead-missing">Chosen lead no longer exists</option>
           <option value="saving">Saving</option>
           <option value="failed">Save failed</option>
+          <option value="forbidden">Not allowed to save</option>
+          <option value="edit-loading">Edit · loading</option>
+          <option value="edit-load-failed">Edit · couldn't load</option>
           <option value="edit">Edit</option>
           <option value="conflict">Edit conflict</option>
           <option value="conflict-reloaded">Conflict · latest loaded</option>
+          <option value="deleted">Project deleted meanwhile</option>
         </select>
       </label>
       <a href="../index.html">All mocks</a>
@@ -35,14 +40,19 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="create">Opens from "New project" (administrators only). Focus moves to Name. Delivery mode is chosen once here; later changes go through the delivery-mode dialog. Below 576px the dialog fills the screen with the actions pinned to the bottom.</p>
-    <p class="mock-note" data-when="lead-picker" hidden>The responsible lead is an optional, searchable combobox over all leads (1,000+), not a plain select. Arrow keys move through matches, Enter picks one, Escape closes the list.</p>
+    <p class="mock-note" data-when="create">Opens from "New project" on Projects or Home (administrators only). Focus moves to Name. Delivery mode is chosen once here; later changes go through the delivery-mode dialog. Below 576px the dialog fills the screen with the actions pinned to the bottom.</p>
+    <p class="mock-note" data-when="lead-picker" hidden>The responsible lead is an optional, searchable combobox over all leads, not a plain select (it must stay fast with 1,000+ leads). "han" matches four leads by name or email, listed by last name. Typing searches about 250 ms after the last keystroke, and a newer search cancels the request still in flight, so only the latest matches appear. Arrow keys move through matches, Enter picks one, Escape closes the list. If the search itself fails, only this field reports it (next state).</p>
+    <p class="mock-note" data-when="lead-search-failed" hidden>The lead search failed (500 or no response), so only the Responsible lead field shows the problem, with Retry, which repeats the same search. A 500 adds its reference ID; with no response there is no reference ID and the shell's offline banner appears too. Any lead already chosen stays chosen, the name, description, and mode are kept, and Save project still works, with or without a lead. Screen readers hear the alert; focus stays in the field.</p>
     <p class="mock-note" data-when="validation" hidden>Name is required (1–200 characters, whitespace-only is invalid), description is limited to 10,000 characters, and a delivery mode is required. Focus moves to the error summary; valid values are kept.</p>
-    <p class="mock-note" data-when="lead-missing" hidden>Hana Kim was deleted after she was picked, so the API rejects the reference (400) and nothing is saved. The rest of the form is kept.</p>
+    <p class="mock-note" data-when="lead-missing" hidden>Hana Kim was deleted after she was picked, so the API rejects the reference (400) and nothing is saved. The rest of the form is kept. Focus moves to Responsible lead, which reads its error, and screen readers hear the alert. The refusal can only repeat, so there is no Retry and no reference ID.</p>
     <p class="mock-note" data-when="saving" hidden>The lead was cleared after the rejected save, so Youth Coding Night is submitted with no responsible lead. The save button shows progress and ignores repeat clicks; Cancel waits until the request finishes. Success opens the new project with a "Project created" toast.</p>
-    <p class="mock-note" data-when="failed" hidden>Nothing was saved and every value is kept. "Save project" retries.</p>
-    <p class="mock-note" data-when="edit" hidden>Opened from Project actions › Edit project. Delivery mode is read-only here, with a link to the delivery-mode dialog, because mode changes have their own rules and confirmation.</p>
-    <p class="mock-note" data-when="conflict" hidden>The project was saved again after this form opened, so the API answers 409 and nothing is saved. The form keeps the attempted values and reads the latest version once; nothing is resubmitted. "Reload latest" loads the saved values and keeps this comparison visible.</p>
+    <p class="mock-note" data-when="failed" hidden>The save got a server error (500), so nothing was saved and every value is kept. The reference ID matches the server's diagnostic record. "Save project" retries only when pressed; it keeps focus and screen readers hear the alert. A save that gets no response may have gone through, so this alert instead reads "We couldn't confirm whether the project was created" (for an edit, "…whether your changes were saved"), with no reference ID and no claim that nothing was saved. Every value is kept and Projects (or Home's Projects section), or the project's header and tab, reread at once, so check there before creating it again; an edit also rereads the project, and "Save project" sends again only when pressed, so an edit that went through meets the conflict comparison instead of saving twice. That comparison may be showing this edit, so its alert then reads "The latest saved version is shown beside your entries." instead of "Your edits haven't been saved."</p>
+    <p class="mock-note" data-when="forbidden" hidden>The role changed while the form was open, so the save returned 403 and nothing was saved. The dialog stays open with every value, explains that only administrators can save project settings, and Save is unavailable, so focus moves to the alert, which screen readers read; the dialog's description now points to that explanation. An edit shows the same explanation. Nothing failed on the server, so there is no reference ID. Cancel asks before discarding the kept values.</p>
+    <p class="mock-note" data-when="edit-loading" hidden>Opened from Project actions › Edit project. The form reads the saved project first: the fields and Save stay disabled until the record arrives, so nothing can be typed over values that haven't loaded. Cancel closes without sending anything. Screen readers hear "Loading project…"; focus moves to Name once the values arrive.</p>
+    <p class="mock-note" data-when="edit-load-failed" hidden>The read got a server error (500), so the fields and Save stay disabled. Nothing was changed. Try again repeats the read and fills the form once the saved values arrive; the reference ID matches the server's diagnostic record. A read that gets no response shows the same alert without a reference ID, and the shell's offline banner appears. The alert is announced and focus moves to Try again; Cancel closes without sending anything. A 404 (the project was deleted) leaves nothing to keep, so it closes the dialog at once and opens Projects, which reads the list without it, with the info toast "Community Hackathon 2026 has been deleted."</p>
+    <p class="mock-note" data-when="edit" hidden>Opened from Project actions › Edit project. Delivery mode is read-only here, with a link to the delivery-mode dialog, because mode changes have their own rules and confirmation. The link closes this dialog (asking first if there are unsaved edits) and opens the delivery-mode dialog, which here explains that Sprint 8 must close first. If the project was deleted meanwhile, Save changes returns 404 and the form keeps the values (Project deleted meanwhile).</p>
+    <p class="mock-note" data-when="conflict" hidden>The project was saved again after this form opened, so the API answers 409 and nothing is saved. The form keeps the attempted values and reads the latest version once; nothing is resubmitted. Save is replaced by "Reload latest", so focus moves to it and screen readers hear the alert; the dialog's description now points to the conflict explanation. "Reload latest" loads the saved values and keeps this comparison visible. When an earlier save got no response, the saved version may be that save, so the alert keeps its title but reads "The latest saved version is shown beside your entries." in place of "Your edits haven't been saved."</p>
+    <p class="mock-note" data-when="deleted" hidden>Community Hackathon 2026 was deleted while the form was open, so Save changes returned 404. The attempted values stay in the fields, which are disabled with Save, so nothing more can be typed or sent. The alert is announced, the dialog's description now points to that explanation, and focus moves to "Back to projects", which closes the dialog and opens Projects, which reads the list without it, with the info toast "Community Hackathon 2026 has been deleted." Nothing failed on the server, so there is no reference ID or Try again. Cancel asks before discarding the kept values. The reread after a conflict can answer 404 too and shows this state. After a save that got no response, the reread or a repeat can answer 404 as well; the alert then reads only "Community Hackathon 2026 was deleted while you were editing.", without "Your edits weren't saved", because the first save may have gone through.</p>
     <p class="mock-note" data-when="conflict-reloaded" hidden>"Reload latest" put the latest saved values and version into the form without sending anything. The comparison stays visible so edits can be re-applied by hand before saving. Focus moves to Name and the status is announced politely; leaving now asks before discarding the unsaved edits.</p>
   </div>
 
@@ -70,7 +80,7 @@
         </div>
         <div class="mc-main">
           <div class="mc-page">
-            <div data-unless="edit conflict conflict-reloaded">
+            <div data-unless="edit-loading edit-load-failed edit conflict conflict-reloaded deleted">
             <div class="mc-page-header">
               <div class="mc-page-header__main">
                 <p class="mc-h1">Projects</p>
@@ -79,12 +89,12 @@
               <div class="mc-page-header__actions"><span class="mc-button mc-button--primary"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>New project</span></div>
             </div>
             <div class="mc-grid">
-              <div class="mc-card mc-stack mc-stack--sm"><span><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span></span><p class="mc-h3">Church Website Refresh</p><p class="mc-muted mc-text-sm">Refresh partner church websites with accessible templates and a simple publishing guide.</p></div>
-              <div class="mc-card mc-stack mc-stack--sm"><span><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span></span><p class="mc-h3">Community Hackathon 2026</p><p class="mc-muted mc-text-sm">Plan and run Toronto's fall build weekend: teams, venues, volunteers, and demo day.</p></div>
-              <div class="mc-card mc-stack mc-stack--sm"><span><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span></span><p class="mc-h3">Prayer Wall App</p><p class="mc-muted mc-text-sm">A small app for sharing prayer needs within a community, built by volunteers.</p></div>
+              <div class="mc-card mc-stack mc-stack--sm"><span><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span></span><p class="mc-h3">Church Website Refresh</p></div>
+              <div class="mc-card mc-stack mc-stack--sm"><span><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span></span><p class="mc-h3">Community Hackathon 2026</p></div>
+              <div class="mc-card mc-stack mc-stack--sm"><span><span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span></span><p class="mc-h3">Prayer Wall App</p></div>
             </div>
             </div>
-            <div data-when="edit conflict conflict-reloaded" hidden>
+            <div data-when="edit-loading edit-load-failed edit conflict conflict-reloaded deleted" hidden>
             <div class="mc-breadcrumbs"><ol><li><span>Projects</span></li><li><span aria-current="page">Community Hackathon 2026</span></li></ol></div>
             <div class="mc-page-header">
               <div class="mc-page-header__main">
@@ -98,6 +108,7 @@
               <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</span></li>
               <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</span></li>
               <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</span></li>
             </ul>
             <div class="mc-split">
               <div class="mc-card mc-stack mc-stack--sm"><p class="mc-h3">About this project</p><span class="mc-skeleton mc-w-80"></span><span class="mc-skeleton mc-w-60"></span></div>
@@ -110,25 +121,33 @@
     </div>
 
     <div class="mc-backdrop">
-      <section class="mc-dialog mc-dialog--sheet" role="dialog" aria-modal="true" aria-labelledby="project-dialog-title" aria-describedby="project-dialog-note">
+      <section class="mc-dialog mc-dialog--sheet" role="dialog" aria-modal="true" aria-labelledby="project-dialog-title" aria-describedby="project-dialog-note"
+        data-attr-forbidden="aria-describedby=project-forbidden-title project-forbidden-text"
+        data-attr-conflict="aria-describedby=project-conflict-title project-conflict-text"
+        data-attr-deleted="aria-describedby=project-deleted-title project-deleted-text">
         <header class="mc-dialog__header">
           <div class="mc-dialog__heading">
             <h2 class="mc-dialog__title" id="project-dialog-title">
-              <span data-unless="edit conflict conflict-reloaded">New project</span>
-              <span data-when="edit conflict conflict-reloaded" hidden>Edit project</span>
+              <span data-unless="edit-loading edit-load-failed edit conflict conflict-reloaded deleted">New project</span>
+              <span data-when="edit-loading edit-load-failed edit conflict conflict-reloaded deleted" hidden>Edit project</span>
             </h2>
             <p class="mc-dialog__subtitle" id="project-dialog-note">
-              <span data-when="edit conflict conflict-reloaded" hidden>Community Hackathon 2026 · </span>All fields are required unless marked optional.
+              <span data-when="edit conflict conflict-reloaded deleted" hidden>Community Hackathon 2026 · </span>All fields are required unless marked optional.
             </p>
           </div>
           <button class="mc-button mc-button--quiet mc-button--icon" type="button" aria-label="Close"
               data-nav="project-list.html"
               data-attr-lead-picker="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+              data-attr-lead-search-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
               data-attr-validation="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
               data-attr-lead-missing="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
               data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+              data-attr-forbidden="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
               data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
               data-attr-conflict-reloaded="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+              data-attr-deleted="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+              data-attr-edit-loading="data-nav=project-overview.html"
+              data-attr-edit-load-failed="data-nav=project-overview.html"
               data-attr-edit="data-nav=project-overview.html"
               data-attr-saving="disabled">
             <span class="mc-icon mc-icon--close" aria-hidden="true"></span>
@@ -145,6 +164,20 @@
                   <li><a href="#project-description">Shorten the description to 10,000 characters or fewer</a></li>
                   <li><a href="#project-mode-kanban">Choose a delivery mode</a></li>
                 </ul>
+              </div>
+
+              <div class="mc-alert mc-alert--danger" data-when="edit-load-failed" hidden>
+                <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">We couldn't load this project</p>
+                  <p class="mc-alert__text">Nothing was changed. Try again, and if it keeps happening, share the reference ID with your administrator.</p>
+                  <p class="mc-ref">Reference ID <code>4e19-b7d2-0a6c</code>
+                    <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="4e19-b7d2-0a6c"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                  </p>
+                  <div class="mc-alert__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-goto-state="edit"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again</button>
+                  </div>
+                </div>
               </div>
 
               <div class="mc-alert mc-alert--danger" data-when="lead-missing" hidden>
@@ -166,16 +199,36 @@
                 </div>
               </div>
 
+              <div class="mc-alert mc-alert--danger" tabindex="-1" data-when="forbidden" hidden>
+                <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title" id="project-forbidden-title">Only administrators can save project settings</p>
+                  <p class="mc-alert__text" id="project-forbidden-text">Your access changed while this form was open, so nothing was saved. Your entries are still here.</p>
+                </div>
+              </div>
+
               <div class="mc-alert mc-alert--warning" data-when="conflict" hidden>
                 <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
                 <div class="mc-alert__body">
-                  <p class="mc-alert__title">This project changed after you opened it</p>
-                  <p class="mc-alert__text">Your edits haven't been saved. Compare them with the latest saved version, then reload it and re-apply what you need.</p>
+                  <p class="mc-alert__title" id="project-conflict-title">This project changed after you opened it</p>
+                  <p class="mc-alert__text" id="project-conflict-text">Your edits haven't been saved. Compare them with the latest saved version, then reload it and re-apply what you need.</p>
+                </div>
+              </div>
+
+              <div class="mc-alert mc-alert--danger" data-when="deleted" hidden>
+                <span class="mc-icon mc-icon--x-circle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title" id="project-deleted-title">This project no longer exists</p>
+                  <p class="mc-alert__text" id="project-deleted-text">Community Hackathon 2026 was deleted while you were editing. Your edits weren't saved.</p>
+                  <div class="mc-alert__actions">
+                    <a class="mc-button mc-button--sm" href="project-list.html">Back to projects</a>
+                  </div>
                 </div>
               </div>
             </div>
 
             <div class="mc-live" role="status" aria-live="polite">
+              <div class="mc-loading-inline" data-when="edit-loading" hidden><span class="mc-spinner" aria-hidden="true"></span>Loading project…</div>
               <div class="mc-alert" data-when="conflict-reloaded" hidden>
                 <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
                 <div class="mc-alert__body">
@@ -207,13 +260,18 @@
                 <label class="mc-label" for="project-name">Name</label>
                 <input class="mc-input" id="project-name" name="name" type="text" maxlength="200" autocomplete="off" required
                   data-attr-lead-picker="value=Youth Coding Night"
+                  data-attr-lead-search-failed="value=Youth Coding Night"
                   data-attr-validation="value=|aria-invalid=true|aria-describedby=project-name-error"
                   data-attr-lead-missing="value=Youth Coding Night"
                   data-attr-saving="value=Youth Coding Night|readonly"
                   data-attr-failed="value=Youth Coding Night"
+                  data-attr-forbidden="value=Youth Coding Night"
+                  data-attr-edit-loading="disabled"
+                  data-attr-edit-load-failed="disabled"
                   data-attr-edit="value=Community Hackathon 2026"
                   data-attr-conflict="value=Community Hackathon 2026"
-                  data-attr-conflict-reloaded="value=Community Hackathon 2026">
+                  data-attr-conflict-reloaded="value=Community Hackathon 2026"
+                  data-attr-deleted="value=Community Hackathon 2026|disabled">
                 <p class="mc-field-error" id="project-name-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Enter a project name</p>
               </div>
 
@@ -221,22 +279,27 @@
                 <label class="mc-label" for="project-description">Description <span class="mc-label__optional">(optional)</span></label>
                 <textarea class="mc-textarea" id="project-description" name="description" aria-describedby="project-description-count"
                   data-attr-lead-picker="value=A monthly evening where youth try their first coding project with volunteer mentors."
+                  data-attr-lead-search-failed="value=A monthly evening where youth try their first coding project with volunteer mentors."
                   data-attr-validation="value=A monthly evening where youth try their first coding project with volunteer mentors. Session notes, room setup checklists, and mentor guides pasted from last year follow below…|aria-invalid=true|aria-describedby=project-description-count project-description-error"
                   data-attr-lead-missing="value=A monthly evening where youth try their first coding project with volunteer mentors."
                   data-attr-saving="value=A monthly evening where youth try their first coding project with volunteer mentors.|readonly"
                   data-attr-failed="value=A monthly evening where youth try their first coding project with volunteer mentors."
+                  data-attr-forbidden="value=A monthly evening where youth try their first coding project with volunteer mentors."
+                  data-attr-edit-loading="disabled"
+                  data-attr-edit-load-failed="disabled"
                   data-attr-edit="value=Plan and run Toronto&#x27;s fall build weekend: teams, venues, volunteers, and demo day."
                   data-attr-conflict="value=Plan and run Toronto&#x27;s fall build weekend: teams, venues, volunteers, mentors, and demo day."
-                  data-attr-conflict-reloaded="value=Plan and run Toronto&#x27;s fall build weekend: teams, venues, volunteers, and demo day on Oct 24."></textarea>
+                  data-attr-conflict-reloaded="value=Plan and run Toronto&#x27;s fall build weekend: teams, venues, volunteers, and demo day on Oct 24."
+                  data-attr-deleted="value=Plan and run Toronto&#x27;s fall build weekend: teams, venues, volunteers, mentors, and demo day.|disabled"></textarea>
                 <div class="mc-field__footer">
                   <p class="mc-field-error" id="project-description-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Shorten the description to 10,000 characters or fewer. It's 214 over.</p>
                   <p class="mc-counter" id="project-description-count">
-                    <span data-when="create">0</span><span data-when="lead-picker lead-missing saving failed" hidden>84</span><span data-when="validation" hidden>10,214</span><span data-when="edit" hidden>83</span><span data-when="conflict" hidden>92</span><span data-when="conflict-reloaded" hidden>93</span> / 10,000 characters
+                    <span data-when="create edit-loading edit-load-failed">0</span><span data-when="lead-picker lead-search-failed lead-missing saving failed forbidden" hidden>84</span><span data-when="validation" hidden>10,214</span><span data-when="edit" hidden>83</span><span data-when="conflict deleted" hidden>92</span><span data-when="conflict-reloaded" hidden>93</span> / 10,000 characters
                   </p>
                 </div>
               </div>
 
-              <fieldset class="mc-choice-group mc-choice-group--two" data-unless="edit conflict conflict-reloaded"
+              <fieldset class="mc-choice-group mc-choice-group--two" data-unless="edit-loading edit-load-failed edit conflict conflict-reloaded deleted"
                 data-attr-validation="aria-invalid=true|aria-describedby=project-mode-error">
                 <legend>Delivery mode</legend>
                 <p class="mc-field-error" id="project-mode-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Choose a delivery mode</p>
@@ -250,7 +313,7 @@
                   </label>
                   <label class="mc-choice">
                     <input type="radio" name="mode" value="scrum" required
-                      data-attr-lead-picker="checked" data-attr-lead-missing="checked" data-attr-saving="checked" data-attr-failed="checked">
+                      data-attr-lead-picker="checked" data-attr-lead-search-failed="checked" data-attr-lead-missing="checked" data-attr-saving="checked" data-attr-failed="checked" data-attr-forbidden="checked">
                     <span class="mc-choice__body">
                       <span class="mc-choice__title"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
                       <span class="mc-choice__text">Timeboxed sprints with a goal, a sprint board, and history.</span>
@@ -259,11 +322,11 @@
                 </div>
               </fieldset>
 
-              <div class="mc-field mc-field--full" data-when="edit conflict conflict-reloaded" hidden>
+              <div class="mc-field mc-field--full" data-when="edit conflict conflict-reloaded deleted" hidden>
                 <p class="mc-label">Delivery mode</p>
                 <div class="mc-cluster">
                   <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
-                  <a href="mode-change-dialog.html#state=blocked">Change delivery mode</a>
+                  <a href="mode-change-dialog.html#state=blocked" data-unless="deleted">Change delivery mode</a>
                 </div>
                 <p class="mc-hint">Mode changes have their own confirmation, so no work or sprint history is lost.</p>
               </div>
@@ -278,11 +341,15 @@
                       aria-autocomplete="list" aria-expanded="false" aria-controls="project-lead-options" aria-describedby="project-lead-hint"
                       placeholder="Search leads"
                       data-attr-lead-picker="value=han|aria-expanded=true|aria-activedescendant=lead-option-hana"
+                      data-attr-lead-search-failed="value=han|aria-describedby=project-lead-hint project-lead-lookup-title"
                       data-attr-lead-missing="value=Hana Kim|aria-invalid=true|aria-describedby=project-lead-hint project-lead-error"
                       data-attr-saving="readonly"
+                      data-attr-edit-loading="disabled"
+                      data-attr-edit-load-failed="disabled"
                       data-attr-edit="value=Rafael Da Silva"
                       data-attr-conflict="value=Rafael Da Silva"
-                      data-attr-conflict-reloaded="value=Karim Haddad">
+                      data-attr-conflict-reloaded="value=Karim Haddad"
+                      data-attr-deleted="value=Rafael Da Silva|disabled">
                   </div>
                   <ul class="mc-listbox" id="project-lead-options" role="listbox" aria-label="Matching leads" data-when="lead-picker" hidden>
                     <li class="mc-listbox__option" id="lead-option-hannah" role="option" aria-selected="false">
@@ -297,10 +364,25 @@
                       <span>Siobhan O&#39;Connor</span>
                       <span class="mc-listbox__hint">Create · siobhan.oconnor@example.org</span>
                     </li>
+                    <li class="mc-listbox__option" id="lead-option-lei" role="option" aria-selected="false">
+                      <span>Lei Zhang</span>
+                      <span class="mc-listbox__hint">Create · lei.zhang@example.org</span>
+                    </li>
                   </ul>
                 </div>
+                <div class="mc-alert mc-alert--danger" role="alert" data-when="lead-search-failed" hidden>
+                  <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+                  <div class="mc-alert__body">
+                    <p class="mc-alert__title" id="project-lead-lookup-title">We couldn't search leads</p>
+                    <p class="mc-alert__text">Your other entries are kept. You can save without a responsible lead, or retry.</p>
+                    <p class="mc-ref">Reference ID <code>91c4-3e7a-d250</code>
+                      <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="91c4-3e7a-d250"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                    </p>
+                    <div class="mc-alert__actions"><button class="mc-button mc-button--sm" type="button" data-goto-state="lead-picker"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Retry</button></div>
+                  </div>
+                </div>
                 <p class="mc-field-error" id="project-lead-error" data-when="lead-missing" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Choose another lead or clear this field</p>
-                <div class="mc-live" role="status" aria-live="polite"><p class="mc-visually-hidden" data-when="lead-picker" hidden>3 leads found</p></div>
+                <div class="mc-live" role="status" aria-live="polite"><p class="mc-visually-hidden" data-when="lead-picker" hidden>4 leads found</p></div>
               </div>
             </div>
           </div>
@@ -309,22 +391,31 @@
             <button class="mc-button" type="button"
               data-nav="project-list.html"
               data-attr-lead-picker="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+              data-attr-lead-search-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
               data-attr-validation="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
               data-attr-lead-missing="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
               data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+              data-attr-forbidden="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
               data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
               data-attr-conflict-reloaded="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+              data-attr-deleted="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+              data-attr-edit-loading="data-nav=project-overview.html"
+              data-attr-edit-load-failed="data-nav=project-overview.html"
               data-attr-edit="data-nav=project-overview.html"
               data-attr-saving="disabled">Cancel</button>
             <button class="mc-button mc-button--primary" type="button" data-when="conflict" hidden data-goto-state="conflict-reloaded">
               <span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Reload latest
             </button>
             <button class="mc-button mc-button--primary" type="submit" data-unless="conflict"
-              data-attr-saving="aria-busy=true|aria-disabled=true">
+              data-attr-saving="aria-busy=true|aria-disabled=true"
+              data-attr-edit-loading="disabled"
+              data-attr-edit-load-failed="disabled"
+              data-attr-forbidden="disabled"
+              data-attr-deleted="disabled">
               <span class="mc-spinner" aria-hidden="true" data-when="saving" hidden></span>
               <span data-when="saving" hidden>Saving…</span>
-              <span data-unless="saving edit conflict-reloaded">Save project</span>
-              <span data-when="edit conflict-reloaded" hidden>Save changes</span>
+              <span data-unless="saving edit-loading edit-load-failed edit conflict-reloaded deleted">Save project</span>
+              <span data-when="edit-loading edit-load-failed edit conflict-reloaded deleted" hidden>Save changes</span>
             </button>
           </footer>
         </form>

@@ -1,0 +1,230 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+set separator none
+title Frontend classes - Prioritize siblings and the story backlog
+package "frontend/projects/mission-control" {
+  class BacklogPage {
+    +workspaceId: Signal<Guid>
+    -layout: ProjectLayoutPage
+    -revision: WritableSignal<number>
+    -revealed: WritableSignal<OrderMoved | null>
+    +openMovePosition(target: MoveTarget): void
+    +addToSprint(request: AddToSprintRequest): void
+    +openForm(context: WorkItemFormContext): void
+  }
+  note bottom of BacklogPage
+    Implements FormDraft by delegating to its open
+    dialog, else to layout.draft(); binds the view's
+    refresh to revision()
+    plus layout.revision(); retryRequested calls
+    layout.refresh(). addToSprint: an Active target
+    opens SprintScopeDialog in add mode with
+    addStoryId (preselected once the eligible read
+    returns it) and offerSprintsLink true; SprintScopeOutcome
+    Changed: revision + 1 and the "Scope updated"
+    toast with its summary; Outdated: revision + 1.
+    A Planned target navigates to
+    /projects/:id/sprints/:sprintId/plan?add={storyId}.
+    changeModeRequested: layout.openDialog(ChangeMode)
+    opens ModeChangeDialog. The tab action is
+    registered with layout.setTabAction({ label, run }):
+    Add initiative while emptyChange last reported
+    true, Add story otherwise. A view's
+    or dialog's forbidden shows the "Your access
+    changed" toast through TOAST_SERVICE (including
+    SprintScopeDialog's forbidden while it stays open).
+    The view's first notFound only calls
+    layout.refresh(); retryRequested always does.
+    MovePositionOutcome: every kind adds 1 to
+    revision; Moved also shows the "Reordered" toast
+    and sets revealed (revealMoved); NotFound adds a
+    toast that the item no longer exists. A dialog's
+    unconfirmed adds 1 to revision at once.
+  end note
+  class WorkHierarchyPage {
+    -revision: WritableSignal<number>
+    +openMovePosition(target: MoveTarget): void
+  }
+  class WorkItemDetailPage {
+    -revision: WritableSignal<number>
+    +openMovePosition(target: MoveTarget): void
+  }
+  class MovePositionDialog {
+    +target: InputSignal<MoveTarget>
+    +draft: Signal<DraftState>
+    +unconfirmed: OutputEmitterRef<void>
+    +forbidden: OutputEmitterRef<void>
+    +close(result: MovePositionOutcome?): void
+  }
+  class MovePositionOutcome {
+    +kind: Moved | Outdated | NotFound
+    +moved: OrderMoved?
+  }
+  note bottom of MovePositionOutcome
+    Moved on the form's moved; Outdated on
+    reloadRequested; NotFound on notFound; no
+    result: dismissed.
+  end note
+  class SprintScopeDialog {
+    +forbidden: OutputEmitterRef<void>
+  }
+  class WorkItemFormDialog
+}
+package "frontend/projects/domain" {
+  class BacklogView {
+    +workspaceId: InputSignal<Guid>
+    +refresh: InputSignal<number>
+    +revealMoved: InputSignal<OrderMoved | null>
+    +canChangeMode: InputSignal<boolean>
+    +movePositionRequested: OutputEmitterRef<MoveTarget>
+    +addToSprintRequested: OutputEmitterRef<AddToSprintRequest>
+    +addInitiativeRequested: OutputEmitterRef<void>
+    +emptyChange: OutputEmitterRef<boolean>
+    +changeModeRequested: OutputEmitterRef<void>
+    +retryRequested: OutputEmitterRef<void>
+    +forbidden: OutputEmitterRef<void>
+    +notFound: OutputEmitterRef<void>
+    -query: Signal<ListBacklogQuery>
+    -backlog: ResourceRef<BacklogItemPage>
+    -snapshot: Signal<BacklogItem[]>
+    -pendingMove: Signal<PendingMove?>
+    +moveUp(storyId: Guid): void
+    +moveDown(storyId: Guid): void
+  }
+  class WorkHierarchyBranch {
+    +refresh: InputSignal<number>
+    +movePositionRequested: OutputEmitterRef<MoveTarget>
+    +forbidden: OutputEmitterRef<void>
+    +moveSibling(itemId: Guid, targetPosition: int): void
+  }
+  class WorkItemDetailView {
+    +refresh: InputSignal<number>
+    +movePositionRequested: OutputEmitterRef<MoveTarget>
+  }
+  class MovePositionForm {
+    +target: InputSignal<MoveTarget>
+    +moved: OutputEmitterRef<OrderMoved>
+    +reloadRequested: OutputEmitterRef<MoveTarget>
+    +notFound: OutputEmitterRef<void>
+    +unconfirmed: OutputEmitterRef<void>
+    +forbidden: OutputEmitterRef<void>
+    +draftChange: OutputEmitterRef<DraftState>
+    -position: Signal<int>
+    -submit: Signal<FeatureState<OrderMoved>>
+  }
+  class MoveTarget {
+    +kind: OrderKind
+    +workspaceId: Guid
+    +itemId: Guid
+    +title: string
+    +parentId: Guid?
+    +parentTitle: string?
+    +position: int
+    +totalCount: int
+    +orderVersion: long
+  }
+  class AddToSprintRequest {
+    +storyId: Guid
+    +target: SprintTarget
+  }
+  note bottom of MoveTarget
+    Filled from the read that drew the row:
+    a branch's WorkItemSummary.siblingPosition
+    with WorkItemPage.totalCount and orderVersion;
+    WorkItemDetail.siblingPosition, siblingCount,
+    and siblingOrderVersion; or BacklogItem.rank
+    with BacklogItemPage.totalCount and
+    orderVersion. The dialog reads nothing on open.
+  end note
+  note bottom of BacklogView
+    Owns its resource, snapshot, and pending move.
+    500 or 503: restore and offer Try again.
+    409: restore; the alert is announced without
+    moving focus; Reload backlog returns focus to
+    the story's row. No response: reread the page;
+    the alert says it couldn't confirm the move and
+    where the reread found the story.
+    Unexpected 403: restore and emit forbidden.
+    Success or revealMoved: show the new rank's page;
+    on another page, focus moves to the story's row.
+    refresh rereads the page. emptyChange fires on
+    the first read and whenever a read changes
+    whether the total is zero. A 404 (missing
+    workspace) shows Project not found and emits
+    notFound. A refused move (400) restores and
+    shows the reason with Reload backlog only.
+    A move 404 rereads without the story; focus
+    moves to the row now at that rank, or to the
+    backlog heading when none is left there.
+    End-of-order Move up/down are aria-disabled.
+    Add to sprint lists the page's sprintTargets,
+    active first; eligibility reasons otherwise.
+    NoOpenSprint: unavailable with "No active or
+    planned sprint yet" and a Sprints tab link.
+    sprintsPaused: memberships marked paused, banner
+    with Change delivery mode when canChangeMode.
+  end note
+  note bottom of WorkHierarchyBranch
+    The only sender of Move up and Move down. Owns
+    the snapshot and pending move for its rows and
+    sends WorkItemPage.orderVersion. 500 or 503:
+    restore, alert with the reference ID, Try again
+    (move-failed). 409: restore and offer Reload
+    order only, announced without moving focus;
+    Reload order returns focus to the item's row.
+    No response: reread the loaded window and say
+    it couldn't confirm and where the item is now.
+    Unexpected 403: restore
+    and emit forbidden. refresh rereads the window.
+    A move 404 rereads without the item; focus
+    moves to the parent row, or to the Work heading
+    for an initiative.
+  end note
+}
+package "frontend/projects/api" {
+  interface IWorkOrderService {
+    +reorderSibling(command: ReorderSiblingCommand): Promise<OrderMoved>
+    +prioritize(command: PrioritizeStoryCommand): Promise<OrderMoved>
+    +backlogResource(query: () => ListBacklogQuery | undefined): ResourceRef<BacklogItemPage>
+  }
+  class WorkOrderService {
+    -http: HttpClient
+  }
+  note bottom of WorkOrderService
+    Creates each resource in the consumer's injection
+    context; a changed query aborts the superseded
+    read; consumer destroy cancels it. Moves return
+    promises and are never debounced or retried.
+  end note
+}
+BacklogPage --> BacklogView : composes
+BacklogPage ..> MovePositionDialog : opens on movePositionRequested
+BacklogPage ..> SprintScopeDialog : opens on addToSprintRequested (active sprint)
+BacklogPage ..> WorkItemFormDialog : opens on Add story or addInitiativeRequested
+WorkHierarchyPage ..> MovePositionDialog : opens on movePositionRequested
+WorkItemDetailPage ..> MovePositionDialog : opens on movePositionRequested
+WorkHierarchyPage --> WorkHierarchyBranch : composes through WorkHierarchyView
+WorkItemDetailPage --> WorkItemDetailView : composes
+MovePositionDialog --> MovePositionForm : hosts; inputs and outputs only
+MovePositionDialog ..> MovePositionOutcome : close(result)
+BacklogView ..> AddToSprintRequest : emits
+MovePositionForm ..> MoveTarget : input
+BacklogView ..> IWorkOrderService : inject WORK_ORDER_SERVICE
+WorkHierarchyBranch ..> IWorkOrderService : inject WORK_ORDER_SERVICE
+MovePositionForm ..> IWorkOrderService : inject WORK_ORDER_SERVICE
+IWorkOrderService <|.. WorkOrderService
+@enduml

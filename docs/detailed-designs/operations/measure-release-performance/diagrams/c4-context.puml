@@ -3,8 +3,8 @@
 LAYOUT_WITH_LEGEND()
 title System context - Measure release workflow performance
 Person(actor, "Release operator", "Completes the environment manifest and starts each run")
-System(tooling, "Mission Control release tooling", "API load runner and cold-view runner")
+System(tooling, "Mission Control release tooling", "API load runner, cold-view runner, and retention runner")
 System(env, "Isolated measurement environment", "Production web build, API, and SQL at the L2-046 profile")
-Rel(actor, tooling, "Runs fixture, load, and cold views")
+Rel(actor, tooling, "Runs fixture, load scenarios, cold views, and retention")
 Rel(tooling, env, "Measures through existing endpoints and routes", "HTTPS")
 @enduml

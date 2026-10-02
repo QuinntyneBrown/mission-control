@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Deactivate or reactivate account · Mission Control mock</title>
-  <meta name="description" content="Confirmation dialog for deactivating or reactivating an account, the designated administrator conflict, a stale-version conflict, and saving and failure states.">
+  <meta name="description" content="Confirmation dialog for deactivating or reactivating an account: reading the account on open, the designated administrator conflict, a stale-version conflict, and saving and failure states.">
   <meta name="mock-area" content="Administration">
   <meta name="mock-requirements" content="L2-002.3, L2-004, L2-008.1, L2-031.5, L2-033.2, L2-039.2, L2-041.3, L2-043.4">
   <link rel="stylesheet" href="../assets/tokens.css">
@@ -21,6 +21,8 @@
         <select data-mock-state>
           <option value="deactivate">Deactivate</option>
           <option value="reactivate">Reactivate</option>
+          <option value="loading">Loading account</option>
+          <option value="load-failed">Couldn't load account</option>
           <option value="blocked">Designated administrator (409)</option>
           <option value="saving">Deactivating</option>
           <option value="failed">Deactivation failed</option>
@@ -32,12 +34,14 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="deactivate">Administrator-only. Focus starts on Cancel, the safe choice. Deactivation keeps the account, its assignments, and its audit history; Mateo's existing token is refused on the next request. Success shows the toast "Account deactivated: Mateo Silva can't sign in. Their assignments are kept."</p>
+    <p class="mock-note" data-when="deactivate">Administrator-only. Shown for Ada Okafor, as opened from Deactivate on her details page or her row in Accounts. Focus starts on Cancel, the safe choice. Deactivation keeps the account, its assignments, and its audit history; Ada's existing token is refused on the next request. Success shows the toast "Account deactivated: Ada Okafor can't sign in. Their assignments are kept."</p>
     <p class="mock-note" data-when="reactivate" hidden>Reactivation restores sign-in with the existing password and the same role. Success shows the toast "Account reactivated: Jordan Reyes can sign in again."</p>
-    <p class="mock-note" data-when="blocked" hidden>The interface never offers Deactivate for the designated administrator. This is the API's 409 answer when the request is made anyway, for example from an outdated page. The rejected attempt is recorded in the audit log with outcome Rejected. Nothing changed, so the only action is Close.</p>
-    <p class="mock-note" data-when="saving" hidden>Both buttons wait while the request is in progress, so the action can't be sent twice.</p>
-    <p class="mock-note" data-when="failed" hidden>Nothing changed: Mateo can still sign in. Try again repeats the same request.</p>
-    <p class="mock-note" data-when="stale" hidden>The account changed after the dialog opened, for example another administrator changed its role, so the API answered 409 and nothing changed. The request is never resubmitted automatically; Review account opens the latest details, where the action can be chosen again.</p>
+    <p class="mock-note" data-when="loading" hidden>Opens from a Deactivate or Reactivate action. The dialog reads the account first for its name, email, role, and version, so the title stays generic and Deactivate account stays disabled until the record arrives; Reactivate loads the same way. Cancel closes without sending anything. Screen readers hear "Loading account…"; focus stays on Cancel. A read that answers 404 closes the dialog: from the account's page, that page shows Account not found; from the list, the list reloads and announces that the account wasn't found.</p>
+    <p class="mock-note" data-when="load-failed" hidden>The read failed, so Deactivate account stays disabled and nothing was changed. Try again repeats the read and names the account once it arrives. This read answered 500, so the reference ID matches the server's diagnostic record; a read that got no response shows "Check your connection and try again." without a reference ID. The alert is announced and focus moves to Try again; Cancel closes without sending anything.</p>
+    <p class="mock-note" data-when="blocked" hidden>The interface never offers Deactivate for the designated administrator. This is the API's 409 answer when the request is made anyway, for example from an outdated page. The rejected attempt is recorded in the audit log with outcome Rejected. Nothing changed, so the only action is Close. Deactivate account, which had focus, is gone, so focus moves to Close, and screen readers hear the explanation as an alert; it is also the dialog's description.</p>
+    <p class="mock-note" data-when="saving" hidden>Both buttons wait while the request is in progress, so the action can't be sent twice. Focus stays on the busy Deactivating… button.</p>
+    <p class="mock-note" data-when="failed" hidden>The API answered 500, or 503 because it was busy, so nothing changed: Ada can still sign in. Try again repeats the same request; the reference ID matches the server's diagnostic record. The alert is announced and focus stays on Try again. A refused request (400) shows the API's reason in this alert instead, without Try again or a reference ID; Deactivate account is gone, so focus moves to the alert. A request that gets no response may have been applied, so it changes this presentation: the dialog first re-reads Ada's account, with both buttons disabled, so focus moves to the alert. If she is already inactive, the change is in place and the dialog closes with the "Account deactivated" toast. Otherwise the alert reads "We couldn't confirm the deactivation", with no reference ID and never "nothing changed", and Try again sends the change with the latest version. The page behind rereads at once while the dialog stays open, so Cancel just closes. If the API answers 403 because you're no longer an administrator, the dialog closes and the <a href="../shell/status-pages.html#state=access-denied">access-denied page</a> replaces Accounts.</p>
+    <p class="mock-note" data-when="stale" hidden>The account changed after the dialog opened, for example another administrator changed its role, so the API answered 409 and nothing changed. The request is never resubmitted automatically; Review account closes the dialog onto Ada Okafor's latest details (<code>/accounts/:id</code>), where the action can be chosen again, and Cancel closes and rereads the page behind. Deactivate account, which had focus, is gone, so focus moves to Review account, and screen readers hear the explanation as an alert; it is also the dialog's description. When this answers a Try again after a deactivation that got no response, the explanation leaves out "Nothing was changed", because the first request may be the change it reports.</p>
   </div>
 
   <div class="mock-screen">
@@ -89,21 +93,24 @@
     </div>
 
     <div class="mc-backdrop">
-      <section class="mc-dialog mc-dialog--sm" role="alertdialog" aria-modal="true" aria-labelledby="status-dialog-title" aria-describedby="status-dialog-text">
+      <section class="mc-dialog mc-dialog--sm" role="alertdialog" aria-modal="true" aria-labelledby="status-dialog-title" aria-describedby="status-dialog-text"
+        data-attr-blocked="aria-describedby=status-blocked-text"
+        data-attr-stale="aria-describedby=status-stale-text">
         <header class="mc-dialog__header">
-          <span class="mc-dialog__icon mc-dialog__icon--danger" data-when="deactivate saving failed"><span class="mc-icon mc-icon--user-x" aria-hidden="true"></span></span>
+          <span class="mc-dialog__icon mc-dialog__icon--danger" data-when="deactivate loading load-failed saving failed"><span class="mc-icon mc-icon--user-x" aria-hidden="true"></span></span>
           <span class="mc-dialog__icon mc-dialog__icon--success" data-when="reactivate" hidden><span class="mc-icon mc-icon--user-check" aria-hidden="true"></span></span>
           <span class="mc-dialog__icon mc-dialog__icon--warning" data-when="blocked" hidden><span class="mc-icon mc-icon--shield-check" aria-hidden="true"></span></span>
           <span class="mc-dialog__icon mc-dialog__icon--warning" data-when="stale" hidden><span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span></span>
           <div class="mc-dialog__heading">
             <h2 class="mc-dialog__title" id="status-dialog-title">
-              <span data-when="deactivate saving failed">Deactivate Mateo Silva?</span>
+              <span data-when="deactivate saving failed">Deactivate Ada Okafor?</span>
+              <span data-when="loading load-failed" hidden>Deactivate account?</span>
               <span data-when="reactivate" hidden>Reactivate Jordan Reyes?</span>
               <span data-when="blocked" hidden>Quinntyne Brown can't be deactivated</span>
-              <span data-when="stale" hidden>Mateo Silva's account changed</span>
+              <span data-when="stale" hidden>Ada Okafor's account changed</span>
             </h2>
             <p class="mc-dialog__subtitle">
-              <span data-when="deactivate saving failed stale">mateo.silva<wbr>@example.org · Collaborator</span>
+              <span data-when="deactivate saving failed stale">ada.okafor<wbr>@example.org · Collaborator</span>
               <span data-when="reactivate" hidden>jordan.reyes<wbr>@example.org · Collaborator · Inactive since Sep 12, 2026</span>
               <span data-when="blocked" hidden>quinntynebrown<wbr>@gmail.com · Administrator</span>
             </p>
@@ -111,24 +118,41 @@
         </header>
 
         <div class="mc-dialog__body">
+          <div class="mc-live" role="status" aria-live="polite">
+            <div class="mc-loading-inline" data-when="loading" hidden><span class="mc-spinner" aria-hidden="true"></span>Loading account…</div>
+          </div>
           <div class="mc-live" role="alert">
-            <div class="mc-alert mc-alert--danger" data-when="failed" hidden>
+            <div class="mc-alert mc-alert--danger" data-when="load-failed" hidden>
+              <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+              <div class="mc-alert__body">
+                <p class="mc-alert__title">We couldn't load this account</p>
+                <p class="mc-alert__text">Nothing was changed. Something went wrong on our side; try again.</p>
+                <p class="mc-ref">Reference ID <code>b81d-0c6e-2f95</code>
+                  <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="b81d-0c6e-2f95"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                </p>
+                <div class="mc-alert__actions">
+                  <button class="mc-button mc-button--sm" type="button" data-goto-state="deactivate"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again</button>
+                </div>
+              </div>
+            </div>
+            <div class="mc-alert mc-alert--danger" data-when="failed" tabindex="-1" hidden>
               <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
               <div class="mc-alert__body">
                 <p class="mc-alert__title">We couldn't deactivate this account</p>
-                <p class="mc-alert__text">Nothing changed. Mateo can still sign in. Try again.</p>
+                <p class="mc-alert__text">Nothing changed. Ada can still sign in. Try again.</p>
                 <p class="mc-ref">Reference ID <code>6a0e-b3c5-71d8</code>
                   <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="6a0e-b3c5-71d8"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
                 </p>
               </div>
             </div>
+            <p id="status-blocked-text" data-when="blocked" hidden>Quinntyne Brown is the designated administrator and must stay active. Nothing was changed.</p>
+            <p id="status-stale-text" data-when="stale" hidden>This account changed after you opened it. Nothing was changed. Review the latest details, then deactivate it again if you still need to.</p>
           </div>
 
-          <div id="status-dialog-text">
-            <p data-when="deactivate saving failed">Mateo Silva won't be able to sign in. Access ends on their next request. Their assignments and history are kept, and you can reactivate the account later.</p>
+          <div id="status-dialog-text" data-unless="blocked stale">
+            <p data-when="loading load-failed" hidden>The account won't be able to sign in. Its assignments and history are kept, and you can reactivate it later.</p>
+            <p data-when="deactivate saving failed">Ada Okafor won't be able to sign in. Access ends on their next request. Their assignments and history are kept, and you can reactivate the account later.</p>
             <p data-when="reactivate" hidden>Jordan Reyes will be able to sign in again with their existing password, as a Collaborator. Replace the password first if they no longer know it.</p>
-            <p data-when="blocked" hidden>Quinntyne Brown is the designated administrator and must stay active. Nothing was changed.</p>
-            <p data-when="stale" hidden>This account changed after you opened it. Nothing was changed. Review the latest details, then deactivate it again if you still need to.</p>
           </div>
           <p class="mc-hint" data-when="blocked" hidden>This keeps at least one administrator able to manage Mission Control.</p>
         </div>
@@ -140,10 +164,12 @@
           <button class="mc-button mc-button--primary" type="button" data-when="stale" hidden data-nav="account-detail.html">
             <span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Review account
           </button>
-          <button class="mc-button mc-button--danger" type="button" data-when="deactivate saving failed" data-goto-state="saving"
+          <button class="mc-button mc-button--danger" type="button" data-when="deactivate loading load-failed saving failed" data-goto-state="saving"
+            data-attr-loading="disabled"
+            data-attr-load-failed="disabled"
             data-attr-saving="aria-busy=true|aria-disabled=true">
             <span class="mc-spinner" aria-hidden="true" data-when="saving" hidden></span>
-            <span data-when="deactivate">Deactivate account</span>
+            <span data-when="deactivate loading load-failed">Deactivate account</span>
             <span data-when="saving" hidden>Deactivating…</span>
             <span data-when="failed" hidden>Try again</span>
           </button>

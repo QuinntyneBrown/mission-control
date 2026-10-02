@@ -3,6 +3,7 @@ skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
+skinparam maxMessageSize 300
 skinparam ArrowColor #344054
 skinparam rectangle {
   BorderColor #344054
@@ -16,7 +17,7 @@ skinparam package {
 title Behavior - Create planned sprint
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "SprintsPage / SprintFormDialog / SprintView" as page
+  participant "SprintsPage or SprintBoardPage\nSprintFormDialog / SprintForm" as page
   participant "ISprintService / SprintService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -39,50 +40,61 @@ access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid or expired JWT; deactivated account
   access --> client : 401; audit denial without payloads
-  client --> page : Clear session; sign in with the Sprints tab as return route
-else Authenticated without the required permission
-  access --> client : 403; audit denial without payloads
-  client --> page : Keep input; explain that planning sprints is not permitted
-else Authorized
+  client --> page : SessionService.end(Unauthorized) once; sign in with the current tab as return route
+else Authenticated (profile P: every active role plans sprints)
   access -> ctrl : Authorized request
   ctrl -> validation : Send CreateSprintCommand through MediatR 12.5.0
   validation -> validation : L2-022 trim; name 1-200, goal 1-2,000, valid dates, end on or after start
   alt Missing, over-limit or malformed fields; end before start
     validation --> ctrl : 400 field errors; nothing read or changed
     ctrl --> client : Validation ProblemDetails
-    client --> page : Keep all input; focus the linked error summary
+    client --> page : Keep all input; one field error focuses that field, which reads its error;\nseveral focus the linked error summary; no Retry or reference ID
   else Valid request
     validation -> handler : Handle CreateSprintCommand
-    handler -> db : Lock workspace; read existence and delivery mode
-    db --> handler : Workspace and mode
-    alt Workspace not found
+    handler -> db : BeginWorkspaceTransactionAsync (workspace lock); LoadWorkspaceAsync: existence and delivery mode
+    alt Workspace lock wait exceeds the configured timeout
+      db --> handler : Lock timeout; nothing read or changed
+      handler --> ctrl : 503 with Retry-After; nothing created
+      ctrl --> client : ProblemDetails (busy) with correlation ID
+      client --> page : Keep all input; failed state shows the reference ID;\nSave retries only when chosen, never automatically
+    else Workspace not found
+      db --> handler : No workspace
       handler --> ctrl : 404; nothing created
       ctrl --> client : ProblemDetails (not found)
-      client --> page : Close dialog; project not-found state linking to Projects
+      client --> page : SprintForm emits notFound; the dialog closes with Outdated; the opening page\nincrements its counter and its reread shows Project not found with Back to projects
     else Workspace in Kanban mode (L2-027.3)
+      db --> handler : Workspace and mode
       handler --> ctrl : 409 sprints paused; nothing created
       ctrl --> client : ProblemDetails (sprints paused)
-      client --> page : Keep input; explain that sprints are paused in Kanban mode; no retry
+      client --> page : paused state: keep input; Save disabled; the alert explains that sprints are paused in Kanban mode\nand takes focus; no retry; SprintForm emits modeChanged; the dialog closes with ModeChanged and\nSprintsPage or SprintBoardPage calls ProjectLayoutPage.modeChanged()
     else Scrum mode
+      db --> handler : Workspace and mode
       handler -> entity : L2-022 create Planned sprint with Toronto dates and version 1
       entity --> handler : New planned sprint
-      handler -> db : L2-039 / L2-040 insert sprint and success audit in one transaction
+      handler -> db : L2-039 / L2-040 AddSprint; AddAuditEvent;\nSaveChangesAsync writes sprint and success audit in one transaction
       alt Commit fails
         db --> handler : Roll back sprint and success audit
         handler --> ctrl : Generic 500 with correlation ID
         ctrl --> client : Failure; no successful-save claim
-        client --> page : Keep all input; failed state shows the reference ID; Save retries
+        client --> page : Keep all input; failed state shows the reference ID;\nSave retries only when chosen
       else Commit succeeds
         db --> handler : New sprint ID and version
         handler --> ctrl : Created sprint
         ctrl --> client : 201 with sprint ID and version
-        client --> page : Update signal state
-        page --> actor : Announce the planned sprint; open sprint planning to choose stories
+        client --> page : SprintForm emits saved; the dialog closes with Saved(SprintSaveResult)
+        page --> actor : The opening page opens the new sprint's planning page to choose stories;\nits heading takes focus and names the sprint
       end
     end
   end
 end
 note over ctrl, db
+An unexpected 403 (access changed after sign-in) creates nothing; SprintForm keeps its input and emits
+forbidden, which SprintFormDialog relays as its own forbidden while it stays open, and the opening
+page shows the "Your access changed" toast through TOAST_SERVICE, without Retry.
+A save that gets no response is uncertain: the form keeps its input, says "We couldn't confirm
+whether Sprint 10 was saved." (no reference ID), and emits unconfirmed; SprintFormDialog relays it
+and stays open, and the opening page increments its counter at once, so its sprints or board
+reread and show the sprint if it was saved. Save stays unavailable; Cancel closes with no result.
 Unexpected failures return generic 500 plus correlation ID (L2-043).
 Diagnostics exclude secrets and contact payloads.
 end note

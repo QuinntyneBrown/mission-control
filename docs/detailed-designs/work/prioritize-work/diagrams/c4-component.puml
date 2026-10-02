@@ -2,17 +2,17 @@
 !include <C4/C4_Component>
 LAYOUT_WITH_LEGEND()
 title Components - Prioritize siblings and the story backlog
-Container(web, "Mission Control web client", "Angular", "BacklogPage / WorkOrderView")
+Container(web, "Mission Control web client", "Angular", "BacklogView, MovePositionForm, and sibling Move up / Move down in WorkHierarchyBranch")
 ContainerDb(db, "Mission Control database", "SQL", "Versioned feature records and audit events")
 Container_Boundary(api, "MissionControl.Api runtime") {
   Component(ctrl, "WorkOrdersController", "API boundary", "Binds request and dispatches through MediatR 12.5.0")
   Component(access, "CurrentAccountAuthorization", "API authentication / authorization", "Validates JWT and checks current SQL account access")
   Component(validation, "ValidationBehavior", "Application pipeline", "Invokes request validators")
-  Component(entity, "WorkOrder", "Domain / read model", "Prioritize siblings and the story backlog")
-  Component(store, "MissionControlDataSession", "Infrastructure", "Implements Application data port; commits transactions")
+  Component(entity, "WorkOrder", "Domain", "One order set: ordered stable IDs and order version")
+  Component(store, "MissionControlDataSession", "Infrastructure", "Implements IMissionControlDataSession: workspace transaction and lock, typed order queries, SaveChangesAsync")
 Rel(web, access, "Calls through IWorkOrderService / WorkOrderService", "HTTPS")
 Rel(access, db, "Checks current access for protected requests", "SQL")
-Rel(access, ctrl, "Forwards authorized request; login remains public")
+Rel(access, ctrl, "Forwards authenticated request")
 Rel(ctrl, validation, "Sends typed request")
 Component(h0, "ReorderSiblingCommandHandler", "Application / MediatR", "Reorder siblings")
 Rel(validation, h0, "Dispatches validated request")
@@ -27,5 +27,5 @@ Rel(validation, h2, "Dispatches validated request")
 Rel(h2, entity, "Reads / applies domain behavior")
 Rel(h2, store, "Loads / persists state")
 }
-Rel(store, db, "Executes bounded queries / atomic writes", "SQL")
+Rel(store, db, "Bounded backlog reads without descriptions; interval rewrites under the lock", "SQL")
 @enduml

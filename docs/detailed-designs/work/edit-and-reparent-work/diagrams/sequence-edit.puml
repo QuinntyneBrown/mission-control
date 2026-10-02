@@ -4,6 +4,7 @@ skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
 skinparam ArrowColor #344054
+skinparam maxMessageSize 300
 skinparam rectangle {
   BorderColor #344054
   FontColor #101828
@@ -16,8 +17,7 @@ skinparam package {
 title Behavior - Edit fields, assignment, dates, and status
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "WorkItemDetailPage / WorkItemFormDialog / WorkItemView" as page
-  participant "UnfinishedTasksDialog" as dialog
+  participant "WorkItemDetailPage or WorkHierarchyPage / WorkItemFormDialog / WorkItemForm, or WorkItemDetailView" as page
   participant "IWorkItemService / WorkItemService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -32,83 +32,98 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Edit fields, assignment, dates, or status and save
-page -> page : Disable Save while pending (L2-031)
-page -> client : Build typed UpdateWorkItemCommand (explicit nulls for cleared fields, expected item version)
+alt Edit form
+  actor -> page : Edit on an item (the view's actionRequested); the page opens WorkItemFormDialog
+  page -> client : WorkItemForm's workItemResource reads GetWorkItemQuery; fields and Save stay disabled (edit-loading)
+  alt Read fails (500 or 503 with correlation ID, or no response)
+    client --> page : Fields stay disabled; alert with Try again = reload(), Cancel, and the reference ID only when the server answered (edit-load-failed)
+  else Read 404: the item was deleted after the page loaded
+    client --> page : Fields and Save stay disabled; "no longer exists" with Back to work, no reference ID or Try again (edit-not-found); Back to work emits notFound, the dialog closes with NotFound, and the page calls the layout's refresh() (the detail page opens the work outline)
+  else Item read
+    client --> page : The draft starts from the resolved values; draftChange reports a clean draft
+  end
+  opt Cancel, Close, or Escape with a dirty draft
+    page -> page : UnsavedChangesDialog asks first; Keep editing returns with every value; Discard closes and sends nothing
+  end
+  actor -> page : Edit fields, assignment (searchable active-people combobox; see the assignee sequence), dates, or status and save
+  page -> client : Disable Save while pending; draftChange reports pending (L2-031); build typed UpdateWorkItemCommand (explicit nulls for cleared fields, expected item version)
+else Status control or task-row status select on the detail
+  actor -> page : Choose a status other than Done for a story, or any status for another item
+  page -> client : setStatus: UpdateWorkItemCommand with only the status and that item's version; absent fields stay unchanged
+  note right of page : Outcomes are in Create and navigate: success reloads the detail and children and announces; a stale 409 reloads them once; 500 or 503 shows status-failed (under a task's row)
+end
 client -> access : PUT /api/workspaces/{id}/work-items/{itemId}
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid or expired JWT; deactivated account
   access --> client : 401; audit denial without payloads
-  client --> page : Clear session; sign in with the item as return route
-else Authenticated without permission to update work
-  access --> client : 403; audit denial without payloads
-  client --> page : Keep input; explain that editing work is not permitted
-else Authorized
+  client --> page : sessionInterceptor calls SessionService.end(Unauthorized) once for this generation; the promise rejects with its 401 (nothing written); sign-in shows session-unsaved when a draft was dirty, then returns to the item
+else Authenticated active account (profile P: editing work needs no capability beyond an active session)
   access -> ctrl : Authorized request
   ctrl -> validation : Send UpdateWorkItemCommand through MediatR 12.5.0
-  validation -> validation : L2-016 title 1-200, description up to 10,000, known status, due on or after start, whole estimate of 0 or more for stories only
+  validation -> validation : L2-016 title 1-200, description up to 10,000, known status, calendar dates, estimate a whole number of 0 or more (the command carries no item type and may leave a date absent, so the type and date-order checks wait for the handler)
   alt Invalid fields
     validation --> ctrl : 400 field errors; nothing read or changed
     ctrl --> client : Validation ProblemDetails
-    client --> page : Keep valid input; focus the linked error summary (validation state)
+    client --> page : Keep every value; one field error moves focus to that field, which reads its error; several focus the linked error summary (validation state); no Retry or reference ID
   else Valid request
     validation -> handler : Handle UpdateWorkItemCommand
-    handler -> db : Lock workspace; load item and version, chosen assignee status, story completion condition
-    db --> handler : Current item and reference state
-    alt Workspace or item not found
+    handler -> db : BeginWorkspaceTransactionAsync takes the workspace lock first; then LoadWorkItemAsync, or LoadStoryPlacementsAsync for a story status change; LoadAccountStatusAsync for a newly chosen assignee; a task status change also loads its parent story
+    db --> handler : Current item and reference state, or lock-wait timeout
+    alt Workspace lock wait times out
+      handler --> ctrl : 503 with Retry-After; nothing read or changed
+      ctrl --> client : ProblemDetails (unavailable)
+      client --> page : Unavailable save, as for a 500: keep every value; "We couldn't save this story" with reference ID; focus stays on Save, which resends only when chosen (failed state)
+    else Workspace or item not found
       handler --> ctrl : 404; nothing changed
       ctrl --> client : ProblemDetails (not found)
-      client --> page : Close the form; detail shows its not-found state with links to the project and Projects
+      client --> page : Edit form: edit-not-found, as for a read 404. Status control or task row: the detail and children reread once; a deleted task leaves the tasks list, and focus moves to the Tasks heading; for the item itself the read's 404 category decides (item-not-found: the item's not-found state; workspace-not-found: Project not found and notFound, so the page calls the layout's refresh())
     else Stale item version (L2-041)
       handler --> ctrl : 409 stale version; nothing changed
       ctrl --> client : ProblemDetails (changed)
-      client -> client : Read the latest version once; never resubmit
-      client --> page : Keep attempted values; compare "Your edit" with "Latest saved" (conflict state)
+      client --> page : The promise rejects with the 409; WorkItemForm keeps the attempted values and calls reload() on its item resource once; never resubmits
+      page --> actor : Compare "Your edit" with "Latest saved"; Save gives way to Reload latest, which receives focus (conflict state)
       opt Reload latest
         actor -> page : Reload latest
-        page -> page : Adopt latest values and version; comparison stays visible; Save enabled (conflict-reloaded state)
+        page -> page : Adopt latest values and version; comparison stays visible; Save enabled; focus moves to Title (conflict-reloaded state)
       end
-    else Newly chosen assignee inactive or unknown
-      handler --> ctrl : 400 invalid assignee; nothing changed
-      ctrl --> client : Validation ProblemDetails (assignee field)
-      client --> page : Keep input; assignee field error (rejected state)
+    else L2-016 estimate sent for an item that isn't a story; due date before start once the sent dates merge with the saved ones; or a newly chosen assignee deactivated after selection, or unknown
+      handler --> ctrl : 400 field error on the estimate, the due date, or the assignee; nothing changed
+      ctrl --> client : Validation ProblemDetails (that field)
+      client --> page : Keep every value; focus moves to that field, which reads its error; no Retry or reference ID (rejected state for the assignee)
     else Story set to Done with unfinished tasks; condition absent or not current
-      handler -> handler : L2-021 StoryCompletionPolicy: sent condition missing or not current
+      handler -> handler : L2-021 StoryStatusTransition applies StoryCompletionPolicy: sent condition missing or not current
       handler --> ctrl : 409 unfinished-tasks with count and StoryCompletionCondition; nothing changed
       ctrl --> client : ProblemDetails (unfinished-tasks)
-      client --> page : Keep the edit; hold the returned condition
-      page -> dialog : Open with story title and unfinished count; focus Keep in progress
-      alt Mark story Done
-        dialog --> page : Confirmed
-        page -> client : Resubmit the same UpdateWorkItemCommand with the returned condition
-        note right of client : Re-enters this flow; a changed count returns a new 409 and the dialog shows server-count
-      else Keep in progress
-        dialog --> page : Kept
-        page -> page : Restore the saved status; send no request; focus returns to Status
-      end
+      client --> page : WorkItemForm keeps the edit and emits completionStatus ConfirmationRequired; WorkItemFormDialog opens UnfinishedTasksDialog ("Mark a story Done from the edit form")
     else Edit permitted
       handler -> entity : L2-016 apply validated fields; keep an unchanged inactive assignee; type and workspace unchanged
       entity --> handler : Updated details
-      handler -> db : L2-039 / L2-040 update item, live board placements on a status change, and success audit in one transaction
+      handler -> handler : Story status change: StoryStatusTransition.apply sets the status, moves every live board placement to the new column, and increments the active sprint's version for a member (closure revision matrix). Task status change: increment the parent story's task revision only; the story's version and every sprint's version stay unchanged
+      handler -> db : L2-039 / L2-040 AddAuditEvent, then SaveChangesAsync: item, placements, sprint version, story task revision, and success audit in one transaction
       alt Commit fails
         db --> handler : Roll back business state and success audit
         handler --> ctrl : Generic 500 with correlation ID
         ctrl --> client : Failure; no successful-save claim
-        client --> page : Keep every value; show reference ID; Save retries the same request (failed state)
+        client --> page : Keep every value; "We couldn't save this story" with reference ID; focus stays on Save, which retries the same request only when chosen (failed state)
       else Commit succeeds
         db --> handler : New item version
         handler --> ctrl : Updated item
         ctrl --> client : 200 with new version
-        client --> page : Close the form; update every view's signal state
-        page --> actor : Announce "Changes saved"; focus returns to Edit
+        client --> page : WorkItemForm emits saved with a WorkItemSavedResult (WorkItemSaved, title, parentTitle); the dialog closes with Saved(saved, title, parentTitle)
+        page --> actor : The page increments its refresh counter, so its view rereads (the detail and children, or every expanded branch); the "Changes saved" toast through TOAST_SERVICE; focus returns to Edit
       end
     end
   end
 end
+opt No response to the save (timeout or network failure)
+  client --> page : The save may have committed. Edit form: keep the attempted values; the failed alert reads "We couldn't confirm whether your changes were saved" without a reference ID; WorkItemForm calls reload() on its item resource once and emits unconfirmed, which the dialog relays so the page rereads its view at once; Save resends only when pressed; a committed save then meets the stale 409, whose comparison reads "The latest saved version is shown beside your entries", never "Your edits haven't been saved". Status control: the detail and children reload once; status-failed says it couldn't confirm and names the persisted status, without reference ID or Try again
+end
 note over ctrl, db
-Checks run in this order under the lock, before any write: item exists, version current, assignee active, completion condition.
+An unexpected 403 changes nothing; the edit form keeps every value and emits forbidden (relayed by WorkItemFormDialog), or the detail view restores the saved status and emits forbidden; the routed page shows the "Your access changed" toast through TOAST_SERVICE, without Retry or reference ID; the capability refresh still runs.
+Checks run in this order under the lock, before any write: item exists, version current, estimate allowed for the item's type and merged dates in order, assignee active, completion condition.
+SaveChangesAsync also compares the tracked expected version; its ConcurrencyConflictException maps to the same 409.
 Unexpected failures return generic 500 plus correlation ID (L2-043).
 Diagnostics exclude secrets and contact payloads.
 end note

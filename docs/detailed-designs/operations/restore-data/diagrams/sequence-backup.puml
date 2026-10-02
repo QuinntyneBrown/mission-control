@@ -21,6 +21,8 @@ box "Release tooling - backend/src/MissionControl.Operations" #E0F2FE
 end box
 box "Selected SQL provider" #FFF4E5
   database "Source SQL\n(read-only during capture)" as source
+end box
+box "Backup storage - facility <TO SUPPLY>" #F2F4F7
   collections "Backup storage" as storage
 end box
 box "Release records - docs/operations" #ECFDF3
@@ -34,7 +36,7 @@ break Source, storage, or external credentials not configured
   console --> actor : Exit non-zero; nothing ran against the source
 end
 capture -> source : Read DataFingerprint in one read-only transaction
-source --> capture : Counts, ordered ID / parent / position / membership / snapshot digests, samples
+source --> capture : Counts and ordered digests: IDs; account roles / active flags; lead categories;\nparent / responsible-lead / assignee links; sibling / backlog positions; board placements;\nsprint membership / initial scope / scope changes; closure snapshots; samples
 capture -> source : L2-044 provider backup command <TO SUPPLY> (reads only)
 source -> storage : Write backup artifact
 break Backup command fails or storage access is denied

@@ -4,9 +4,11 @@ LAYOUT_WITH_LEGEND()
 title Containers - Review workflow mock artifacts
 Person(reviewer, "Design reviewer", "Reviews at 375, 768, 1440 and profile R widths")
 System_Boundary(artifact, "Review workflow mock artifacts") {
-  Container(source, "docs/mocks/", "HTML / CSS / JavaScript", "Static sources and token values")
-  Container(site, "Independent static review site", "Browser", "Catalog, examples, and review states")
+  Container(source, "docs/mocks/", "HTML / CSS / JavaScript", "Mock pages, mocks.css, mocks.js, and mirrored tokens")
+  Container(site, "Offline review site", "Browser from file://", "index.html catalog and viewer.html widths")
 }
-Rel(source, site, "Builds or loads offline")
+Container_Ext(dist, "design-system/dist", "tokens.css, _breakpoints.scss", "Authoritative mirror sources once design-system exists")
+Rel(source, site, "Opens offline; build-index.mjs regenerates the index")
+Rel(source, dist, "sync-tokens.mjs copies with version and commit header")
 Rel(reviewer, site, "Opens and resizes")
 @enduml

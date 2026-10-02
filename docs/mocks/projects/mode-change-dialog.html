@@ -33,13 +33,13 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="to-kanban">Administrator-only. Shown as if Community Hackathon 2026 had no active sprint. Focus starts on Cancel; Escape closes without changes. Success shows "Now using Kanban — Sprint plans and history are kept."</p>
+    <p class="mock-note" data-when="to-kanban">Administrator-only. Shown as if Community Hackathon 2026 had no active sprint. Focus starts on Cancel; Escape closes without changes. Success shows "Now using Kanban — Sprint plans and history are kept." If the project was deleted meanwhile, the API answers 404: the dialog closes, the header keeps only the breadcrumb, and the project's tab shows "Project not found", with no other announcement. If the project changed after the dialog opened, the API answers 409 for the stale version: the dialog closes, the header and the tab reload, and once the header has reloaded an info toast says "This project changed while the dialog was open. Its current delivery mode is shown." Nothing is resubmitted.</p>
     <p class="mock-note" data-when="to-scrum" hidden>Switching back to Scrum restores planning and starting for the kept Sprint 3 plan, and Sprints 1–2 history stays readable. Success shows "Now using Scrum — Your sprint plans and history are available again."</p>
     <p class="mock-note" data-when="to-scrum-empty" hidden>Church Website Refresh has never had sprints, so there is no sprint history to restore. Its work keeps its IDs, statuses, and order. After switching, plan the first sprint from Sprints; success shows "Now using Scrum — Plan your first sprint from Sprints."</p>
     <p class="mock-note" data-when="to-kanban-empty" hidden>Youth Coding Night is new, with no work and no sprints, so nothing moves. Work added later lands at the bottom of To Do on the continuous board. Success shows "Now using Kanban" on the project overview.</p>
-    <p class="mock-note" data-when="blocked" hidden>While Sprint 8 is active the API answers 409 and nothing changes. The dialog explains the fix instead of offering the switch.</p>
+    <p class="mock-note" data-when="blocked" hidden>Community Hackathon 2026's loaded details show Sprint 8 active, so Change delivery mode opens this state without a request. If a sprint started after the details loaded, Confirm gets a 409 and shows the same state; nothing changes either way. The dialog explains the fix instead of offering the switch. Focus moves to "Close Sprint 8" and screen readers hear the explanation as an alert; the dialog's description now points to that explanation. That button closes this dialog and opens the close-sprint dialog for Sprint 8.</p>
     <p class="mock-note" data-when="saving" hidden>The confirm button shows progress and ignores repeat clicks. The switch is atomic: everything changes, or nothing does.</p>
-    <p class="mock-note" data-when="failed" hidden>Nothing changed. "Switch to Kanban" tries again; the reference ID matches the server's diagnostic record.</p>
+    <p class="mock-note" data-when="failed" hidden>Nothing changed. This state covers an unexpected 500 and a 503 returned when another change held the project's lock too long (the API waited, gave up, and changed nothing). The dialog keeps the previous mode; nothing retries automatically. "Switch to Kanban" tries again only when chosen, and the reference ID matches the server's diagnostic record. If the role changed while the dialog was open, the API answers 403 instead: the dialog stays open, this alert says "Only administrators can change the delivery mode" with no reference ID, the switch button stays unavailable, so focus moves to the alert, the dialog's description now points to that explanation, and the mode is unchanged. A malformed request gets 400 instead: this alert shows the server's message with no Try again and no reference ID, because sending again could only repeat the refusal; the dialog has no field to focus and the switch button stays unavailable, so focus moves to the alert. After a 500 or 503 the switch button keeps focus and screen readers hear the alert. A switch that gets no response may have gone through, so this alert instead reads "We couldn't confirm whether Community Hackathon 2026 switched to Kanban", with no reference ID and no claim that nothing changed; the project's header and tab reread at once and show the mode actually saved, while the dialog stays open (the board re-match, or the move from a Sprints tab that no longer exists to the overview, waits until it closes). "Switch to Kanban" sends again only when chosen: if the first switch went through, the dialog closes, the project shows its current mode, and the info toast reads "Community Hackathon 2026 uses Kanban now." instead of saying the project changed while the dialog was open, since that change may have been the first switch.</p>
   </div>
 
   <div class="mock-screen">
@@ -80,6 +80,7 @@
               <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</span></li>
               <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</span></li>
               <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</span></li>
             </ul>
             <div class="mc-split">
               <div class="mc-card mc-stack mc-stack--sm"><p class="mc-h3">About this project</p><span class="mc-skeleton mc-w-80"></span><span class="mc-skeleton mc-w-60"></span></div>
@@ -100,6 +101,7 @@
               <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</span></li>
               <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</span></li>
               <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</span></li>
+              <li><span class="mc-tabs__link"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</span></li>
             </ul>
             <div class="mc-split">
               <div class="mc-card mc-stack mc-stack--sm"><p class="mc-h3">About this project</p><span class="mc-skeleton mc-w-80"></span><span class="mc-skeleton mc-w-60"></span></div>
@@ -153,7 +155,8 @@
     </div>
 
     <div class="mc-backdrop">
-      <section class="mc-dialog mc-dialog--sm" role="alertdialog" aria-modal="true" aria-labelledby="mode-title" aria-describedby="mode-text">
+      <section class="mc-dialog mc-dialog--sm" role="alertdialog" aria-modal="true" aria-labelledby="mode-title" aria-describedby="mode-text"
+        data-attr-blocked="aria-describedby=mode-blocked-text">
         <header class="mc-dialog__header">
           <span class="mc-dialog__icon" data-unless="blocked"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span></span>
           <span class="mc-dialog__icon mc-dialog__icon--warning" data-when="blocked" hidden><span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span></span>
@@ -170,7 +173,7 @@
 
         <div class="mc-dialog__body">
           <div class="mc-live" role="alert">
-            <div class="mc-alert mc-alert--danger" data-when="failed" hidden>
+            <div class="mc-alert mc-alert--danger" tabindex="-1" data-when="failed" hidden>
               <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
               <div class="mc-alert__body">
                 <p class="mc-alert__title">We couldn't change the delivery mode</p>
@@ -180,14 +183,14 @@
                 </p>
               </div>
             </div>
+            <p id="mode-blocked-text" data-when="blocked" hidden>Community Hackathon 2026 can't change its delivery mode while Sprint 8 is active. Close the sprint, then try again.</p>
           </div>
 
-          <div id="mode-text" class="mc-stack mc-stack--sm">
+          <div id="mode-text" class="mc-stack mc-stack--sm" data-unless="blocked">
             <p data-when="to-kanban saving failed">Work moves to a continuous Kanban board. Nothing is deleted.</p>
             <p data-when="to-scrum" hidden>Sprint 3's plan and the history of Sprints 1 and 2 become available again. Nothing is deleted.</p>
             <p data-when="to-scrum-empty" hidden>Church Website Refresh has no sprint history to restore. Its work stays where it is, ready to plan into sprints. Nothing is deleted.</p>
             <p data-when="to-kanban-empty" hidden>Youth Coding Night has no work or sprints yet, so nothing moves. Work you add later appears on the continuous Kanban board.</p>
-            <p data-when="blocked" hidden>Community Hackathon 2026 can't change its delivery mode while Sprint 8 is active. Close the sprint, then try again.</p>
           </div>
 
           <div data-unless="blocked to-kanban-empty">
@@ -235,7 +238,7 @@
             <span data-unless="saving">Switch to Kanban</span>
             <span data-when="saving" hidden>Switching…</span>
           </button>
-          <button class="mc-button mc-button--primary" type="button" data-when="to-scrum" hidden data-nav="project-overview.html">Switch to Scrum</button>
+          <button class="mc-button mc-button--primary" type="button" data-when="to-scrum" hidden>Switch to Scrum</button>
           <button class="mc-button mc-button--primary" type="button" data-when="to-scrum-empty" hidden>Switch to Scrum</button>
           <button class="mc-button mc-button--primary" type="button" data-when="to-kanban-empty" hidden>Switch to Kanban</button>
           <button class="mc-button mc-button--primary" type="button" data-when="blocked" hidden data-nav="project-overview.html">Close</button>

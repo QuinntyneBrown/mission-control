@@ -17,24 +17,24 @@ set separator none
 title Class structure - Rehearse backup and restore
 package "backend/src/MissionControl.Operations" {
   class OperationsConsole {
-    +main(args: string[]): int
+    +Main(args: string[]): Task<int>
   }
   class CaptureBackupOperation {
-    +run(options: RecoveryOptions): RecoveryRecord
+    +RunAsync(options: RecoveryOptions, ct: CancellationToken): Task<RecoveryRecord>
   }
   class RestoreBackupOperation {
-    +run(options: RecoveryOptions, capture: RecoveryRecord): RecoveryRecord
+    +RunAsync(options: RecoveryOptions, capture: RecoveryRecord, ct: CancellationToken): Task<RecoveryRecord>
   }
   interface IBackupProvider {
-    +backup(sourceConnectionName: string, artifactLocation: string): void
-    +verify(artifactLocation: string): string
-    +restore(artifactLocation: string, targetConnectionName: string): void
+    +BackupAsync(sourceConnectionName: string, artifactLocation: string, ct: CancellationToken): Task
+    +VerifyAsync(artifactLocation: string, ct: CancellationToken): Task<string>
+    +RestoreAsync(artifactLocation: string, targetConnectionName: string, ct: CancellationToken): Task
   }
   interface IDataFingerprintReader {
-    +read(connectionName: string): DataFingerprint
+    +ReadAsync(connectionName: string, ct: CancellationToken): Task<DataFingerprint>
   }
   class RecoveryApiProbe {
-    +verify(apiBaseUrl: string, samples: string[]): string[]
+    +VerifyAsync(apiBaseUrl: string, samples: string[], ct: CancellationToken): Task<string[]>
   }
   class RecoveryOptions {
     +sourceConnectionName: string

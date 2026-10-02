@@ -14,9 +14,10 @@ skinparam package {
   BackgroundColor #F9FAFB
 }
 title Behavior - Provision account
+skinparam maxMessageSize 300
 actor "Administrator" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "AccountFormDialog / AccountView" as page
+  participant "AccountFormDialog / AccountForm" as page
   participant "IAccountService / AccountService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -34,19 +35,23 @@ box "Backend - MissionControl.Infrastructure" #FFF4E5
 end box
 actor -> page : Enter names, email, initial password and role; Add account
 page -> page : Disable repeat submission; show saving progress
-page -> client : Build typed ProvisionAccountCommand
+page -> client : provision(ProvisionAccountCommand)
 client -> access : POST /api/accounts
+alt No response: the connection dropped or the request timed out
+  client --> page : provision() rejects with a no-response error; the account may or may not have been added
+  page --> actor : failed presentation with "We couldn't confirm whether ...'s account was added"; every value kept, password included; no reference ID; AccountForm emits unconfirmed (DraftState.unconfirmed until the next answered save), which the dialog relays while it stays open, so AccountsPage increments its counter at once and the page behind rereads; nothing is resent until Add account is chosen again, and if the first request committed, that repeat gets the duplicate 409 below with neutral copy
+else Response received
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry (zero clock skew)
-access -> db : Read current status, role and credential version
+access -> db : LoadAccountAccessAsync: current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid or expired JWT; inactive or missing account; credential version changed
-  access -> audit : Append Denied audit (restricted append; no payload)
+  access -> audit : AppendRestrictedAsync(Denied); no payload
   access --> client : 401
-  client --> page : Clear in-memory session; open login (session-unsaved); no account was added
-else Authenticated Collaborator (profile P: no account management)
-  access -> audit : Append Denied audit (restricted append; no payload)
+  client --> page : sessionInterceptor: end(Unauthorized) once for this generation; the promise rejects with its 401, so no account was added; login opens (session-unsaved)
+else Authenticated Collaborator (profile P: no accounts.manage)
+  access -> audit : AppendRestrictedAsync(Denied); no payload
   access --> client : 403
-  client --> page : Show access-denied page; no account was added
+  client --> page : refreshCapabilities() (deduplicated); AccountForm emits forbidden; the dialog closes with Forbidden and AccountsPage calls showStatus(AccessDenied); no account was added
 else Administrator
   access -> ctrl : Authorized request
   ctrl -> validation : Send ProvisionAccountCommand through MediatR 12.5.0
@@ -54,19 +59,19 @@ else Administrator
   alt Invalid request
     validation --> ctrl : 400 field errors; no business mutation
     ctrl --> client : Validation ProblemDetails
-    client --> page : validation state: keep valid input; focus linked error summary
+    client --> page : validation state: keep valid input; one field error moves focus to that field, which reads its error; several move focus to the linked error summary; no Retry or reference ID
   else Valid request
     validation -> handler : Handle ProvisionAccountCommand
-    handler -> db : Find account with the normalized email
+    handler -> db : LoadAccountByEmailAsync(normalized email)
     db --> handler : Existing account or none
     alt Normalized email already used
-      handler --> ctrl : 409 duplicate with the existing account ID and name; nothing created
+      handler --> ctrl : 409 duplicate with DuplicateAccountConflict (existing account ID and name); nothing created
       ctrl --> client : Conflict ProblemDetails (duplicate)
-      client --> page : duplicate state: keep every value including the password; flag email; link the existing account
+      client --> page : duplicate state: keep every value including the password; flag email and move focus to it, so it reads its error; after an unconfirmed add the explanation is neutral (an account with this email exists now; check it in Accounts), never that no account was added; View account emits existingAccountRequested; the dialog confirms leaving the draft (UnsavedChangesDialog, Navigate), closes with ViewAccount(id), and AccountsPage navigates to /accounts/:id
     else Email available
       handler -> entity : L2-004 / L2-036 create active account; salted hash of the exact password
       entity --> handler : New account (version 1, credential version 1)
-      handler -> db : L2-039 / L2-040 insert account and success audit in one transaction
+      handler -> db : L2-039 / L2-040 AddAccount and AddAuditEvent(success); SaveChangesAsync inserts both in one transaction
       alt Unique index rejects the email (racing provision)
         db --> handler : Roll back insert and audit
         handler --> ctrl : 409 duplicate, as above
@@ -76,16 +81,17 @@ else Administrator
         db --> handler : Roll back business state and success audit
         handler --> ctrl : Generic 500 with correlation ID
         ctrl --> client : Failure; no successful-save claim
-        client --> page : failed state: keep every value; reference ID; Add account retries
+        client --> page : failed state: nothing was created; keep every value; reference ID; Add account retries (a busy 503 is shown the same way)
       else Commit succeeds
         db --> handler : Committed account
         handler --> ctrl : 201 with safe summary; never the password or hash
         ctrl --> client : Success response
-        client --> page : created state: share the password directly; it is not shown again
-        page --> actor : New row appears in Accounts; no lead contact created (L2-005.2)
+        client --> page : created state: the dialog's persistent status region announces "Account added for ..."; focus moves to Done; share the password directly; it is not shown again
+        page --> actor : Done closes with Added(account): AccountsPage increments its counter, so AccountView rereads and the new row appears, and shows the "Account added" toast naming it; no lead contact created (L2-005.2)
       end
     end
   end
+end
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).

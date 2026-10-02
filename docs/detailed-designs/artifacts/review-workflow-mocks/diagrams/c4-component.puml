@@ -5,8 +5,8 @@ title Components - Review workflow mock artifacts
 Container_Boundary(site, "docs/mocks/ static artifact") {
   Component(catalog, "ArtifactCatalog", "index.html / viewer.html / catalog.js", "Lists every mock and state; frames them at 320-1920 widths")
   Component(examples, "MockScreen files", "HTML / mocks.js", "Default and data-when states with design notes")
-  Component(tokens, "--mc- token stylesheet", "CSS custom properties", "Provisional mirror of the authoritative design-system copy")
+  Component(tokens, "Mirrored --mc- tokens and breakpoints", "assets/tokens.css / assets/_breakpoints.scss", "Provisional until design-system exists; then written only by sync-tokens.mjs")
 }
 Rel(catalog, examples, "Opens named mock and #state")
-Rel(examples, tokens, "Consumes visual roles through mocks.css")
+Rel(examples, tokens, "Consumes visual roles through mocks.css; media-query widths match the breakpoints")
 @enduml

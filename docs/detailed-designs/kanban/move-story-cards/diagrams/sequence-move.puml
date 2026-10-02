@@ -3,6 +3,7 @@ skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
+skinparam maxMessageSize 300
 skinparam ArrowColor #344054
 skinparam rectangle {
   BorderColor #344054
@@ -27,84 +28,107 @@ end box
 box "Backend - MissionControl.Application and Domain" #ECFDF3
   participant "ValidationBehavior" as validation
   participant "MoveStoryCommandHandler" as handler
-  participant "BoardPlacement" as entity
+  participant "StoryStatusTransition / BoardPlacement" as entity
 end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Drop a card, or choose a destination in MoveStoryDialog or Move up/down
-page -> page : Snapshot saved board; show card Saving at the destination; keep committed column totals
-page -> client : Build typed MoveStoryCommand (destination, position, story and board versions)
-client -> access : PUT /api/workspaces/{id}/board/stories/{storyId}/placement
-access -> access : L2-002 validate signature, issuer, audience, subject, expiry
-access -> db : Read current status, role and credential version
-db --> access : Current account access
-alt Missing, invalid or expired JWT; deactivated account
-  access --> client : 401; audit denial without payloads
-  client --> page : Restore snapshot; clear session; sign in with the board as return route
-else Authenticated without permission to move cards
-  access --> client : 403; audit denial without payloads
-  client --> page : Restore snapshot; explain that the move is not permitted
-else Authorized
-  access -> ctrl : Authorized request
-  ctrl -> validation : Send MoveStoryCommand through MediatR 12.5.0
-  validation -> validation : L2-020 validate status, position and identifiers
-  alt Unknown status or malformed position
-    validation --> ctrl : 400 field errors; nothing read or changed
-    ctrl --> client : Validation ProblemDetails
-    client --> page : Restore snapshot; MoveStoryDialog keeps choices and shows the message; a drag shows the failure toast
-  else Valid request
-    validation -> handler : Handle MoveStoryCommand
-    handler -> db : Lock workspace order boundary; load story, board, live placements, versions, completion condition
-    db --> handler : Persisted status, order, versions and task condition
-    alt Workspace or story not found
-      handler --> ctrl : 404; nothing changed
-      ctrl --> client : ProblemDetails (not found)
-      client --> page : Missing story: reload board without it and announce; missing workspace: not-found state linking to Projects
-    else Board or position outside the story's workspace or column bounds
-      handler --> ctrl : 400 invalid reference; nothing changed
+actor -> page : Drop a card, Move up/down, or choose a destination in MoveStoryDialog (opened with the MoveRequest from moveRequested; its choice passed to BoardView through chosenMove)
+alt Another move is pending on this board
+  page --> actor : Control is aria-disabled; "Saving move..." already announced; nothing sent
+else No pending move
+  page -> page : Mark the move pending; increment the request generation; clear the board query so the resource aborts any read in flight; aria-disable other moves, drag and Load more; announce "Saving move..."; moveStatus Saving
+  page -> page : Show the card Saving at the destination; totals stay at the latest acknowledged state
+  page -> client : move(MoveStoryCommand: destination, position, story and board versions) returns a promise; stamped with board ID and generation
+  client -> access : PUT /api/workspaces/{id}/board/stories/{storyId}/placement
+  access -> access : L2-002 validate signature, issuer, audience, subject, expiry
+  access -> db : Read current status, role and credential version
+  db --> access : Current account access
+  alt Missing, invalid or expired JWT; deactivated account
+    access --> client : 401; audit denial without payloads; sessionInterceptor: a 401 for the current generation calls SessionService.end(Unauthorized) once
+    client --> page : The promise rejects with the 401 (nothing saved); navigation to sign-in destroys BoardView; the board is the return route
+  else Unexpected 403 (profile P: moving cards needs only an active session)
+    access --> client : 403; Denied audit; nothing changed; sessionInterceptor refreshes capabilities
+    client --> page : The promise rejects; restore the latest acknowledged state; end pending; moveStatus Forbidden: KanbanBoardPage closes any open dialog and shows the "Your access changed" toast, without Retry
+  else Active session
+    access -> ctrl : Authorized request
+    ctrl -> validation : Send MoveStoryCommand through MediatR 12.5.0
+    validation -> validation : L2-020 validate status, position and identifiers
+    alt Unknown status or malformed position
+      validation --> ctrl : 400 field errors; nothing read or changed
       ctrl --> client : Validation ProblemDetails
-      client --> page : Restore snapshot; explain why the move was refused; offer Retry
-    else Stale story or board version; story left the sprint; delivery mode changed
-      handler --> ctrl : 409 conflict; nothing changed
-      ctrl --> client : ProblemDetails (board changed)
-      client --> page : Restore snapshot; "The board changed" alert; Reload board reads the latest columns without resubmitting
-    else Done with unfinished tasks; condition absent or no longer current
-      handler -> handler : L2-021 StoryCompletionPolicy: sent condition missing or not current
-      handler --> ctrl : 409 unfinished-tasks with count and StoryCompletionCondition; nothing changed
-      ctrl --> client : ProblemDetails (unfinished-tasks)
-      client --> page : Keep snapshot; hold returned condition
-      page -> dialog : Open with story title and returned count; focus Keep in progress
-      alt Mark story Done
-        dialog --> page : Confirmed
-        page -> client : Resubmit the same MoveStoryCommand (same destination and position) with the returned condition
-        note right of client : Re-enters this flow; a changed count returns a new 409 and the dialog shows server-count
-      else Keep in progress
-        dialog --> page : Kept
-        page -> page : Restore snapshot; send no request; focus returns to the card's Move button
-      end
-    else Move permitted
-      handler -> entity : L2-020 place story; synchronize status on every live placement
-      entity --> handler : Requested placement; compacted source; appended placements on other boards
-      handler -> db : L2-039 / L2-040 update story, placements, board versions and success audit in one transaction
-      alt Commit fails
-        db --> handler : Roll back business state and success audit
-        handler --> ctrl : Generic 500 with correlation ID
-        ctrl --> client : Failure; no successful-save claim
-        client --> page : Restore snapshot; "Couldn't move story" toast with Retry; MoveStoryDialog shows the reference ID
-      else Commit succeeds
-        db --> handler : New story and board versions
-        handler --> ctrl : Committed placement
-        ctrl --> client : 200 with placement and versions
-        client --> page : Replace snapshot with committed board
-        page --> actor : Announce destination and position
+      client --> page : The promise rejects; restore the latest acknowledged state; end pending; moveStatus Settled closes any open dialog; refusal page alert with the server's reason and Reload board (no Retry, no reference ID)
+    else Valid request
+      validation -> handler : Handle MoveStoryCommand
+      handler -> db : BeginWorkspaceTransactionAsync takes the workspace lock first (bounded wait)
+      alt Lock wait times out
+        handler --> ctrl : Lock wait timed out: 503 with Retry-After; nothing changed
+        ctrl --> client : ProblemDetails (unavailable)
+        client --> page : The promise rejects; restore the latest acknowledged state; end pending; moveStatus Failed with the reference ID: an open MoveStoryDialog shows its failed state, otherwise the "Couldn't move story" toast with Retry and the reference ID
+      else Lock held
+        handler -> db : LoadStoryPlacementsAsync reads the story, delivery mode, boards with live placements, versions and completion condition (unfinished count in one aggregate)
+        alt Workspace or story not found
+          handler --> ctrl : 404; nothing changed
+          ctrl --> client : ProblemDetails (not found)
+          client --> page : The promise rejects; end pending; moveStatus Settled closes any open dialog; a new first-batch query reloads the board: without the story, the board announces that it was deleted; if the project was deleted, that read returns 404 and the board shows the project's not-found presentation (Back to projects; no Try again or reference ID) and emits notFound. When a closed dialog or the removed card (Move up or Move down) held focus, focus moves to the board region, or to the not-found heading
+        else Delivery mode changed after the board loaded
+          handler --> ctrl : 409 mode-changed; nothing changed
+          ctrl --> client : ProblemDetails (mode changed)
+          client --> page : The promise rejects; restore the latest acknowledged state; end pending; moveStatus Settled closes any open dialog; no board-changed alert; BoardView emits modeChanged
+          page -> page : KanbanBoardPage calls ProjectLayoutPage.modeChanged(): the header reloads and BoardModeGuard re-matches the Board tab to SprintBoardPage
+        else Stale story or board version; story left the sprint
+          handler --> ctrl : 409 board-changed; nothing changed
+          ctrl --> client : ProblemDetails (board changed)
+          client --> page : The promise rejects; restore the latest acknowledged state; end pending; moveStatus Settled closes any open dialog; page alert, never a toast: "The board changed after it loaded, so your move wasn't applied."; Reload board reads a new first batch without resubmitting
+        else Board outside the story's workspace, or position outside the column (versions current, so a malformed request)
+          handler --> ctrl : 400 invalid reference; nothing changed
+          ctrl --> client : Validation ProblemDetails
+          client --> page : The promise rejects; restore the latest acknowledged state; end pending; moveStatus Settled closes any open dialog; refusal page alert with the server's reason and Reload board (no Retry, no reference ID)
+        else Done with unfinished tasks; condition absent or no longer current
+          handler -> entity : L2-021 StoryStatusTransition applies StoryCompletionPolicy: sent condition missing or not current
+          entity --> handler : Confirmation required; nothing changed
+          handler --> ctrl : 409 unfinished-tasks with count and StoryCompletionCondition; nothing changed
+          ctrl --> client : ProblemDetails (unfinished-tasks)
+          client --> page : The promise rejects with the condition; the move stays pending; moveStatus ConfirmationRequired with the card and condition
+          page -> dialog : An open MoveStoryDialog closes with ConfirmationRequired; KanbanBoardPage opens UnfinishedTasksDialog with the card's key, title and saved status and the returned count; focus Keep in progress
+          note right of dialog : Keep in progress and Mark story Done continue in "Confirm a Done move on a board"
+        else Move permitted
+          handler -> entity : L2-020 StoryStatusTransition sets the status and moves every live placement (a same-column reorder repositions the requested board only)
+          entity --> handler : Requested placement; compacted source; appended placements on other boards
+          handler -> db : L2-039 / L2-040 AddAuditEvent registers the success audit; SaveChangesAsync checks tracked versions and commits story, placements, board versions and the active sprint's version on a status change (not on a same-column reorder)
+          alt Commit fails
+            db --> handler : Roll back business state and success audit
+            handler --> ctrl : Generic 500 with correlation ID (L2-043); diagnostics exclude secrets and contact payloads
+            ctrl --> client : Failure; no successful-save claim
+            client --> page : The promise rejects; restore the latest acknowledged state; end pending; moveStatus Failed with the reference ID: an open MoveStoryDialog shows its failed state, otherwise the "Couldn't move story" toast with Retry and the reference ID
+          else Commit succeeds
+            db --> handler : New story and board versions
+            handler --> ctrl : MoveStoryResult
+            ctrl --> client : 200 with board ID, placement and versions
+            client --> page : The promise resolves with the result, stamped with the request's board ID and generation
+            alt Board ID or generation no longer current (board left or reloaded)
+              page -> page : Discard the result; no state change
+            else Current
+              page -> client : Set the board query to the loaded window of the source column, then the destination column (batches of at most 100, current generation); boardResource reads each batch (authorized as above)
+              alt Re-read fails
+                client --> page : Resource status error: keep the confirmed placement; that column shows its alert with Retry (reads the batch again) and the reference ID only when the response carried one
+              else Columns resolve
+                client --> page : Resolved columns with full counts and the new board version become the latest acknowledged state
+              end
+              page --> actor : End pending; moves and Load more available again; moveStatus Settled with the destination and position as its announcement closes any dialog; KanbanBoardPage shows the success toast through TOAST_SERVICE
+            end
+          end
+        end
       end
     end
   end
 end
-note over ctrl, db
-Unexpected failures return generic 500 plus correlation ID (L2-043).
-No response (uncertain outcome): reload story and board before offering Retry.
-Diagnostics exclude secrets and contact payloads.
+note over page, client
+No response (timeout or network failure) is never treated as a failure:
+set the board query to the source and destination columns' loaded window,
+adopt the resolved columns as the latest acknowledged state and announce
+where the story is before another move; moveStatus Settled then closes any
+open dialog. If that read fails, show the board load error saying the move
+could not be confirmed, with Reload board; moves stay paused until a read succeeds.
 end note
 @enduml

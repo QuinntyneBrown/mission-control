@@ -29,9 +29,9 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="navigate">Appears when an in-app link (here, Leads) is chosen while a page has unsaved changes. Focus starts on "Stay on this page"; Escape also stays and returns focus to the link. Reloading or closing the tab shows the browser's own prompt instead, which can't be styled or mocked.</p>
-    <p class="mock-note" data-when="cancel-form" hidden>Appears when Cancel, Close, or Escape is used on a form dialog with changes. "Keep editing" returns focus to the form with every value intact; "Discard changes" closes the form and keeps the saved lead as it was.</p>
-    <p class="mock-note" data-when="sign-out" hidden>Appears when Sign out is chosen with unsaved changes. Staying keeps the session and the input; signing out clears the in-memory session and opens the sign-in page.</p>
+    <p class="mock-note" data-when="navigate">Appears when an in-app link (here, Leads) or browser Back is chosen while a page has unsaved changes; the reason is Navigate. The Sprint 9 plan supplies a summary of its draft, so the dialog names what would be lost: the 2 stories added. If a form dialog such as Edit details is open over the plan when Back is chosen, the plan combines both drafts, and the summary names the plan's marks and the dialog's edits. Focus starts on "Stay on this page"; Escape also stays and returns focus to the link. Reloading or closing the tab shows the browser's own prompt instead, which can't be styled or mocked.</p>
+    <p class="mock-note" data-when="cancel-form" hidden>Appears when Cancel, Close, or Escape is used on any form dialog with changes: the lead, account, password, project, sprint, work item, reparent, move-position, sprint scope, and close-sprint dialogs. The reason is CancelForm, and the form dialog asks itself, without a route change. The lead form behind it supplies no summary, so the generic copy appears; a form that supplies one names what would be lost, as in the other states. "Keep editing" returns to the form that opened it, with focus back in the form and every value intact; "Discard changes" closes that form and keeps the saved record as it was. In every state the body says what leaving or discarding drops and never that the changes haven't been saved, because a form whose last save got no response may already have saved them.</p>
+    <p class="mock-note" data-when="sign-out" hidden>Appears when Sign out is chosen with unsaved changes; the reason is SignOut, and the Sprint 9 plan's summary names the 2 stories added. Staying keeps the session and the input; signing out clears the in-memory session and opens the sign-in page.</p>
   </div>
 
   <div class="mock-screen">
@@ -188,9 +188,9 @@
         </header>
 
         <div class="mc-dialog__body" id="unsaved-text">
-          <p data-when="navigate">Your changes to the Sprint 9 plan haven't been saved. If you leave now, the 2 stories you added will not be in the sprint.</p>
-          <p data-when="cancel-form" hidden>Your edits to Grace Mensah haven't been saved. If you discard them, the saved details stay as they were.</p>
-          <p data-when="sign-out" hidden>Your changes to the Sprint 9 plan haven't been saved. Signing out ends your session, and the 2 stories you added will not be in the sprint.</p>
+          <p data-when="navigate">If you leave now, your changes to the Sprint 9 plan are discarded, including the 2 stories you added to it.</p>
+          <p data-when="cancel-form" hidden>Discarding clears your entries in this form. It doesn't change anything already saved.</p>
+          <p data-when="sign-out" hidden>Signing out ends your session and discards your changes to the Sprint 9 plan, including the 2 stories you added to it.</p>
         </div>
 
         <footer class="mc-dialog__footer">

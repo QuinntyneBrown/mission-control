@@ -19,22 +19,153 @@ skinparam class {
   FontColor #101828
   BackgroundColor #F9FAFB
 }
+class ProjectLayoutPage {
+  +workspaceId: Signal<Guid>
+  +canChangeMode: Signal<boolean>
+  +revision: Signal<number>
+  +draft: Signal<DraftState>
+  +workspace: Signal<WorkspaceDetail | null>
+  +openDialog(kind: WorkspaceActionKind): void
+  +refresh(): void
+  +modeChanged(): void
+}
+note right of ProjectLayoutPage
+  canChangeMode = workspaces.changeMode in
+  currentSession.capabilities. openDialog uses the
+  workspace the header last resolved (workspaceLoaded);
+  before that a request does nothing. modeChanged():
+  revision + 1 reloads the header and the active
+  tab; re-navigating the current tab URL lets
+  BoardModeGuard re-match the board. A resolved
+  header without a Sprints tab while the child route
+  is sprints navigates to overview (replaceUrl).
+  While one of its dialogs is open, revision still
+  increments at once, but the re-navigation and the
+  sprints redirect wait until the dialog closes
+  (deactivating the child page would dismiss it).
+  Dialog close result (toasts via TOAST_SERVICE):
+  Changed -> modeChanged() + "Now using" toast;
+  Outdated -> modeChanged(); once the reloaded
+  header resolves, the "project changed" info
+  toast, or, after a relayed unconfirmed, the
+  neutral "Community Hackathon 2026 uses Kanban
+  now." naming the mode it shows (after a 404 the
+  read fails: only the tab's not-found);
+  CloseSprint(sprint) -> CloseSprintDialog with
+  sprint.sprintId and offerSprintsLink (false only
+  on the sprints tab; scrum close-sprint); no result
+  -> nothing.
+  unconfirmed (dialog still open) -> modeChanged():
+  revision + 1 at once; the dialog stays open and
+  the re-navigation waits for its close.
+  CloseSprintOutcome: Closed -> refresh() +
+  "Sprint 8 closed" toast with its counts;
+  Outdated -> refresh(). Still open: unconfirmed
+  -> refresh(); forbidden -> "Your access
+  changed" toast, no Retry.
+  Implements FormDraft by delegating to its dialog;
+  every child page's draft falls back to it.
+end note
+interface IToastService {
+  +show(toast: Toast): void
+}
+class ProjectHeaderView {
+  +canChangeMode: InputSignal<boolean>
+  +actionRequested: OutputEmitterRef<WorkspaceActionKind>
+  +workspaceLoaded: OutputEmitterRef<WorkspaceDetail>
+}
+enum WorkspaceActionKind {
+  Edit
+  Delete
+  ChangeMode
+}
 class ProjectOverviewPage {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
+  -layout: ProjectLayoutPage
+}
+note bottom of ProjectOverviewPage
+  BacklogPage, KanbanBoardPage, and SprintsPage
+  relay their paused-sprints banner the same way:
+  inject(ProjectLayoutPage).openDialog(ChangeMode).
+  WorkHierarchyPage and WorkItemDetailPage react
+  to WorkItemDeleteOutcome ChangeMode (the
+  paused-sprint delete blocker) the same way.
+end note
+class WorkspaceOverviewView {
+  +canChangeMode: InputSignal<boolean>
+  +changeModeRequested: OutputEmitterRef<void>
+}
+note bottom of WorkspaceOverviewView
+  BacklogView, the Kanban BoardView, and
+  SprintListView take the same input and output
+  for their banners (their own slices).
+end note
+class WorkspaceForm {
+  +changeModeRequested: OutputEmitterRef<void>
+}
+note bottom of WorkspaceForm
+  Edit form's Change delivery mode link, an
+  output to ProjectFormDialog, which closes
+  with ProjectFormOutcome ChangeMode after the
+  unsaved-changes check; the layout reacts to
+  that close result: openDialog(ChangeMode).
+end note
+interface FormDraft {
+  +draft: Signal<DraftState>
+}
+class DraftState {
+  +dirty: bool
+  +pending: bool
+  +unconfirmed: bool
+  +summary: string?
 }
 class ModeChangeDialog {
-  +destination: DeliveryMode
-  +blockedBy: Signal<SprintReference?>
-  +confirm(): void
-  +cancel(): void
+  +workspace: InputSignal<WorkspaceDetail>
+  +draft: Signal<DraftState>
+  +unconfirmed: OutputEmitterRef<void>
+  +close(result: ModeChangeOutcome?): void
 }
-class WorkspaceView {
-  +state: Signal<FeatureState>
-  +submit(): void
+class ModeChangeOutcome {
+  +kind: Changed | Outdated | CloseSprint
+  +sprint: SprintReference?
 }
+note bottom of ModeChangeOutcome
+  Changed on changed, Outdated on outdated,
+  CloseSprint(sprint) on closeSprintRequested;
+  no result on Cancel or Escape.
+end note
+class ModeChangeForm {
+  +workspace: InputSignal<WorkspaceDetail>
+  +changed: OutputEmitterRef<DeliveryMode>
+  +outdated: OutputEmitterRef<void>
+  +closeSprintRequested: OutputEmitterRef<SprintReference>
+  +unconfirmed: OutputEmitterRef<void>
+  +draftChange: OutputEmitterRef<DraftState>
+  -submit: WritableSignal<FeatureState>
+  -blockedBy: WritableSignal<SprintReference?>
+  +confirm(): Promise<void>
+}
+note right of ModeChangeForm
+  Opens blocked, without a request, when the
+  workspace input has an active sprint; a 409 after
+  Confirm shows the same state. Blocked focuses
+  Close Sprint N and is announced as an alert.
+  403: dialog stays open; switch unavailable, so
+  focus moves to the alert; no reference ID.
+  400: field message in the alert; no retry or
+  reference ID; switch unavailable, so focus
+  moves to the alert.
+  500 or 503 (lock wait timed out): failed state,
+  previous mode kept; retry only on request.
+  404 or stale 409: outdated, and the layout
+  calls modeChanged(); it announces the stale
+  change only when the reloaded header resolves.
+  No response: the failed alert says it couldn't
+  confirm the switch (no reference ID); emits
+  unconfirmed. A resent switch that meets the
+  stale 409 emits outdated as above.
+end note
 interface IWorkspaceService {
-  +changeMode(request: ChangeDeliveryModeCommand): Promise<FeatureResult>
+  +changeMode(command: ChangeDeliveryModeCommand): Promise<void>
 }
 class WorkspaceService {
   -http: HttpClient
@@ -54,16 +185,32 @@ note right of Workspace
   so no board backfill runs in either direction.
 end note
 interface IMissionControlDataSession {
-  +query(specification): Task<ReadResult>
-  +commit(expectedVersion: long): Task<void>
+  +BeginWorkspaceTransactionAsync(workspaceId: Guid, ct: CancellationToken): Task
+  +LoadWorkspaceAsync(id: Guid, ct: CancellationToken): Task<Workspace?>
+  +LoadActiveSprintAsync(workspaceId: Guid, ct: CancellationToken): Task<SprintReference?>
+  +AddAuditEvent(auditEvent: AuditEvent): void
+  +SaveChangesAsync(ct: CancellationToken): Task
 }
-class MissionControlDataSession {
-  -connection: DbConnection
-}
-ProjectOverviewPage --> WorkspaceView : composes
-ProjectOverviewPage ..> ModeChangeDialog : opens from Project actions
-ModeChangeDialog --> WorkspaceView : composes
-WorkspaceView ..> IWorkspaceService : inject token
+note bottom of IMissionControlDataSession
+  Scoped view of the shared port; only the members this
+  slice uses. The workspace lock is taken first and held
+  only until SaveChangesAsync commits. A lock-wait
+  timeout maps to 503 with Retry-After, nothing changed.
+end note
+class MissionControlDataSession
+ProjectLayoutPage --> ProjectHeaderView : composes; inputs and outputs only
+ProjectLayoutPage ..> IToastService : inject TOAST_SERVICE
+ProjectHeaderView ..> WorkspaceActionKind : emits
+ProjectLayoutPage ..> ModeChangeDialog : opens through openDialog(ChangeMode);\ncalls modeChanged() on Changed or Outdated
+ProjectOverviewPage --> WorkspaceOverviewView : composes; relays changeModeRequested
+ProjectOverviewPage ..> ProjectLayoutPage : openDialog(ChangeMode)
+WorkspaceForm ..> ProjectLayoutPage : via ProjectFormDialog's ChangeMode close result
+ModeChangeDialog --> ModeChangeForm : hosts; inputs and outputs only
+ModeChangeDialog ..> ModeChangeOutcome : close result
+FormDraft <|.. ModeChangeDialog
+FormDraft <|.. ProjectLayoutPage
+ModeChangeForm ..> DraftState : emits
+ModeChangeForm ..> IWorkspaceService : inject WORKSPACE_SERVICE
 IWorkspaceService <|.. WorkspaceService
 IMissionControlDataSession <|.. MissionControlDataSession
 class ChangeDeliveryModeCommand {
@@ -72,7 +219,7 @@ class ChangeDeliveryModeCommand {
   +expectedVersion: long
 }
 class ChangeDeliveryModeCommandHandler {
-  +handle(request: ChangeDeliveryModeCommand): Task<FeatureResult>
+  +handle(request: ChangeDeliveryModeCommand, ct: CancellationToken): Task
 }
 WorkspacesController ..> ChangeDeliveryModeCommand : dispatches
 ChangeDeliveryModeCommandHandler ..> ChangeDeliveryModeCommand : handles
@@ -87,6 +234,11 @@ class SprintReference {
 ActiveSprintProblem *-- SprintReference
 ChangeDeliveryModeCommandHandler --> Workspace : loads / applies
 ChangeDeliveryModeCommandHandler ..> ActiveSprintProblem : 409 while a sprint is active
-ChangeDeliveryModeCommandHandler ..> IMissionControlDataSession : uses
+ChangeDeliveryModeCommandHandler ..> IMissionControlDataSession : locks; loads; AddAuditEvent; SaveChangesAsync
 
+enum DeliveryMode {
+  Kanban
+  Scrum
+}
+Workspace --> DeliveryMode
 @enduml

@@ -14,9 +14,10 @@ skinparam package {
   BackgroundColor #F9FAFB
 }
 title Behavior - Deactivate or reactivate account
+skinparam maxMessageSize 300
 actor "Administrator" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "AccountStatusDialog / AccountView" as page
+  participant "AccountStatusDialog /\nAccountStatusForm" as page
   participant "IAccountService / AccountService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -32,21 +33,45 @@ box "Backend - MissionControl.Infrastructure" #FFF4E5
   participant "IAuditEventWriter" as audit
   database "Mission Control SQL" as db
 end box
+== Open: the form reads its account ==
+actor -> page : Choose Deactivate or Reactivate on a row or the details page; the dialog receives the account ID and the requested status
+page -> client : accountResource(GetAccountQuery { id }); the action stays disabled while it loads (loading)
+client -> access : GET /api/accounts/{id}, with the checks and handler of Read account details
+access --> client : 200 AccountDetail, 404, or a failure
+alt Account read
+  client --> page : The dialog names the account with its email and role; Deactivate account or Reactivate account enabled
+else Read failed: 500 or no response
+  client --> page : load-failed: alert with Try again (reload()), plus the reference ID when a 500 carried one; Cancel closes; the action stays disabled
+else 404
+  client --> page : Form emits notFound; the dialog closes with NotFound; the owning page increments its counter: the details page shows its not-found state with Back to accounts, and the directory shows the "Account not found" toast
+end
+== Submit ==
 actor -> page : Confirm Deactivate or Reactivate (dialog names the account)
-page -> page : Disable both buttons; show progress
-page -> client : Build typed ChangeAccountStatusCommand (id, active, expectedVersion)
+page -> page : Disable both buttons; show progress; draftChange reports pending
+page -> client : changeStatus(ChangeAccountStatusCommand: id, active, expectedVersion from the form's accountResource)
 client -> access : PUT /api/accounts/{id}/status
+alt No response: the connection dropped or the request timed out
+  client --> page : changeStatus() rejects with a no-response error; the change may or may not have been made
+  page -> page : AccountStatusForm emits unconfirmed (DraftState.unconfirmed until settled), which the dialog relays while it stays open; the owning page increments its counter at once, so the page behind rereads; keep both buttons disabled while the account is read again, so focus moves to the alert
+  page -> client : AccountStatusForm calls reload() on its accountResource once (GET /api/accounts/{id})
+  client --> page : Latest account details and version
+  alt The account already has the requested status
+    page --> actor : The change is in place: the form emits changed; the dialog closes with Changed(account) and the toast names the account and result
+  else Status unchanged
+    page --> actor : failed presentation with "We couldn't confirm the deactivation"; no reference ID; the action resends with the reloaded version only when chosen (a stale 409 on that repeat leaves out "Nothing was changed"); Cancel closes with no result, since the page behind already reread
+  end
+else Response received
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry (zero clock skew)
-access -> db : Read current status, role and credential version
+access -> db : LoadAccountAccessAsync: current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid or expired JWT; inactive or missing account; credential version changed
-  access -> audit : Append Denied audit (restricted append; no payload)
+  access -> audit : AppendRestrictedAsync(Denied); no payload
   access --> client : 401
-  client --> page : Clear in-memory session; open login (session-ended); nothing changed
-else Authenticated Collaborator (profile P: no account management)
-  access -> audit : Append Denied audit (restricted append; no payload)
+  client --> page : sessionInterceptor: end(Unauthorized) once for this generation; the promise rejects with its 401; login opens (session-ended); nothing changed
+else Authenticated Collaborator (profile P: no accounts.manage)
+  access -> audit : AppendRestrictedAsync(Denied); no payload
   access --> client : 403
-  client --> page : Show access-denied page; nothing changed
+  client --> page : refreshCapabilities() (deduplicated); AccountStatusForm emits forbidden; the dialog closes with Forbidden and the owning page calls showStatus(AccessDenied); nothing changed
 else Administrator
   access -> ctrl : Authorized request
   ctrl -> validation : Send ChangeAccountStatusCommand through MediatR 12.5.0
@@ -54,7 +79,7 @@ else Administrator
   alt Invalid request
     validation --> ctrl : 400 field errors; no business mutation
     ctrl --> client : Validation ProblemDetails
-    client --> page : Keep dialog open; show failed state with the message; nothing changed
+    client --> page : Keep the dialog open; show the API's message without Try again or a reference ID, since a resubmission would be refused again; nothing changed
   else Valid request
     validation -> handler : Handle ChangeAccountStatusCommand
     handler -> db : Load account by ID
@@ -62,26 +87,27 @@ else Administrator
     alt Account missing
       handler --> ctrl : 404; nothing changed
       ctrl --> client : NotFound ProblemDetails
-      client --> page : Close dialog; account detail shows not-found state with link back to Accounts
+      client --> page : Form emits notFound; the dialog closes with NotFound; the owning page increments its counter: the details page shows its not-found state with Back to accounts, and the directory shows the "Account not found" toast
     else Account found
       handler -> entity : L2-008 reject deactivation of the designated administrator -> 409
       entity --> handler : Allowed or protected
       alt Designated account and active = false
-        handler -> audit : Append Rejected audit via restricted append, outside any business transaction (L2-039.2)
+        handler -> audit : AppendRestrictedAsync(Rejected), outside any business transaction (L2-039.2)
         audit -> db : Insert audit event only
         handler --> ctrl : 409 protected-identity with explanation; account stays active
         ctrl --> client : Conflict ProblemDetails (protected-identity)
-        client --> page : blocked state: explain the designated administrator must stay active; Close only, no retry
+        client --> page : blocked state: the explanation (the designated administrator must stay active) fills the alert region and becomes the dialog description; Close only, no retry; focus moves to Close; the form emits outdated, so Close returns Outdated and the page rereads
       else Stored version differs from expectedVersion
         handler --> ctrl : 409 stale version; nothing changed
         ctrl --> client : Conflict ProblemDetails (stale)
-        client -> access : GET /api/accounts/{id} once (authorized as above)
-        access --> client : Latest account summary and version
-        client --> page : stale state: nothing changed; Review account opens the latest details; no resubmission
+        client --> page : Promise rejects with the stale 409
+        page -> client : AccountStatusForm emits outdated and calls reload() on its accountResource once (GET /api/accounts/{id}, authorized as above)
+        client --> page : Latest account details and version
+        page --> actor : stale state: the explanation fills the alert region and becomes the dialog description; focus moves to Review account; nothing changed; no resubmission; Review account emits reviewRequested: the dialog closes with Review, and AccountsPage navigates to /accounts/:id while AccountDetailPage increments its counter; Cancel returns Outdated
       else Permitted change at current version
         handler -> entity : L2-004 set active flag; password, role and assignments kept
         entity --> handler : Updated account
-        handler -> db : L2-039 / L2-040 update where version matches; success audit in the same transaction
+        handler -> db : L2-039 / L2-040 AddAuditEvent(success); SaveChangesAsync updates where version matches and commits both
         alt Racing save changed the version
           db --> handler : 0 rows; roll back update and audit
           handler --> ctrl : 409 stale version, handled as above
@@ -91,17 +117,18 @@ else Administrator
           db --> handler : Roll back business state and success audit
           handler --> ctrl : Generic 500 with correlation ID
           ctrl --> client : Failure; no successful-save claim
-          client --> page : failed state: nothing changed; reference ID; Try again repeats the request
+          client --> page : failed state: nothing changed; reference ID; Try again repeats the request (a busy 503 is shown the same way)
         else Commit succeeds
           db --> handler : New committed version
           handler --> ctrl : 200 with safe account summary and version
           ctrl --> client : Success response
-          client --> page : Close dialog; refresh account; toast names the account and result
+          client --> page : Form emits changed; the dialog closes with Changed(account); the owning page increments its counter and shows the "Account deactivated" or "Account reactivated" toast naming the account
           page --> actor : Deactivated account's tokens return 401 on their next request (L2-002.3)
         end
       end
     end
   end
+end
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).

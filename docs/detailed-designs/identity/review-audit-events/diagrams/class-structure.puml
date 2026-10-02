@@ -20,18 +20,65 @@ skinparam class {
   BackgroundColor #F9FAFB
 }
 class AuditLogPage {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
+  -refresh: WritableSignal<number>
 }
+note right of AuditLogPage
+  AuditEventView.refresh = refresh; no dialog,
+  so no outcome changes it. On forbidden:
+  inject(ApplicationShell).showStatus(AccessDenied).
+end note
 class AuditEventView {
+  +refresh: InputSignal<number>
+  +query: Signal<ListAuditEventsQuery>
+  -events: ResourceRef<AuditEventPage>
+  -actorSearch: WritableSignal<string>
+  -actorChoices: ResourceRef<AuditActorPage>
   +state: Signal<FeatureState>
-  +submit(): void
+  +applyFilters(filters: ListAuditEventsQuery): void
+  +searchActors(text: string): void
+  +retryActorSearch(): void
+  +goToPage(page: int): void
+  +forbidden: OutputEmitterRef<void>
 }
+note right of AuditEventView
+  Renders the filter bar and pager from components
+  controls. actorChoices reads ListAuditActorsQuery
+  from the actor text debounced ~250 ms; undefined
+  while the list is closed. Clearing the actor = Anyone.
+  A failed actor read shows a field message with
+  Retry = actorChoices.reload(), plus the reference ID
+  when a 500 carried one; filters and rows stay.
+  A refresh change rereads events. A 403 on either
+  read emits forbidden.
+end note
 interface IAuditEventService {
-  +read(request: ListAuditEventsQuery): Promise<FeatureResult>
+  +auditEventsResource(query: () => ListAuditEventsQuery | undefined): ResourceRef<AuditEventPage>
+  +actorChoicesResource(query: () => ListAuditActorsQuery | undefined): ResourceRef<AuditActorPage>
 }
 class AuditEventService {
   -http: HttpClient
+}
+note right of AuditEventService
+  One caller-owned resource per call; observable-to-signal
+  inside. A query change aborts the superseded request;
+  consumer destroy aborts the in-flight one.
+end note
+class AuditEventPage {
+  +items: AuditEventRow[]
+  +totalCount: int
+  +page: int
+  +pageSize: int
+}
+class AuditEventRow {
+  +id: Guid
+  +timestampUtc: DateTimeOffset
+  +actorId: Guid?
+  +actorName: string?
+  +operation: string
+  +entityType: string
+  +entityId: Guid?
+  +outcome: AuditOutcome
+  +correlationId: string
 }
 class AuditEventsController {
   -sender: ISender
@@ -41,17 +88,45 @@ class AuditEvent {
   +timestampUtc: DateTimeOffset
   +actorId: Guid?
   +operation: string
+  +area: AuditArea
   +entityType: string
   +entityId: Guid?
   +outcome: AuditOutcome
   +correlationId: string
 }
+note left of AuditEvent
+  Denied is appended before dispatch from audit
+  metadata each controller action declares beside
+  its capability policy: area, operation name,
+  entity type, and the route parameter holding the
+  entity ID. Areas: /api/sessions, /api/session ->
+  SignIn; /api/accounts*, /api/audit-events* ->
+  Accounts; /api/home/lead-coverage -> Leads;
+  /api/home/projects -> Projects;
+  /api/home/active-sprints -> Sprints; other
+  routes -> their feature's area. Work-item
+  routes declare WorkItem (no read before denial).
+end note
 enum AuditOutcome {
   Succeeded
   Rejected
   Denied
   Throttled
 }
+enum AuditArea {
+  SignIn
+  Accounts
+  Leads
+  Projects
+  WorkItems
+  Boards
+  Sprints
+}
+note right of AuditArea
+  Stored on every event by the operation
+  that records it; the Area filter offers
+  exactly these seven.
+end note
 note right of AuditOutcome
   Succeeded: committed with its business transaction.
   Rejected: 409 protected-identity change.
@@ -60,29 +135,37 @@ note right of AuditOutcome
   The last three use the restricted append.
 end note
 interface IAuditEventWriter {
-  +addToTransaction(event: AuditEvent): void
-  +appendRestricted(event: AuditEvent): Task<void>
+  +AppendRestrictedAsync(auditEvent: AuditEvent, ct: CancellationToken): Task
 }
-class AuditEventWriter {
-  -connection: DbConnection
-}
+note right of IAuditEventWriter
+  Denied, Throttled and Rejected only,
+  outside any business transaction.
+end note
+class AuditEventWriter <<Infrastructure>>
 interface IMissionControlDataSession {
-  +query(specification): Task<ReadResult>
-  +commit(expectedVersion: long): Task<void>
+  +ListAuditEventsAsync(query: ListAuditEventsQuery, ct: CancellationToken): Task<AuditEventPage>
+  +ListAuditActorsAsync(query: ListAuditActorsQuery, ct: CancellationToken): Task<AuditActorPage>
+  +AddAuditEvent(auditEvent: AuditEvent): void
 }
-class MissionControlDataSession {
-  -connection: DbConnection
-}
+note right of IMissionControlDataSession
+  Scoped view of the shared port. Rows and total come
+  from one statement with a window count. Mutation
+  handlers call AddAuditEvent; their SaveChangesAsync
+  commits the Succeeded event with the change.
+end note
 AuditLogPage --> AuditEventView : composes
 AuditEventView ..> IAuditEventService : inject token
 IAuditEventService <|.. AuditEventService
-IMissionControlDataSession <|.. MissionControlDataSession
+IAuditEventService --> AuditEventPage
+AuditEventPage *-- AuditEventRow
+AuditEventRow --> AuditOutcome
 IAuditEventWriter <|.. AuditEventWriter
 AuditEvent --> AuditOutcome : outcome
+AuditEvent --> AuditArea : area
 AuditEventWriter ..> AuditEvent : inserts only
 class ListAuditEventsQuery {
   +actorId: Guid?
-  +area: string?
+  +area: AuditArea?
   +outcome: AuditOutcome?
   +from: DateOnly?
   +to: DateOnly?
@@ -90,12 +173,41 @@ class ListAuditEventsQuery {
   +pageSize: int
 }
 class ListAuditEventsQueryHandler {
-  +handle(request: ListAuditEventsQuery): Task<FeatureResult>
+  +handle(request: ListAuditEventsQuery, ct: CancellationToken): Task<AuditEventPage>
 }
 AuditEventsController ..> ListAuditEventsQuery : dispatches
 ListAuditEventsQueryHandler ..> ListAuditEventsQuery : handles
-ListAuditEventsQueryHandler --> AuditEvent : loads / applies
+ListAuditEventsQueryHandler --> AuditEventPage : returns
 ListAuditEventsQueryHandler ..> IMissionControlDataSession : uses
 ListAuditEventsQuery --> AuditOutcome : filter
+ListAuditEventsQuery --> AuditArea : filter
+class ListAuditActorsQuery {
+  +search: string?
+  +page: int
+  +pageSize: int
+}
+class ListAuditActorsQueryHandler {
+  +handle(request: ListAuditActorsQuery, ct: CancellationToken): Task<AuditActorPage>
+}
+class AuditActorPage {
+  +items: AuditActorChoice[]
+  +totalCount: int
+  +page: int
+  +pageSize: int
+}
+class AuditActorChoice {
+  +id: Guid
+  +displayName: string
+}
+note bottom of AuditActorChoice
+  Every account, inactive included;
+  display name then ID; 25 default, 100 max.
+end note
+AuditEventsController ..> ListAuditActorsQuery : dispatches
+ListAuditActorsQueryHandler ..> ListAuditActorsQuery : handles
+ListAuditActorsQueryHandler --> AuditActorPage : returns
+ListAuditActorsQueryHandler ..> IMissionControlDataSession : uses
+AuditActorPage *-- AuditActorChoice
+IAuditEventService --> AuditActorPage
 
 @enduml

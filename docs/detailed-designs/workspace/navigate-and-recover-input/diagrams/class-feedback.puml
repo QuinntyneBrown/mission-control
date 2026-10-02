@@ -1,0 +1,215 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Class structure - Toasts, connectivity, and status pages
+left to right direction
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+package "frontend/projects/mission-control" {
+  class ApplicationShell {
+    +status: Signal<ShellStatus?>
+    +showStatus(kind: StatusKind, referenceId?: string): void
+    +retryOffline(): void
+  }
+  note right of ApplicationShell
+    Hosts ToastRegion and passes it TOAST_SERVICE toasts();
+    on actionChosen(id) runs that toast's action, and on
+    dismissed(id) calls dismiss(id). ToastRegion renders
+    in the overlay layer above any open dialog, outside
+    the inert background; below 576px above a sheet's
+    pinned footer. Its actions are reachable once the
+    dialog closes.
+    Shows the offline banner while offline(); content on
+    screen stays. retryOffline() navigates to the reload
+    route with skipLocationChange, then back to the
+    current URL: leaving passes through
+    UnsavedChangesGuard (Stay cancels), and the route's
+    guards and views are created and read again.
+    While status() is set, renders ShellStatusView in place
+    of the routed content with the role's destinations;
+    showStatus() records the current URL as attempted; the
+    next navigation clears status when it starts; retry
+    navigates to the attempted URL with
+    onSameUrlNavigation 'reload', so route matching and
+    guards run again even at the same URL.
+  end note
+  class ShellStatus {
+    +kind: StatusKind
+    +referenceId: string?
+    +attemptedUrl: string
+  }
+  class RouteContext <<root provider>> {
+    +status: WritableSignal<ShellStatus?>
+  }
+  note right of RouteContext
+    Scoped view: holds the shell status so that
+    PermissionGuard, which runs before any component
+    exists, can set it without injecting the shell.
+  end note
+  class PermissionGuard {
+    +canActivate(path: string): Promise<bool | UrlTree>
+  }
+  note right of PermissionGuard
+    Denied: status AccessDenied; returns false.
+    Refresh failed, no summary held, capability route:
+    status Error (reference ID) or Offline; returns false.
+  end note
+  class BoardModeGuard {
+    +canMatch(route: Route, segments: UrlSegment[]): Promise<boolean | UrlTree>
+  }
+  note right of BoardModeGuard
+    Scoped view; owned by projects/manage-workspaces.
+    Mode read 404: redirect to overview. 500 or 503:
+    status Error (reference ID); no response: Offline;
+    returns false, leaving the router at the board URL
+    on the ** route with that status. Try again runs
+    the match again.
+  end note
+  class "** route" as NotFoundRoute <<route>>
+  note right of NotFoundRoute
+    Last child route of the shell: renders ShellStatusView
+    with kind NotFound and Home, Projects, Leads from its
+    route data, for an address matching no client route.
+    After a declined BoardModeGuard match the status set
+    by that guard shows in place of NotFound.
+  end note
+  class "reload route" as ReloadRoute <<route>>
+  note right of ReloadRoute
+    Componentless child route of the shell (path reload,
+    children [], no guard); renders nothing. Reached only
+    by retryOffline() with skipLocationChange.
+  end note
+  class "Capability page\n(AccountsPage, AccountDetailPage,\nAuditLogPage)" as CapabilityPage
+  note right of CapabilityPage
+    On its view's forbidden output (a 403):
+    inject(ApplicationShell).showStatus(AccessDenied).
+  end note
+  class "Routed page\n(e.g. KanbanBoardPage)" as RoutedPage
+  note right of RoutedPage
+    Calls show(toast) after an outcome, for example
+    a committed save or a failed board move. An
+    unexpected 403 on an operation that needs only an
+    active session: the caller restores its saved state
+    and the page shows "Your access changed" (no Retry;
+    its one action is Go to Home).
+  end note
+}
+package "frontend/projects/components" {
+  class ToastRegion {
+    +toasts: InputSignal<ToastItem[]>
+    +dismissed: OutputEmitterRef<string>
+    +actionChosen: OutputEmitterRef<string>
+  }
+  note right of ToastRegion
+    Presentational. Declares its own ToastItem input
+    shape; the api Toast matches it structurally, so
+    no project is imported. Two persistent live
+    containers: polite status for success and info,
+    alert for errors and warnings; a toast carries no
+    role and never takes focus. Owns the timing: a
+    Success or Info toast without an action emits
+    dismissed after 8 s, paused while hovered or
+    focused; Error, Warning and action toasts stay
+    until dismissed.
+  end note
+  class ShellStatusView {
+    +kind: InputSignal<StatusKind>
+    +referenceId: InputSignal<string?>
+    +destinations: InputSignal<ShellDestination[]>
+    +retry: OutputEmitterRef<void>
+  }
+  note right of ShellStatusView
+    Presentational: not-found, access-denied, error
+    (with reference ID) and offline pages. Try again
+    (Error, Offline) emits retry. Declares its own
+    input types; imports no other project.
+  end note
+  enum StatusKind {
+    NotFound
+    AccessDenied
+    Error
+    Offline
+  }
+  class ShellDestination {
+    +label: string
+    +path: string
+  }
+}
+package "frontend/projects/api" {
+  interface IToastService {
+    +toasts: Signal<Toast[]>
+    +show(toast: Toast): void
+    +dismiss(id: string): void
+  }
+  class ToastService
+  note right of ToastService
+    toast.service.contract.ts holds IToastService and
+    TOAST_SERVICE. Root signal of visible toasts:
+    at most three (proposed; a fourth removes the
+    oldest), cleared when the session ends (end()),
+    so no toast text outlives its session.
+  end note
+  class Toast {
+    +id: string
+    +tone: ToastTone
+    +title: string
+    +text: string | null
+    +referenceId: string | null
+    +action: ToastAction | null
+  }
+  class ToastAction {
+    +label: string
+    +run(): void
+  }
+  enum ToastTone {
+    Success
+    Info
+    Warning
+    Error
+  }
+  interface ISessionService {
+    +offline: Signal<bool>
+  }
+  note right of ISessionService
+    Scoped view: only the member feedback uses.
+    sessionInterceptor sets offline when a request gets
+    no response and clears it on the next response.
+    There is no separate offline toast.
+  end note
+}
+ApplicationShell --> ToastRegion : hosts; passes toasts()
+ApplicationShell --> ShellStatusView : renders while status() is set; handles retry
+ApplicationShell --> RouteContext : status() reads; showStatus() sets
+ApplicationShell ..> IToastService : inject TOAST_SERVICE
+ApplicationShell ..> ISessionService : offline()
+PermissionGuard --> RouteContext : sets status
+BoardModeGuard --> RouteContext : sets status (Error or Offline)
+NotFoundRoute --> ShellStatusView : renders (NotFound)
+ApplicationShell ..> ReloadRoute : retryOffline() passes through
+CapabilityPage ..> ApplicationShell : showStatus(AccessDenied)
+RoutedPage ..> IToastService : show(toast)
+RouteContext --> ShellStatus
+ShellStatus --> StatusKind
+ShellStatusView --> StatusKind
+ShellStatusView --> ShellDestination
+IToastService <|.. ToastService
+IToastService --> Toast
+Toast --> ToastTone
+Toast --> ToastAction
+ToastService ..> ISessionService : clears on end()
+@enduml

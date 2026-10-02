@@ -23,6 +23,7 @@
         <select data-mock-state>
           <option value="default">Stories in progress</option>
           <option value="zero-results">Zero results</option>
+          <option value="filter-invalid">Filter in the link not recognized</option>
           <option value="loading">Loading</option>
           <option value="error">Load failed</option>
         </select>
@@ -32,10 +33,11 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">Opened from a Home count ("Stories · In Progress"). Type and status filters apply on change, reset to page 1, and announce the result count. Totals come from all records, 25 per page. The project header and tabs stay pinned while the tab content scrolls; on phones only the tabs stay pinned.</p>
-    <p class="mock-note" data-when="zero-results" hidden>No initiatives are Done in this project. Clear filters shows all work.</p>
+    <p class="mock-note" data-when="default">Opened from a Home count ("Stories · In Progress"). Each row names its parent, here the story's epic. Type and status filters apply on change, reset to page 1, and announce the result count. Rows from different parents follow the outline order: initiative, then epic, story, and task positions, then ID, so Volunteers can join a build team and Mentor matching survey (Hackathon team formation) come before the Venue and logistics stories. Totals come from all records, 25 per page. The project header and tabs stay pinned while the tab content scrolls; on phones only the tabs stay pinned.</p>
+    <p class="mock-note" data-when="zero-results" hidden>No initiatives are Done in this project. Screen readers hear "No initiatives are Done yet. 0 results." from the results status. Clear filters shows all work.</p>
+    <p class="mock-note" data-when="filter-invalid" hidden>The link asked for a status this list doesn't have (here status=blocked, typed into the address), so the API answered 400 with a field message instead of a list. The page says why the filter can't apply and offers Clear filter, which removes the status filter and shows page 1. Nothing failed on the server, so there is no Try again and no reference ID. Screen readers hear the explanation. An unknown type, or a page or page size outside the allowed range, is handled the same way with its own message.</p>
     <p class="mock-note" data-when="loading" hidden>The list keeps its filters while results load. Screen readers hear "Loading work".</p>
-    <p class="mock-note" data-when="error" hidden>The list couldn't load; the filters are kept. The reference ID matches the server's diagnostic record; Try again reruns the same filtered request.</p>
+    <p class="mock-note" data-when="error" hidden>The list couldn't load (a 500, a busy 503, or no response); the filters are kept. Try again reruns the same filtered request, and the project header rereads with it in case it failed too. The reference ID appears only when the server answered and matches its diagnostic record; with no response there is none. A project that no longer exists, from a stale link or deleted after the list opened (a 404 on a filter or page change, or a reload), is not a load failure: the header keeps only the breadcrumb and the list shows "Project not found" with Back to projects and no Try again or reference ID, the same presentation as the <a href="../projects/project-overview.html#state=not-found">project overview's Not found state</a>.</p>
   </div>
 
   <div class="mc-app">
@@ -118,7 +120,7 @@
               <h1 class="mc-page-header__title" tabindex="-1">Community Hackathon 2026</h1>
               <div class="mc-page-header__meta">
                 <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
-                <span>Responsible lead: <a href="../leads/lead-detail.html#state=lead">Rafael Da Silva</a></span>
+                <span>Responsible lead: <a href="../leads/lead-detail.html#state=lead-rafael">Rafael Da Silva</a></span>
               </div>
             </div>
             <div class="mc-page-header__actions">
@@ -168,7 +170,7 @@
               <select class="mc-select" id="work-status">
                 <option>All statuses</option>
                 <option>To Do</option>
-                <option selected data-attr-zero-results="!selected">In Progress</option>
+                <option selected data-attr-zero-results="!selected" data-attr-filter-invalid="!selected">In Progress</option>
                 <option data-attr-zero-results="selected">Done</option>
               </select>
             </span>
@@ -177,10 +179,12 @@
 
         <div class="mc-live" role="status" aria-live="polite">
           <div class="mc-results-meta" data-when="default">
-            <span><strong>4 stories in progress</strong> in Community Hackathon 2026</span>
+            <span><strong>4 stories in progress</strong></span>
             <a class="mc-link" href="work-hierarchy.html">Back to the outline</a>
           </div>
           <p class="mc-visually-hidden" data-when="loading" hidden>Loading work</p>
+          <p class="mc-visually-hidden" data-when="zero-results" hidden>No initiatives are Done yet. 0 results.</p>
+          <p class="mc-visually-hidden" data-when="filter-invalid" hidden>Blocked isn't a status, so the list can't be filtered by it</p>
         </div>
 
         <section aria-label="Matching work" data-when="default">
@@ -188,7 +192,7 @@
               <li class="mc-list__item">
                 <div class="mc-list__main">
                   <a class="mc-list__title" href="work-item-detail.html">Volunteers can join a build team</a>
-                  <div class="mc-list__meta"><span>HCK-112</span><span>Grow Toronto's builder community › Hackathon team formation</span></div>
+                  <div class="mc-list__meta"><span>HCK-112</span><span>Hackathon team formation</span></div>
                 </div>
                 <div class="mc-list__aside">
                   <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span>
@@ -199,7 +203,7 @@
               <li class="mc-list__item">
                 <div class="mc-list__main">
                   <a class="mc-list__title" href="work-item-detail.html">Mentor matching survey</a>
-                  <div class="mc-list__meta"><span>HCK-110</span><span>Grow Toronto's builder community › Hackathon team formation</span></div>
+                  <div class="mc-list__meta"><span>HCK-110</span><span>Hackathon team formation</span></div>
                 </div>
                 <div class="mc-list__aside">
                   <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span>
@@ -210,7 +214,7 @@
               <li class="mc-list__item">
                 <div class="mc-list__main">
                   <a class="mc-list__title" href="work-item-detail.html">Venue floor plan with accessible routes</a>
-                  <div class="mc-list__meta"><span>HCK-129</span><span>Grow Toronto's builder community › Venue and logistics</span></div>
+                  <div class="mc-list__meta"><span>HCK-129</span><span>Venue and logistics</span></div>
                 </div>
                 <div class="mc-list__aside">
                   <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span>
@@ -221,7 +225,7 @@
               <li class="mc-list__item">
                 <div class="mc-list__main">
                   <a class="mc-list__title" href="work-item-detail.html">Book AV for demo day</a>
-                  <div class="mc-list__meta"><span>HCK-121</span><span>Grow Toronto's builder community › Venue and logistics</span></div>
+                  <div class="mc-list__meta"><span>HCK-121</span><span>Venue and logistics</span></div>
                 </div>
                 <div class="mc-list__aside">
                   <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span>
@@ -238,9 +242,18 @@
         <div class="mc-empty mc-empty--neutral mc-empty--compact" data-when="zero-results" hidden>
           <span class="mc-empty__icon"><span class="mc-icon mc-icon--search mc-icon--lg" aria-hidden="true"></span></span>
           <h2 class="mc-empty__title">No initiatives are Done yet</h2>
-          <p class="mc-empty__text">Community Hackathon 2026 has 2 initiatives: 1 To Do and 1 In Progress.</p>
+          <p class="mc-empty__text">Try another status, or clear the filters to see all work.</p>
           <div class="mc-empty__actions">
             <button class="mc-button" type="button" data-goto-state="default">Clear filters</button>
+          </div>
+        </div>
+
+        <div class="mc-empty mc-empty--neutral mc-empty--compact" data-when="filter-invalid" hidden>
+          <span class="mc-empty__icon"><span class="mc-icon mc-icon--search mc-icon--lg" aria-hidden="true"></span></span>
+          <h2 class="mc-empty__title">Can't filter by this status</h2>
+          <p class="mc-empty__text">Blocked isn't a status, so the list can't be filtered by it. Statuses are To Do, In Progress, and Done. Clear the filter to see every story.</p>
+          <div class="mc-empty__actions">
+            <button class="mc-button" type="button" data-goto-state="default">Clear filter</button>
           </div>
         </div>
 

@@ -1,0 +1,403 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam ArrowColor #344054
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+skinparam class {
+  BorderColor #344054
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+set separator none
+left to right direction
+title Frontend classes - Create and navigate the work hierarchy
+package "frontend/projects/mission-control" {
+  interface FormDraft {
+    +draft: Signal<DraftState>
+  }
+  note top of FormDraft
+    Defined by Navigate with context and preserve
+    form input; UnsavedChangesGuard is the
+    canDeactivate of every route below.
+  end note
+  class ProjectLayoutPage {
+    +canDeleteWork: Signal<boolean>
+    +revision: Signal<number>
+    +draft: Signal<DraftState>
+    +refresh(): void
+    +setTabAction(action: TabAction?): void
+  }
+  note top of ProjectLayoutPage
+    Owned by Create and manage project workspaces.
+    The three work pages are its child routes work,
+    work-list, and work/:itemId; the pinned header
+    and tabs render on each, Work tab active.
+    canDeleteWork = work.delete, computed beside
+    canManageWorkspace and canChangeMode. draft is
+    its own open dialog's; a child page's draft
+    falls back to it. Its route has no
+    canDeactivate, so leaving a project asks once.
+  end note
+  class WorkHierarchyPage {
+    +workspaceId: Signal<Guid>
+    -layout: ProjectLayoutPage
+    -revision: WritableSignal<number>
+    +openForm(context: WorkItemFormContext): void
+    +onAction(action: WorkItemAction): void
+    +openMovePosition(target: MoveTarget): void
+  }
+  class WorkListPage {
+    +filters: Signal<WorkFilters>
+    -layout: ProjectLayoutPage
+    -revision: WritableSignal<number>
+    +openForm(context: WorkItemFormContext): void
+    +onFiltersRequested(filters: WorkFilters): void
+  }
+  class WorkItemDetailPage {
+    +workItemId: Signal<Guid>
+    -layout: ProjectLayoutPage
+    -revision: WritableSignal<number>
+    -decision: Signal<CompletionDecision?>
+    +openForm(context: WorkItemFormContext): void
+    +onAction(action: WorkItemAction): void
+    +openMovePosition(target: MoveTarget): void
+  }
+  note bottom of WorkItemDetailPage
+    Each page implements FormDraft by delegating
+    to its open dialog, else to layout.draft(),
+    passes layout.canDeleteWork() to its view, and
+    binds the view's refresh to revision() plus
+    layout.revision(). WorkItemFormOutcome: Saved
+    increments revision and shows the "Story added"
+    toast naming title and parentTitle, or "Changes
+    saved", through TOAST_SERVICE;
+    NotFound calls layout.refresh() (the detail page
+    also opens the work outline). A dialog's
+    unconfirmed increments revision at once. The
+    view's retryRequested, and its first notFound
+    only (a workspace 404), call layout.refresh().
+    An unexpected 403 (forbidden, completion
+    Forbidden, or a dialog's forbidden, including
+    SprintScopeDialog's in remove mode) shows the
+    "Your access changed" toast, without Retry.
+    BacklogPage,
+    ProjectOverviewPage, KanbanBoardPage, and
+    SprintBoardPage also open WorkItemFormDialog for
+    Add. A tab page registers the header's Add
+    through setTabAction({ label, run }). A change
+    of :itemId reuses the detail page but runs its
+    guard; once it completes, the page closes its
+    open dialog with no result; for
+    UnfinishedTasksDialog it relays kept through
+    completionDecision, so the view drops the old
+    item's pending completion without a request.
+  end note
+  class WorkItemFormDialog {
+    +context: InputSignal<WorkItemFormContext>
+    +draft: Signal<DraftState>
+    +unconfirmed: OutputEmitterRef<void>
+    +forbidden: OutputEmitterRef<void>
+    +close(result: WorkItemFormOutcome?): void
+  }
+  class WorkItemFormOutcome {
+    +kind: Saved | NotFound
+    +saved: WorkItemSaved?
+    +title: string?
+    +parentTitle: string?
+  }
+  note bottom of WorkItemFormOutcome
+    Saved(saved, title, parentTitle) from the
+    form's saved WorkItemSavedResult; NotFound on
+    notFound; no result: dismissed. The form's
+    unconfirmed and forbidden are relayed as the
+    dialog's own outputs while it stays open.
+  end note
+  class UnfinishedTasksDialog {
+    +prompt: InputSignal<CompletionPrompt>
+    +confirmed: OutputEmitterRef<StoryCompletionCondition>
+    +kept: OutputEmitterRef<void>
+    +close(result: UnfinishedTasksOutcome?): void
+  }
+  note bottom of UnfinishedTasksDialog
+    Owned by Confirm story completion.
+    UnfinishedTasksOutcome: Settled or Forbidden;
+    Escape is Keep in progress (kept). On either
+    outcome focus returns to the status control.
+    Closed with no result by a navigation: the page
+    relays kept, so no request is sent.
+  end note
+  class ReparentDialog
+  class WorkItemDeleteDialog
+  class MovePositionDialog
+}
+package "frontend/projects/domain" {
+  class WorkHierarchyView {
+    +workspaceId: InputSignal<Guid>
+    +canDeleteWork: InputSignal<boolean>
+    +refresh: InputSignal<number>
+    +addRequested: OutputEmitterRef<WorkItemFormContext>
+    +actionRequested: OutputEmitterRef<WorkItemAction>
+    +movePositionRequested: OutputEmitterRef<MoveTarget>
+    +forbidden: OutputEmitterRef<void>
+    +retryRequested: OutputEmitterRef<void>
+    +notFound: OutputEmitterRef<void>
+  }
+  class WorkHierarchyBranch {
+    +parentId: InputSignal<Guid?>
+    +canDeleteWork: InputSignal<boolean>
+    +refresh: InputSignal<number>
+    +addRequested: OutputEmitterRef<WorkItemFormContext>
+    +actionRequested: OutputEmitterRef<WorkItemAction>
+    +movePositionRequested: OutputEmitterRef<MoveTarget>
+    +forbidden: OutputEmitterRef<void>
+    +retryRequested: OutputEmitterRef<void>
+    +notFound: OutputEmitterRef<void>
+    -page: Signal<int>
+    -batch: ResourceRef<WorkItemPage>
+    -rows: Signal<WorkItemSummary[]>
+    -totalCount: Signal<int>
+    -orderVersion: Signal<long?>
+    +loadMore(): void
+  }
+  class WorkListView {
+    +filters: InputSignal<WorkFilters>
+    +refresh: InputSignal<number>
+    +filtersRequested: OutputEmitterRef<WorkFilters>
+    +retryRequested: OutputEmitterRef<void>
+    +notFound: OutputEmitterRef<void>
+    -items: ResourceRef<WorkItemPage>
+  }
+  class WorkItemDetailView {
+    +workItemId: InputSignal<Guid>
+    +canDeleteWork: InputSignal<boolean>
+    +refresh: InputSignal<number>
+    +completionDecision: InputSignal<CompletionDecision?>
+    +addRequested: OutputEmitterRef<WorkItemFormContext>
+    +actionRequested: OutputEmitterRef<WorkItemAction>
+    +movePositionRequested: OutputEmitterRef<MoveTarget>
+    +completionStatus: OutputEmitterRef<CompletionStatus>
+    +forbidden: OutputEmitterRef<void>
+    +retryRequested: OutputEmitterRef<void>
+    +notFound: OutputEmitterRef<void>
+    -detail: ResourceRef<WorkItemDetail>
+    -childPage: Signal<int>
+    -children: ResourceRef<WorkItemPage>
+    -childRows: Signal<WorkItemSummary[]>
+    -statusRequests: Signal<Map<Guid, FeatureState<WorkItemSaved>>>
+    +setStatus(itemId: Guid, status: WorkStatus): Promise<void>
+    +loadMoreChildren(): void
+  }
+  class WorkItemForm {
+    +context: InputSignal<WorkItemFormContext>
+    +saved: OutputEmitterRef<WorkItemSavedResult>
+    +notFound: OutputEmitterRef<void>
+    +unconfirmed: OutputEmitterRef<void>
+    +forbidden: OutputEmitterRef<void>
+    +draftChange: OutputEmitterRef<DraftState>
+    -draft: Signal<WorkItemDraft>
+    -parentSearch: Signal<string>
+    -parentQuery: Signal<GetWorkItemsQuery | undefined>
+    -parentChoices: ResourceRef<WorkItemPage>
+    -assigneeQuery: Signal<ListAssigneeChoicesQuery | undefined>
+    -assigneeChoices: ResourceRef<AssigneeChoicePage>
+    -submit: Signal<FeatureState<WorkItemSaved>>
+  }
+  class WorkItemFormContext {
+    +workspaceId: Guid
+    +type: WorkItemType
+    +parent: ParentChoice?
+    +itemId: Guid?
+  }
+  class WorkItemSavedResult {
+    +saved: WorkItemSaved
+    +title: string
+    +parentTitle: string | null
+  }
+  note bottom of WorkItemSavedResult
+    The API returns WorkItemSaved (ID and
+    version); the form adds the saved title and
+    the chosen parent's title (null for an
+    initiative) from the draft it sent, which
+    the opener's toast names.
+  end note
+  class ParentChoice {
+    +id: Guid
+    +title: string
+    +sprint: SprintReference?
+  }
+  class WorkItemAction {
+    +kind: Edit | Reparent | Delete
+    +target: WorkItemTarget
+  }
+  class WorkItemTarget {
+    +workspaceId: Guid
+    +itemId: Guid
+    +type: WorkItemType
+    +key: string
+    +title: string
+    +parentId: Guid?
+    +parentTitle: string?
+    +scopeSummary: ScopeStorySummary?
+  }
+  class ScopeStorySummary {
+    +storyId: Guid
+    +key: string
+    +title: string
+    +status: WorkStatus
+    +assigneeName: string?
+    +completedTasks: int
+    +totalTasks: int
+    +estimate: int?
+  }
+  note bottom of ScopeStorySummary
+    Defined by Start a sprint and change its
+    active scope. Stories only: the branch fills it
+    from WorkItemSummary, the detail view from
+    WorkItemDetail (done-child and child counts,
+    storyEstimate).
+  end note
+  note bottom of WorkItemForm
+    parentSearch is debounced about 250 ms into
+    parentQuery: the required parent type in this
+    workspace and the typed text, bounded pages.
+    context.parent is preselected; a task's hint
+    names that story's sprint. draftChange reports
+    dirty, pending, unconfirmed, and a summary
+    (null for Add).
+    Zero parent matches: "No epics match"; a failed
+    parent search: field-level Retry (reload()), the
+    reference ID only after 500/503, choice and draft
+    kept. A create with no response keeps every value,
+    says it couldn't confirm, and emits unconfirmed.
+  end note
+  note bottom of WorkHierarchyBranch
+    One instance per expanded branch. Collapse
+    destroys it: loaded descendants are released
+    and its read is cancelled. refresh rereads the
+    loaded window. totalCount and orderVersion come
+    from the response, never from rows; Move up and
+    Move down use them (prioritize). Batches of 25.
+    Re-emits its child branches' outputs. When a
+    reread drops the row whose action opened a
+    dialog, or a Move up or Move down 404 with no
+    dialog open drops its row, focus moves to the
+    parent row, or to the Work heading for an
+    initiative. A read 404
+    (only a missing workspace; an unknown parentId
+    returns an empty page) emits notFound; the view
+    then shows Project not found. The root branch
+    (no parentId) reads with type Initiative, so its
+    page is the initiatives' sibling set with their
+    orderVersion; it renders the outline's skeleton,
+    its empty state (Add initiative emits
+    addRequested), and its load-failed state (Try
+    again emits retryRequested, which the view
+    relays); a child branch shows a failed read as
+    the batch alert with Retry (reload()).
+  end note
+}
+package "frontend/projects/api" {
+  interface "ResourceRef<T>" as ResourceRef {
+    +value: Signal<T | undefined>
+    +status: Signal<loading | resolved | error>
+    +error: Signal<unknown>
+    +reload(): void
+  }
+  interface IWorkItemService {
+    +workItemsResource(query: () => GetWorkItemsQuery | undefined): ResourceRef<WorkItemPage>
+    +workItemResource(query: () => GetWorkItemQuery | undefined): ResourceRef<WorkItemDetail>
+    +create(command: CreateWorkItemCommand): Promise<WorkItemSaved>
+    +update(command: UpdateWorkItemCommand): Promise<WorkItemSaved>
+    +complete(command: CompleteStoryCommand): Promise<CompleteStoryResult>
+  }
+  class WorkItemService {
+    -http: HttpClient
+  }
+  interface IAssigneeService {
+    +assigneeChoicesResource(query: () => ListAssigneeChoicesQuery | undefined): ResourceRef<AssigneeChoicePage>
+  }
+  class AssigneeService {
+    -http: HttpClient
+  }
+  interface IToastService {
+    +show(toast: Toast): void
+  }
+  note bottom of WorkItemService
+    Creates each resource in the consumer's injection
+    context; aborts a superseded read when the query
+    signal changes and cancels on consumer destroy.
+    Mutations return promises; no RxJS type leaves api.
+  end note
+}
+note right of WorkItemDetailView
+  Its status control sends complete for a story set
+  to Done and reports each attempt through
+  completionStatus; the page opens
+  UnfinishedTasksDialog and relays its choice through
+  completionDecision (Confirm story completion).
+  Every other status change, from that control or a
+  task row, is setStatus: update with only the status
+  and that item's version. Success reloads detail and
+  children; a stale 409 reloads them once; 500 or 503
+  restores the status with the reference ID and
+  Try again; no response reloads them once and says
+  it couldn't confirm (complete: Settled); an
+  unexpected 403 restores it and emits forbidden
+  (complete: completionStatus Forbidden). refresh
+  rereads the detail and children. A 404 with
+  category item-not-found, or with no category (a
+  malformed ID the {id:guid} route constraint
+  rejected), shows the item's not-found state; the
+  layout's header read decides whether the project
+  exists. workspace-not-found shows
+  Project not found and emits notFound. A status
+  change or completion 404 rereads the detail and
+  children once, and that read's category decides;
+  a deleted task leaves the list, and focus moves
+  to the Tasks heading.
+end note
+WorkHierarchyPage ..> ProjectLayoutPage : canDeleteWork, revision, draft; registers Add initiative
+WorkListPage ..> ProjectLayoutPage : revision, draft; registers Add initiative
+WorkItemDetailPage ..> ProjectLayoutPage : canDeleteWork, revision, draft
+WorkHierarchyPage ..> IToastService : inject TOAST_SERVICE
+WorkItemDetailPage ..> IToastService : inject TOAST_SERVICE
+WorkListPage ..> IToastService : inject TOAST_SERVICE
+WorkHierarchyPage ..|> FormDraft
+WorkListPage ..|> FormDraft
+WorkItemDetailPage ..|> FormDraft
+WorkItemFormDialog ..|> FormDraft
+WorkHierarchyPage --> WorkHierarchyView : composes
+WorkListPage --> WorkListView : composes
+WorkItemDetailPage --> WorkItemDetailView : composes
+WorkHierarchyPage ..> WorkItemFormDialog : opens on Add or Edit
+WorkListPage ..> WorkItemFormDialog : opens on Add initiative
+WorkItemDetailPage ..> WorkItemFormDialog : opens on Add or Edit
+WorkHierarchyPage ..> ReparentDialog : opens on Reparent
+WorkHierarchyPage ..> WorkItemDeleteDialog : opens on Delete
+WorkHierarchyPage ..> MovePositionDialog : opens on movePositionRequested
+WorkItemDetailPage ..> UnfinishedTasksDialog : opens when completionStatus asks; relays its choice as completionDecision
+WorkItemFormDialog --> WorkItemForm : hosts; inputs and outputs only
+WorkItemFormDialog ..> WorkItemFormOutcome : close(result)
+WorkHierarchyView --> WorkHierarchyBranch : renders the root
+WorkHierarchyBranch --> WorkHierarchyBranch : one per expanded child; re-emits its outputs
+WorkHierarchyBranch .[norank].> WorkItemAction : emits
+WorkItemAction -[norank]-> WorkItemTarget
+WorkItemTarget -[norank]-> ScopeStorySummary : stories
+WorkItemForm ..> WorkItemFormContext : input
+WorkItemForm ..> WorkItemSavedResult : saved
+WorkItemFormContext -[norank]-> ParentChoice
+WorkHierarchyBranch ..> IWorkItemService : inject WORK_ITEM_SERVICE
+WorkListView ..> IWorkItemService : inject WORK_ITEM_SERVICE
+WorkItemDetailView ..> IWorkItemService : inject WORK_ITEM_SERVICE
+WorkItemForm ..> IWorkItemService : inject WORK_ITEM_SERVICE
+WorkItemForm ..> IAssigneeService : inject ASSIGNEE_SERVICE
+IWorkItemService <|.. WorkItemService
+IAssigneeService <|.. AssigneeService
+IWorkItemService ..> ResourceRef : returns per consumer
+@enduml

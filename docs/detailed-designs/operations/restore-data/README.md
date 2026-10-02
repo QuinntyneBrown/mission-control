@@ -13,11 +13,11 @@ This design refines the [L2 baseline](../../../specs/L2.md) and its linked L1 sc
 
 ## Description
 
-All named parts are proposed; the repository currently contains requirements, designs, and static mocks.
+The [shared design rules](../../README.md#shared-design-rules) apply: proposed type status, Application placement and MediatR `12.5.0`, authentication and validation V, responsive profile R and accessibility, token styling, data ownership and session handling, and incremental ATDD. This page records feature-specific behavior and exceptions only.
 
 | Part | Responsibility and architectural home |
 | --- | --- |
-| `MissionControl.Operations` | Release-tooling .NET console project under `backend/src`. Microsoft.Extensions Hosting supplies DI, Options, and Configuration; it references no other Mission Control project. |
+| `MissionControl.Operations` | Release-tooling .NET console project under `backend/src`, hosted with the Microsoft.Extensions generic host; it references no other Mission Control project. |
 | `OperationsConsole` | Entry point in `MissionControl.Operations`; binds options, runs one verb (`backup` or `restore` here), and writes the resulting `RecoveryRecord`. |
 | `CaptureBackupOperation` | `backup` verb; reads the source fingerprint, runs the provider backup, and verifies the artifact. It sends no API call and no write to the source. |
 | `RestoreBackupOperation` | `restore` verb; refuses an unsafe target, restores into the isolated target, compares fingerprints, and delegates API checks to `RecoveryApiProbe`. |
@@ -33,7 +33,7 @@ Schedule, retention, backup encryption/access, responsible operator, and restora
 The rehearsal source is a populated database with accounts, five lead categories, complete hierarchies, board ordering, sprint plans, and closed history.
 
 Capture treats the source as read-only. The runbook records a write freeze on the source while capture runs, so the fingerprint describes the backup point.
-`IDataFingerprintReader` reads counts and ordered digests of IDs, parent links, sibling and backlog positions, board placements, sprint membership, and closure snapshots.
+`IDataFingerprintReader` reads counts and ordered digests of IDs; account roles and active flags; lead categories; parent, responsible-lead, and assignee links; sibling and backlog positions; board placements; sprint membership, initial scope, and scope changes; and closure snapshots.
 The provider backup writes the artifact to backup storage; the provider's read-only verification and a SHA-256 checksum then confirm it is usable.
 Capture makes no API call: a sign-in would append an audit event to the source, and L2-044.3 forbids altering it.
 
@@ -46,7 +46,7 @@ It then reads sample leads, work items, board placements, and sprint history and
 
 Each record holds the backup point, source and target names, start and end instants, verification results, and failures.
 Any failure records the outcome `Failed` and leaves release readiness unresolved. The operator links the latest record from the runbook.
-The tooling is built test-first: integration checks in `backend/tests` drive each verb against disposable SQL instances, for example `restore` refusing the source as its target.
+Integration checks in `backend/tests` drive each verb against disposable SQL instances, for example `restore` refusing the source as its target.
 
 | Behavior | Proposed boundary | Proposed operation |
 | --- | --- | --- |

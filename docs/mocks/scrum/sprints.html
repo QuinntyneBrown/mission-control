@@ -33,10 +33,11 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">A project has at most one active sprint, so Sprint 9 can't start until Sprint 8 closes; Start opens an explanation. History lists closed sprints, newest first, 25 per page. Collaborators can plan, start, and close sprints too. The project header and tabs stay pinned while the tab content scrolls; on phones only the tabs stay pinned.</p>
+    <p class="mock-note" data-when="default">A project has at most one active sprint, so Sprint 9 can't start until Sprint 8 closes. Start sprint opens the start dialog on its confirmation, because opening reads only Sprint 9's plan; pressing Start sprint there is answered with 409, and the dialog then explains and offers to review and close Sprint 8 (this click-through lands on that outcome). Change scope and Close sprint open their dialogs for Sprint 8, and Edit opens Sprint 9's details. Opened from this tab, the scope and close dialogs leave out their View sprints link, which would only lead back here, so Close is the first action of their closed-sprint explanations. Each dialog's outcome has its own reaction: saving a new sprint opens its planning page; a start opens the sprint board with the "Sprint 9 started" toast; a close opens that sprint's history with the "Sprint 8 closed" toast; Edit and Change scope reread the list with a toast naming the sprint ("Changes saved", "Scope updated"); a dialog that finds the project switched to Kanban makes the project header and the list read again; and when a dialog finds the sprint changed or gone, the list reads again. A closed sprint's row counts its stories done, carried over to a planned sprint, and returned to the backlog, as recorded at closure. Planned sprints are listed by start date, then ID, and history lists closed sprints, newest closure first, then ID; each list shows 25 per page with its own total and its own pager once there's more than one page. Collaborators can plan, start, and close sprints too. The project header and tabs stay pinned while the tab content scrolls; on phones only the tabs stay pinned.</p>
     <p class="mock-note" data-when="empty" hidden>Youth Coding Night is a new Scrum project with no work and no sprints. Administrators and collaborators can both plan sprints, so everyone sees the action; a sprint can be planned before stories exist and filled from the backlog later.</p>
-    <p class="mock-note" data-when="kanban-paused" hidden>In Kanban mode, sprint plans and history are kept but paused. Starting and adding stories are unavailable (the API returns 409); history stays readable. Switching back to Scrum restores them.</p>
-    <p class="mock-note" data-when="loading" hidden>Placeholders keep the layout while sprints load. Screen readers hear "Loading sprints".</p>
+    <p class="mock-note" data-when="kanban-paused" hidden>In Kanban mode, sprint plans and history are kept but paused. Changing, starting, and adding stories are unavailable (the API returns 409); View plan opens Sprint 3's plan read-only, and history stays readable. Switching back to Scrum restores them.</p>
+    <p class="mock-note" data-when="loading" hidden>Placeholders keep the layout while sprints load. A status region that is always on the page announces "Loading sprints" to screen readers.</p>
+    <p class="mock-note" data-when="error" hidden>The sprints didn't load, so nothing is shown that could be out of date. A server error (500) shows the reference ID, which matches the server's diagnostic record; a read that gets no response shows the same message without a reference ID and asks you to check your connection. Try again reads the project header and the sprints again together, since the header may have failed too. Screen readers hear the alert. A project deleted meanwhile shows "Project not found" with Back to projects instead, like the project overview's not-found state.</p>
   </div>
 
   <div class="mc-app">
@@ -120,7 +121,7 @@
               <div class="mc-page-header__meta">
                 <span class="mc-pill mc-pill--outline" data-unless="kanban-paused"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
                 <span class="mc-pill mc-pill--outline" data-when="kanban-paused" hidden><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Kanban</span>
-                <span data-unless="kanban-paused empty">Responsible lead: <a href="../leads/lead-detail.html#state=lead">Rafael Da Silva</a></span>
+                <span data-unless="kanban-paused empty">Responsible lead: <a href="../leads/lead-detail.html#state=lead-rafael">Rafael Da Silva</a></span>
                 <span data-when="empty" hidden>Responsible lead: <span class="mc-unset">Not set</span></span>
                 <span data-when="kanban-paused" hidden>Responsible lead: <a href="../leads/lead-detail.html#state=lead">Grace Mensah</a></span>
               </div>
@@ -135,20 +136,20 @@
                 </button>
                 <div class="mc-menu" id="project-actions">
                   <button class="mc-menu__item" type="button" data-nav="../projects/project-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit project</button>
-                  <button class="mc-menu__item" type="button" data-nav="../projects/mode-change-dialog.html#state=blocked" data-attr-kanban-paused="data-nav=../projects/mode-change-dialog.html#state=to-scrum" data-attr-empty="data-nav=../projects/mode-change-dialog.html#state=to-kanban"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
+                  <button class="mc-menu__item" type="button" data-nav="../projects/mode-change-dialog.html#state=blocked" data-attr-kanban-paused="data-nav=../projects/mode-change-dialog.html#state=to-scrum" data-attr-empty="data-nav=../projects/mode-change-dialog.html#state=to-kanban-empty"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
                   <div class="mc-menu__separator"></div>
-                  <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="../projects/project-delete-dialog.html#state=blocked" data-attr-empty="data-nav=../projects/project-delete-dialog.html#state=default"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
+                  <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="../projects/project-delete-dialog.html#state=blocked" data-attr-empty="data-nav=../projects/project-delete-dialog.html#state=default" data-attr-kanban-paused="data-nav=../projects/project-delete-dialog.html#state=blocked-paused"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
                 </div>
               </div>
             </div>
           </header>
           <nav class="mc-project-tabs" aria-label="Project sections">
             <ul class="mc-tabs">
-            <li><a class="mc-tabs__link" href="../projects/project-overview.html" data-attr-empty="href=../projects/project-overview.html#state=new-empty"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</a></li>
+            <li><a class="mc-tabs__link" href="../projects/project-overview.html" data-attr-empty="href=../projects/project-overview.html#state=new-empty" data-attr-kanban-paused="href=../projects/project-overview.html#state=kanban-preserved"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</a></li>
             <li><a class="mc-tabs__link" href="../work/work-hierarchy.html" data-attr-empty="href=../work/work-hierarchy.html#state=empty"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</a></li>
-            <li><a class="mc-tabs__link" href="../backlog/backlog.html" data-attr-empty="href=../backlog/backlog.html#state=empty"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</a></li>
-            <li><a class="mc-tabs__link" href="../scrum/sprint-board.html" data-attr-kanban-paused="href=../kanban/kanban-board.html" data-attr-empty="href=../scrum/sprint-board.html#state=no-sprints"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</a></li>
-            <li><a class="mc-tabs__link" href="../scrum/sprints.html" aria-current="page"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</a></li>
+            <li><a class="mc-tabs__link" href="../backlog/backlog.html" data-attr-empty="href=../backlog/backlog.html#state=empty" data-attr-kanban-paused="href=../backlog/backlog.html#state=kanban-preserved"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</a></li>
+            <li><a class="mc-tabs__link" href="../scrum/sprint-board.html" data-attr-kanban-paused="href=../kanban/kanban-board.html#state=preserved" data-attr-empty="href=../scrum/sprint-board.html#state=no-sprints"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</a></li>
+            <li><a class="mc-tabs__link" href="../scrum/sprints.html" aria-current="page" data-attr-empty="href=../scrum/sprints.html#state=empty" data-attr-kanban-paused="href=../scrum/sprints.html#state=kanban-paused"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</a></li>
             </ul>
           </nav>
         </div>
@@ -157,7 +158,7 @@
           <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
           <div class="mc-alert__body">
             <p class="mc-alert__title">Sprints are paused while Prayer Wall App uses Kanban</p>
-            <p class="mc-alert__text">Sprint 3's plan and the history of Sprints 1 and 2 are kept. Switch the project back to Scrum to start or plan sprints again.</p>
+            <p class="mc-alert__text">Sprint 3's plan and the history of Sprints 1 and 2 are kept. An administrator can switch the project back to Scrum to plan or start sprints.</p>
             <div class="mc-alert__actions mock-admin-only">
               <button class="mc-button mc-button--sm" type="button" data-nav="../projects/mode-change-dialog.html#state=to-scrum">
                 <span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode
@@ -201,6 +202,7 @@
           <section aria-labelledby="planned-heading">
             <div class="mc-section__header">
               <h2 class="mc-section__title" id="planned-heading">Planned</h2>
+              <span class="mc-section__hint">By start date</span>
             </div>
             <article class="mc-card" data-unless="kanban-paused">
               <div class="mc-card__header">
@@ -230,18 +232,19 @@
                     <h3 class="mc-card__title">Sprint 3</h3>
                     <span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--calendar" aria-hidden="true"></span>Planned</span>
                   </div>
-                  <p class="mc-text-sm mc-muted">Jun 1 – Jun 12, 2026 · 4 stories · 11 points</p>
+                  <p class="mc-text-sm mc-muted">Jun 1 – Jun 12, 2026 · 3 stories · 6 points</p>
                 </div>
               </div>
               <dl class="mc-dl"><dt>Goal</dt><dd>Moderation tools for shared requests</dd></dl>
               <div class="mc-card__footer">
                 <div class="mc-cluster mc-cluster--sm">
-                  <button class="mc-button" type="button" disabled aria-describedby="paused-reason"><span class="mc-icon mc-icon--list" aria-hidden="true"></span>Plan stories</button>
+                  <button class="mc-button" type="button" data-nav="sprint-planning.html#state=paused"><span class="mc-icon mc-icon--list" aria-hidden="true"></span>View plan</button>
                   <button class="mc-button" type="button" disabled aria-describedby="paused-reason"><span class="mc-icon mc-icon--play" aria-hidden="true"></span>Start sprint</button>
                 </div>
                 <p class="mc-reason" id="paused-reason"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span>Paused while the project uses Kanban.</p>
               </div>
             </article>
+            <p class="mc-text-sm mc-muted mc-mt-4">Showing 1 of 1 planned sprint · 25 per page</p>
           </section>
 
           <!-- History -->
@@ -257,7 +260,7 @@
                   <div class="mc-list__meta"><span>Sep 14 – Sep 25, 2026</span><span>Mentor matching ready for review</span></div>
                 </div>
                 <div class="mc-list__aside">
-                  <span class="mc-text-sm">6 of 8 done · 2 carried over</span>
+                  <span class="mc-text-sm">6 of 8 done · 1 carried over · 1 returned</span>
                   <span class="mc-pill"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Closed</span>
                 </div>
               </li>
@@ -267,7 +270,7 @@
                   <div class="mc-list__meta"><span>Aug 31 – Sep 11, 2026</span><span>Open team registration</span></div>
                 </div>
                 <div class="mc-list__aside">
-                  <span class="mc-text-sm">7 of 7 done</span>
+                  <span class="mc-text-sm">4 of 4 done</span>
                   <span class="mc-pill"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Closed</span>
                 </div>
               </li>
@@ -279,7 +282,7 @@
                   <div class="mc-list__meta"><span>May 18 – May 29, 2026</span><span>Private groups for small communities</span></div>
                 </div>
                 <div class="mc-list__aside">
-                  <span class="mc-text-sm">4 of 4 done</span>
+                  <span class="mc-text-sm">3 of 3 done</span>
                   <span class="mc-pill"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Closed</span>
                 </div>
               </li>
@@ -289,7 +292,7 @@
                   <div class="mc-list__meta"><span>May 4 – May 15, 2026</span><span>Post and view prayer requests</span></div>
                 </div>
                 <div class="mc-list__aside">
-                  <span class="mc-text-sm">5 of 6 done · 1 carried over</span>
+                  <span class="mc-text-sm">2 of 3 done · 1 carried over</span>
                   <span class="mc-pill"><span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>Closed</span>
                 </div>
               </li>
@@ -301,7 +304,7 @@
         <div class="mc-empty" data-when="empty" hidden>
           <span class="mc-empty__icon"><span class="mc-icon mc-icon--sprint mc-icon--lg" aria-hidden="true"></span></span>
           <h2 class="mc-empty__title">Plan your first sprint</h2>
-          <p class="mc-empty__text">Give the sprint a goal and dates, then choose stories from the backlog. Youth Coding Night has no stories yet, so add work first or plan the sprint now and choose stories later. Anyone on the project can plan one.</p>
+          <p class="mc-empty__text">Give the sprint a goal and dates, then choose stories from the backlog. Add work first, or plan the sprint now and choose its stories later. Anyone on the project can plan one.</p>
           <div class="mc-empty__actions">
             <a class="mc-button" href="../work/work-hierarchy.html#state=empty">Open Work</a>
             <button class="mc-button mc-button--primary" type="button" data-nav="sprint-form-dialog.html">
@@ -310,7 +313,9 @@
           </div>
         </div>
 
-        <p class="mc-visually-hidden" role="status" data-when="loading" hidden>Loading sprints</p>
+        <div class="mc-live" role="status" aria-live="polite">
+          <p class="mc-visually-hidden" data-when="loading" hidden>Loading sprints</p>
+        </div>
         <div class="mc-stack mc-stack--lg" data-when="loading" hidden aria-hidden="true">
           <div class="mc-card">
             <div class="mc-stack">
@@ -334,7 +339,7 @@
         <div class="mc-empty mc-empty--error" role="alert" data-when="error" hidden>
           <span class="mc-empty__icon"><span class="mc-icon mc-icon--alert-circle mc-icon--lg" aria-hidden="true"></span></span>
           <h2 class="mc-empty__title">We couldn't load sprints</h2>
-          <p class="mc-empty__text">Check your connection and try again. If it keeps happening, share the reference ID with your administrator.</p>
+          <p class="mc-empty__text">Try again. If it keeps happening, share the reference ID with your administrator.</p>
           <p class="mc-ref">Reference ID <code>a61f-07cd-2e95</code>
             <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="a61f-07cd-2e95"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
           </p>

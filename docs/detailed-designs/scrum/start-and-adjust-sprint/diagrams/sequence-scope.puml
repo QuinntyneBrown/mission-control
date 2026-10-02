@@ -3,6 +3,7 @@ skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
+skinparam maxMessageSize 300
 skinparam ArrowColor #344054
 skinparam rectangle {
   BorderColor #344054
@@ -16,7 +17,7 @@ skinparam package {
 title Behavior - Explicitly add or remove active stories
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "SprintBoardPage / SprintScopeDialog / SprintView" as page
+  participant "SprintBoardPage, SprintsPage, BacklogPage\nor a work page; SprintScopeDialog / SprintScopeForm" as page
   participant "ISprintService / SprintService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,79 +32,96 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Add stories, or confirm Remove for one unfinished story, in SprintScopeDialog
-page -> client : Build typed ChangeSprintScopeCommand with expected sprint version
+group Open the dialog (read on open)
+  actor -> page : Change scope or Add stories (sprintId), Backlog Add to sprint (sprintId, addStoryId),\nor Remove (sprintId, removeStoryId, removeStorySummary); every opener passes offerSprintsLink,\nfalse only from the Sprints tab
+  page -> client : sprintPlanResource(GetSprintPlanQuery): title, dates, version;\nadd mode also reads the eligible candidates (eligibleOnly true, page 1), and with addStoryId one eligible\nread with storyId: the story starts chosen only if that read returns it; otherwise nothing is chosen
+  client --> page : Add and Return to backlog disabled until the sprint resolves (loading); a failed read shows Try again\n(reload) and Cancel, with the reference ID only after a 500 (load-failed); a 404 emits notFound: the dialog\ncloses with Outdated and the opening page rereads
+end
+actor -> page : Choose stories across search and pages (eligible only), or confirm Remove\nfor one unfinished story, in SprintScopeDialog
+page -> client : Build typed ChangeSprintScopeCommand with the version from the sprint resource
 client -> access : PUT /api/workspaces/{id}/sprints/{sprintId}/scope
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid or expired JWT; deactivated account
   access --> client : 401; audit denial without payloads
-  client --> page : Clear session; sign in with the sprint board as return route
-else Authenticated without the required permission
-  access --> client : 403; audit denial without payloads
-  client --> page : Keep the selection; explain that changing scope is not permitted
-else Authorized
+  client --> page : SessionService.end(Unauthorized) once; sign in with the sprint board as return route
+else Authenticated (profile P: every active role changes sprint scope)
   access -> ctrl : Authorized request
   ctrl -> validation : Send ChangeSprintScopeCommand through MediatR 12.5.0
   validation -> validation : At least one story; distinct IDs; no story both added and removed
   alt Empty or malformed change
     validation --> ctrl : 400 field errors; nothing read or changed
     ctrl --> client : Validation ProblemDetails
-    client --> page : Keep the selection; show the message
+    client --> page : Keep the selection so it can be corrected; the failed alert shows the server's reason without\nTry again or reference ID; Add (or Return to backlog) is still offered, so focus stays on it
   else Valid request
     validation -> handler : Handle ChangeSprintScopeCommand
-    handler -> db : Lock workspace; read sprint state and version, named stories with status and open membership
+    handler -> db : BeginWorkspaceTransactionAsync (workspace lock); LoadScopeChangeAsync:\nSprint with status, version and memberships; its BoardState; named stories with status and open membership
     db --> handler : Current scope, unchanged initial scope, eligibility
     alt Sprint not found (or in another workspace)
       handler --> ctrl : 404; nothing changed
       ctrl --> client : ProblemDetails (not found)
-      client --> page : Close dialog; reload the board; announce that the sprint no longer exists
+      client --> page : SprintScopeForm emits notFound; the dialog closes with Outdated; the opening page rereads\nand shows its own state
     else Sprint Closed (L2-023.4)
       handler --> ctrl : 409 closed, with recorded closing actor and instant; history unchanged
       ctrl --> client : ProblemDetails (sprint closed)
-      client --> page : Closed explanation with View sprint history; Close only, no retry
+      client --> page : closed: the alert region names who closed it and when and describes the dialog;\nView sprints only when offerSprintsLink is true; focus moves to the first action, View sprints or Close;\nno retry. SprintScopeForm emits outdated, so Close returns\nOutdated and the opening page rereads
     else Sprint still Planned
       handler --> ctrl : 409 not active; nothing changed
       ctrl --> client : ProblemDetails (not active)
-      client --> page : Explain that planned stories change in Plan stories
-    else Done or foreign-workspace story named (L2-022.2, L2-023.3)
+      client --> page : closed presentation: Sprint 9 hasn't started, so its stories change in Plan stories; no retry;\nSprintScopeForm emits outdated, so Close returns Outdated and the opening page rereads
+    else Done, foreign-workspace or already-member story to add; story to remove no longer a member (L2-022.2, L2-023.3)
       handler --> ctrl : 400 identifying each story; nothing changed
       ctrl --> client : Validation ProblemDetails per story
-      client --> page : Keep the selection; mark each story with its reason
+      client --> page : allocated presentation: keep the selection; mark each story to add with its reason; focus moves to\nthe first marked story's checkbox (aria-disabled, so it stays focusable and reads its reason). Remove mode:\nthe story is dropped and named neutrally, "HCK-118 is no longer in Sprint 8"; Return to backlog becomes\nunavailable and focus moves to the alert (unconfirmed-added). No Retry or reference ID
     else Story to add is in another open sprint (L2-022.3)
       handler --> ctrl : 409 naming the story and its sprint; nothing changed
       ctrl --> client : ProblemDetails (already allocated)
-      client --> page : Keep the selection; mark the story
+      client --> page : allocated state: keep the selection; mark the story and name its sprint; focus moves to\nits checkbox (aria-disabled); no Retry or reference ID
     else Stale sprint version
       handler --> ctrl : 409 changed since opened; nothing changed
       ctrl --> client : ProblemDetails (stale version)
-      client --> page : Keep the selection; reload the current scope for review; no resubmission
+      client --> page : stale state: keep the selection; reload the sprint and the eligible list once and adopt\nthe new version; neutral "Sprint 8 changed after you opened this"; no resubmission; a chosen story\nnow in this sprint leaves the selection, named "HCK-130 is already in Sprint 8" (unconfirmed-added)
     else Change accepted
       handler -> entity : L2-023 changeScope(add, remove, at, actorId); initial scope unchanged
-      entity --> handler : New live scope and SprintScopeChange entries
-      handler -> db : L2-039 / L2-040 update open membership and board placements; append SprintScopeChange; success audit in one transaction
+      entity --> handler : OpenSprintMembership children added or removed; SprintScopeChange children appended
+      handler -> db : L2-039 / L2-040 AddAuditEvent; SaveChangesAsync: tracked sprint children and board placements;\nsprint version increments; success audit; one transaction
       alt Unique open-membership violation (concurrent allocation, L2-041.2)
         db --> handler : Roll back everything
         handler --> ctrl : 409 naming the story; nothing changed
         ctrl --> client : ProblemDetails (already allocated)
-        client --> page : Keep the selection; mark the story
+        client --> page : allocated state: keep the selection; mark the story
       else Commit fails
         db --> handler : Roll back business state and success audit
         handler --> ctrl : Generic 500 with correlation ID
         ctrl --> client : Failure; no successful-save claim
-        client --> page : Failed state with reference ID; selection kept; the action retries
+        client --> page : Failed state with reference ID; selection kept;\nthe action retries only when chosen
       else Commit succeeds
         db --> handler : New sprint version
         handler --> ctrl : Updated scope
         ctrl --> client : 200 with scope and version
-        client --> page : Refresh board and scope log; a removed story returns to the backlog unchanged
-        page --> actor : Announce the change; focus returns to the trigger
+        client --> page : SprintScopeForm emits changed(ScopeChangeSummary); the dialog closes with Changed; the opening\npage increments its counter (the board rereads its columns and scope log); a removed story returns\nto the backlog unchanged
+        page --> actor : The opening page shows the "Scope updated" toast with the summary; focus returns to the trigger
       end
     end
   end
 end
 note over ctrl, db
+A workspace lock wait beyond the timeout returns 503 with Retry-After and no change;
+the dialog shows the same failed state with the reference ID.
+An unexpected 403 (access changed after sign-in) changes nothing; SprintScopeForm keeps the selection and
+emits forbidden, which the dialog relays as its own forbidden while it stays open, and the opening
+page shows the "Your access changed" toast through TOAST_SERVICE, without Retry.
+A change that gets no response is uncertain: the dialog keeps the selection, says "We couldn't
+confirm whether Sprint 8's scope changed." (no reference ID), and the form emits unconfirmed,
+which the dialog relays while it stays open, so the opening page rereads at once. The form
+reloads the sprint and the eligible list once without the stale copy: a chosen story now in the
+sprint is dropped and named "HCK-130 is already in Sprint 8", and in remove mode a story that
+left is named "HCK-118 is no longer in Sprint 8" (unconfirmed-added), before Add or Return to
+backlog is offered again for what remains. A sprint read Closed shows the neutral "Sprint 8 is
+closed now." (never "nothing was changed") with View sprints when offered and Close, which
+returns Outdated (unconfirmed-closed).
+SaveChangesAsync raises ConcurrencyConflictException on a stale version, mapped to the same 409.
 Unexpected failures return generic 500 plus correlation ID (L2-043).
 Diagnostics exclude secrets and contact payloads.
 end note

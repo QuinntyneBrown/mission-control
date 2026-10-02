@@ -4,6 +4,7 @@ skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
 skinparam ArrowColor #344054
+skinparam maxMessageSize 400
 skinparam rectangle {
   BorderColor #344054
   FontColor #101828
@@ -16,7 +17,7 @@ skinparam package {
 title Behavior - Edit workspace settings
 actor "Administrator" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "ProjectOverviewPage\nProjectFormDialog / WorkspaceView" as page
+  participant "ProjectLayoutPage / ProjectHeaderView\nProjectFormDialog / WorkspaceForm" as page
   participant "IWorkspaceService / WorkspaceService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,19 +32,40 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Project actions > Edit project; change settings; Save changes
-page -> page : Disable repeat submission; show saving progress
-page -> client : Build UpdateWorkspaceCommand with the opened expectedVersion
+actor -> page : Project actions > Edit project on any project tab (the header's actionRequested output; shown only with workspaces.manage)
+page -> page : The layout's openDialog(Edit) opens ProjectFormDialog; fields and Save disabled; announce "Loading project"
+page -> client : WorkspaceForm's workspaceResource reads GetWorkspaceQuery (GET /api/workspaces/{id}, authorized like any workspace read)
+alt Read 404 (project deleted after the header loaded)
+  client --> page : Resource status error (404)
+  page -> page : No input to keep, so WorkspaceForm emits notFound at once; the dialog closes with NotFound; the layout navigates to /projects, which reads the list without the project, and shows the info toast "Community Hackathon 2026 has been deleted." through TOAST_SERVICE; no reference ID or Try again
+else Read fails (500 with correlation ID, or no response)
+  client --> page : Resource status error
+  page --> actor : edit-load-failed: fields and Save stay disabled; alert announced, with the reference ID for a 500 (no response: none, and the shell's offline banner appears); focus Try again, which calls reload(); Cancel closes
+else Read resolves
+  client --> page : WorkspaceDetail with its version; the draft starts from it; focus Name
+end
+note right of page
+  Only a resolved read continues below. The read-only
+  Delivery mode field's Change delivery mode link emits
+  changeModeRequested: the dialog closes with ChangeMode
+  after the unsaved-changes check and the layout calls
+  openDialog(ChangeMode) (change-delivery-mode slice).
+end note
+actor -> page : Change settings; Save changes
+page -> page : Disable repeat submission; show saving progress; draftChange reports dirty and pending
+page -> client : edit(UpdateWorkspaceCommand with the opened expectedVersion) returns a promise
 client -> access : PUT /api/workspaces/{id}
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid, or expired JWT; inactive account
   access --> client : 401; audit denial without payloads
-  client --> page : Clear in-memory session; require login; nothing saved
+  client -> client : sessionInterceptor: a 401 for the current session generation calls SessionService.end(Unauthorized) once
+  client --> page : The promise rejects with the 401; nothing saved; sign-in reports the unsaved draft
 else Collaborator (profile P: no workspace edits)
   access --> client : 403; audit denial without payloads
-  client --> page : Close dialog; explain that only administrators change project settings
+  client -> client : sessionInterceptor calls SessionService.refreshCapabilities() (one in flight)
+  client --> page : The promise rejects with the 403; forbidden state: keep the dialog and every value; explain that only administrators can save project settings; Save changes unavailable, so focus moves to the alert; no reference ID; nothing saved; controls follow currentSession
 else Administrator
   access -> ctrl : Authorized request
   ctrl -> validation : Send UpdateWorkspaceCommand through MediatR 12.5.0
@@ -51,23 +73,26 @@ else Administrator
   alt Invalid fields
     validation --> ctrl : 400 field errors; nothing saved
     ctrl --> client : Validation ProblemDetails
-    client --> page : Show field errors and summary; focus the summary; keep valid input
+    client --> page : The promise rejects; show field errors; keep valid input; no Retry or reference ID; one field error focuses that field, which reads its error; several focus the linked error summary
   else Valid request
     validation -> handler : Handle UpdateWorkspaceCommand
-    handler -> db : Begin transaction; load workspace and version
+    handler -> db : Load workspace and version (version guard only; no workspace lock)
     db --> handler : Workspace row or none
     alt Workspace missing (deleted meanwhile)
       handler --> ctrl : 404; nothing saved
       ctrl --> client : NotFound ProblemDetails
-      client --> page : Close dialog; show "Project not found" with Back to projects
+      client --> page : The promise rejects; deleted state: keep the attempted values; disable the fields and Save; the alert "This project no longer exists" is announced and becomes the dialog's description; focus Back to projects; no reference ID or Try again
+      actor -> page : Back to projects (Cancel, Close, or Escape asks before discarding the kept values)
+      page -> page : WorkspaceForm emits notFound; the dialog closes with NotFound; the layout navigates to /projects, which reads the list without the project, and shows the info toast "Community Hackathon 2026 has been deleted." through TOAST_SERVICE
     else Version differs from expectedVersion
       handler --> ctrl : L2-041 409 stale version; nothing saved
       ctrl --> client : Conflict ProblemDetails
-      client -> access : GET /api/workspaces/{id} once for the latest version
-      access --> client : Latest WorkspaceDetail (authorized as above)
-      client --> page : Keep attempted values; show "Your edit" beside "Latest saved"; no resubmission
+      client --> page : The promise rejects with the stale 409
+      page -> client : WorkspaceForm calls reload() on its workspace resource once (GET /api/workspaces/{id}, authorized as above)
+      client --> page : Resource resolves with the latest WorkspaceDetail (a 404 instead shows the deleted state, as above)
+      page -> page : Keep attempted values; show "Your edit" beside "Latest saved"; Reload latest replaces Save and receives focus; announce the alert; no resubmission
       opt Reload latest
-        page -> page : Adopt latest values and version; keep the comparison visible
+        page -> page : Adopt the reloaded values and version; keep the comparison visible
         page --> actor : "Latest version loaded"; re-apply edits, then Save changes sends a new request
       end
     else Current version
@@ -76,11 +101,11 @@ else Administrator
       alt Selected lead no longer exists
         handler --> ctrl : 400 responsibleLeadId field error; nothing saved
         ctrl --> client : Validation ProblemDetails
-        client --> page : Show missing-lead alert and field error; keep every other value
+        client --> page : The promise rejects; lead-missing: show the alert and field error; focus Responsible lead, which reads its error; no Retry or reference ID; keep every other value
       else Lead exists or cleared
         handler -> entity : L2-014 edit name, description, lead; mode unchanged
         entity --> handler : Updated workspace; version + 1
-        handler -> db : L2-039 / L2-040 update guarded by expectedVersion with success audit; one transaction
+        handler -> db : L2-039 / L2-040 SaveChangesAsync: update guarded by expectedVersion with success audit; one transaction
         alt Version guard matches no row (racing save)
           db --> handler : Roll back update and audit
           handler --> ctrl : Same 409 stale version
@@ -90,22 +115,26 @@ else Administrator
           db --> handler : Roll back update and audit
           handler --> ctrl : Same 400 responsibleLeadId field error
           ctrl --> client : Validation ProblemDetails
-          client --> page : Show missing-lead alert and field error; keep every other value
+          client --> page : The promise rejects; lead-missing as above; focus Responsible lead; keep every other value
         else Commit fails unexpectedly
           db --> handler : Roll back update and audit
           handler --> ctrl : Generic 500 with correlation ID
           ctrl --> client : Failure; no successful-save claim
-          client --> page : Show save-failed alert with reference ID; keep every value; Save changes retries
+          client --> page : The promise rejects; failed state: announce the save-failed alert with reference ID; keep every value; Save changes keeps focus and retries only when pressed
         else Commit succeeds
           db --> handler : New committed version
-          handler --> ctrl : 200 with updated WorkspaceDetail
+          handler --> ctrl : 200 with SavedWorkspaceResult (id, new version, name)
           ctrl --> client : Success response
-          client --> page : Close dialog; update overview signals
-          page --> actor : "Changes saved" toast; focus returns to Project actions
+          client --> page : The promise resolves with SavedWorkspaceResult; WorkspaceForm emits saved; the dialog closes with Saved(SavedWorkspaceResult)
+          page -> page : ProjectLayoutPage calls refresh() (revision + 1); ProjectHeaderView and the active tab's view reload their resources
+          page --> actor : The layout shows the "Changes saved" toast naming the project through TOAST_SERVICE; focus returns to Project actions
         end
       end
     end
   end
+end
+opt No response to the save (timeout or network failure)
+  client --> page : The save may have committed: keep the attempted values; the failed alert reads "We couldn't confirm whether your changes were saved" without a reference ID; WorkspaceForm calls reload() on its workspace resource once and emits unconfirmed, which the dialog relays, so the layout calls refresh() and the header and the active tab reread at once; Save resends only when pressed, and a save that did commit makes it meet the stale-version 409 and its comparison; because the first save may be the change it shows, the conflict alert then reads "The latest saved version is shown beside your entries." instead of "Your edits haven't been saved."; a 404 from the reread or the resent save shows the deleted state with the values kept, its alert reading only "Community Hackathon 2026 was deleted while you were editing." without "Your edits weren't saved"
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).

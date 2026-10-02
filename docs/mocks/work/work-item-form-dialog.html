@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Add or edit work item · Mission Control mock</title>
-  <meta name="description" content="Work item form dialog for initiatives, epics, stories, and tasks: parents, assignee, dates, estimate, a kept inactive assignee, validation, rejected assignee, deleted parent, saving, failure, and edit conflict with the latest version loaded.">
+  <meta name="description" content="Work item form dialog for initiatives, epics, stories, and tasks: searchable parents with results, no matches, and a failed search, a searchable active-people assignee with results, no matches, and a failed lookup, dates, estimate, a kept inactive assignee, validation, rejected assignee, deleted parent, saving, failure, and edit conflict with the latest version loaded.">
   <meta name="mock-area" content="Work hierarchy">
-  <meta name="mock-requirements" content="L2-004, L2-015, L2-016, L2-031, L2-033.2, L2-034.1, L2-041.3, L2-041.4, L2-043.4">
+  <meta name="mock-requirements" content="L2-004, L2-005, L2-015, L2-016, L2-031, L2-032, L2-033.2, L2-034.1, L2-041.3, L2-041.4, L2-043.4, L2-045">
   <link rel="stylesheet" href="../assets/tokens.css">
   <link rel="stylesheet" href="../assets/mocks.css">
   <script src="../assets/mocks.js" defer></script>
@@ -22,9 +22,18 @@
           <option value="create-initiative">Add initiative</option>
           <option value="create-epic">Add epic (parent prefilled)</option>
           <option value="create-story">Add story</option>
+          <option value="parent-search">Parent search results</option>
+          <option value="parent-no-match">Parent search · no matches</option>
+          <option value="parent-failed">Parent search failed</option>
           <option value="create-task">Add task</option>
+          <option value="edit-loading">Edit · loading</option>
+          <option value="edit-load-failed">Edit · couldn't load</option>
+          <option value="edit-not-found">Edit · no longer exists</option>
           <option value="edit">Edit story</option>
           <option value="edit-inactive-assignee">Edit story · inactive assignee kept</option>
+          <option value="assignee-search">Assignee search results</option>
+          <option value="assignee-no-match">Assignee search · no matches</option>
+          <option value="assignee-failed">Assignee search failed</option>
           <option value="validation">Validation errors</option>
           <option value="rejected">Inactive assignee rejected</option>
           <option value="parent-deleted">Parent deleted meanwhile</option>
@@ -40,17 +49,26 @@
 
   <div class="mock-notes">
     <p class="mock-note" data-when="create-initiative">Opens from "Add initiative". Initiatives are top level, so there is no parent field. New items start in To Do. Focus moves to Title; below 576px the dialog fills the screen with actions pinned to the bottom.</p>
-    <p class="mock-note" data-when="create-epic" hidden>Launched from an initiative's "Add epic", so the parent is prefilled. Only initiatives in this project are offered.</p>
-    <p class="mock-note" data-when="create-story" hidden>Parents are grouped by initiative and limited to this project. The estimate is optional and must be a whole number of 0 or more.</p>
+    <p class="mock-note" data-when="create-epic" hidden>Launched from an initiative's "Add epic", so the parent is prefilled. Only initiatives in this project are offered, through the same searchable combobox as every parent field.</p>
+    <p class="mock-note" data-when="create-story" hidden>The parent is a searchable combobox limited to this project's epics, so every epic is reachable however many exist; it starts with the launching epic. The estimate is optional and must be a whole number of 0 or more.</p>
+    <p class="mock-note" data-when="parent-search" hidden>Typing "and" searches this project's epics about 250 ms after the last keystroke, and a newer search cancels the older request. Matches show the epic's initiative as a hint, 25 at a time, and the count is announced ("2 epics found"); typing more narrows the list. Arrow keys move through matches, Enter picks one, and Escape closes the list and keeps the current choice. The same pattern serves the parent initiative and parent story fields.</p>
+    <p class="mock-note" data-when="parent-no-match" hidden>Typing "catering" finds no epic in this project. "No epics match “catering”" shows under the field and is announced politely. Hackathon team formation stays the chosen parent until another epic is picked, and every other entry is kept, so Add story still works. The parent initiative and parent story fields say the same with their own type.</p>
+    <p class="mock-note" data-when="parent-failed" hidden>The epic search failed (a 500, a busy 503, or no response), so only the parent field shows the problem, with Retry, which repeats the same search. The reference ID appears only when the server answered (500 or 503) and matches its diagnostic record; with no response there is none. Hackathon team formation stays the chosen parent and every other entry is kept, so Add story still works. The alert is announced and focus stays in the field.</p>
     <p class="mock-note" data-when="create-task" hidden>Tasks have no estimate and follow their story's sprint.</p>
-    <p class="mock-note" data-when="edit" hidden>Editing adds Status. Clearing an optional field removes its value when saved. The parent changes only through "Move to another parent", which keeps IDs and sprint membership. Choosing Done while the story has unfinished tasks opens the unfinished-tasks confirmation before anything is saved.</p>
+    <p class="mock-note" data-when="edit-loading" hidden>Opens from a story's Edit action. The form reads the saved story first: the fields and Save stay disabled until the record arrives, so nothing can be typed over values that haven't loaded. Status and the parent appear with the saved values. Cancel closes without sending anything. Screen readers hear "Loading story…"; focus stays on Cancel until the values arrive, then moves to Title.</p>
+    <p class="mock-note" data-when="edit-load-failed" hidden>The read failed (a 500, a busy 503, or no response), so the fields and Save stay disabled. Nothing was changed. Try again repeats the read and fills the form once the saved values arrive. The reference ID appears only when the server answered and matches its diagnostic record; with no response there is none. The alert is announced and focus moves to Try again; Cancel closes without sending anything.</p>
+    <p class="mock-note" data-when="edit-not-found" hidden>The story was deleted after the page loaded, so the read answered 404. The fields and Save stay disabled and nothing can be sent. Nothing failed on the server, so there is no Try again and no reference ID. Back to work closes the dialog and opens the project's work outline, which no longer lists the story. A save that answers 404 because the story was deleted meanwhile shows this state too, and so does the reread after a save that got no response; that save may have gone through first, so the text then drops "Nothing was changed". The alert is announced, the dialog's description now points to that explanation, and focus moves to Back to work.</p>
+    <p class="mock-note" data-when="edit" hidden>Editing adds Status. Clearing an optional field removes its value when saved. The parent changes only through "Move to another parent", which keeps IDs and sprint membership. Choosing Done while the story has unfinished tasks is refused by the server on Save (409), and then the unfinished-tasks confirmation opens; nothing is saved yet, and the form stays open with every edit kept.</p>
     <p class="mock-note" data-when="edit-inactive-assignee" hidden>HCK-123 is assigned to Jordan Reyes, whose account was deactivated after the assignment. Deactivation keeps assignments, so the current assignee stays selected and an unchanged assignment is kept when other fields are saved. Inactive people are never offered as new choices: once another person or Unassigned is saved, Jordan Reyes leaves the list.</p>
-    <p class="mock-note" data-when="validation" hidden>Focus moves to the error summary; each link jumps to its field. Valid input is kept.</p>
-    <p class="mock-note" data-when="rejected" hidden>Jordan Reyes was active when the form opened but was deactivated before saving, so the server rejected the assignment. Nothing was saved; everything else is kept.</p>
-    <p class="mock-note" data-when="parent-deleted" hidden>The chosen epic, Sponsor outreach, had no stories, so an administrator could delete it while this form was open. The server refused to add a story under a parent that no longer exists, so nothing was saved. Sponsor outreach is no longer offered; every other value is kept.</p>
-    <p class="mock-note" data-when="saving" hidden>One request at a time: the button shows progress and repeat clicks are ignored.</p>
-    <p class="mock-note" data-when="failed" hidden>Nothing was saved and every value is kept. The button retries the same request.</p>
-    <p class="mock-note" data-when="conflict" hidden>Another save changed this story after the form opened, so the API answered 409. The form keeps the attempted values, reads the latest version once for the comparison, and never resubmits. Estimate is the field the other save changed. "Reload latest" goes to the next state.</p>
+    <p class="mock-note" data-when="assignee-search" hidden>Assignee is a searchable combobox over active people, the same pattern as the project form's lead picker. Typing "ma" searches about 250 ms after the last keystroke, and a newer search cancels the older request. Matches show display names only, ordered by name, 25 at a time. Arrow keys move through matches, Enter picks one, and Escape closes the list and keeps Ada Okafor; the match count is announced. Every signed-in person can search, so collaborators assign work without the administrator-only account screens.</p>
+    <p class="mock-note" data-when="assignee-no-match" hidden>Typing "jor" finds no one: Jordan Reyes's account is inactive, and inactive people are never offered as new choices. "No active people match" shows under the field and is announced politely. Ada Okafor stays assigned until another person is picked or the field is cleared.</p>
+    <p class="mock-note" data-when="assignee-failed" hidden>The people search failed (a 500, a busy 503, or no response), so only the assignee field shows the problem, with Retry, which repeats the same search. The reference ID appears only when the server answered; with no response there is none. The title, dates, estimate, and the current choice, Ada Okafor, are kept, and Save changes still works. A search the API refuses (400, longer than 200 characters) shows only its message under the field, with no Retry or reference ID, because the same search would be refused again.</p>
+    <p class="mock-note" data-when="validation" hidden>Several problems, so focus moves to the error summary; each link jumps to its field. Valid input is kept. A server 400 with a single field error moves focus to that field instead, as in the rejected and parent-deleted states, with no Retry or reference ID. An edit gets that single-field 400 when the server, after loading the item, finds an estimate on an item that isn't a story or a due date before the saved start date; nothing is saved and every value is kept.</p>
+    <p class="mock-note" data-when="rejected" hidden>Jordan Reyes was active when picked from the search but was deactivated before saving, so the server rejected the assignment with a 400 assignee field error. Nothing was saved; everything else is kept, and a new search offers only active people. Focus moves to Assignee, which reads its error through its description; there is no Retry or reference ID, because sending the same choice again would be refused again.</p>
+    <p class="mock-note" data-when="parent-deleted" hidden>The chosen epic, Sponsor outreach, had no stories, so an administrator could delete it while this form was open. The server refused to add a story under a parent that no longer exists, so nothing was saved. Sponsor outreach is no longer offered; every other value is kept. The server answered 400 with a parent field error, so focus moves to Parent epic, which reads its error; there is no Retry or reference ID.</p>
+    <p class="mock-note" data-when="saving" hidden>One request at a time: the button shows progress and repeat clicks are ignored. It is marked unavailable (aria-disabled) rather than disabled, so focus stays on it while the save runs.</p>
+    <p class="mock-note" data-when="failed" hidden>The API answered 500, or 503 because the project was busy, so nothing was saved and every value is kept. The alert is announced with the reference ID, and focus stays on the button, which retries the same request only when pressed. An edit that fails this way shows the same alert titled "We couldn't save this story", and the button reads Save changes. A save that gets no response may have gone through, so this alert reads "We couldn't confirm whether the story was added" (or, for an edit, "…whether your changes were saved"), with no reference ID and no claim that nothing was saved, and asks to check the outline before adding it again. Every value is kept, the page behind rereads its work at once, and the button sends again only when pressed; an edit also rereads the story, so a save that did go through meets the conflict comparison instead of applying twice, and that comparison doesn't say the edits haven't been saved. Adding and editing need only an active session, so a 403 is unexpected: nothing is saved, every value is kept, the dialog shows no alert and stays open, and the page behind shows the "Your access changed" toast, without Retry or a reference ID.</p>
+    <p class="mock-note" data-when="conflict" hidden>Another save changed this story after the form opened, so the API answered 409. The form keeps the attempted values, reads the latest version once for the comparison, and never resubmits. Estimate is the field the other save changed. Save changes gives way to Reload latest, so focus moves to Reload latest and the alert is announced; the dialog's description now points to the conflict explanation. "Reload latest" goes to the next state. When this follows a save that got no response, that save may have applied the edits, so the alert text reads "The latest saved version is shown beside your entries. Compare them, then reload it and re-apply what you need." instead of saying the edits haven't been saved.</p>
     <p class="mock-note" data-when="conflict-reloaded" hidden>"Reload latest" put the latest saved values and version into the form without sending anything, so Estimate now shows 8. The comparison stays visible so edits can be re-applied by hand before saving. Focus moves to Title and the status is announced politely; leaving now asks before discarding the unsaved edits.</p>
   </div>
 
@@ -132,17 +150,19 @@
     </div>
 
     <div class="mc-backdrop">
-      <section class="mc-dialog mc-dialog--sheet" role="dialog" aria-modal="true" aria-labelledby="work-dialog-title" aria-describedby="work-dialog-note">
+      <section class="mc-dialog mc-dialog--sheet" role="dialog" aria-modal="true" aria-labelledby="work-dialog-title" aria-describedby="work-dialog-note"
+        data-attr-edit-not-found="aria-describedby=work-notfound-title work-notfound-text"
+        data-attr-conflict="aria-describedby=work-conflict-title work-conflict-text">
         <header class="mc-dialog__header">
           <div class="mc-dialog__heading">
             <h2 class="mc-dialog__title" id="work-dialog-title">
               <span data-when="create-initiative">Add initiative</span>
               <span data-when="create-epic" hidden>Add epic</span>
-              <span data-when="create-story validation rejected parent-deleted saving failed" hidden>Add story</span>
+              <span data-when="create-story parent-search parent-no-match parent-failed validation rejected parent-deleted saving failed" hidden>Add story</span>
               <span data-when="create-task" hidden>Add task</span>
-              <span data-when="edit edit-inactive-assignee conflict conflict-reloaded" hidden>Edit story</span>
+              <span data-when="edit-loading edit-load-failed edit-not-found edit edit-inactive-assignee assignee-search assignee-no-match assignee-failed conflict conflict-reloaded" hidden>Edit story</span>
             </h2>
-            <p class="mc-dialog__subtitle" id="work-dialog-note"><span data-when="edit conflict conflict-reloaded" hidden>HCK-112 · </span><span data-when="edit-inactive-assignee" hidden>HCK-123 · </span>Community Hackathon 2026 · Title is required; everything else is optional.</p>
+            <p class="mc-dialog__subtitle" id="work-dialog-note"><span data-when="edit assignee-search assignee-no-match assignee-failed conflict conflict-reloaded" hidden>HCK-112 · </span><span data-when="edit-inactive-assignee" hidden>HCK-123 · </span>Title is required; everything else is optional.</p>
           </div>
           <button class="mc-button mc-button--quiet mc-button--icon" type="button" aria-label="Close" data-nav="work-hierarchy.html"
             data-attr-edit-inactive-assignee="data-nav=work-item-detail.html#state=inactive-assignee"
@@ -152,6 +172,11 @@
             data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
             data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
             data-attr-conflict-reloaded="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-assignee-search="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-assignee-no-match="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-assignee-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-parent-no-match="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-parent-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
             data-attr-saving="disabled"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
         </header>
 
@@ -165,6 +190,29 @@
                   <li><a href="#work-due">Choose a due date on or after the start date</a></li>
                   <li><a href="#work-estimate">Enter the estimate as a whole number of 0 or more</a></li>
                 </ul>
+              </div>
+              <div class="mc-alert mc-alert--danger" data-when="edit-load-failed" hidden>
+                <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">We couldn't load this story</p>
+                  <p class="mc-alert__text">Nothing was changed. Try again.</p>
+                  <p class="mc-ref">Reference ID <code>d05a-3c81-9fe4</code>
+                    <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="d05a-3c81-9fe4"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                  </p>
+                  <div class="mc-alert__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-goto-state="edit"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again</button>
+                  </div>
+                </div>
+              </div>
+              <div class="mc-alert mc-alert--danger" data-when="edit-not-found" hidden>
+                <span class="mc-icon mc-icon--x-circle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title" id="work-notfound-title">This story no longer exists</p>
+                  <p class="mc-alert__text" id="work-notfound-text">It was deleted after the page loaded. Nothing was changed.</p>
+                  <div class="mc-alert__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-nav="work-hierarchy.html"><span class="mc-icon mc-icon--arrow-left" aria-hidden="true"></span>Back to work</button>
+                  </div>
+                </div>
               </div>
               <div class="mc-alert mc-alert--danger" data-when="rejected" hidden>
                 <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
@@ -193,13 +241,14 @@
               <div class="mc-alert mc-alert--warning" data-when="conflict" hidden>
                 <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
                 <div class="mc-alert__body">
-                  <p class="mc-alert__title">This story changed after you opened it</p>
-                  <p class="mc-alert__text">Your edits haven't been saved. Compare them with the latest saved version, then reload it and re-apply what you need.</p>
+                  <p class="mc-alert__title" id="work-conflict-title">This story changed after you opened it</p>
+                  <p class="mc-alert__text" id="work-conflict-text">Your edits haven't been saved. Compare them with the latest saved version, then reload it and re-apply what you need.</p>
                 </div>
               </div>
             </div>
 
             <div class="mc-live" role="status" aria-live="polite">
+              <div class="mc-loading-inline" data-when="edit-loading" hidden><span class="mc-spinner" aria-hidden="true"></span>Loading story…</div>
               <div class="mc-alert" data-when="conflict-reloaded" hidden>
                 <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
                 <div class="mc-alert__body">
@@ -234,7 +283,15 @@
                   data-attr-parent-deleted="value=Sponsor welcome packet"
                   data-attr-saving="value=Volunteer check-in list|readonly"
                   data-attr-failed="value=Volunteer check-in list"
+                  data-attr-parent-no-match="value=Volunteer check-in list"
+                  data-attr-parent-failed="value=Volunteer check-in list"
+                  data-attr-edit-loading="disabled"
+                  data-attr-edit-load-failed="disabled"
+                  data-attr-edit-not-found="disabled"
                   data-attr-edit="value=Volunteers can join a build team"
+                  data-attr-assignee-search="value=Volunteers can join a build team"
+                  data-attr-assignee-no-match="value=Volunteers can join a build team"
+                  data-attr-assignee-failed="value=Volunteers can join a build team"
                   data-attr-edit-inactive-assignee="value=&lt;script&gt;alert(1)&lt;/script&gt; feedback form"
                   data-attr-conflict="value=Volunteers can join a build team"
                   data-attr-conflict-reloaded="value=Volunteers can join a build team">
@@ -249,70 +306,109 @@
                   data-attr-parent-deleted="value=A one-page welcome for sponsors with the schedule, venue map, and a contact for the day."
                   data-attr-saving="value=A printed and on-screen list for checking volunteers in at the door.|readonly"
                   data-attr-failed="value=A printed and on-screen list for checking volunteers in at the door."
-                  data-attr-edit="value=Volunteers choose a build team while they register, so mentors and the venue can plan for team sizes."
+                  data-attr-parent-no-match="value=A printed and on-screen list for checking volunteers in at the door."
+                  data-attr-parent-failed="value=A printed and on-screen list for checking volunteers in at the door."
+                  data-attr-edit-loading="disabled"
+                  data-attr-edit-load-failed="disabled"
+                  data-attr-edit-not-found="disabled"
+                  data-attr-edit="value=Volunteers choose a build team while they register, so mentors and the venue can plan for team sizes.&#10;&#10;A volunteer can be on one team at a time. Full teams show as full."
+                  data-attr-assignee-search="value=Volunteers choose a build team while they register, so mentors and the venue can plan for team sizes.&#10;&#10;A volunteer can be on one team at a time. Full teams show as full."
+                  data-attr-assignee-no-match="value=Volunteers choose a build team while they register, so mentors and the venue can plan for team sizes.&#10;&#10;A volunteer can be on one team at a time. Full teams show as full."
+                  data-attr-assignee-failed="value=Volunteers choose a build team while they register, so mentors and the venue can plan for team sizes.&#10;&#10;A volunteer can be on one team at a time. Full teams show as full."
                   data-attr-edit-inactive-assignee="value=Draft the short form judges fill in after each demo: what worked, what to try next, and one encouragement."
-                  data-attr-conflict="value=Volunteers choose a build team while they register, so mentors and the venue can plan for team sizes."
-                  data-attr-conflict-reloaded="value=Volunteers choose a build team while they register, so mentors and the venue can plan for team sizes."></textarea>
-                <div class="mc-field__footer"><span class="mc-counter" id="work-description-count"><span data-unless="validation rejected parent-deleted saving failed edit edit-inactive-assignee conflict conflict-reloaded">0</span><span data-when="validation rejected saving failed" hidden>68</span><span data-when="parent-deleted" hidden>88</span><span data-when="edit conflict conflict-reloaded" hidden>101</span><span data-when="edit-inactive-assignee" hidden>106</span> / 10,000</span></div>
+                  data-attr-conflict="value=Volunteers choose a build team while they register, so mentors and the venue can plan for team sizes.&#10;&#10;A volunteer can be on one team at a time. Full teams show as full."
+                  data-attr-conflict-reloaded="value=Volunteers choose a build team while they register, so mentors and the venue can plan for team sizes.&#10;&#10;A volunteer can be on one team at a time. Full teams show as full."></textarea>
+                <div class="mc-field__footer"><span class="mc-counter" id="work-description-count"><span data-unless="validation rejected parent-deleted saving failed parent-no-match parent-failed edit edit-inactive-assignee assignee-search assignee-no-match assignee-failed conflict conflict-reloaded">0</span><span data-when="validation rejected saving failed parent-no-match parent-failed" hidden>68</span><span data-when="parent-deleted" hidden>88</span><span data-when="edit assignee-search assignee-no-match assignee-failed conflict conflict-reloaded" hidden>169</span><span data-when="edit-inactive-assignee" hidden>106</span> / 10,000</span></div>
               </div>
 
               <p class="mc-hint mc-field--full" data-when="create-initiative"><span class="mc-icon mc-icon--initiative mc-icon--sm" aria-hidden="true"></span> Initiatives are top level, so they have no parent.</p>
 
               <div class="mc-field mc-field--full" data-when="create-epic" hidden>
                 <label class="mc-label" for="work-parent-initiative">Parent initiative</label>
-                <span class="mc-select-wrap">
-                  <select class="mc-select" id="work-parent-initiative" required>
-                    <option selected>Grow Toronto's builder community</option>
-                    <option>Demo day showcase</option>
-                  </select>
-                </span>
+                <div class="mc-combobox">
+                  <div class="mc-search">
+                    <span class="mc-icon mc-icon--search" aria-hidden="true"></span>
+                    <input class="mc-input" id="work-parent-initiative" type="text" role="combobox" autocomplete="off" required
+                      aria-autocomplete="list" aria-expanded="false" aria-controls="work-parent-initiative-options"
+                      placeholder="Search initiatives" value="Grow Toronto's builder community">
+                  </div>
+                  <ul class="mc-listbox" id="work-parent-initiative-options" role="listbox" aria-label="Matching initiatives" hidden>
+                    <li class="mc-listbox__option" id="initiative-option-grow" role="option" aria-selected="true"><span>Grow Toronto's builder community</span></li>
+                    <li class="mc-listbox__option" id="initiative-option-demo" role="option" aria-selected="false"><span>Demo day showcase</span></li>
+                  </ul>
+                </div>
               </div>
 
-              <div class="mc-field mc-field--full" data-when="create-story validation rejected parent-deleted saving failed" hidden>
+              <div class="mc-field mc-field--full" data-when="create-story parent-search parent-no-match parent-failed validation rejected parent-deleted saving failed" hidden>
                 <label class="mc-label" for="work-parent-epic">Parent epic</label>
-                <span class="mc-select-wrap">
-                  <select class="mc-select" id="work-parent-epic" required
-                  data-attr-parent-deleted="aria-invalid=true|aria-describedby=work-parent-error">
-                    <option value="" data-attr-parent-deleted="selected">Choose a parent epic</option>
-                    <optgroup label="Grow Toronto's builder community">
-                      <option selected data-attr-parent-deleted="!selected">Hackathon team formation</option>
-                      <option>Venue and logistics</option>
-                    </optgroup>
-                    <optgroup label="Demo day showcase">
-                      <option>Judging and feedback</option>
-                      <option data-unless="parent-deleted">Sponsor outreach</option>
-                    </optgroup>
-                  </select>
-                </span>
+                <div class="mc-combobox">
+                  <div class="mc-search">
+                    <span class="mc-icon mc-icon--search" aria-hidden="true"></span>
+                    <input class="mc-input" id="work-parent-epic" type="text" role="combobox" autocomplete="off" required
+                      aria-autocomplete="list" aria-expanded="false" aria-controls="work-parent-epic-options"
+                      placeholder="Search epics" value="Hackathon team formation"
+                      data-attr-parent-search="value=and|aria-expanded=true|aria-activedescendant=parent-option-venue"
+                      data-attr-parent-no-match="value=catering|aria-describedby=work-parent-empty"
+                      data-attr-parent-failed="value=and|aria-describedby=work-parent-lookup-title"
+                      data-attr-parent-deleted="!value|aria-invalid=true|aria-describedby=work-parent-error"
+                      data-attr-saving="readonly">
+                  </div>
+                  <ul class="mc-listbox" id="work-parent-epic-options" role="listbox" aria-label="Matching epics" data-when="parent-search" hidden>
+                    <li class="mc-listbox__option" id="parent-option-venue" role="option" aria-selected="true">
+                      <span>Venue and logistics</span>
+                      <span class="mc-listbox__hint">In Grow Toronto's builder community</span>
+                    </li>
+                    <li class="mc-listbox__option" id="parent-option-judging" role="option" aria-selected="false">
+                      <span>Judging and feedback</span>
+                      <span class="mc-listbox__hint">In Demo day showcase</span>
+                    </li>
+                  </ul>
+                  <div class="mc-live" role="status" aria-live="polite">
+                    <div class="mc-listbox" data-when="parent-no-match" hidden>
+                      <p class="mc-listbox__empty" id="work-parent-empty">No epics match “catering”</p>
+                    </div>
+                    <p class="mc-visually-hidden" data-when="parent-search" hidden>2 epics found</p>
+                  </div>
+                </div>
+                <div class="mc-alert mc-alert--danger" role="alert" data-when="parent-failed" hidden>
+                  <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+                  <div class="mc-alert__body">
+                    <p class="mc-alert__title" id="work-parent-lookup-title">We couldn't search epics</p>
+                    <p class="mc-alert__text">Hackathon team formation is still the parent and your other entries are kept.</p>
+                    <p class="mc-ref">Reference ID <code>e81c-4a07-b3d5</code>
+                      <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="e81c-4a07-b3d5"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                    </p>
+                    <div class="mc-alert__actions"><button class="mc-button mc-button--sm" type="button" data-goto-state="parent-search"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Retry</button></div>
+                  </div>
+                </div>
                 <p class="mc-field-error" id="work-parent-error" data-when="parent-deleted" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Sponsor outreach was deleted. Choose another epic.</p>
               </div>
 
               <div class="mc-field mc-field--full" data-when="create-task" hidden>
                 <label class="mc-label" for="work-parent-story">Parent story</label>
                 <p class="mc-hint" id="work-parent-story-hint">Tasks follow their story's sprint. This one will be in Sprint 8.</p>
-                <span class="mc-select-wrap">
-                  <select class="mc-select" id="work-parent-story" required aria-describedby="work-parent-story-hint">
-                    <optgroup label="Hackathon team formation">
-                      <option selected>Volunteers can join a build team</option>
-                      <option>Mentors can see team needs</option>
-                      <option>Teams can register a project idea</option>
-                      <option>Mentor matching survey</option>
-                    </optgroup>
-                    <optgroup label="Venue and logistics">
-                      <option>Confirm venue accessibility checklist</option>
-                      <option>Venue floor plan with accessible routes</option>
-                      <option>Book AV for demo day</option>
-                    </optgroup>
-                  </select>
-                </span>
+                <div class="mc-combobox">
+                  <div class="mc-search">
+                    <span class="mc-icon mc-icon--search" aria-hidden="true"></span>
+                    <input class="mc-input" id="work-parent-story" type="text" role="combobox" autocomplete="off" required
+                      aria-autocomplete="list" aria-expanded="false" aria-controls="work-parent-story-options" aria-describedby="work-parent-story-hint"
+                      placeholder="Search stories" value="Volunteers can join a build team">
+                  </div>
+                  <ul class="mc-listbox" id="work-parent-story-options" role="listbox" aria-label="Matching stories" hidden>
+                    <li class="mc-listbox__option" id="story-option-volunteers" role="option" aria-selected="true">
+                      <span>Volunteers can join a build team</span>
+                      <span class="mc-listbox__hint">In Hackathon team formation</span>
+                    </li>
+                  </ul>
+                </div>
               </div>
 
-              <div class="mc-field mc-field--full" data-when="edit edit-inactive-assignee conflict conflict-reloaded" hidden>
+              <div class="mc-field mc-field--full" data-when="edit edit-inactive-assignee assignee-search assignee-no-match assignee-failed conflict conflict-reloaded" hidden>
                 <span class="mc-label">Parent epic</span>
                 <p class="mc-text-sm"><span data-unless="edit-inactive-assignee">Hackathon team formation</span><span data-when="edit-inactive-assignee" hidden>Judging and feedback</span> <span class="mc-muted">· to change it, use "Move to another parent"</span></p>
               </div>
 
-              <div class="mc-field" data-when="edit edit-inactive-assignee conflict conflict-reloaded" hidden>
+              <div class="mc-field" data-when="edit edit-inactive-assignee assignee-search assignee-no-match assignee-failed conflict conflict-reloaded" hidden>
                 <label class="mc-label" for="work-status">Status</label>
                 <span class="mc-select-wrap">
                   <select class="mc-select" id="work-status">
@@ -325,19 +421,52 @@
 
               <div class="mc-field">
                 <label class="mc-label" for="work-assignee">Assignee <span class="mc-label__optional">(optional)</span></label>
-                <span class="mc-select-wrap">
-                  <select class="mc-select" id="work-assignee" aria-describedby="work-assignee-hint"
-                  data-attr-rejected="aria-invalid=true|aria-describedby=work-assignee-error work-assignee-hint">
-                    <option selected>Unassigned</option>
-                    <option>Quinntyne Brown</option>
-                    <option>Priya Raman</option>
-                    <option data-attr-edit="selected" data-attr-conflict-reloaded="selected">Ada Okafor</option>
-                    <option data-attr-conflict="selected">Mateo Silva</option>
-                    <option data-when="rejected" hidden data-attr-rejected="selected">Jordan Reyes</option>
-                    <option data-when="edit-inactive-assignee" hidden data-attr-edit-inactive-assignee="selected">Jordan Reyes (inactive)</option>
-                  </select>
-                </span>
-                <p class="mc-hint" id="work-assignee-hint"><span data-unless="edit-inactive-assignee">Only active people are listed.</span><span data-when="edit-inactive-assignee" hidden>Jordan Reyes's account is inactive. Keep this assignment or choose an active person; inactive people can't be newly assigned.</span></p>
+                <p class="mc-hint" id="work-assignee-hint"><span data-unless="edit-inactive-assignee">Search active people by name. Clear the field to leave it unassigned.</span><span data-when="edit-inactive-assignee" hidden>Jordan Reyes's account is inactive. Keep this assignment or search for an active person; inactive people can't be newly assigned.</span></p>
+                <div class="mc-combobox">
+                  <div class="mc-search">
+                    <span class="mc-icon mc-icon--search" aria-hidden="true"></span>
+                    <input class="mc-input" id="work-assignee" name="assignee" type="text" role="combobox" autocomplete="off"
+                      aria-autocomplete="list" aria-expanded="false" aria-controls="work-assignee-options" aria-describedby="work-assignee-hint"
+                      placeholder="Search people"
+                      data-attr-edit-loading="disabled"
+                      data-attr-edit-load-failed="disabled"
+                      data-attr-edit-not-found="disabled"
+                      data-attr-edit="value=Ada Okafor"
+                      data-attr-edit-inactive-assignee="value=Jordan Reyes (inactive)"
+                      data-attr-assignee-search="value=ma|aria-expanded=true|aria-activedescendant=assignee-option-mateo"
+                      data-attr-assignee-no-match="value=jor|aria-describedby=work-assignee-hint work-assignee-empty"
+                      data-attr-assignee-failed="value=ma|aria-describedby=work-assignee-hint work-assignee-lookup-title"
+                      data-attr-rejected="value=Jordan Reyes|aria-invalid=true|aria-describedby=work-assignee-error work-assignee-hint"
+                      data-attr-saving="readonly"
+                      data-attr-conflict="value=Mateo Silva"
+                      data-attr-conflict-reloaded="value=Ada Okafor">
+                  </div>
+                  <ul class="mc-listbox" id="work-assignee-options" role="listbox" aria-label="Matching active people" data-when="assignee-search" hidden>
+                    <li class="mc-listbox__option" id="assignee-option-mateo" role="option" aria-selected="true">
+                      <span>Mateo Silva</span>
+                    </li>
+                    <li class="mc-listbox__option" id="assignee-option-priya" role="option" aria-selected="false">
+                      <span>Priya Raman</span>
+                    </li>
+                  </ul>
+                  <div class="mc-live" role="status" aria-live="polite">
+                    <div class="mc-listbox" data-when="assignee-no-match" hidden>
+                      <p class="mc-listbox__empty" id="work-assignee-empty">No active people match “jor”</p>
+                    </div>
+                    <p class="mc-visually-hidden" data-when="assignee-search" hidden>2 people found</p>
+                  </div>
+                </div>
+                <div class="mc-alert mc-alert--danger" role="alert" data-when="assignee-failed" hidden>
+                  <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+                  <div class="mc-alert__body">
+                    <p class="mc-alert__title" id="work-assignee-lookup-title">We couldn't search people</p>
+                    <p class="mc-alert__text">Ada Okafor is still assigned and your other entries are kept.</p>
+                    <p class="mc-ref">Reference ID <code>5b72-c4e9-08da</code>
+                      <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="5b72-c4e9-08da"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                    </p>
+                    <div class="mc-alert__actions"><button class="mc-button mc-button--sm" type="button" data-goto-state="assignee-search"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Retry</button></div>
+                  </div>
+                </div>
                 <p class="mc-field-error" id="work-assignee-error" data-when="rejected" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Jordan Reyes is inactive. Choose an active person.</p>
               </div>
 
@@ -345,7 +474,13 @@
                 <label class="mc-label" for="work-start">Start date <span class="mc-label__optional">(optional)</span></label>
                 <input class="mc-input" id="work-start" type="date"
                   data-attr-validation="value=2026-10-07"
+                  data-attr-edit-loading="disabled"
+                  data-attr-edit-load-failed="disabled"
+                  data-attr-edit-not-found="disabled"
                   data-attr-edit="value=2026-09-28"
+                  data-attr-assignee-search="value=2026-09-28"
+                  data-attr-assignee-no-match="value=2026-09-28"
+                  data-attr-assignee-failed="value=2026-09-28"
                   data-attr-conflict="value=2026-09-28"
                   data-attr-conflict-reloaded="value=2026-09-28">
               </div>
@@ -354,14 +489,20 @@
                 <label class="mc-label" for="work-due">Due date <span class="mc-label__optional">(optional)</span></label>
                 <input class="mc-input" id="work-due" type="date"
                   data-attr-validation="value=2026-10-02|aria-invalid=true|aria-describedby=work-due-error"
+                  data-attr-edit-loading="disabled"
+                  data-attr-edit-load-failed="disabled"
+                  data-attr-edit-not-found="disabled"
                   data-attr-edit="value=2026-10-07"
+                  data-attr-assignee-search="value=2026-10-07"
+                  data-attr-assignee-no-match="value=2026-10-07"
+                  data-attr-assignee-failed="value=2026-10-07"
                   data-attr-edit-inactive-assignee="value=2026-10-16"
                   data-attr-conflict="value=2026-10-09"
                   data-attr-conflict-reloaded="value=2026-10-07">
                 <p class="mc-field-error" id="work-due-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Choose a due date on or after the start date (Oct 7, 2026)</p>
               </div>
 
-              <div class="mc-field" data-when="create-story validation rejected parent-deleted saving failed edit edit-inactive-assignee conflict conflict-reloaded" hidden>
+              <div class="mc-field" data-when="create-story parent-search parent-no-match parent-failed validation rejected parent-deleted saving failed edit-loading edit-load-failed edit-not-found edit edit-inactive-assignee assignee-search assignee-no-match assignee-failed conflict conflict-reloaded" hidden>
                 <label class="mc-label" for="work-estimate">Estimate <span class="mc-label__optional">(optional)</span></label>
                 <input class="mc-input" id="work-estimate" type="text" inputmode="numeric" autocomplete="off" aria-describedby="work-estimate-hint"
                   data-attr-validation="value=2.5|aria-invalid=true|aria-describedby=work-estimate-error work-estimate-hint"
@@ -369,14 +510,22 @@
                   data-attr-parent-deleted="value=2"
                   data-attr-saving="value=2|readonly"
                   data-attr-failed="value=2"
+                  data-attr-parent-no-match="value=2"
+                  data-attr-parent-failed="value=2"
+                  data-attr-edit-loading="disabled"
+                  data-attr-edit-load-failed="disabled"
+                  data-attr-edit-not-found="disabled"
                   data-attr-edit="value=5"
+                  data-attr-assignee-search="value=5"
+                  data-attr-assignee-no-match="value=5"
+                  data-attr-assignee-failed="value=5"
                   data-attr-conflict="value=5"
                   data-attr-conflict-reloaded="value=8">
                 <p class="mc-hint" id="work-estimate-hint">A whole number, 0 or more.</p>
                 <p class="mc-field-error" id="work-estimate-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Enter the estimate as a whole number of 0 or more</p>
               </div>
 
-              <p class="mc-hint mc-field--full" data-unless="edit edit-inactive-assignee conflict conflict-reloaded">New items start in To Do.</p>
+              <p class="mc-hint mc-field--full" data-unless="edit-loading edit-load-failed edit-not-found edit edit-inactive-assignee assignee-search assignee-no-match assignee-failed conflict conflict-reloaded">New items start in To Do.</p>
             </div>
           </div>
 
@@ -389,17 +538,25 @@
             data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
             data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
             data-attr-conflict-reloaded="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-assignee-search="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-assignee-no-match="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-assignee-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-parent-no-match="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-parent-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
               data-attr-saving="disabled">Cancel</button>
             <button class="mc-button mc-button--primary" type="button" data-when="conflict" hidden data-goto-state="conflict-reloaded"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Reload latest</button>
             <button class="mc-button mc-button--primary" type="submit" data-unless="conflict"
-              data-attr-saving="aria-busy=true|aria-disabled=true">
+              data-attr-saving="aria-busy=true|aria-disabled=true"
+              data-attr-edit-loading="disabled"
+              data-attr-edit-load-failed="disabled"
+              data-attr-edit-not-found="disabled">
               <span class="mc-spinner" aria-hidden="true" data-when="saving" hidden></span>
               <span data-when="saving" hidden>Saving…</span>
               <span data-when="create-initiative">Add initiative</span>
               <span data-when="create-epic" hidden>Add epic</span>
-              <span data-when="create-story validation rejected parent-deleted failed" hidden>Add story</span>
+              <span data-when="create-story parent-search parent-no-match parent-failed validation rejected parent-deleted failed" hidden>Add story</span>
               <span data-when="create-task" hidden>Add task</span>
-              <span data-when="edit edit-inactive-assignee conflict-reloaded" hidden>Save changes</span>
+              <span data-when="edit-loading edit-load-failed edit-not-found edit edit-inactive-assignee assignee-search assignee-no-match assignee-failed conflict-reloaded" hidden>Save changes</span>
             </button>
           </footer>
         </form>

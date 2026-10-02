@@ -3,6 +3,7 @@ skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
+skinparam maxMessageSize 300
 skinparam ArrowColor #344054
 skinparam rectangle {
   BorderColor #344054
@@ -16,7 +17,7 @@ skinparam package {
 title Behavior - Start a planned sprint
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "SprintsPage / StartSprintDialog / SprintView" as page
+  participant "SprintsPage, SprintPlanningPage or SprintBoardPage\nStartSprintDialog / SprintStartView" as page
   participant "ISprintService / SprintService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,6 +32,11 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
+group Open the dialog (read on open)
+  actor -> page : Start on a planned sprint: startRequested(sprintId), planning page Start sprint,\nor the board's No active sprint Start; StartSprintDialog opens with the sprint ID
+  page -> client : sprintPlanResource(GetSprintPlanQuery): name, goal, dates, member count and points, version;\nno active-sprint check on open, so the dialog always opens on the confirmation
+  client --> page : Start sprint disabled until it resolves (loading); a failed read shows Try again (reload) and Cancel,\nwith the reference ID only after a 500 (load-failed); a 404 emits notFound: the dialog closes with Outdated\nand the opening page rereads
+end
 actor -> page : Confirm Start sprint in StartSprintDialog
 page -> client : Build typed StartSprintCommand with expected sprint version
 client -> access : POST /api/workspaces/{id}/sprints/{sprintId}/start
@@ -39,67 +45,79 @@ access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid or expired JWT; deactivated account
   access --> client : 401; audit denial without payloads
-  client --> page : Clear session; sign in with the Sprints tab as return route
-else Authenticated without the required permission
-  access --> client : 403; audit denial without payloads
-  client --> page : Keep the dialog open; explain that starting sprints is not permitted
-else Authorized
+  client --> page : SessionService.end(Unauthorized) once; sign in with the Sprints tab as return route
+else Authenticated (profile P: every active role starts sprints)
   access -> ctrl : Authorized request
   ctrl -> validation : Send StartSprintCommand through MediatR 12.5.0
-  validation -> validation : Validate identifiers and expected version
-  alt Malformed identifiers or version
-    validation --> ctrl : 400 field errors; nothing read or changed
+  validation -> validation : Validate the expected version (path IDs already matched {id:guid})
+  alt Missing or malformed expected version
+    validation --> ctrl : 400 field error; nothing read or changed
     ctrl --> client : Validation ProblemDetails
-    client --> page : Failed state with reference ID; sprint stays planned
+    client --> page : The alert shows the message without Retry or reference ID; Start sprint unavailable;\nfocus moves to the alert; sprint stays planned
   else Valid request
     validation -> handler : Handle StartSprintCommand
-    handler -> db : Lock workspace; read mode, sprint state and version, active slot, current scope
+    handler -> db : BeginWorkspaceTransactionAsync (workspace lock); LoadSprintStartAsync:\nmode, Sprint with status, version and current memberships, active slot
     db --> handler : Current start conditions
     alt Sprint not found (or in another workspace)
       handler --> ctrl : 404; nothing changed
       ctrl --> client : ProblemDetails (not found)
-      client --> page : Close dialog; reload the sprint list; announce that the sprint no longer exists
+      client --> page : SprintStartView emits notFound; the dialog closes with Outdated; the opening page increments\nits counter and rereads its list, plan header or board, which shows its own state
     else Workspace in Kanban mode (L2-027.3)
       handler --> ctrl : 409 sprints paused; nothing changed
       ctrl --> client : ProblemDetails (sprints paused)
-      client --> page : Blocked explanation; administrators can change mode; Close only, no retry
+      client --> page : blocked-kanban: the explanation fills the alert region and describes the dialog; focus moves to Close;\nno retry; SprintStartView emits modeChanged; the dialog closes with ModeChanged and the page calls\nProjectLayoutPage.modeChanged() (the planning page rereads its plan header)
     else Another sprint is Active (L2-023.2)
       handler --> ctrl : 409 naming the active sprint; neither sprint changes
       ctrl --> client : ProblemDetails (active sprint exists)
-      client --> page : Blocked explanation with a link to review and close it; Close only, no retry
+      client --> page : blocked-active: the explanation naming the active sprint fills the alert region and describes\nthe dialog; focus moves to Review and close Sprint 8; Close; no retry
+      opt Review and close Sprint 8
+        actor -> page : Choose Review and close Sprint 8
+        page -> page : SprintStartView emits closeSprintRequested(SprintReference from the 409); the dialog closes with\nCloseSprint; SprintsPage, SprintPlanningPage or SprintBoardPage calls openCloseSprint(sprintId)\nand CloseSprintDialog opens for that sprint (close-sprint)
+      end
     else Sprint already Active or Closed (L2-023.4)
       handler --> ctrl : 409 not planned; history unchanged
       ctrl --> client : ProblemDetails (not planned)
-      client --> page : Explain the current state; reload the sprint list
+      client --> page : not-planned: the alert region names the current state and describes the dialog; focus moves\nto Close; no retry. SprintStartView emits outdated, so Close returns Outdated and the opening page\nrereads its list, plan header or board
     else Stale sprint version
       handler --> ctrl : 409 changed since reviewed; nothing changed
       ctrl --> client : ProblemDetails (stale version)
-      client --> page : Reload the sprint and its scope; ask for a fresh confirmation; no resubmission
+      client --> page : Read the sprint once; stale state: neutral "Sprint 9 changed after you opened it",\nrefreshed summary; Start sprint asks again; no resubmission
     else Startable Planned sprint
-      handler -> entity : L2-023 start(at, actorId): Active; record start instant, start actor, initial scope
+      handler -> entity : L2-023 start(at, actorId): Active; record start instant, start actor,\ninitial-scope rows as tracked children
       entity --> handler : Active sprint with immutable initial scope
-      handler -> db : L2-039 / L2-040 claim unique active slot; insert initial scope, board placements, success audit in one transaction
+      handler -> db : L2-039 / L2-040 AddActiveSprintSlot; AddBoardState with its placements; AddAuditEvent;\nSaveChangesAsync: sprint, initial-scope rows, unique active slot, board, success audit in one transaction
       alt Active-slot unique violation (concurrent start, L2-041.2)
         db --> handler : Roll back everything
         handler --> ctrl : 409 naming the active sprint; neither sprint changes
         ctrl --> client : ProblemDetails (active sprint exists)
-        client --> page : Blocked explanation; Close only, no retry
+        client --> page : blocked-active explanation naming the active sprint; focus moves to Review and close,\nwhich closes the dialog with CloseSprint(SprintReference); no retry
       else Commit fails
         db --> handler : Roll back business state and success audit
         handler --> ctrl : Generic 500 with correlation ID
         ctrl --> client : Failure; no successful-start claim
-        client --> page : Failed state with reference ID; sprint still planned; Start sprint retries
+        client --> page : Failed state with reference ID; sprint still planned;\nStart sprint retries only when chosen
       else Commit succeeds
         db --> handler : Active sprint version
         handler --> ctrl : Started sprint
         ctrl --> client : 200 with sprint and version
-        client --> page : Open the sprint board; focus its heading
-        page --> actor : Announce that the sprint started
+        client --> page : SprintStartView emits started; the dialog closes with Started(SprintSaveResult); SprintsPage and\nSprintPlanningPage open the sprint board, SprintBoardPage increments its counter; the board heading takes focus
+        page --> actor : The opening page shows the "Sprint 9 started" toast through TOAST_SERVICE
       end
     end
   end
 end
 note over ctrl, db
+A workspace lock wait beyond the timeout returns 503 with Retry-After and no change;
+the dialog shows the same failed state with the reference ID.
+An unexpected 403 (access changed after sign-in) starts nothing; SprintStartView emits forbidden,
+which the dialog relays as its own forbidden while it stays open, and the opening page shows
+the "Your access changed" toast through TOAST_SERVICE, without Retry.
+A start that gets no response is uncertain: the dialog says "We couldn't confirm whether Sprint 9
+started." (no reference ID); SprintStartView emits unconfirmed, which the dialog relays while it
+stays open, so the opening page rereads at once; the view reads the sprint once. Still Planned at
+the same version offers Start sprint again; Active shows the neutral "Sprint 9 is active now."
+(never "Nothing was changed") with Close only, which returns Outdated (unconfirmed-active).
+SaveChangesAsync raises ConcurrencyConflictException on a stale version, mapped to the same 409.
 Unexpected failures return generic 500 plus correlation ID (L2-043).
 Diagnostics exclude secrets and contact payloads.
 end note

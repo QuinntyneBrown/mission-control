@@ -30,10 +30,10 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">Opens when the server refuses a Done change because tasks are unfinished (409) and returns their count: after dragging, the Move dialog, a card menu, or the story's status field, on Kanban and sprint boards alike. It shows the count only. Focus starts on "Keep in progress". Keeping it sends nothing and leaves the status unchanged; a dragged card snaps back to its last saved place. "Mark story Done" resends the same move or status change with the returned completion condition.</p>
-    <p class="mock-note" data-when="server-count" hidden>Tasks changed after the dialog opened, so the server refused the confirmation with the current count (409). Nothing changed; the person confirms again with the new number.</p>
-    <p class="mock-note" data-when="saving" hidden>Only the story status changes; task statuses stay as they are. On success a toast says "Story marked Done — "Volunteers can join a build team" still has 3 open tasks."</p>
-    <p class="mock-note" data-when="failed" hidden>An unexpected server error (500): nothing changed and the story is still In Progress. The dialog stays open with the same count, so "Mark story Done" retries the same confirmed request; "Keep in progress" closes it and restores the saved view. The reference ID matches the server's diagnostic record.</p>
+    <p class="mock-note" data-when="default">Opens when the server refuses a Done change because tasks are unfinished (409) and returns their count: after dragging, the Move dialog, or a card menu on Kanban and sprint boards alike, or after a status change on the story page or in its edit form. It shows the count only. Focus starts on "Keep in progress". Escape does the same as "Keep in progress", and there is no Close button, so the dialog always ends with a choice; a navigation that leaves the page (browser Back, or another story's link on the story page) closes it, and that counts as "Keep in progress": the waiting change is dropped and nothing is sent. Keeping it sends nothing and leaves the status unchanged; a dragged card snaps back to its last saved place, and focus returns to the control that changed the status (the card's Move button, or the status control on the story page). "Mark story Done" resends the same move or status change with the returned completion condition.</p>
+    <p class="mock-note" data-when="server-count" hidden>Tasks changed after the dialog opened, so the server refused the confirmation with the current count (409). A task change updates only the story's task revision, not the story itself, so the confirmation still passes the story's version check and meets this count check instead of a "story changed" outcome. Nothing changed; the person confirms again with the new number. The alert names the new count and is announced without moving focus, which stays on "Mark story Done"; it also becomes the start of the dialog's description.</p>
+    <p class="mock-note" data-when="saving" hidden>Only the story status changes; task statuses stay as they are. Focus stays on "Mark story Done", which reports aria-disabled and stays focusable while "Keep in progress" is disabled, and Escape does nothing until the request finishes. On success a toast says "Story marked Done — "Volunteers can join a build team" still has 3 open tasks." If the story changed or was deleted meanwhile, or the project's delivery mode changed, the dialog closes and the page shows that outcome: a board shows its "board changed" page alert, which takes focus on Reload board, or reloads, and the story page shows the latest story with focus back on its status control, or, when the story or its project was deleted, rereads once and shows the story's Not found state or Project not found, with focus on its heading. If access changed (an unexpected 403), the dialog closes, focus returns to the control that changed the status, and the "Your access changed" toast appears without Retry. If no response arrives at all, nothing is assumed either way: the story may or may not be Done, so the board or the story page reloads once, the dialog closes, and screen readers hear the saved status; if that reload fails too, the page shows its load error with Try again (or Reload board) instead of guessing.</p>
+    <p class="mock-note" data-when="failed" hidden>An unexpected server error (500) or a busy workspace (503): nothing changed and the story is still In Progress. The alert is announced and focus stays on "Mark story Done". The dialog stays open with the same count, so "Mark story Done" retries the same confirmed request; "Keep in progress" closes it and restores the saved view. The reference ID matches the server's diagnostic record. On a board no failure toast appears while this dialog is open; the move waits here. A request that gets no response may have gone through, so this alert is not shown and nothing claims the story is still In Progress: the board re-reads the affected columns, or the story page or edit form re-reads the story, and the dialog closes once that read settles, with the persisted status shown. The story page or form says it couldn't confirm the change, without a reference ID; a board whose re-read fails shows "We couldn't confirm your move". Nothing is resent.</p>
   </div>
 
   <div class="mock-screen">
@@ -125,7 +125,8 @@
     </div>
 
     <div class="mc-backdrop">
-      <section class="mc-dialog mc-dialog--sm" role="alertdialog" aria-modal="true" aria-labelledby="unfinished-title" aria-describedby="unfinished-desc">
+      <section class="mc-dialog mc-dialog--sm" role="alertdialog" aria-modal="true" aria-labelledby="unfinished-title" aria-describedby="unfinished-desc"
+        data-attr-server-count="aria-describedby=unfinished-changed unfinished-desc">
         <header class="mc-dialog__header">
           <span class="mc-dialog__icon mc-dialog__icon--warning"><span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span></span>
           <div class="mc-dialog__heading">
@@ -140,7 +141,7 @@
               <span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>
               <div class="mc-alert__body">
                 <p class="mc-alert__title">The tasks changed</p>
-                <p class="mc-alert__text">A task changed while you were deciding. Nothing was saved. Check the new count and confirm again.</p>
+                <p class="mc-alert__text" id="unfinished-changed">A task changed while you were deciding, and now 4 tasks aren't done. Nothing was saved. Confirm again with the new count.</p>
               </div>
             </div>
             <div class="mc-alert mc-alert--danger" data-when="failed" hidden>

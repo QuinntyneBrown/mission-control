@@ -5,10 +5,15 @@ title Components - Review the standalone design language
 Container_Boundary(site, "design-system/ static artifact") {
   Component(catalog, "ArtifactCatalog", "HTML / JavaScript", "Names available token families and specimens")
   Component(examples, "Controls and responsive examples", "HTML / CSS", "Renders compact through expanded layouts")
-  Component(tokens, "--mc- token stylesheet", "CSS custom properties", "Authoritative in design-system; mirrored by frontend and mocks")
+  Component(tokens, "--mc- token stylesheet", "CSS custom properties", "Authoritative token values")
   Component(breakpoints, "Named breakpoint source", "Sass mixins (mc-bp)", "Only place literal widths appear: xs-xl and short")
+  Component(dist, "Mirror sources", "dist/tokens.css, dist/_breakpoints.scss", "Emitted by the build, unchanged from the sources")
 }
+Component_Ext(sync, "sync-tokens scripts", "frontend npm script / docs/mocks/sync-tokens.mjs", "Copy dist files; write version and commit header; refuse uncommitted design-system changes")
 Rel(catalog, examples, "Opens named example")
 Rel(examples, tokens, "Consumes visual roles")
 Rel(examples, breakpoints, "Switches layout by name")
+Rel(tokens, dist, "Built into")
+Rel(breakpoints, dist, "Built into")
+Rel(sync, dist, "Copies to frontend/styles and docs/mocks/assets")
 @enduml

@@ -6,7 +6,7 @@
   <title>Add or edit lead · Mission Control mock</title>
   <meta name="description" content="Lead form dialog for adding and editing contacts: validation, saving, failure, duplicate email and category, edit conflict with the latest version reloaded for comparison, and a lead deleted while editing.">
   <meta name="mock-area" content="Leads">
-  <meta name="mock-requirements" content="L2-009, L2-011, L2-013, L2-031, L2-033.2, L2-034.1, L2-041.3, L2-043.4">
+  <meta name="mock-requirements" content="L2-005.2, L2-009, L2-011, L2-031, L2-033.2, L2-034.1, L2-041.3, L2-043.4">
   <link rel="stylesheet" href="../assets/tokens.css">
   <link rel="stylesheet" href="../assets/mocks.css">
   <script src="../assets/mocks.js" defer></script>
@@ -24,7 +24,11 @@
           <option value="validation">Validation errors</option>
           <option value="saving">Saving</option>
           <option value="failed">Save failed</option>
+          <option value="forbidden">Not allowed to save</option>
           <option value="duplicate">Duplicate email and category</option>
+          <option value="edit-loading">Edit · loading</option>
+          <option value="edit-load-failed">Edit · couldn't load</option>
+          <option value="edit-not-found">Edit · lead not found</option>
           <option value="edit">Edit</option>
           <option value="conflict">Edit conflict</option>
           <option value="conflict-reloaded">Conflict · latest loaded</option>
@@ -38,14 +42,18 @@
   <div class="mock-notes">
     <p class="mock-note" data-when="add">Opens from "Add lead". Focus moves to First name; Escape or Cancel closes and returns focus to the trigger. Below 576px the dialog fills the screen with the actions pinned to the bottom.</p>
     <p class="mock-note" data-when="add-international" hidden>Phone accepts international prefixes, spaces, parentheses, and hyphens, and is saved exactly as typed. Closing a dirty form asks before discarding.</p>
-    <p class="mock-note" data-when="validation" hidden>Whitespace-only names are invalid. Focus moves to the error summary, whose links jump to each field. Valid input (last name, phone) is kept.</p>
+    <p class="mock-note" data-when="validation" hidden>Whitespace-only names are invalid. Focus moves to the error summary, whose links jump to each field. Valid input (last name, phone) is kept. An edit with invalid values shows the same messages and leaves the saved lead unchanged.</p>
     <p class="mock-note" data-when="saving" hidden>The save button shows progress and ignores repeat clicks; Cancel waits until the request finishes.</p>
-    <p class="mock-note" data-when="failed" hidden>Nothing was saved and every value is kept. "Save lead" retries the same request.</p>
-    <p class="mock-note" data-when="duplicate" hidden>Email/category pairs are unique after trimming and case folding. The API answers 409 with the existing lead's ID, name, and category, so the alert names and links that lead. Every value is kept; the same email is allowed in a different category, so choosing another category resolves the conflict.</p>
+    <p class="mock-note" data-when="failed" hidden>The save got a server error (500), so nothing was saved and every value is kept. The reference ID matches the server's diagnostic record. "Save lead" retries the same request only when pressed; it keeps focus and screen readers hear the alert. A save that gets no response may have gone through, so this alert instead reads "We couldn't confirm whether Oliver Hughes was added" (for an edit, "…whether your changes were saved"), with no reference ID and no claim that nothing was saved. Every value is kept, the directory or lead details behind reread at once, and an edit also rereads the lead; "Save lead" sends again only when pressed, and if the first save went through it meets the duplicate explanation (or, for an edit, the conflict comparison) instead of saving twice.</p>
+    <p class="mock-note" data-when="forbidden" hidden>The role changed while the form was open, so the save returned 403 and nothing was saved. The dialog stays open with every value, explains that only administrators can add or edit leads, and Save is unavailable, so focus moves to the alert, which screen readers read; the dialog's description now points to that explanation. An edit shows the same explanation. Nothing failed on the server, so there is no reference ID. Cancel asks before discarding the kept values. After a save that got no response, the text reads only "Your access changed while this form was open. Your entries are still here.", without "so nothing was saved", because the first save may have gone through.</p>
+    <p class="mock-note" data-when="duplicate" hidden>Email/category pairs are unique after trimming and case folding, so "Grace.Mensah@example.org " matches Grace Mensah's Prayer contact. The API answers 409 with the existing lead's ID, name, and category, so the alert names that lead and "View existing lead" opens her details, after the unsaved-changes question because these entries aren't saved; once her details open, the form closes without saving. Every value is kept; the same email is allowed in a different category, so choosing another category resolves the conflict. Focus moves to Email, which reads its error, and screen readers hear the alert. Editing a lead so that its email and category match another contact shows the same explanation naming that contact, keeps every value, and leaves the saved lead unchanged; Save changes stays available.</p>
+    <p class="mock-note" data-when="edit-loading" hidden>Opens from a lead's Edit action. The form reads the saved lead first: the fields and Save stay disabled until the record arrives, so nothing can be typed over values that haven't loaded. Cancel closes without sending anything. Screen readers hear "Loading lead…"; focus moves to First name once the values arrive.</p>
+    <p class="mock-note" data-when="edit-load-failed" hidden>The read got a server error (500), so the fields and Save stay disabled. Nothing was changed. Try again repeats the read and fills the form once the saved values arrive; the reference ID matches the server's diagnostic record. A read that gets no response shows the same alert without a reference ID, and the shell's offline banner appears. The alert is announced and focus moves to Try again; Cancel closes without sending anything. A 404 shows edit-not-found instead.</p>
+    <p class="mock-note" data-when="edit-not-found" hidden>Opened from a lead's Edit action, but the read answered 404: the lead was deleted after the list or details loaded. The fields and Save stay disabled, so nothing can be typed. The alert is announced, the dialog's description now points to that explanation, and focus moves to "Back to leads", which closes the dialog and opens the directory, which reads afresh. Nothing failed on the server, so there is no reference ID or Try again.</p>
     <p class="mock-note" data-when="edit" hidden>Opens from a lead's Edit action with saved values. Cancel leaves the saved lead unchanged.</p>
-    <p class="mock-note" data-when="conflict" hidden>Another save changed this lead after the form opened, so the API answered 409. The form keeps the attempted values, reads the latest version once for the comparison, and never resubmits. "Reload latest" goes to the next state.</p>
+    <p class="mock-note" data-when="conflict" hidden>Another save changed this lead after the form opened, so the API answered 409. The form keeps the attempted values, reads the latest version once for the comparison, and never resubmits. Save is replaced by "Reload latest", so focus moves to it and screen readers hear the alert; the dialog's description now points to the conflict explanation. "Reload latest" goes to the next state. When the repeat follows a save that got no response, the first save may be the change shown here, so the alert is headed "The latest saved version is shown beside your entries" and never says "Your edits haven't been saved".</p>
     <p class="mock-note" data-when="conflict-reloaded" hidden>"Reload latest" put the latest saved values and version into the form without sending anything. The comparison stays visible so edits can be re-applied by hand before saving. Focus moves to First name and the status is announced politely; leaving now asks before discarding the unsaved edits.</p>
-    <p class="mock-note" data-when="deleted" hidden>Hana Kim was deleted while the form was open, so the save returned 404. Fields and Save are disabled; "Back to leads" opens the directory without her.</p>
+    <p class="mock-note" data-when="deleted" hidden>Hana Kim was deleted while the form was open, so the save returned 404. The fields and Save are disabled, so nothing more can be typed or sent. The alert is announced, the dialog's description now points to that explanation, and focus moves to "Back to leads", which closes the dialog and opens the directory, which reads afresh. Nothing failed on the server, so there is no reference ID or Try again. After a save that got no response, the reread or a repeat can answer 404 too; the alert then reads only "Hana Kim was deleted while you were editing.", without "Your edits weren't saved", because the first save may have gone through.</p>
   </div>
 
   <div class="mock-screen">
@@ -97,12 +105,16 @@
     </div>
 
     <div class="mc-backdrop">
-      <section class="mc-dialog mc-dialog--sheet" role="dialog" aria-modal="true" aria-labelledby="lead-dialog-title" aria-describedby="lead-dialog-note">
+      <section class="mc-dialog mc-dialog--sheet" role="dialog" aria-modal="true" aria-labelledby="lead-dialog-title" aria-describedby="lead-dialog-note"
+        data-attr-forbidden="aria-describedby=lead-forbidden-title lead-forbidden-text"
+        data-attr-edit-not-found="aria-describedby=lead-not-found-title lead-not-found-text"
+        data-attr-conflict="aria-describedby=lead-conflict-title lead-conflict-text"
+        data-attr-deleted="aria-describedby=lead-deleted-title lead-deleted-text">
         <header class="mc-dialog__header">
           <div class="mc-dialog__heading">
             <h2 class="mc-dialog__title" id="lead-dialog-title">
-              <span data-unless="edit conflict conflict-reloaded deleted">Add lead</span>
-              <span data-when="edit conflict conflict-reloaded deleted" hidden>Edit lead</span>
+              <span data-unless="edit-loading edit-load-failed edit-not-found edit conflict conflict-reloaded deleted">Add lead</span>
+              <span data-when="edit-loading edit-load-failed edit-not-found edit conflict conflict-reloaded deleted" hidden>Edit lead</span>
             </h2>
             <p class="mc-dialog__subtitle" id="lead-dialog-note">
               <span data-when="edit conflict conflict-reloaded" hidden>Grace Mensah · </span><span data-when="deleted" hidden>Hana Kim · </span>All fields are required unless marked optional.
@@ -112,6 +124,7 @@
             data-attr-add-international="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
             data-attr-validation="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
             data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+            data-attr-forbidden="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
             data-attr-duplicate="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
             data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
             data-attr-conflict-reloaded="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
@@ -144,11 +157,44 @@
                 </div>
               </div>
 
+              <div class="mc-alert mc-alert--danger" data-when="edit-load-failed" hidden>
+                <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title">We couldn't load this lead</p>
+                  <p class="mc-alert__text">Nothing was changed. Try again, and if it keeps happening, share the reference ID with your administrator.</p>
+                  <p class="mc-ref">Reference ID <code>c83e-1a5f-60d9</code>
+                    <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="c83e-1a5f-60d9"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                  </p>
+                  <div class="mc-alert__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-goto-state="edit"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again</button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="mc-alert mc-alert--danger" tabindex="-1" data-when="forbidden" hidden>
+                <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title" id="lead-forbidden-title">Only administrators can add or edit leads</p>
+                  <p class="mc-alert__text" id="lead-forbidden-text">Your access changed while this form was open, so nothing was saved. Your entries are still here.</p>
+                </div>
+              </div>
+
+              <div class="mc-alert mc-alert--danger" data-when="edit-not-found" hidden>
+                <span class="mc-icon mc-icon--x-circle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title" id="lead-not-found-title">This lead no longer exists</p>
+                  <p class="mc-alert__text" id="lead-not-found-text">It was deleted after the list loaded, so there is nothing to edit. Nothing was changed.</p>
+                  <div class="mc-alert__actions">
+                    <a class="mc-button mc-button--sm" href="lead-directory.html">Back to leads</a>
+                  </div>
+                </div>
+              </div>
+
               <div class="mc-alert mc-alert--danger" data-when="duplicate" hidden>
                 <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
                 <div class="mc-alert__body">
-                  <p class="mc-alert__title">This email is already a Communication lead</p>
-                  <p class="mc-alert__text">Camille Dubois already uses camille.dubois@example.org in Communication. The same email can be added under a different category.</p>
+                  <p class="mc-alert__title">This email is already a Prayer lead</p>
+                  <p class="mc-alert__text">Grace Mensah already uses grace.mensah@example.org in Prayer. The same email can be added under a different category.</p>
                   <div class="mc-alert__actions">
                     <a class="mc-button mc-button--sm" href="lead-detail.html#state=lead">View existing lead</a>
                   </div>
@@ -158,16 +204,16 @@
               <div class="mc-alert mc-alert--warning" data-when="conflict" hidden>
                 <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
                 <div class="mc-alert__body">
-                  <p class="mc-alert__title">This lead changed after you opened it</p>
-                  <p class="mc-alert__text">Your edits haven't been saved. Compare them with the latest saved version, then reload it and re-apply what you need.</p>
+                  <p class="mc-alert__title" id="lead-conflict-title">This lead changed after you opened it</p>
+                  <p class="mc-alert__text" id="lead-conflict-text">Your edits haven't been saved. Compare them with the latest saved version, then reload it and re-apply what you need.</p>
                 </div>
               </div>
 
               <div class="mc-alert mc-alert--danger" data-when="deleted" hidden>
                 <span class="mc-icon mc-icon--x-circle" aria-hidden="true"></span>
                 <div class="mc-alert__body">
-                  <p class="mc-alert__title">This lead no longer exists</p>
-                  <p class="mc-alert__text">Hana Kim was deleted while you were editing. Your edits weren't saved.</p>
+                  <p class="mc-alert__title" id="lead-deleted-title">This lead no longer exists</p>
+                  <p class="mc-alert__text" id="lead-deleted-text">Hana Kim was deleted while you were editing. Your edits weren't saved.</p>
                   <div class="mc-alert__actions">
                     <a class="mc-button mc-button--sm" href="lead-directory.html">Back to leads</a>
                   </div>
@@ -176,6 +222,7 @@
             </div>
 
             <div class="mc-live" role="status" aria-live="polite">
+              <div class="mc-loading-inline" data-when="edit-loading" hidden><span class="mc-spinner" aria-hidden="true"></span>Loading lead…</div>
               <div class="mc-alert" data-when="conflict-reloaded" hidden>
                 <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
                 <div class="mc-alert__body">
@@ -211,7 +258,11 @@
                   data-attr-validation="value=   |aria-invalid=true|aria-describedby=lead-first-error"
                   data-attr-saving="value=Oliver|readonly"
                   data-attr-failed="value=Oliver"
-                  data-attr-duplicate="value=Camille"
+                  data-attr-forbidden="value=Oliver"
+                  data-attr-duplicate="value=Grace"
+                  data-attr-edit-loading="disabled"
+                  data-attr-edit-load-failed="disabled"
+                  data-attr-edit-not-found="disabled"
                   data-attr-edit="value=Grace"
                   data-attr-conflict="value=Grace"
                   data-attr-conflict-reloaded="value=Grace"
@@ -226,7 +277,11 @@
                   data-attr-validation="value=Hughes"
                   data-attr-saving="value=Hughes|readonly"
                   data-attr-failed="value=Hughes"
-                  data-attr-duplicate="value=Dubois"
+                  data-attr-forbidden="value=Hughes"
+                  data-attr-duplicate="value=Mensah"
+                  data-attr-edit-loading="disabled"
+                  data-attr-edit-load-failed="disabled"
+                  data-attr-edit-not-found="disabled"
                   data-attr-edit="value=Mensah"
                   data-attr-conflict="value=Mensah"
                   data-attr-conflict-reloaded="value=Mensah"
@@ -240,13 +295,17 @@
                   data-attr-validation="value=oliver.hughes@|aria-invalid=true|aria-describedby=lead-email-error"
                   data-attr-saving="value=oliver.hughes@example.org|readonly"
                   data-attr-failed="value=oliver.hughes@example.org"
-                  data-attr-duplicate="value=Camille.Dubois@example.org |aria-invalid=true|aria-describedby=lead-email-duplicate"
+                  data-attr-forbidden="value=oliver.hughes@example.org"
+                  data-attr-duplicate="value=Grace.Mensah@example.org |aria-invalid=true|aria-describedby=lead-email-duplicate"
+                  data-attr-edit-loading="disabled"
+                  data-attr-edit-load-failed="disabled"
+                  data-attr-edit-not-found="disabled"
                   data-attr-edit="value=grace.mensah@example.org"
                   data-attr-conflict="value=grace.mensah@example.org"
                   data-attr-conflict-reloaded="value=g.mensah@example.org"
                   data-attr-deleted="value=hana.kim@example.org|disabled">
                 <p class="mc-field-error" id="lead-email-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Enter an email address like name@example.org</p>
-                <p class="mc-field-error" id="lead-email-duplicate" data-when="duplicate" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Already used by a Communication lead. Choose another category or email.</p>
+                <p class="mc-field-error" id="lead-email-duplicate" data-when="duplicate" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Already used by a Prayer lead. Choose another category or email.</p>
               </div>
 
               <div class="mc-field mc-field--full">
@@ -257,38 +316,45 @@
                   data-attr-validation="value=+44 (20) 7946-0321"
                   data-attr-saving="value=+44 (20) 7946-0321|readonly"
                   data-attr-failed="value=+44 (20) 7946-0321"
-                  data-attr-duplicate="value=+44 20 7946 0958"
+                  data-attr-forbidden="value=+44 (20) 7946-0321"
+                  data-attr-duplicate="value=+1 416 555 0117"
+                  data-attr-edit-loading="disabled"
+                  data-attr-edit-load-failed="disabled"
+                  data-attr-edit-not-found="disabled"
                   data-attr-edit="value=+1 416 555 0117"
                   data-attr-conflict="value=+1 416 555 0199"
                   data-attr-conflict-reloaded="value=+1 416 555 0117"
                   data-attr-deleted="value=+1 416 555 0114|disabled">
               </div>
 
-              <fieldset class="mc-choice-group mc-choice-group--row" aria-describedby="lead-category-error"
-                data-attr-validation="aria-invalid=true"
-                data-attr-duplicate="aria-invalid=true"
+              <fieldset class="mc-choice-group mc-choice-group--row"
+                data-attr-validation="aria-invalid=true|aria-describedby=lead-category-error"
+                data-attr-duplicate="aria-invalid=true|aria-describedby=lead-email-duplicate"
+                data-attr-edit-loading="disabled"
+                data-attr-edit-load-failed="disabled"
+                data-attr-edit-not-found="disabled"
                 data-attr-deleted="disabled">
                 <legend>Category</legend>
                 <p class="mc-field-error" id="lead-category-error" data-when="validation" hidden><span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>Choose a category</p>
                 <div class="mc-choice-group__options">
                   <label class="mc-choice">
-                    <input type="radio" name="category" id="lead-category-create" value="create" data-attr-deleted="checked">
+                    <input type="radio" name="category" id="lead-category-create" value="create" required data-attr-deleted="checked">
                     <span class="mc-choice__title"><span class="mc-icon mc-icon--category-create" aria-hidden="true"></span>Create</span>
                   </label>
                   <label class="mc-choice">
-                    <input type="radio" name="category" value="communication" data-attr-duplicate="checked">
+                    <input type="radio" name="category" value="communication" required>
                     <span class="mc-choice__title"><span class="mc-icon mc-icon--category-communication" aria-hidden="true"></span>Communication</span>
                   </label>
                   <label class="mc-choice">
-                    <input type="radio" name="category" value="city">
+                    <input type="radio" name="category" value="city" required>
                     <span class="mc-choice__title"><span class="mc-icon mc-icon--category-city" aria-hidden="true"></span>City</span>
                   </label>
                   <label class="mc-choice">
-                    <input type="radio" name="category" value="prayer" data-attr-edit="checked" data-attr-conflict="checked" data-attr-conflict-reloaded="checked">
+                    <input type="radio" name="category" value="prayer" required data-attr-duplicate="checked" data-attr-edit="checked" data-attr-conflict="checked" data-attr-conflict-reloaded="checked">
                     <span class="mc-choice__title"><span class="mc-icon mc-icon--category-prayer" aria-hidden="true"></span>Prayer</span>
                   </label>
                   <label class="mc-choice">
-                    <input type="radio" name="category" value="event" data-attr-add-international="checked" data-attr-saving="checked" data-attr-failed="checked">
+                    <input type="radio" name="category" value="event" required data-attr-add-international="checked" data-attr-saving="checked" data-attr-failed="checked" data-attr-forbidden="checked">
                     <span class="mc-choice__title"><span class="mc-icon mc-icon--category-event" aria-hidden="true"></span>Event</span>
                   </label>
                 </div>
@@ -303,6 +369,7 @@
               data-attr-add-international="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
               data-attr-validation="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
               data-attr-failed="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
+              data-attr-forbidden="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
               data-attr-duplicate="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
               data-attr-conflict="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
               data-attr-conflict-reloaded="data-nav=../shell/unsaved-changes-dialog.html#state=cancel-form"
@@ -312,11 +379,15 @@
             </button>
             <button class="mc-button mc-button--primary" type="submit" data-unless="conflict"
               data-attr-saving="aria-busy=true|aria-disabled=true"
+              data-attr-edit-loading="disabled"
+              data-attr-edit-load-failed="disabled"
+              data-attr-edit-not-found="disabled"
+              data-attr-forbidden="disabled"
               data-attr-deleted="disabled">
               <span class="mc-spinner" aria-hidden="true" data-when="saving" hidden></span>
               <span data-when="saving" hidden>Saving…</span>
-              <span data-unless="saving edit conflict-reloaded deleted">Save lead</span>
-              <span data-when="edit conflict-reloaded deleted" hidden>Save changes</span>
+              <span data-unless="saving edit-loading edit-load-failed edit-not-found edit conflict-reloaded deleted">Save lead</span>
+              <span data-when="edit-loading edit-load-failed edit-not-found edit conflict-reloaded deleted" hidden>Save changes</span>
             </button>
           </footer>
         </form>

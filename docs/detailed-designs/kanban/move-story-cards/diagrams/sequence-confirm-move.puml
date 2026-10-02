@@ -1,0 +1,81 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam maxMessageSize 300
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Behavior - Confirm a Done move on a board
+actor "Authorized user" as actor
+box "Frontend - Mission Control application" #E0F2FE
+  participant "KanbanBoardPage / BoardView" as page
+  participant "UnfinishedTasksDialog" as dialog
+  participant "IBoardService / BoardService" as client
+end box
+box "Backend - MissionControl.Api, Application and Domain" #D1FADF
+  participant "BoardsController / MoveStoryCommandHandler / StoryStatusTransition" as api
+end box
+box "Backend - MissionControl.Infrastructure" #FFF4E5
+  database "Mission Control SQL" as db
+end box
+note over page, dialog
+Entered from "Move by drag or labeled controls": a 409 unfinished-tasks left
+the move pending (other moves, drag and Load more stay aria-disabled) and
+UnfinishedTasksDialog open with the card's key, title, saved status and count.
+end note
+alt Keep in progress (or Escape)
+  actor -> dialog : Keep in progress, or Escape
+  dialog --> page : kept; KanbanBoardPage passes it through completionDecision
+  page -> page : BoardView restores the latest acknowledged state; sends no request; ends pending; moveStatus Settled; the prompt reports Settled, so the dialog closes with Settled and focus returns to the card's Move button
+else A navigation closes the dialog with no result
+  page -> page : KanbanBoardPage relays kept through completionDecision, as if Keep in progress were chosen; BoardView ends the pending move and sends no request
+else Mark story Done
+  actor -> dialog : Mark story Done
+  dialog --> page : confirmed(condition); KanbanBoardPage passes it through completionDecision; the prompt shows saving
+  page -> client : L2-021 BoardView resubmits the same MoveStoryCommand (same destination, position and versions) with the returned StoryCompletionCondition; stamped with board ID and generation
+  client -> api : PUT /api/workspaces/{id}/board/stories/{storyId}/placement (profile P: an active session suffices)
+  api -> db : CurrentAccountAuthorization reads current access; for an active session, BeginWorkspaceTransactionAsync takes the lock and LoadStoryPlacementsAsync reads mode, versions and the current condition (validation already passed for this command)
+  alt Missing, invalid or expired JWT; deactivated account
+    api --> client : 401; nothing saved
+    client --> page : sessionInterceptor calls SessionService.end(Unauthorized) once; navigation to sign-in destroys the dialog and BoardView; the board is the return route
+  else Unexpected 403 (Denied audit; nothing changed)
+    api --> client : 403
+    client --> page : sessionInterceptor refreshes capabilities; the promise rejects; BoardView restores the latest acknowledged state; ends pending; moveStatus Forbidden
+    page --> actor : The prompt reports Forbidden, so the dialog closes with Forbidden (focus returns to the card's Move button); KanbanBoardPage shows the "Your access changed" toast through TOAST_SERVICE, without Retry
+  else Lock wait times out (503 with Retry-After) or the commit fails (generic 500)
+    api --> client : ProblemDetails with the correlation ID; nothing changed
+    client --> page : The promise rejects; the move stays pending; no toast; moveStatus Failed with the reference ID
+    page -> dialog : KanbanBoardPage sets the prompt to failed with the reference ID (announced; focus stays on Mark story Done); Mark story Done resends the same command; Keep restores the latest acknowledged state and ends pending
+  else Story or workspace missing; delivery mode changed; story or board version stale; story left the sprint
+    api --> client : 404, 409 mode-changed, or 409 board-changed; nothing changed
+    client --> page : The promise rejects; BoardView restores the latest acknowledged state; ends pending; moveStatus Settled closes the dialog with Settled
+    page --> actor : As for a first attempt: a 404 reloads the first batch (without the story, or the project's not-found presentation); ProjectLayoutPage.modeChanged(); or the board-changed page alert, whose Reload board takes focus
+  else Unfinished count or task revision changed since the 409 (a task change leaves the story's version and the board version unchanged, so the version checks pass)
+    api --> client : 409 unfinished-tasks with the current StoryCompletionCondition; nothing changed
+    client --> page : The promise rejects with the new condition; the move stays pending; moveStatus ConfirmationRequired
+    page -> dialog : The prompt shows server-count; its alert announces the new count without moving focus; the person confirms again or keeps
+  else Condition still current
+    api -> db : StoryStatusTransition marks the story Done on every live placement (child tasks unchanged) and bumps the active sprint's version for a member; AddAuditEvent; SaveChangesAsync commits
+    api --> client : 200 MoveStoryResult
+    client --> page : The promise resolves; a result for an older generation or another board is discarded
+    page -> client : Re-read the loaded window of the source and destination columns, as for a first attempt
+    page -> page : Adopt them as the latest acknowledged state (a failed re-read keeps the placement with a column alert); end pending
+    page --> actor : moveStatus Settled with the announcement closes the dialog with Settled; KanbanBoardPage shows "Story marked Done" with the open-task count through TOAST_SERVICE
+  end
+end
+note over page, client
+No response (timeout or network failure) is never treated as a failure:
+the board re-reads the affected columns before another move, as for a first
+attempt; moveStatus Settled then closes the dialog with Settled. If that read
+fails too, the board shows its unconfirmed-move load error with Reload board.
+end note
+@enduml

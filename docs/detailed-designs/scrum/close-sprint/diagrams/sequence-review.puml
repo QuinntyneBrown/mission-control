@@ -1,0 +1,87 @@
+@startuml
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+skinparam roundcorner 12
+skinparam defaultFontName Arial
+skinparam maxMessageSize 300
+skinparam ArrowColor #344054
+skinparam rectangle {
+  BorderColor #344054
+  FontColor #101828
+}
+skinparam package {
+  BorderColor #667085
+  FontColor #101828
+  BackgroundColor #F9FAFB
+}
+title Behavior - Review unfinished stories and destinations
+actor "Authorized user" as actor
+box "Frontend - Mission Control application" #E0F2FE
+  participant "SprintBoardPage, SprintsPage, SprintPlanningPage\nor ProjectLayoutPage\nCloseSprintDialog / SprintClosureForm" as page
+  participant "ISprintService / SprintService" as client
+end box
+box "Backend - MissionControl.Api" #D1FADF
+  participant "CurrentAccountAuthorization" as access
+  participant "SprintsController" as ctrl
+end box
+box "Backend - MissionControl.Application and Domain" #ECFDF3
+  participant "ValidationBehavior" as validation
+  participant "GetSprintClosureReviewQueryHandler" as handler
+end box
+box "Backend - MissionControl.Infrastructure" #FFF4E5
+  database "Mission Control SQL" as db
+end box
+actor -> page : Choose Close sprint on the sprint board header or the Sprints tab's active sprint card,\nReview and close Sprint N in the blocked start dialog, or Close Sprint N in the blocked mode-change dialog
+page -> client : CloseSprintDialog opens with the sprint ID; closureReviewResource(query: sprint, page 1,\npage size 25), independent of the cards loaded on the board; Close sprint disabled while loading
+client -> access : GET /api/workspaces/{id}/sprints/{sprintId}/closure-review?page=1&pageSize=25
+access -> access : L2-002 validate signature, issuer, audience, subject, expiry
+access -> db : Read current status, role and credential version
+db --> access : Current account access
+alt Missing, invalid or expired JWT; deactivated account
+  access --> client : 401; audit denial without payloads
+  client --> page : SessionService.end(Unauthorized) once; sign in with the sprint board as return route
+else Authenticated (profile P: every active role closes sprints)
+  access -> ctrl : Authorized request
+  ctrl -> validation : Send GetSprintClosureReviewQuery through MediatR 12.5.0
+  validation -> validation : L2-045 page 1 or more; page size 1-100, default 25
+  alt Invalid page or page size
+    validation --> ctrl : 400 field errors; nothing read
+    ctrl --> client : Validation ProblemDetails
+    client --> page : The page-size message without Try again or reference ID; Close sprint disabled\n(the dialog always sends page size 25, so only direct API callers meet this)
+  else Valid request
+    validation -> handler : Handle GetSprintClosureReviewQuery
+    handler -> db : ListSprintClosureReviewAsync: sprint status and version; one page of unfinished members\n(backlog priority, then story ID) with totals in one statement;\nplanned sprints of the workspace by start date then ID, at most 25 (a design proposal stricter than L2-025;\na story meant for a later planned sprint returns to the backlog and is added from that sprint's plan page)
+    db --> handler : Review projection, or none
+    alt Sprint not found (or in another workspace)
+      handler --> ctrl : 404
+      ctrl --> client : ProblemDetails (not found)
+      client --> page : SprintClosureForm emits notFound; the dialog closes with Outdated; the opening page rereads\nand shows its own state; no reference ID or retry
+    else Sprint not Active (still Planned, or already Closed)
+      handler --> ctrl : 409 not active, naming the sprint's state; nothing read further
+      ctrl --> client : ProblemDetails (not active)
+      client --> page : already-closed names the actual state ("Sprint 8 is already closed. Nothing changed." or\n"Sprint 9 hasn't started, so it can't close. Nothing changed.") in the alert region, which describes\nthe dialog; focus moves to View sprints, or to Close when offerSprintsLink is false (Sprints tab); no retry; the form emits outdated, so Close returns Outdated
+    else Active sprint
+      handler --> ctrl : Sprint name, goal and dates; page of unfinished stories, unfinished/done/story totals,\ndestinations, reviewed version
+      ctrl --> client : 200 with SprintClosureReview
+      client --> page : Review resource updates; keep reviewedVersion; rows show override,\nelse Set all, else Choose...; only Done stories: no carryover choices;\ndraftChange stays clean until Set all or an override is chosen
+      page --> actor : Present the summary, Set all, the first page of unfinished stories, and the pager
+    end
+  end
+end
+loop Change page
+  actor -> page : Choose another page
+  page -> client : Page signal changes; the resource aborts a superseded page read
+  client --> page : New page; Set all and every override are kept by story ID
+  opt Page version differs from reviewedVersion
+    page --> actor : conflict: neutral "Sprint 8 changed while you were reviewing" message; reread page 1;\nadopt the new version; keep choices that still apply
+  end
+end
+note over ctrl, db
+Each review response is one consistent read (rows and totals in one statement); it takes
+no workspace lock, so it never answers 503.
+Unexpected failures return generic 500 plus correlation ID (L2-043). A 500 or no response
+shows review-failed with Try again (the reference ID only after a 500); focus moves to
+Try again, and Close sprint stays disabled.
+Diagnostics exclude secrets and contact payloads.
+end note
+@enduml

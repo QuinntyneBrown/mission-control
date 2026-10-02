@@ -3,10 +3,16 @@
 LAYOUT_WITH_LEGEND()
 title Containers - Review the standalone design language
 Person(reviewer, "Design reviewer", "Reviews at profile R widths (320-1920)")
-System_Boundary(artifact, "Review the standalone design language") {
-  Container(source, "design-system/", "HTML / CSS / JavaScript", "Static sources and token values")
-  Container(site, "Independent static review site", "Browser", "Catalog, examples, and review states")
+System_Boundary(artifact, "design-system/ standalone artifact") {
+  Container(source, "design-system/ sources", "HTML / CSS / Sass / JavaScript", "Catalog, specimens, token and breakpoint sources")
+  Container(dist, "dist/", "Build output", "Static site, tokens.css, and _breakpoints.scss")
 }
-Rel(source, site, "Builds or loads offline")
-Rel(reviewer, site, "Opens and resizes")
+Container_Ext(frontendMirror, "frontend/styles", "sync-tokens copy", "tokens.css and _breakpoints.scss with version and commit header")
+Container_Ext(mockMirror, "docs/mocks/assets", "sync-tokens.mjs copy", "tokens.css and _breakpoints.scss with version and commit header")
+Rel(source, dist, "Builds with its own package.json")
+Rel(frontendMirror, dist, "npm run sync-tokens copies")
+Rel(mockMirror, dist, "node docs/mocks/sync-tokens.mjs copies")
+Rel(reviewer, dist, "Opens the site and resizes")
+Rel(reviewer, frontendMirror, "Rebuilds, resyncs, expects no change")
+Rel(reviewer, mockMirror, "Rebuilds, resyncs, expects no change")
 @enduml

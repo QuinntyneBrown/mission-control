@@ -4,6 +4,7 @@ skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
 skinparam ArrowColor #344054
+skinparam maxMessageSize 400
 skinparam rectangle {
   BorderColor #344054
   FontColor #101828
@@ -16,7 +17,7 @@ skinparam package {
 title Behavior - Read workspace list and overview
 actor "Signed-in user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "ProjectListPage or ProjectOverviewPage\nWorkspaceView" as page
+  participant "ProjectListPage / WorkspaceListView\nor ProjectLayoutPage / ProjectHeaderView\nwith ProjectOverviewPage / WorkspaceOverviewView\nand BoardModeGuard" as page
   participant "IWorkspaceService / WorkspaceService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -25,40 +26,62 @@ box "Backend - MissionControl.Api" #D1FADF
 end box
 box "Backend - MissionControl.Application and Domain" #ECFDF3
   participant "ValidationBehavior" as validation
-  participant "GetWorkspacesQueryHandler\nGetWorkspaceQueryHandler" as handler
+  participant "ListWorkspacesQueryHandler\nGetWorkspaceQueryHandler" as handler
 end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Open Projects or a project overview
-page -> page : Show skeleton; announce "Loading projects" / "Loading project"
-page -> client : list(GetWorkspacesQuery page, pageSize 25) or read(GetWorkspaceQuery id)
-client -> access : GET /api/workspaces?page=&pageSize= or GET /api/workspaces/{id}
+actor -> page : Open Projects (optionally ?responsibleLeadId from a lead's View all), change page or Clear filter, or open an overview
+page -> page : Route query or route ID reaches the view's input; its query signal changes at once (no debounce); show skeleton; announce "Loading projects" / "Loading project"
+page -> client : workspacesResource reads ListWorkspacesQuery (page, pageSize 25, responsibleLeadId?), or the header's and the overview view's workspaceResource each read GetWorkspaceQuery (id); each resource is created once in its view's injection context
+opt The view's previous read is still in flight
+  client -> client : Unsubscribe the superseded request; HttpClient cancels it; it updates no state
+end
+client -> access : GET /api/workspaces?page=&pageSize=&responsibleLeadId= or GET /api/workspaces/{id}
+alt Overview route ID is not a GUID
+  access --> client : 404 from API routing: the {id:guid} route constraint matches no endpoint; no authorization, controller, or handler runs
+  client --> page : Resource status error (404); the header keeps only the breadcrumb; the overview view shows "Project not found" with Back to projects
+else List query or well-formed ID
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid, or expired JWT; inactive account
   access --> client : 401; audit denial without payloads
-  client --> page : Clear in-memory session; show login; restore this route after sign-in
+  client -> client : sessionInterceptor: a 401 for the current session generation calls SessionService.end(Unauthorized) once
+  client --> page : Navigation to sign-in destroys the view, which cancels its read; this route is restored after sign-in
 else Signed in (profile P: both roles read workspaces)
   access -> ctrl : Authorized request
   ctrl -> validation : Send query through MediatR 12.5.0
-  validation -> validation : L2-045 page >= 1; pageSize 1-100
-  alt Page size zero, negative, or above 100
-    validation --> ctrl : 400 page-size field message; nothing read
+  validation -> validation : L2-045 page >= 1; pageSize 1-100; responsibleLeadId well-formed when present
+  alt Page below 1, or page size zero, negative, or above 100 (an edited link)
+    validation --> ctrl : 400 page or pageSize field message; nothing read
     ctrl --> client : Validation ProblemDetails
-    client --> page : Show load-failed state with the page-size message; no partial list
+    client --> page : Resource status error (400); the field message with Clear filter (all projects, page 1), as in lead-filter-invalid; no rows or paging; no Try again or reference ID; announce the message
+  else responsibleLeadId is malformed
+    validation --> ctrl : 400 responsibleLeadId field message; nothing read
+    ctrl --> client : Validation ProblemDetails
+    client --> page : Resource status error (400); lead-filter-invalid state with Clear filter; no Try again or reference ID
+  else Valid list query, responsibleLeadId names no lead
+    validation -> handler : Handle ListWorkspacesQuery
+    handler -> db : Read the filter lead's ID and name
+    db --> handler : No lead
+    handler --> ctrl : 400 responsibleLeadId field message; no list read
+    ctrl --> client : Validation ProblemDetails
+    client --> page : Resource status error (400); lead-filter-invalid state: "That lead no longer exists, so projects can't be filtered by them", Clear filter (shows all projects); no Try again or reference ID
   else Valid list query
-    validation -> handler : Handle GetWorkspacesQuery
-    handler -> db : One page ordered by name then ID; total matching count
-    handler -> db : Per listed workspace: persisted story done/total
-    handler -> db : Active sprint name and end date, or kept-sprint presence in Kanban mode
-    db --> handler : Bounded rows and counts from persisted records
-    handler --> ctrl : WorkspaceList (items, totalCount, page, pageSize)
+    validation -> handler : Handle ListWorkspacesQuery
+    opt responsibleLeadId supplied
+      handler -> db : Read the filter lead's ID and name
+    end
+    handler -> db : One projection statement: page ordered by name then ID (lead filter if any), window total, set-based story done/total, active sprint or paused flag; no descriptions
+    db --> handler : Bounded rows and total from one statement
+    handler --> ctrl : WorkspaceList (items, totalCount, page, pageSize, responsibleLead?)
     ctrl --> client : 200
-    client --> page : Update signal state
-    alt No workspaces
+    client --> page : Resource status resolved; value holds the WorkspaceList for the current query
+    alt No workspaces and no filter
       page --> actor : Empty state: administrators get New project; collaborators learn who can add one
+    else Filtered by responsible lead
+      page --> actor : "Projects led by" the lead's name, full matching count, Clear filter, and paging as usual
     else Total above page size
       page --> actor : Cards, "Showing 1-25 of N", Previous/Next and page links
     else Single page
@@ -66,32 +89,60 @@ else Signed in (profile P: both roles read workspaces)
     end
   else Valid overview query
     validation -> handler : Handle GetWorkspaceQuery
-    handler -> db : Load workspace settings, version, and responsible lead
+    handler -> db : Begin one snapshot read transaction; load workspace settings, version, and responsible lead
     alt Workspace missing (deleted or mistyped link)
       db --> handler : No row
       handler --> ctrl : 404; nothing else read
       ctrl --> client : NotFound ProblemDetails
-      client --> page : Show "Project not found" with Back to projects; focus the heading
+      client --> page : Resource status error (404); the header keeps only the breadcrumb, with no alert; the overview view shows "Project not found" with Back to projects and focuses its heading; its first notFound makes ProjectOverviewPage call ProjectLayoutPage.refresh(), so a header that still showed the project rereads
     else Workspace found
-      handler -> db : Type-by-status counts over every persisted work item
+      handler -> db : Type-by-status counts, per-type totals, and the work-item total over every persisted work item
       alt Scrum mode
         handler -> db : Active sprint (name, goal, dates, done/total stories)
-        handler -> db : Next planned sprint; latest closed sprint's recorded outcome
+        handler -> db : Next planned sprint (earliest start date, then ID); latest closed sprint's recorded outcome (latest closure, then ID)
       else Kanban mode
-        handler -> db : Kept planned and closed sprints, newest first, at most 25
+        handler -> db : Kept planned and closed sprints by planned start date, newest first, then ID; at most 25
         handler -> handler : Flag each kept sprint paused
       end
       db --> handler : Persisted projection
       handler --> ctrl : WorkspaceDetail
       ctrl --> client : 200
-      client --> page : Update signal state
-      page --> actor : Header, settings, counts linked to filtered work, and the sprint or board summary
+      client --> page : Resource status resolved; value holds the WorkspaceDetail
+      page --> actor : Header with name, mode, lead, and the tabs for the mode (the header emits workspaceLoaded); Project actions only with workspaces.manage, else the Collaborator notice; overview settings, counts linked to filtered work, and the sprint or board summary
     end
   end
 end
+end
+opt Board tab opened
+  page -> client : BoardModeGuard (canMatch) awaits loadMode(workspaceId): GET /api/workspaces/{id}, authorized as above
+  alt Mode read
+    client --> page : The workspace's delivery mode
+    page -> page : Match KanbanBoardPage in Kanban mode or SprintBoardPage in Scrum mode
+  else 404 (project deleted or mistyped)
+    client --> page : The promise rejects with the 404
+    page -> page : The guard returns a UrlTree to overview, whose view shows "Project not found" with Back to projects
+  else 500 or 503, or no response
+    client --> page : The promise rejects
+    page -> page : The guard sets RouteContext.status to Error with the response's reference ID, or to Offline when no response came, and returns false from canMatch; a declined canMatch skips its route instead of cancelling the navigation, so with both board routes skipped the router matches the shell's ** route and completes the navigation at the board URL, outside the project layout
+    page --> actor : ApplicationShell shows ShellStatusView with the status the guard set, not the Not found of that route, because the status clears when a navigation starts, not when it ends
+    actor -> page : Try again
+    page -> page : Navigate to the attempted board URL with onSameUrlNavigation 'reload'; that navigation's start clears the status, and route matching runs BoardModeGuard again
+  end
+end
+opt Sprints route, and the resolved header has no Sprints tab (Kanban with no kept sprints)
+  page -> page : ProjectLayoutPage navigates to overview, replacing the URL; while one of its dialogs is open it defers this until the dialog closes
+end
 opt Unexpected failure (network, SQL, or server)
-  client --> page : 500 or no response with correlation ID
-  page --> actor : Load-failed state with reference ID, Copy, and Try again; no empty layout
+  client --> page : Resource status error: 500 or 503 with correlation ID, or no response
+  alt Projects list, or the overview view's read (the header may have failed too and shows its compact alert)
+    page --> actor : Load-failed state with Try again; a 500 or 503 adds its reference ID and Copy; no response shows no reference ID and the shell's offline banner appears; no empty layout
+    actor -> page : Try again
+    page -> client : WorkspaceListView calls reload() on its workspacesResource; WorkspaceOverviewView emits retryRequested, and ProjectOverviewPage calls ProjectLayoutPage.refresh() (revision + 1), so ProjectHeaderView and the overview reread their workspaceResource together
+  else ProjectHeaderView's read (the active tab's view keeps whatever its own read returned)
+    page --> actor : The header keeps the breadcrumb and shows a compact alert under it: "We couldn't load this project's details", the reference ID only when a response carried one (500 or 503), and Try again; announced as an alert; no name, tabs, or Project actions
+    actor -> page : Try again
+    page -> client : ProjectHeaderView emits retryRequested; ProjectLayoutPage maps it to refresh() (revision + 1), so the header and the active tab's view reread together
+  end
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).

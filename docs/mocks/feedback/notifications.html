@@ -31,7 +31,7 @@
 
   <div class="mock-notes">
     <p class="mock-note" data-when="default">The toasts, alerts, and menus on this page are static specimens and are not announced. "Show" pushes a live copy into the toast region at the bottom of the screen.</p>
-    <p class="mock-note" data-when="toast-stack" hidden>Up to three toasts stack bottom-right, newest last; below 576px they span the bottom of the screen. The error stays until dismissed or retried; focus never moves to a toast.</p>
+    <p class="mock-note" data-when="toast-stack" hidden>Up to three toasts stack bottom-right, newest last; below 576px they span the bottom of the screen. The error stays until dismissed or retried; focus never moves to a toast. The toast region always holds two live containers, a polite status container for success and info and an alert container for errors and warnings, so a new toast is announced by the container it joins; a toast itself carries no role. While a dialog is open, the toast region stacks above it in the overlay layer, outside the background the dialog makes inert, so both live containers keep announcing; below 576px it sits above a sheet's pinned footer, so no toast covers the footer's actions, and the sheet keeps a focused field scrolled clear of the toast. A toast's own actions become reachable once the dialog closes.</p>
   </div>
 
   <main class="mock-index" id="main" tabindex="-1">
@@ -45,8 +45,9 @@
       <h2 class="mc-card__title mc-mb-4">How feedback behaves</h2>
       <ul class="mc-stack mc-stack--sm mc-text-sm">
         <li>A toast confirms an outcome the page already shows. It never holds the only copy of something important.</li>
+        <li>The page where the action happened raises its toasts and the application shell displays them. Every toast clears when the session ends. Losing the connection shows the offline banner, never a toast.</li>
         <li>Success and info toasts dismiss after 8 seconds, waiting while hovered or focused. Errors, warnings, and toasts with an action stay until dismissed.</li>
-        <li>Outcomes are announced through a polite status region; failures use an assertive alert. Focus stays where the person was working.</li>
+        <li>Outcomes are announced through a polite status region; failures use an assertive alert. Focus stays where the person was working, unless the outcome disables or removes the focused control: then focus moves to the outcome's alert or its first offered action. Validation with several problems focuses the error summary; a single problem, or a server 400 naming one field, focuses that field, which reads its error.</li>
         <li>Status is never colour alone: every tone has an icon and words.</li>
         <li>Destructive confirmations name the affected item and offer a clear way back.</li>
       </ul>
@@ -305,6 +306,23 @@
             </dl>
             <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-task-deleted"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Task deleted” toast</span></button></div>
           </li>
+          <li class="mock-index__item mc-card mock-specimen">
+            <div class="mc-toast-region mc-toast-region--static">
+              <div class="mc-toast mc-toast--info">
+      <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Already deleted</p>
+        <p class="mc-toast__text">“Publish team list for mentors” was already deleted, so the list was reloaded without it.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+            </div>
+            <dl class="mc-dl mc-dl--stacked mc-text-sm">
+              <dt>Shown when</dt><dd>The API answers 404 because the item no longer exists: deleting a work item finds it already deleted, or Move to position… finds it gone. The dialog closes, the page rereads without the item, and this toast names it. Deleting a lead or a project that was already deleted shows the same info toast naming the record, such as “Hana Kim was already deleted.” When the dialog had relayed that an earlier delete got no response before it closed this way, that first request may have done the deleting, so the info toast is titled “Deleted” and neutrally says the named record has been deleted, such as “Hana Kim has been deleted.” (for a work item: “Publish team list for mentors” has been deleted.), never “already deleted”. Edit project finding the project deleted (when it opens, or from Back to projects after a save) returns to Projects with the same neutral info toast, such as “Community Hackathon 2026 has been deleted.”</dd>
+              <dt>Tone and announcement</dt><dd>Info · Status (polite) · Dismisses after 8 seconds</dd>
+            </dl>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-already-deleted"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Already deleted” toast</span></button></div>
+          </li>
           </ul>
         </section>
         <section class="mc-stack" aria-labelledby="toasts-board">
@@ -334,34 +352,19 @@
       <div class="mc-toast__body">
         <p class="mc-toast__title">Couldn&#x27;t move story</p>
         <p class="mc-toast__text">“Mentors can see team needs” is back in To Do.</p>
+        <p class="mc-ref">Reference ID <code>5e3c-91a7-d20f</code>
+          <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="5e3c-91a7-d20f"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+        </p>
         <div class="mc-toast__actions"><button class="mc-button mc-button--sm" type="button">Retry</button></div>
       </div>
       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
     </div>
             </div>
             <dl class="mc-dl mc-dl--stacked mc-text-sm">
-              <dt>Shown when</dt><dd>The API rejects a move or can&#x27;t be reached; the card returns to its last saved place.</dd>
+              <dt>Shown when</dt><dd>The move failed on the server (500) or the workspace was busy (503); the card returns to its last saved place, and Retry sends the same move again. The reference ID is the response&#x27;s correlation ID. With no response, the board re-reads the columns instead of showing this toast. A refused move (400) shows the API&#x27;s reason with Reload board, without Retry or a reference ID, because repeating it would be refused again. A 403 is unexpected, because moves need only an active session: the card returns and the board page shows the “Your access changed” toast instead, without Retry.</dd>
               <dt>Tone and announcement</dt><dd>Error · Alert (assertive) · Stays until dismissed</dd>
             </dl>
             <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-card-move-failed"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Couldn&#x27;t move story” toast</span></button></div>
-          </li>
-          <li class="mock-index__item mc-card mock-specimen">
-            <div class="mc-toast-region mc-toast-region--static">
-              <div class="mc-toast mc-toast--warning">
-      <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
-      <div class="mc-toast__body">
-        <p class="mc-toast__title">The board changed</p>
-        <p class="mc-toast__text">Someone else moved stories.</p>
-        <div class="mc-toast__actions"><button class="mc-button mc-button--sm" type="button">Reload</button></div>
-      </div>
-      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
-    </div>
-            </div>
-            <dl class="mc-dl mc-dl--stacked mc-text-sm">
-              <dt>Shown when</dt><dd>A move conflicts with a newer change (409).</dd>
-              <dt>Tone and announcement</dt><dd>Warning · Alert (assertive) · Stays until dismissed</dd>
-            </dl>
-            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-board-changed"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “The board changed” toast</span></button></div>
           </li>
           <li class="mock-index__item mc-card mock-specimen">
             <div class="mc-toast-region mc-toast-region--static">
@@ -442,7 +445,7 @@
       <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
       <div class="mc-toast__body">
         <p class="mc-toast__title">Sprint 8 closed</p>
-        <p class="mc-toast__text">4 done, 1 returned to the backlog, 1 moved to Sprint 9.</p>
+        <p class="mc-toast__text">2 done, 2 returned to the backlog, 2 moved to Sprint 9.</p>
       </div>
       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
     </div>
@@ -470,7 +473,7 @@
     </div>
             </div>
             <dl class="mc-dl mc-dl--stacked mc-text-sm">
-              <dt>Shown when</dt><dd>An administrator provisions an account.</dd>
+              <dt>Shown when</dt><dd>The Add account dialog closes after adding an account; the account list rereads to show it.</dd>
               <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
             </dl>
             <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-account-added"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Account added” toast</span></button></div>
@@ -487,7 +490,7 @@
     </div>
             </div>
             <dl class="mc-dl mc-dl--stacked mc-text-sm">
-              <dt>Shown when</dt><dd>An account&#x27;s names or role are saved.</dd>
+              <dt>Shown when</dt><dd>An account&#x27;s names or role are saved; the account list or details page rereads.</dd>
               <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
             </dl>
             <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-account-saved"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Changes saved” toast</span></button></div>
@@ -504,7 +507,7 @@
     </div>
             </div>
             <dl class="mc-dl mc-dl--stacked mc-text-sm">
-              <dt>Shown when</dt><dd>An administrator sets a replacement password.</dd>
+              <dt>Shown when</dt><dd>An administrator sets a replacement password for another account. Replacing your own signs you out instead.</dd>
               <dt>Tone and announcement</dt><dd>Success · Status (polite) · Dismisses after 8 seconds</dd>
             </dl>
             <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-password-replaced"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Password replaced” toast</span></button></div>
@@ -543,28 +546,28 @@
             </dl>
             <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-account-reactivated"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Account reactivated” toast</span></button></div>
           </li>
-          </ul>
-        </section>
-        <section class="mc-stack" aria-labelledby="toasts-system">
-          <h3 id="toasts-system">System</h3>
-          <ul class="mock-index__list">
           <li class="mock-index__item mc-card mock-specimen">
             <div class="mc-toast-region mc-toast-region--static">
-              <div class="mc-toast mc-toast--warning">
-      <span class="mc-icon mc-icon--wifi-off" aria-hidden="true"></span>
+              <div class="mc-toast mc-toast--info">
+      <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
       <div class="mc-toast__body">
-        <p class="mc-toast__title">You&#x27;re offline</p>
-        <p class="mc-toast__text">Changes can&#x27;t be saved until you reconnect.</p>
+        <p class="mc-toast__title">Account not found</p>
+        <p class="mc-toast__text">That account doesn&#x27;t exist, so the account list was reloaded.</p>
       </div>
       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
     </div>
             </div>
             <dl class="mc-dl mc-dl--stacked mc-text-sm">
-              <dt>Shown when</dt><dd>The browser loses its connection to the API.</dd>
-              <dt>Tone and announcement</dt><dd>Warning · Alert (assertive) · Stays until dismissed</dd>
+              <dt>Shown when</dt><dd>An account dialog opened from Accounts finds that its account doesn&#x27;t exist (404): the dialog closes and the list rereads. Accounts are never deleted, so this follows only an outdated or mistyped ID. Opened from an account&#x27;s own page, the dialog closes onto that page&#x27;s Account not found state instead.</dd>
+              <dt>Tone and announcement</dt><dd>Info · Status (polite) · Dismisses after 8 seconds</dd>
             </dl>
-            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-offline"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “You&#x27;re offline” toast</span></button></div>
+            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-account-not-found"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Account not found” toast</span></button></div>
           </li>
+          </ul>
+        </section>
+        <section class="mc-stack" aria-labelledby="toasts-system">
+          <h3 id="toasts-system">System</h3>
+          <ul class="mock-index__list">
           <li class="mock-index__item mc-card mock-specimen">
             <div class="mc-toast-region mc-toast-region--static">
               <div class="mc-toast mc-toast--danger">
@@ -578,28 +581,10 @@
     </div>
             </div>
             <dl class="mc-dl mc-dl--stacked mc-text-sm">
-              <dt>Shown when</dt><dd>The API returns 403 because the account&#x27;s role changed after sign-in. A deactivated account gets 401 and the sign-in page&#x27;s “Your session ended” message instead.</dd>
+              <dt>Shown when</dt><dd>The API unexpectedly answers 403 to an action that needs only an active session: a card move, adding, editing, or reordering work, or planning, starting, re-scoping, or closing a sprint. The page where it happened puts back what was last saved and raises this toast; there is no Retry, because repeating the action would be refused again, and the person&#x27;s permissions refresh. Administrator-only dialogs explain a 403 inside the dialog, and Accounts or the Audit log show the access-denied page instead. A deactivated account gets 401 and the sign-in page&#x27;s “Your session ended” message.</dd>
               <dt>Tone and announcement</dt><dd>Error · Alert (assertive) · Stays until dismissed</dd>
             </dl>
             <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-access-changed"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Your access changed” toast</span></button></div>
-          </li>
-          <li class="mock-index__item mc-card mock-specimen">
-            <div class="mc-toast-region mc-toast-region--static">
-              <div class="mc-toast mc-toast--danger">
-      <span class="mc-icon mc-icon--alert-octagon" aria-hidden="true"></span>
-      <div class="mc-toast__body">
-        <p class="mc-toast__title">Something went wrong</p>
-        <p class="mc-toast__text">Nothing was changed. Try again. Reference ID 3a9c-51e0-d7b2.</p>
-        <div class="mc-toast__actions"><button class="mc-button mc-button--sm" type="button">Try again</button></div>
-      </div>
-      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
-    </div>
-            </div>
-            <dl class="mc-dl mc-dl--stacked mc-text-sm">
-              <dt>Shown when</dt><dd>An unexpected server error (500) occurs during an action.</dd>
-              <dt>Tone and announcement</dt><dd>Error · Alert (assertive) · Stays until dismissed</dd>
-            </dl>
-            <div><button class="mc-button mc-button--sm" type="button" data-toast="tpl-server-error"><span class="mc-icon mc-icon--bell" aria-hidden="true"></span>Show<span class="mc-visually-hidden"> “Something went wrong” toast</span></button></div>
           </li>
           </ul>
         </section>
@@ -645,7 +630,7 @@
               </div>
             </div>
           </div>
-          <p class="mc-hint">Shown when a save answers 409 because the record changed after the form opened. The form keeps your values beside the latest saved ones and never resubmits; Reload latest loads the latest values and keeps the comparison visible.</p>
+          <p class="mc-hint">Shown when a save answers 409 because the record changed after the form opened. The form keeps your values beside the latest saved ones and never resubmits; Reload latest loads the latest values and keeps the comparison visible. When the save follows one that got no response, the first save may be the change shown, so the alert is headed "The latest saved version is shown beside your entries" instead and never says "Your edits haven't been saved".</p>
         </li>
         <li class="mock-index__item">
           <h3 class="mc-h4">Error with reference ID</h3>
@@ -659,6 +644,7 @@
               </p>
             </div>
           </div>
+          <p class="mc-hint">Shown when a save answers 500, or 503 when the server is busy. A save that gets no response may still have been made, so the same alert reads "We couldn't confirm whether …" with no reference ID and never says nothing was saved; the form reads the saved record again before another attempt.</p>
         </li>
         <li class="mock-index__item">
           <h3 class="mc-h4">Neutral: read-only</h3>
@@ -679,17 +665,30 @@
               <div class="mc-alert__actions"><button class="mc-button mc-button--sm" type="button"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again</button></div>
             </div>
           </div>
+          <p class="mc-hint">The application shell shows this banner while the latest request got no response, and clears it with the next response. Content already on screen stays. Try again reloads the current page in place (the address stays), so its views are recreated and read their data again; a form with unsaved input asks first. There is no offline toast.</p>
         </li>
         <li class="mock-index__item">
-          <h3 class="mc-h4">Access changed</h3>
+          <h3 class="mc-h4">Board changed</h3>
+          <div class="mc-alert mc-alert--warning">
+            <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
+            <div class="mc-alert__body">
+              <p class="mc-alert__title">The board changed</p>
+              <p class="mc-alert__text">The board changed after it loaded, so your move wasn't applied. Reload to see the latest board.</p>
+              <div class="mc-alert__actions"><button class="mc-button mc-button--sm" type="button"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Reload board</button></div>
+            </div>
+          </div>
+          <p class="mc-hint">Shown at the top of a Kanban or sprint board when the API refuses a move with 409 because the board changed after it loaded. The board keeps its last saved view, and Reload board reads the latest columns; nothing is resubmitted. It is a page alert, not a toast. <a href="../kanban/kanban-board.html#state=conflict">See it on the Kanban board</a>.</p>
+        </li>
+        <li class="mock-index__item">
+          <h3 class="mc-h4">Access changed in an administrator dialog</h3>
           <div class="mc-alert mc-alert--danger">
             <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
             <div class="mc-alert__body">
-              <p class="mc-alert__title">Your access changed</p>
-              <p class="mc-alert__text">You no longer have permission to do that. An administrator may have changed your role. Nothing was changed.</p>
-              <div class="mc-alert__actions"><a class="mc-button mc-button--sm" href="../home/home.html">Go to Home</a></div>
+              <p class="mc-alert__title">Only administrators can add or edit leads</p>
+              <p class="mc-alert__text">Your access changed while this form was open, so nothing was saved. Your entries are still here.</p>
             </div>
           </div>
+          <p class="mc-hint">Shown inside an administrator-only dialog when its save answers 403 because the role changed while it was open: that dialog's designed 403, such as the lead form's forbidden state. The title names what only administrators can do there. The dialog stays open with every value and its save action becomes unavailable, so focus moves to this alert; it offers no action, Retry, or reference ID. After a save that got no response, the text reads only “Your access changed while this form was open. Your entries are still here.”, because the first save may have gone through. A change any active account may make shows the “Your access changed” toast instead. <a href="../leads/lead-form-dialog.html#state=forbidden">See it in the lead form</a>.</p>
         </li>
         <li class="mock-index__item">
           <h3 class="mc-h4">Sprints paused in Kanban</h3>
@@ -741,7 +740,7 @@
               <li><a href="#sample-first">Enter a first name</a></li>
             </ul>
           </div>
-          <p class="mc-hint">Focus moves here on submit; each link jumps to its field.</p>
+          <p class="mc-hint">With two or more problems, focus moves here on submit and each link jumps to its field; a single problem focuses its field instead.</p>
         </li>
         <li class="mock-index__item mc-card">
           <h3 class="mc-h4">Field error</h3>
@@ -778,7 +777,7 @@
         </li>
         <li class="mock-index__item mc-card">
           <h3 class="mc-h4">Unsaved changes</h3>
-          <p class="mc-text-sm">Leaving a page, cancelling a form, or signing out with unsaved input asks first, naming what would be lost.</p>
+          <p class="mc-text-sm">Leaving a page, cancelling a form, or signing out with unsaved input asks first. The dialog names what would be lost when the form supplies a summary, and uses generic copy otherwise.</p>
           <div><a class="mc-button mc-button--sm" href="../shell/unsaved-changes-dialog.html">Open the confirmation</a></div>
         </li>
       </ul>
@@ -788,7 +787,7 @@
     <section class="mock-index__group" id="dialogs" aria-labelledby="dialogs-title">
       <div class="mc-stack mc-stack--sm mc-mb-6">
         <h2 id="dialogs-title">Dialogs and confirmations</h2>
-        <p class="mc-muted">Every dialog moves focus inside, keeps Tab within it, closes with Cancel or Escape, and returns focus to what opened it. Form dialogs fill the screen below 576px; confirmations stay compact and name the item.</p>
+        <p class="mc-muted">Every dialog moves focus inside, keeps Tab within it, closes with Cancel or Escape, and returns focus to what opened it. Below 576px form dialogs become full-screen sheets with a pinned footer; confirmations stay centered with full-width stacked actions and name the item.</p>
       </div>
       <ul class="mc-list">
             <li class="mc-list__item">
@@ -957,10 +956,11 @@
           <div class="mc-empty mc-empty--compact mc-empty--error">
             <span class="mc-empty__icon"><span class="mc-icon mc-icon--alert-circle mc-icon--lg" aria-hidden="true"></span></span>
             <p class="mc-empty__title">We couldn't load leads</p>
-            <p class="mc-empty__text">Check your connection and try again.</p>
+            <p class="mc-empty__text">Something went wrong on our side. Try again.</p>
             <p class="mc-ref">Reference ID <code>7d41-a2c9-0be3</code></p>
             <div class="mc-empty__actions"><button class="mc-button mc-button--primary" type="button"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again</button></div>
           </div>
+          <p class="mc-hint">A 500 or 503 shows its reference ID. A read that got no response reads "Check your connection and try again." and shows no reference ID, because no response carried one.</p>
         </li>
         <li class="mock-index__item">
           <h3 class="mc-h4">Loading skeleton</h3>
@@ -974,8 +974,8 @@
         <li class="mock-index__item mc-card">
           <h3 class="mc-h4">Load more</h3>
           <div class="mc-board__more">
-            <span>Showing 100 of 340 stories</span>
-            <button class="mc-button mc-button--sm" type="button">Load 100 more</button>
+            <span>Showing 25 of 340 stories</span>
+            <button class="mc-button mc-button--sm" type="button">Load 25 more</button>
           </div>
           <div class="mc-loading-inline"><span class="mc-spinner" aria-hidden="true"></span>Loading more stories…</div>
           <p class="mc-hint">Totals always count every matching record, not just the loaded batch.</p>
@@ -1077,8 +1077,8 @@
           <h3 class="mc-h4">Add to sprint</h3>
           <div class="mc-menu" data-open>
             <p class="mc-menu__label">Add to sprint</p>
-            <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--calendar" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9<span class="mc-menu__hint">Planned · Oct 13 – Oct 23</span></span></button>
             <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--play" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 8<span class="mc-menu__hint">Active · records a scope change</span></span></button>
+            <button class="mc-menu__item" type="button"><span class="mc-icon mc-icon--calendar" aria-hidden="true"></span><span class="mc-menu__item-text">Sprint 9<span class="mc-menu__hint">Planned · Oct 13 – Oct 23</span></span></button>
             <div class="mc-menu__separator"></div>
             <span class="mc-menu__item" aria-disabled="true"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span><span class="mc-menu__item-text">Done stories can't be added</span></span>
           </div>
@@ -1130,7 +1130,7 @@
     <section class="mock-index__group" id="announcements" aria-labelledby="announcements-title">
       <div class="mc-stack mc-stack--sm mc-mb-6">
         <h2 id="announcements-title">Screen-reader announcements</h2>
-        <p class="mc-muted">Outcomes are announced without moving focus, except validation, which moves focus to the error summary.</p>
+        <p class="mc-muted">Outcomes are announced without moving focus, with two exceptions. When an outcome disables or removes the focused control, focus moves to the outcome's alert or its first offered action. Validation with several problems moves focus to the error summary, and a single problem, or a server 400 naming one field, moves focus to that field.</p>
       </div>
       <div class="mc-table-wrap">
         <table class="mc-table mc-table--stack">
@@ -1157,7 +1157,7 @@
                 <tr>
                   <td class="mc-table__primary">“Fix 3 problems to save this lead”</td>
                   <td data-label="Region">Focus moves to the error summary</td>
-                  <td data-label="When">A form is submitted with invalid fields.</td>
+                  <td data-label="When">A form is submitted with several invalid fields. A single invalid field, or a server 400 naming one field, takes focus itself and reads its error.</td>
                 </tr>
                 <tr>
                   <td class="mc-table__primary">“Saving…”</td>
@@ -1172,7 +1172,12 @@
                 <tr>
                   <td class="mc-table__primary">“Couldn&#x27;t move story. It&#x27;s back in To Do.”</td>
                   <td data-label="Region">Alert (assertive)</td>
-                  <td data-label="When">A board move fails or conflicts.</td>
+                  <td data-label="When">A board move fails on the server (500) or the workspace is busy (503). With no response, the board re-reads the columns instead.</td>
+                </tr>
+                <tr>
+                  <td class="mc-table__primary">“The board changed after it loaded, so your move wasn&#x27;t applied. Reload to see the latest board.”</td>
+                  <td data-label="Region">Alert (assertive)</td>
+                  <td data-label="When">A board move is refused because the board changed after it loaded (409); the board shows its Board changed alert with Reload board.</td>
                 </tr>
                 <tr>
                   <td class="mc-table__primary">“Reordered: ‘Book AV for demo day’ is now 2 of 6”</td>
@@ -1200,31 +1205,38 @@
     </section>
   </main>
 
-  <div class="mc-toast-region" role="status" aria-live="polite">
-    <div class="mc-toast mc-toast--success" data-when="toast-stack" hidden>
-      <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
-      <div class="mc-toast__body">
-        <p class="mc-toast__title">Lead added</p>
-        <p class="mc-toast__text">Oliver Hughes was added to Event.</p>
+  <div class="mc-toast-region">
+    <div class="mc-toast-live" role="status" aria-live="polite">
+      <div class="mc-toast mc-toast--success" data-when="toast-stack" hidden>
+        <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
+        <div class="mc-toast__body">
+          <p class="mc-toast__title">Lead added</p>
+          <p class="mc-toast__text">Oliver Hughes was added to Event.</p>
+        </div>
+        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
       </div>
-      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+      <div class="mc-toast mc-toast--success" data-when="toast-stack" hidden>
+        <span class="mc-icon mc-icon--play" aria-hidden="true"></span>
+        <div class="mc-toast__body">
+          <p class="mc-toast__title">Sprint 9 started</p>
+          <p class="mc-toast__text">Its board is open.</p>
+        </div>
+        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+      </div>
     </div>
-    <div class="mc-toast mc-toast--success" data-when="toast-stack" hidden>
-      <span class="mc-icon mc-icon--play" aria-hidden="true"></span>
-      <div class="mc-toast__body">
-        <p class="mc-toast__title">Sprint 9 started</p>
-        <p class="mc-toast__text">Its board is open.</p>
+    <div class="mc-toast-live" role="alert">
+      <div class="mc-toast mc-toast--danger" data-when="toast-stack" hidden>
+        <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+        <div class="mc-toast__body">
+          <p class="mc-toast__title">Couldn't move story</p>
+          <p class="mc-toast__text">“Mentors can see team needs” is back in To Do.</p>
+          <p class="mc-ref">Reference ID <code>5e3c-91a7-d20f</code>
+            <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="5e3c-91a7-d20f"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+          </p>
+          <div class="mc-toast__actions"><button class="mc-button mc-button--sm" type="button">Retry</button></div>
+        </div>
+        <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
       </div>
-      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
-    </div>
-    <div class="mc-toast mc-toast--danger" role="alert" data-when="toast-stack" hidden>
-      <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
-      <div class="mc-toast__body">
-        <p class="mc-toast__title">Couldn't move story</p>
-        <p class="mc-toast__text">“Mentors can see team needs” is back in To Do.</p>
-        <div class="mc-toast__actions"><button class="mc-button mc-button--sm" type="button">Retry</button></div>
-      </div>
-      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
     </div>
   </div>
 
@@ -1357,6 +1369,16 @@
       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
     </div>
   </template>
+  <template id="tpl-already-deleted">
+    <div class="mc-toast mc-toast--info">
+      <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
+      <div class="mc-toast__body">
+        <p class="mc-toast__title">Already deleted</p>
+        <p class="mc-toast__text">“Publish team list for mentors” was already deleted, so the list was reloaded without it.</p>
+      </div>
+      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
+    </div>
+  </template>
   <template id="tpl-card-moved">
     <div class="mc-toast mc-toast--success">
       <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
@@ -1368,23 +1390,15 @@
     </div>
   </template>
   <template id="tpl-card-move-failed">
-    <div class="mc-toast mc-toast--danger" role="alert">
+    <div class="mc-toast mc-toast--danger">
       <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
       <div class="mc-toast__body">
         <p class="mc-toast__title">Couldn&#x27;t move story</p>
         <p class="mc-toast__text">“Mentors can see team needs” is back in To Do.</p>
+        <p class="mc-ref">Reference ID <code>5e3c-91a7-d20f</code>
+          <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="5e3c-91a7-d20f"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+        </p>
         <div class="mc-toast__actions"><button class="mc-button mc-button--sm" type="button">Retry</button></div>
-      </div>
-      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
-    </div>
-  </template>
-  <template id="tpl-board-changed">
-    <div class="mc-toast mc-toast--warning" role="alert">
-      <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
-      <div class="mc-toast__body">
-        <p class="mc-toast__title">The board changed</p>
-        <p class="mc-toast__text">Someone else moved stories.</p>
-        <div class="mc-toast__actions"><button class="mc-button mc-button--sm" type="button">Reload</button></div>
       </div>
       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
     </div>
@@ -1434,7 +1448,7 @@
       <span class="mc-icon mc-icon--check-circle" aria-hidden="true"></span>
       <div class="mc-toast__body">
         <p class="mc-toast__title">Sprint 8 closed</p>
-        <p class="mc-toast__text">4 done, 1 returned to the backlog, 1 moved to Sprint 9.</p>
+        <p class="mc-toast__text">2 done, 2 returned to the backlog, 2 moved to Sprint 9.</p>
       </div>
       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
     </div>
@@ -1489,34 +1503,23 @@
       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
     </div>
   </template>
-  <template id="tpl-offline">
-    <div class="mc-toast mc-toast--warning" role="alert">
-      <span class="mc-icon mc-icon--wifi-off" aria-hidden="true"></span>
+  <template id="tpl-account-not-found">
+    <div class="mc-toast mc-toast--info">
+      <span class="mc-icon mc-icon--info" aria-hidden="true"></span>
       <div class="mc-toast__body">
-        <p class="mc-toast__title">You&#x27;re offline</p>
-        <p class="mc-toast__text">Changes can&#x27;t be saved until you reconnect.</p>
+        <p class="mc-toast__title">Account not found</p>
+        <p class="mc-toast__text">That account doesn&#x27;t exist, so the account list was reloaded.</p>
       </div>
       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
     </div>
   </template>
   <template id="tpl-access-changed">
-    <div class="mc-toast mc-toast--danger" role="alert">
+    <div class="mc-toast mc-toast--danger">
       <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
       <div class="mc-toast__body">
         <p class="mc-toast__title">Your access changed</p>
         <p class="mc-toast__text">You no longer have permission to do that.</p>
         <div class="mc-toast__actions"><button class="mc-button mc-button--sm" type="button" data-nav="../home/home.html">Go to Home</button></div>
-      </div>
-      <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
-    </div>
-  </template>
-  <template id="tpl-server-error">
-    <div class="mc-toast mc-toast--danger" role="alert">
-      <span class="mc-icon mc-icon--alert-octagon" aria-hidden="true"></span>
-      <div class="mc-toast__body">
-        <p class="mc-toast__title">Something went wrong</p>
-        <p class="mc-toast__text">Nothing was changed. Try again. Reference ID 3a9c-51e0-d7b2.</p>
-        <div class="mc-toast__actions"><button class="mc-button mc-button--sm" type="button">Try again</button></div>
       </div>
       <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-dismiss aria-label="Dismiss notification"><span class="mc-icon mc-icon--close" aria-hidden="true"></span></button>
     </div>

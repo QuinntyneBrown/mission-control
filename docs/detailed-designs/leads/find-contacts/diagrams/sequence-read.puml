@@ -4,6 +4,7 @@ skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
 skinparam ArrowColor #344054
+skinparam maxMessageSize 300
 skinparam rectangle {
   BorderColor #344054
   FontColor #101828
@@ -16,7 +17,7 @@ skinparam package {
 title Behavior - Read lead details
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "LeadDetailPage / LeadView" as page
+  participant "LeadDetailPage / LeadDetailView" as page
   participant "ILeadService / LeadService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -32,42 +33,49 @@ box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
 actor -> page : Open /leads/:id
-page -> page : Show loading skeleton; announce "Loading lead"
-page -> client : Build typed GetLeadQuery
+page -> page : The route's lead ID reaches the view's leadId input; show loading skeleton; announce "Loading lead"
+page -> client : leadResource (created once in LeadDetailView's injection context) reads GetLeadQuery for that ID
 client -> access : GET /api/leads/{id}
+alt Route ID is not a GUID
+  access --> client : 404 from API routing: the {id:guid} route constraint matches no endpoint; no authorization, controller, or handler runs
+  client --> page : Resource status error (404); show "Lead not found" with Back to leads; focus its heading
+else Well-formed ID
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid, or expired JWT; inactive account
   access --> client : 401; audit denial without payloads
-  client --> page : Clear in-memory session; require login; restore /leads/:id after login (L2-029.3)
+  client -> client : sessionInterceptor: a 401 for the current session generation calls SessionService.end(Unauthorized) once
+  client --> page : Navigation to sign-in destroys the view, which cancels its read; /leads/:id is restored after sign-in (L2-029.3)
 else Authenticated (every role reads contacts in profile P)
   access -> ctrl : Authorized request
-alt Route ID is not a GUID
-  ctrl --> client : 404 ProblemDetails; no handler runs
-  client --> page : Show "Lead not found" with Back to leads; focus its heading
-else Well-formed ID
   ctrl -> validation : Send GetLeadQuery through MediatR 12.5.0
   validation -> handler : Handle GetLeadQuery
-  handler -> db : Read lead by ID and workspaces naming it responsible (ID, name, mode)
-  db --> handler : Contact or none; responsible workspaces
+  handler -> db : LoadLeadDetailAsync, one snapshot read: lead by ID, count of workspaces naming it responsible, first 10 by name then ID (ID, name, mode)
+  db --> handler : Contact or none; responsibleWorkspaceCount; bounded preview
   alt Lead does not exist
     handler --> ctrl : 404 lead not found
     ctrl --> client : NotFound ProblemDetails
-    client --> page : Show "Lead not found" with Back to leads; focus its heading (L2-010.4)
+    client --> page : Resource status error (404); show "Lead not found" with Back to leads; focus its heading (L2-010.4)
   else Lead exists
     handler -> entity : Project LeadDetailResult; isCityLead from City category and designated email
-    entity --> handler : Saved values, isCityLead, responsibleWorkspaces
+    entity --> handler : Saved values, isCityLead, responsibleWorkspaceCount, responsibleWorkspaces (at most 10)
     handler --> ctrl : Typed result
     ctrl --> client : 200 LeadDetailResult
-    client --> page : Render details; absent phone reads Not provided; City Lead label from isCityLead; Responsible for card
-    page --> actor : Lead details; focus moves to the lead name heading
+    client --> page : Resource status resolved; render details; absent phone reads Not provided; City Lead label from isCityLead
+    alt responsibleWorkspaceCount is 0
+      page -> page : Responsible for card reads no project responsibility; no link
+    else Count is 1 or more
+      page -> page : Card shows the count, up to 10 project links, and View all to /projects?responsibleLeadId={id}
+    end
+    page --> actor : Lead details; Edit and Delete only when canManageLeads, else the read-only notice; focus moves to the lead name heading
   end
 end
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043);
-the page shows "We couldn't load this lead" with the reference ID, Try again, and Back to leads.
+the view shows "We couldn't load this lead" with the reference ID, Try again (reload()), and Back to leads.
+With no response there is no reference ID, and the shell's offline banner appears.
 Diagnostics exclude secrets and contact payloads.
 end note
 @enduml

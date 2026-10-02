@@ -2,7 +2,7 @@
 !include <C4/C4_Container>
 LAYOUT_WITH_LEGEND()
 title Containers - Change workspace delivery mode
-Person(actor, "Authorized user", "Change workspace delivery mode")
+Person(actor, "Administrator", "Change workspace delivery mode")
 System_Boundary(mc, "Mission Control") {
   Container(web, "Mission Control web client", "Angular", "Change workspace delivery mode")
   Container(api, "MissionControl.Api", ".NET", "Authorized application handlers")

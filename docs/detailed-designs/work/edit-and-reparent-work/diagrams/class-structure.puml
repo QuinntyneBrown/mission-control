@@ -4,133 +4,213 @@ skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
 skinparam ArrowColor #344054
-skinparam rectangle {
-  BorderColor #344054
-  FontColor #101828
-}
 skinparam package {
   BorderColor #667085
   FontColor #101828
   BackgroundColor #F9FAFB
 }
-title Class structure - Edit, assign, and reparent work
 skinparam class {
   BorderColor #344054
   FontColor #101828
   BackgroundColor #F9FAFB
 }
-class WorkItemDetailPage {
-  +routeContext: Signal<RouteContext>
-  +openDialog(): void
+set separator none
+left to right direction
+title Backend classes - Edit, assign, and reparent work
+package "MissionControl.Api" {
+  class WorkItemsController {
+    -sender: ISender
+  }
+  class AssigneeChoicesController {
+    -sender: ISender
+  }
 }
-class WorkItemFormDialog {
-  +draft: Signal<WorkItemDraft>
-  +comparison: Signal<FieldComparison[]>
-  +reloadLatest(): void
+package "MissionControl.Application" {
+  class UpdateWorkItemCommand {
+    +workspaceId: Guid
+    +itemId: Guid
+    +details: WorkItemDetails
+    +expectedVersion: long
+    +completionCondition: StoryCompletionCondition?
+  }
+  note bottom of UpdateWorkItemCommand
+    A field absent from details stays unchanged;
+    an explicit null clears an optional field. The
+    detail's status control and task rows send
+    only status with the item's expected version.
+    The validator checks lengths, status, and a
+    whole estimate of 0 or more. The command has no
+    item type, so the handler, after loading the
+    item, refuses an estimate for a non-story and a
+    due date before the merged start date (400 field
+    error, nothing changed).
+  end note
+  class ListAssigneeChoicesQuery {
+    +workspaceId: Guid
+    +search: string?
+    +page: int
+    +pageSize: int
+  }
+  class ReparentWorkItemCommand {
+    +workspaceId: Guid
+    +itemId: Guid
+    +targetParentId: Guid
+    +expectedVersion: long
+  }
+  class UpdateWorkItemCommandHandler {
+    +Handle(request, ct): Task<WorkItemSaved>
+  }
+  class ListAssigneeChoicesQueryHandler {
+    +Handle(request, ct): Task<AssigneeChoicePage>
+  }
+  class ReparentWorkItemCommandHandler {
+    +Handle(request, ct): Task<WorkItemMoved>
+  }
+  class WorkItemSaved {
+    +id: Guid
+    +version: long
+  }
+  class AssigneeChoicePage {
+    +items: AssigneeChoice[]
+    +totalCount: int
+    +page: int
+    +pageSize: int
+  }
+  class AssigneeChoice {
+    +id: Guid
+    +displayName: string
+  }
+  class WorkItemMoved {
+    +id: Guid
+    +version: long
+    +path: AncestorLink[]
+  }
+  class StoryStatusTransition {
+    +apply(placements, status, sent?, requestedBoardId?, position?): bool
+  }
+  note bottom of StoryStatusTransition
+    Defined by Confirm story completion; shared with
+    board moves and the completion endpoint. False
+    means confirmation required (nothing changed).
+    Otherwise sets the status, moves every live
+    placement, and increments the active sprint's
+    version when the story is a member.
+  end note
+  class StoryPlacements {
+    +story: WorkItem
+    +boards: IReadOnlyList<BoardState>
+    +completion: StoryCompletionCondition
+  }
+  interface IMissionControlDataSession {
+    +BeginWorkspaceTransactionAsync(workspaceId, ct): Task
+    +LoadWorkItemAsync(workspaceId, itemId, ct): Task<WorkItem?>
+    +LoadStoryPlacementsAsync(workspaceId, storyId, ct): Task<StoryPlacements?>
+    +LoadAccountStatusAsync(accountId, ct): Task<bool?>
+    +LoadSiblingOrderAsync(workspaceId, parentId, ct): Task<WorkOrder>
+    +ListActiveAssigneeChoicesAsync(query, ct): Task<AssigneeChoicePage>
+    +AddAuditEvent(auditEvent: AuditEvent): void
+    +SaveChangesAsync(ct): Task
+  }
+  note bottom of IMissionControlDataSession
+    Shared members as defined in the overview; only the
+    members this slice uses are shown. A story status
+    change loads the story through LoadStoryPlacementsAsync;
+    other edits use LoadWorkItemAsync. LoadAccountStatusAsync
+    returns null for an unknown account, else its active flag.
+    Reparenting loads the source and target sibling orders
+    as tracked aggregates.
+    SaveChangesAsync commits; a stale tracked version raises
+    ConcurrencyConflictException, mapped to 409.
+  end note
+  note bottom of ListAssigneeChoicesQueryHandler
+    Any authenticated active role. Active accounts only;
+    display-name substring; ordered by display name, then ID;
+    default 25, maximum 100, total count. No email or role.
+  end note
 }
-class ReparentDialog {
-  +targets: Signal<ParentChoice[]>
-  +preview: Signal<string>
+package "MissionControl.Domain" {
+  class WorkItem {
+    +id: Guid
+    +workspaceId: Guid
+    +parentId: Guid?
+    +type: WorkItemType
+    +status: WorkStatus
+    +assigneeId: Guid?
+    +taskRevision: long
+    +version: long
+    +edit(details: WorkItemDetails): void
+    +reparent(parentId: Guid, position: int): void
+  }
+  note right of WorkItem
+    A task status edit increments its story's
+    taskRevision; a task reparent increments both
+    stories' revisions, in the same transaction.
+    Only taskRevision changes: the story's version
+    and every sprint's version stay unchanged.
+  end note
+  class WorkItemDetails {
+    +title: string
+    +description: string?
+    +status: WorkStatus
+    +assigneeId: Guid?
+    +startDate: DateOnly?
+    +dueDate: DateOnly?
+    +storyEstimate: int?
+  }
+  class StoryCompletionCondition {
+    +storyId: Guid
+    +storyVersion: long
+    +taskRevision: long
+    +unfinishedCount: int
+  }
+  class StoryCompletionPolicy {
+    +requireConfirmation(sent: StoryCompletionCondition?, current: StoryCompletionCondition): bool
+  }
+  class WorkOrder
+  class BoardState
+  class UserAccount {
+    +id: Guid
+    +firstName: string
+    +lastName: string
+    +active: bool
+  }
+  enum WorkStatus {
+    ToDo
+    InProgress
+    Done
+  }
 }
-class UnfinishedTasksDialog {
-  +unfinishedCount: number
-  +confirm(): void
-  +keep(): void
-}
-class WorkItemView {
-  +state: Signal<FeatureState>
-  +submit(): void
-}
-interface IWorkItemService {
-  +edit(request: UpdateWorkItemCommand): Promise<FeatureResult>
-  +reparent(request: ReparentWorkItemCommand): Promise<FeatureResult>
-}
-class WorkItemService {
-  -http: HttpClient
-}
-class WorkItemsController {
-  -sender: ISender
-}
-class WorkItem {
-  +id: Guid
-  +workspaceId: Guid
-  +parentId: Guid?
-  +type: WorkItemType
-  +title: string
-  +description: string?
-  +status: WorkStatus
-  +siblingPosition: int
-  +assigneeId: Guid?
-  +startDate: DateOnly?
-  +dueDate: DateOnly?
-  +storyEstimate: int?
-  +version: long
-  +edit(details: WorkItemDetails): void
-  +reparent(parentId: Guid, position: int): void
-}
-interface IMissionControlDataSession {
-  +query(specification): Task<ReadResult>
-  +commit(expectedVersion: long): Task<void>
-}
-class MissionControlDataSession {
-  -connection: DbConnection
-}
-WorkItemDetailPage --> WorkItemView : composes
-WorkItemFormDialog --> WorkItemView : composes
-ReparentDialog --> WorkItemView : composes
-WorkItemDetailPage ..> WorkItemFormDialog : opens
-WorkItemDetailPage ..> ReparentDialog : opens
-WorkItemFormDialog ..> UnfinishedTasksDialog : opens on 409 unfinished-tasks
-WorkItemView ..> IWorkItemService : inject token
-IWorkItemService <|.. WorkItemService
-IMissionControlDataSession <|.. MissionControlDataSession
-class UpdateWorkItemCommand {
-  +workspaceId: Guid
-  +itemId: Guid
-  +details: WorkItemDetails
-  +expectedVersion: long
-  +completionCondition: StoryCompletionCondition?
-}
-class StoryCompletionCondition {
-  +storyId: Guid
-  +storyVersion: long
-  +taskRevision: long
-  +unfinishedCount: int
-}
-class UpdateWorkItemCommandHandler {
-  +handle(request: UpdateWorkItemCommand): Task<FeatureResult>
+package "MissionControl.Infrastructure" {
+  class MissionControlDataSession {
+    -connection: DbConnection
+  }
 }
 WorkItemsController ..> UpdateWorkItemCommand : dispatches
-UpdateWorkItemCommandHandler ..> UpdateWorkItemCommand : handles
-UpdateWorkItemCommandHandler --> WorkItem : loads / applies
-UpdateWorkItemCommandHandler ..> IMissionControlDataSession : uses
-UpdateWorkItemCommand --> StoryCompletionCondition : carries returned condition
-class ReparentWorkItemCommand {
-  +workspaceId: Guid
-  +itemId: Guid
-  +targetParentId: Guid
-  +expectedVersion: long
-}
-class ReparentWorkItemCommandHandler {
-  +handle(request: ReparentWorkItemCommand): Task<FeatureResult>
-}
 WorkItemsController ..> ReparentWorkItemCommand : dispatches
-ReparentWorkItemCommandHandler ..> ReparentWorkItemCommand : handles
-ReparentWorkItemCommandHandler --> WorkItem : loads / applies
+AssigneeChoicesController ..> ListAssigneeChoicesQuery : dispatches
+UpdateWorkItemCommand <.. UpdateWorkItemCommandHandler : handles
+ListAssigneeChoicesQuery <.. ListAssigneeChoicesQueryHandler : handles
+ReparentWorkItemCommand <.. ReparentWorkItemCommandHandler : handles
+UpdateWorkItemCommand *-- WorkItemDetails
+UpdateWorkItemCommand --> StoryCompletionCondition : carries returned condition
+UpdateWorkItemCommandHandler ..> WorkItemSaved : returns
+ListAssigneeChoicesQueryHandler ..> AssigneeChoicePage : returns
+ReparentWorkItemCommandHandler ..> WorkItemMoved : returns
+AssigneeChoicePage *-- AssigneeChoice
+UpdateWorkItemCommandHandler ..> IMissionControlDataSession : uses
+ListAssigneeChoicesQueryHandler ..> IMissionControlDataSession : uses
 ReparentWorkItemCommandHandler ..> IMissionControlDataSession : uses
-
-enum WorkItemType {
-  Initiative
-  Epic
-  Story
-  Task
-}
-enum WorkStatus {
-  ToDo
-  InProgress
-  Done
-}
-WorkItem --> WorkItemType : immutable level
+UpdateWorkItemCommandHandler --> WorkItem : edits
+UpdateWorkItemCommandHandler --> StoryStatusTransition : story status changes
+StoryStatusTransition --> StoryCompletionPolicy : before Done
+StoryStatusTransition ..> StoryPlacements : updates
+IMissionControlDataSession ..> StoryPlacements : loads tracked
+StoryCompletionPolicy ..> StoryCompletionCondition : compares
+WorkItem ..> WorkItemDetails : edit
+ReparentWorkItemCommandHandler --> WorkItem : reparents
+ReparentWorkItemCommandHandler --> WorkOrder : compacts source, appends to target
+AssigneeChoice ..> UserAccount : projects active accounts
+WorkItem ..> UserAccount : assigneeId
 WorkItem --> WorkStatus : current status
-WorkItem "0..1" <-- "*" WorkItem : parent / children
+IMissionControlDataSession <|.. MissionControlDataSession
 @enduml

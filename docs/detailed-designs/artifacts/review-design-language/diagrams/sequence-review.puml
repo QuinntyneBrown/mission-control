@@ -15,32 +15,38 @@ skinparam package {
 }
 title Manual review - Review the standalone design language
 actor "Design reviewer" as reviewer
-box "Frontend - Standalone static artifact" #E0F2FE
+box "design-system/ standalone static site" #E0F2FE
   participant "ArtifactCatalog" as catalog
   participant "Static specimen" as example
   participant "--mc- token stylesheet\nand named breakpoints" as tokens
 end box
-box "Backend - Application runtime excluded" #D1FADF
-  participant "No API or SQL dependency" as excluded
+box "Mirrors written by sync-tokens" #F2F4F7
+  participant "frontend/styles and\ndocs/mocks/assets" as mirrors
 end box
-reviewer -> catalog : ReviewDesignLanguage: open the built site independently
+reviewer -> catalog : ReviewDesignLanguage: build and open the site independently
 catalog -> example : Select token family or control specimen
 example -> tokens : Read visual roles and breakpoint names
 tokens --> example : Token values
 example --> catalog : Static rendering
 catalog --> reviewer : L2-047 review across profile R widths (320-1920)
+reviewer -> mirrors : Read header: source version and commit
+reviewer -> mirrors : Rebuild design-system at that commit; rerun sync-tokens
+mirrors --> reviewer : Mirrored files unchanged, or the differences
 alt Site needs the API, the Angular app, or a network call to render
   reviewer -> catalog : Record L2-047.1 issue; remove the runtime dependency
   catalog --> reviewer : Rebuilt standalone site for re-review
 else Token family, shared prefix, value, or example missing
   reviewer -> catalog : Record L2-047.2 issue; add the role to the authoritative stylesheet
-  catalog --> reviewer : Frontend and mocks mirror the added token
+  catalog --> reviewer : Rebuilt; sync-tokens refreshes both mirrors
 else Specimen unreadable or overlapping at a profile R width
   reviewer -> catalog : Record L2-047.3 issue with the failing width
   catalog --> reviewer : Specimen revised with named breakpoints and tokens
 else Contrast, status cue, or touch size below L2-035
   reviewer -> catalog : Record issue; revise the token value
-  catalog --> reviewer : Mirrors updated; recheck contrast and size
+  catalog --> reviewer : Rebuilt and resynced; recheck contrast and size
+else A mirror differs after resync or lacks its header
+  reviewer -> mirrors : Record drift; discard hand edits
+  mirrors --> reviewer : Rewritten by sync-tokens from the committed design system
 else Tests or ATDD introduced for the artifact
   reviewer -> catalog : Record L2-047.4 issue; remove them
   catalog --> reviewer : Artifact remains manual-review only
@@ -48,7 +54,8 @@ else Review criteria satisfied
   reviewer -> catalog : Record manual review outcome
   catalog --> reviewer : Artifact remains static; no ATDD or tests
 end
-note over catalog, excluded
-No authentication, network mutation, or application database persistence occurs.
+note over catalog, tokens
+No authentication, API or SQL dependency, network mutation,
+or application database persistence occurs.
 end note
 @enduml

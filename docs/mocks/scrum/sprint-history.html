@@ -24,6 +24,7 @@
           <option value="default">Closed sprint</option>
           <option value="renamed">Story renamed since</option>
           <option value="not-found">Sprint not found</option>
+          <option value="project-not-found">Project not found</option>
           <option value="loading">Loading</option>
           <option value="error">Load failed</option>
         </select>
@@ -33,10 +34,12 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">History is a snapshot taken at closure: goal, planned dates, actual start and close, initial and final scope, scope changes, and each story's title, status, and destination as recorded. It can't be edited (the API returns 409). A story deleted after closure keeps its recorded ID, title, and status as plain text with a Deleted label and no link. Who started and closed the sprint, and each scope change, come from the snapshot too.</p>
-    <p class="mock-note" data-when="renamed" hidden>A story renamed after closure keeps its recorded title here; the current title is shown as a note so the link still makes sense.</p>
-    <p class="mock-note" data-when="not-found" hidden>Missing or mistyped sprint links show a readable message and a way back to the project's sprints.</p>
-    <p class="mock-note" data-when="loading" hidden>Placeholders keep the layout while history loads. Screen readers hear "Loading Sprint 7".</p>
+    <p class="mock-note" data-when="default">History is a snapshot taken at closure: goal, planned dates, actual start and close, initial and final scope, scope changes, and each story's title, status, and destination as recorded. It can't be edited (the API returns 409). A story deleted after closure keeps its recorded key, title, and status as plain text with a Deleted label and no link. The counts come from the recorded outcomes, and each carried-over row names its destination sprint as recorded. Who started and closed the sprint, and each scope change, come from the snapshot too. Story outcomes and scope changes load as separate lists, 25 at a time: outcomes in the order recorded at closure, then story ID, and scope changes newest first, then story ID; a longer list gets its own pager, like the lead directory's. Both lists here are short (8 outcomes, 1 scope change), so everything is shown and no pager appears.</p>
+    <p class="mock-note" data-when="renamed" hidden>A story renamed after closure keeps its recorded title here; the current title is shown as a note so the link still makes sense. Current titles and whether each story still exists come from one lookup per page of outcomes, never one per row.</p>
+    <p class="mock-note" data-when="not-found" hidden>Missing or mistyped sprint links, and a sprint that hasn't closed, show a readable message naming the project and a way back to the project's sprints (the API returns 404); no Try again or reference ID.</p>
+    <p class="mock-note" data-when="project-not-found" hidden>The project itself is missing: it was deleted, or the link is incomplete. The page reads the project for its breadcrumb and name, and that read's 404 shows this message with Back to projects; no Try again or reference ID. The breadcrumb keeps only Projects, and focus moves to the heading.</p>
+    <p class="mock-note" data-when="loading" hidden>Placeholders keep the layout while history loads. A status region that is always on the page announces "Loading Sprint 7" to screen readers.</p>
+    <p class="mock-note" data-when="error" hidden>The history didn't load, so nothing is shown that could be out of date. Try again reads the project and the history again together. A server error (500) shows the reference ID, which matches the server's diagnostic record; a read that gets no response shows the same message without a reference ID and asks you to check your connection. Screen readers hear the alert.</p>
   </div>
 
   <div class="mc-app">
@@ -107,7 +110,7 @@
 
     <main class="mc-main" id="main" tabindex="-1">
       <div class="mc-page">
-        <nav class="mc-breadcrumbs" aria-label="Breadcrumb">
+        <nav class="mc-breadcrumbs" aria-label="Breadcrumb" data-unless="project-not-found">
           <ol>
             <li><a href="../projects/project-list.html">Projects</a></li>
             <li class="mc-breadcrumbs__overflow">
@@ -127,7 +130,7 @@
           </ol>
         </nav>
 
-        <div data-unless="not-found loading error">
+        <div data-unless="not-found project-not-found loading error">
           <header class="mc-page-header">
             <div class="mc-page-header__main">
               <h1 class="mc-page-header__title" tabindex="-1">Sprint 7</h1>
@@ -154,9 +157,9 @@
                 <span class="mc-stat__hint">of 8 stories</span>
               </div>
               <div class="mc-stat">
-                <span class="mc-stat__label"><span class="mc-stat__icon"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span></span>Moved to Sprint 8</span>
+                <span class="mc-stat__label"><span class="mc-stat__icon"><span class="mc-icon mc-icon--arrow-right" aria-hidden="true"></span></span>Carried over</span>
                 <span class="mc-stat__value">1</span>
-                <span class="mc-stat__hint">Unfinished at closure</span>
+                <span class="mc-stat__hint">Unfinished, moved to a planned sprint</span>
               </div>
               <div class="mc-stat">
                 <span class="mc-stat__label"><span class="mc-stat__icon"><span class="mc-icon mc-icon--undo" aria-hidden="true"></span></span>Returned to backlog</span>
@@ -180,10 +183,11 @@
               <section class="mc-card" aria-labelledby="changes-heading">
                 <div class="mc-card__header"><h2 class="mc-card__title" id="changes-heading">Scope changes</h2></div>
                 <ol class="mc-timeline">
-                  <li class="mc-timeline__item"><span class="mc-timeline__time">Sep 25, 2026, 4:47 p.m.</span>Priya Raman closed the sprint. 1 story moved to Sprint 8, 1 returned to the backlog.</li>
+                  <li class="mc-timeline__item"><span class="mc-timeline__time">Sep 25, 2026, 4:47 p.m.</span>Priya Raman closed the sprint. 1 story carried over to a planned sprint, 1 returned to the backlog.</li>
                   <li class="mc-timeline__item"><span class="mc-timeline__time">Sep 18, 2026, 11:30 a.m.</span>Priya Raman added HCK-134 "Sponsor thank-you page".</li>
                   <li class="mc-timeline__item"><span class="mc-timeline__time">Sep 14, 2026, 9:02 a.m.</span>Quinntyne Brown started the sprint with 7 stories.</li>
                 </ol>
+                <p class="mc-text-sm mc-muted mc-mt-4">Showing the only scope change after the start</p>
               </section>
             </div>
 
@@ -205,7 +209,7 @@
                   <td data-label="Outcome">Completed in Sprint 7</td>
                 </tr>
                 <tr>
-                  <td class="mc-table__primary"><span class="mc-table__secondary">HCK-134</span><a href="../work/work-item-detail.html">Sponsor thank-you page</a><span class="mc-table__secondary">Added Sep 18 by Priya Raman</span></td>
+                  <td class="mc-table__primary"><span class="mc-table__secondary">HCK-134</span><a href="../work/work-item-detail.html">Sponsor thank-you page</a></td>
                   <td data-label="At closure"><span class="mc-pill mc-pill--done"><span class="mc-icon mc-icon--status-done" aria-hidden="true"></span>Done</span></td>
                   <td data-label="Outcome">Completed in Sprint 7</td>
                 </tr>
@@ -258,8 +262,22 @@
           </div>
         </div>
 
+        <div data-when="project-not-found" hidden>
+          <nav class="mc-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../projects/project-list.html">Projects</a></li></ol></nav>
+          <div class="mc-empty mc-empty--page mc-empty--neutral">
+            <span class="mc-empty__icon"><span class="mc-icon mc-icon--compass mc-icon--lg" aria-hidden="true"></span></span>
+            <h1 class="mc-empty__title" tabindex="-1">Project not found</h1>
+            <p class="mc-empty__text">This project may have been deleted, or the link may be incomplete.</p>
+            <div class="mc-empty__actions">
+              <button class="mc-button mc-button--primary" type="button" data-nav="../projects/project-list.html"><span class="mc-icon mc-icon--arrow-left" aria-hidden="true"></span>Back to projects</button>
+            </div>
+          </div>
+        </div>
+
         <h1 class="mc-visually-hidden" data-when="loading" hidden>Sprint 7</h1>
-        <p class="mc-visually-hidden" role="status" data-when="loading" hidden>Loading Sprint 7</p>
+        <div class="mc-live" role="status" aria-live="polite">
+          <p class="mc-visually-hidden" data-when="loading" hidden>Loading Sprint 7</p>
+        </div>
         <div class="mc-stack mc-stack--lg" data-when="loading" hidden aria-hidden="true">
           <span class="mc-skeleton mc-skeleton--title"></span>
           <div class="mc-grid mc-grid--stats">

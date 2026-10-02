@@ -4,6 +4,7 @@ skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
 skinparam ArrowColor #344054
+skinparam maxMessageSize 300
 skinparam rectangle {
   BorderColor #344054
   FontColor #101828
@@ -16,7 +17,7 @@ skinparam package {
 title Behavior - Delete a confirmed leaf item
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "WorkItemDetailPage / WorkItemDeleteDialog / WorkItemView" as page
+  participant "WorkItemDetailPage or WorkHierarchyPage / WorkItemDeleteDialog / WorkItemDeleteForm" as page
   participant "IWorkItemService / WorkItemService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,8 +32,8 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Choose Delete on a work item
-page -> page : Open the confirmation naming the item; focus Cancel
+actor -> page : Choose Delete on a work item (the view's actionRequested with its WorkItemTarget)
+page -> page : Open the confirmation naming the item from the WorkItemTarget, with nothing read on open; focus Cancel
 alt Cancel or Escape
   actor -> page : Cancel
   page -> page : Close; send no request; focus returns to Delete
@@ -46,54 +47,77 @@ else Confirm
   db --> access : Current account access
   alt Missing, invalid or expired JWT; deactivated account
     access --> client : 401; audit denial without payloads
-    client --> page : Clear session; sign in with the item as return route
-  else Collaborator (profile P: only administrators delete work)
+    client --> page : sessionInterceptor calls SessionService.end(Unauthorized) once for this generation; the promise rejects with its 401 (nothing written); sign-in shows session-unsaved when a draft was dirty, then returns to the item
+  else Account lacks work.delete (role changed to Collaborator while the dialog was open; profile P: work.delete is administrator-only)
     access --> client : 403; audit denial without payloads
-    client --> page : Close the dialog; Delete stays unavailable with its written reason
-  else Administrator
+    client --> page : sessionInterceptor calls SessionService.refreshCapabilities(); WorkItemDeleteForm sets forbidden: the dialog stays open with "Only administrators can delete work" in its alert, no reference ID, and Delete unavailable; focus moves to Cancel
+    page -> page : The refreshed capabilities turn the layout's canDeleteWork false, so the page's Delete actions become unavailable with their written reason
+  else Administrator (work.delete)
     access -> ctrl : Authorized request
     ctrl -> validation : Send DeleteWorkItemCommand through MediatR 12.5.0
-    validation -> validation : Identifiers present and well formed
-    alt Malformed identifiers
-      validation --> ctrl : 400; nothing read or changed
-      ctrl --> client : Validation ProblemDetails
-      client --> page : Show the message; nothing deleted
-    else Valid request
-      validation -> handler : Handle DeleteWorkItemCommand
-      handler -> db : Lock workspace; load item, child count, and open sprint membership
-      db --> handler : Current deletion conditions
-      alt Workspace or item not found
+    note right of ctrl : Both IDs are path IDs with a {id:guid} route constraint; a malformed ID matches no route and returns 404 before dispatch
+    validation -> handler : Handle DeleteWorkItemCommand
+    group Under the workspace lock
+      handler -> db : BeginWorkspaceTransactionAsync takes the workspace lock first; LoadDeletionCheckAsync reads the item, child count, open sprint membership with its state, whether sprints are paused (Kanban), the parent, and the tracked sibling order, backlog order, and boards
+      db --> handler : Current deletion conditions, or lock-wait timeout
+      opt Item loaded
+        handler -> entity : checkDeletion(childCount, openSprint, openSprintStatus, sprintsPaused)
+        entity --> handler : The Domain DeletionBlocker naming every blocker found, or none
+      end
+      alt Workspace lock wait times out
+        handler --> ctrl : 503 with Retry-After; nothing read or deleted
+        ctrl --> client : ProblemDetails (unavailable)
+        client --> page : Unavailable save, as for a 500: nothing deleted; alert with reference ID; focus stays on Try again, which resends only when chosen (failed state)
+      else Workspace or item not found
         handler --> ctrl : 404; nothing changed
         ctrl --> client : ProblemDetails (not found)
-        client --> page : Close the dialog; reload the list without the item; announce it was already deleted
-      else Item has children (L2-018.1)
-        handler --> ctrl : 409 has-children with child count; nothing changed
+        client --> page : WorkItemDeleteForm emits alreadyDeleted; the dialog closes with AlreadyDeleted; the page increments its refresh counter (the detail page opens the parent's detail first) and the toast says the item was already deleted, or, after the dialog relayed unconfirmed, the neutral info toast "'Publish team list for mentors' has been deleted."
+      else DeletionBlocker returned: children, or a story in a planned or active sprint (L2-018.1, L2-018.2)
+        handler --> ctrl : 409 DeletionBlocker naming every blocker found: child count; open sprint, its state, the story's status, and sprintsPaused; nothing changed
         ctrl --> client : ProblemDetails (blocked)
-        client --> page : Explain moving or deleting the children first; Close only, no retry (has-children state)
-      else Story in a planned or active sprint (L2-018.2)
-        handler --> ctrl : 409 open-sprint membership naming the sprint; nothing changed
-        ctrl --> client : ProblemDetails (blocked)
-        client --> page : Explain removing it from the sprint first; offer the sprint scope action, no retry (in-sprint state)
+        client --> page : WorkItemDeleteForm puts each blocker's explanation in the dialog's alert region, which becomes its description; Delete gives way to Close, which receives focus; no retry
+        alt Children only
+          page --> actor : Move or delete the children first; Close only (has-children state)
+        else Planned sprint while sprints are paused (Kanban, L2-027.3)
+          page --> actor : Explains the pause: "Switch the project back to Scrum to change its plan, then delete the story."; Close (back to the opening page), plus Change delivery mode when canChangeMode (in-paused-sprint state)
+          opt Change delivery mode
+            actor -> page : Change delivery mode
+            page -> page : Form emits changeModeRequested; the dialog closes with ChangeMode; the page calls inject(ProjectLayoutPage).openDialog(ChangeMode), which opens ModeChangeDialog
+          end
+        else Planned sprint
+          page --> actor : "Change Sprint N's plan" (in-planned-sprint state)
+          actor -> page : Change Sprint N's plan
+          page -> page : Form emits changePlanRequested(sprintId); the dialog closes with ChangePlan(sprintId); the page navigates to /projects/:id/sprints/:sprintId/plan?remove={storyId}, which opens the plan with the story marked To remove
+        else Active sprint, unfinished story
+          page --> actor : "Remove from Sprint N" (in-sprint state)
+          actor -> page : Remove from Sprint N
+          page -> page : Form emits removeFromSprintRequested(sprintId); the dialog closes with RemoveFromSprint(sprintId); the page opens SprintScopeDialog in remove mode with removeStoryId and the target's scopeSummary; on SprintScopeOutcome Changed it increments its refresh counter and shows the "Scope updated" toast with the outcome's summary (TOAST_SERVICE), and on Outdated it increments the counter; while that dialog stays open, its forbidden output (an unexpected 403) shows the "Your access changed" toast without Retry
+        else Active sprint, Done story
+          page --> actor : Done stories stay with the sprint's outcomes; deletable once the sprint closes; any children named too; Close only (in-sprint-done state)
+        end
       else Deletable leaf
-        handler -> entity : L2-018 confirm leaf outside open membership
-        entity --> handler : Permitted deletion
-        handler -> db : L2-039 / L2-040 delete item; compact siblings; for a story remove and compact its backlog position and board placements; bump order versions; success audit
+        handler -> handler : L2-018 checkDeletion returned no blocker: a leaf outside open membership
+        handler -> db : L2-039 / L2-040 RemoveWorkItem and AddAuditEvent, then SaveChangesAsync: delete item; remove its sibling position and, for a story, its StoryBacklogPosition and BoardPlacements as tracked children; compact and bump those orders; for a task increment the parent story's task revision only (the story's version and sprint versions unchanged); success audit
         note right of db : Closed SprintStoryOutcome rows have no cascading FK and stay unchanged (L2-018.4)
         alt Commit fails
           db --> handler : Roll back business state and success audit
           handler --> ctrl : Generic 500 with correlation ID
           ctrl --> client : Failure; no deletion claim
-          client --> page : Nothing deleted; show reference ID; Try again resends the same request (failed state)
+          client --> page : Nothing deleted; alert with reference ID; focus stays on Try again, which resends the same request only when chosen (failed state)
         else Commit succeeds
           db --> handler : Committed deletion
           handler --> ctrl : Deleted
           ctrl --> client : 204
-          client --> page : Close the dialog; remove the item from every view; refresh counts
-          page --> actor : Announce the deletion; focus moves to the parent or the list heading
+          client --> page : WorkItemDeleteForm emits deleted; the dialog closes with Deleted
+          page -> page : The outline increments its refresh counter, so its expanded branches and counts reread; the detail page opens the parent's detail, or the work outline for an initiative
+          page --> actor : The "Task deleted" toast (named for the item's type) names the item; focus moves to the parent's row, or to the destination heading after navigation
         end
       end
     end
   end
+end
+opt No response to the deletion (timeout or network failure)
+  client --> page : The deletion may have committed: the failed alert reads "We couldn't confirm whether the task was deleted" without a reference ID; WorkItemDeleteForm emits unconfirmed, which the dialog relays so the page rereads at once; Try again resends only when pressed, and a deletion that went through then returns 404 (AlreadyDeleted); because the dialog relayed unconfirmed, the page shows the neutral info toast "'Publish team list for mentors' has been deleted." instead of saying it was already deleted
 end
 note over ctrl, db
 All rejection checks run under the lock before any write.

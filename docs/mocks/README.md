@@ -27,7 +27,7 @@ Open [`index.html`](index.html) in a browser. It works offline from `file://`.
 | --- | --- |
 | `index.html` | Catalog of every mock and state, plus L2-048 workflow coverage |
 | `viewer.html` | Responsive preview at the review widths |
-| `assets/tokens.css` | Provisional `--mc-` design tokens: colour, spacing, type, radius, focus, elevation |
+| `assets/tokens.css` | Provisional `--mc-` design tokens: colour, spacing, type, radius, focus, elevation. Becomes a synced mirror of the design system (see below) |
 | `assets/mocks.css` | Shared styles. Values come only from tokens, apart from the Styling exceptions below; `.mock-*` classes are mock chrome |
 | `assets/mocks.js` | State switching, menus, column selector, and click-through. No network calls |
 | `assets/catalog.js` | Mock manifest used by the viewer (generated) |
@@ -36,7 +36,22 @@ Open [`index.html`](index.html) in a browser. It works offline from `file://`.
 
 The standalone design system (`design-system/`) will adopt the tokens in
 `assets/tokens.css` under the same `--mc-` prefix. Its copy will then be the
-authoritative one, and this file should mirror it.
+authoritative one, and the mocks mirror it deterministically:
+
+- **Sync.** Its build emits `dist/tokens.css` and `dist/_breakpoints.scss`.
+  `node docs/mocks/sync-tokens.mjs`, added with the design system, copies them
+  unchanged to `assets/tokens.css` and `assets/_breakpoints.scss`. The frontend
+  runs the same copy with `npm run sync-tokens`.
+- **Provenance.** Each copy starts with a header comment naming the
+  design-system version from its `package.json` and the latest commit that
+  changed `design-system/`. The script refuses to run while `design-system/` has
+  uncommitted changes.
+- **No hand edits.** A missing or wrong token is fixed in `design-system/`, then
+  resynced. `assets/mocks.css` stays plain CSS, so its media-query widths must
+  match the mirrored `assets/_breakpoints.scss`.
+- **Review.** Rebuild the design system at the recorded commit, rerun the sync,
+  and check that the mirrored files are unchanged. This is manual review, not a
+  test.
 
 ## Conventions for editing
 
@@ -47,12 +62,29 @@ authoritative one, and this file should mirror it.
   `assets/mocks.js` lists every hook.
 - **Role variants.** A state can set `data-role=collaborator` on `<body>`. That
   hides `.mock-admin-only` and shows `.mock-collaborator-only`.
+- **Stand-in click-throughs.** List rows and generic navigation may open one
+  representative record or state. A link whose own text or surrounding prose
+  names a specific entity or scenario must land on a state that shows that
+  entity or scenario.
+- **Outcome coverage.** A designed outcome that reuses an existing state's
+  presentation is covered by that state's design note, which names the outcome.
+  An outcome with a distinct presentation gets its own state.
+  A save or delete that gets no response reuses the dialog's `failed`
+  presentation with "We couldn't confirm whether …" copy and no reference ID
+  (no response carried one); the `failed` note names this case, and the view
+  re-reads before another attempt.
+- **Toasts.** A page's toast region is one `.mc-toast-region` holding two
+  persistent `.mc-toast-live` containers: `role="status" aria-live="polite"` for
+  success and info toasts, then `role="alert"` for errors and warnings. Each
+  `.mc-toast` carries no role of its own. At most three toasts are visible in
+  the region across both containers; a new toast removes the oldest.
 - **Styling.** Reuse `.mc-*` classes. New styles go in `assets/mocks.css` and read
   only `var(--mc-*)` tokens. Don't use inline styles or `<style>` blocks. Two
   literals are allowed: media-query widths, because media queries can't read
-  custom properties (use the breakpoints documented in `assets/tokens.css`), and
-  the `1px` visually-hidden pattern. Layout keywords such as `100%`, `1fr`, and
-  `100vh` aren't design values.
+  custom properties (use the breakpoints documented in `assets/tokens.css`, or in
+  the mirrored `assets/_breakpoints.scss` once it exists), and the `1px`
+  visually-hidden pattern. Layout keywords such as `100%`, `1fr`, and `100vh`
+  aren't design values.
 - **Index.** Run `node docs/mocks/build-index.mjs` to regenerate `index.html` and
   `assets/catalog.js`. They're built from each mock's `<title>`, `description`,
   and `mock-requirements` meta tags and its state menu. When adding a mock, keep

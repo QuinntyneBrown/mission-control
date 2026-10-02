@@ -3,6 +3,7 @@ skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
+skinparam maxMessageSize 300
 skinparam ArrowColor #344054
 skinparam rectangle {
   BorderColor #344054
@@ -16,7 +17,7 @@ skinparam package {
 title Behavior - Close with a disposition for every unfinished story
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "SprintBoardPage / CloseSprintDialog / SprintView" as page
+  participant "SprintBoardPage, SprintsPage, SprintPlanningPage\nor ProjectLayoutPage\nCloseSprintDialog / SprintClosureForm" as page
   participant "ISprintService / SprintService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,75 +32,91 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Choose a destination for every unfinished story; confirm Close sprint
-page -> client : Build typed CloseSprintCommand with expected version and one disposition per unfinished story
+actor -> page : Choose Set all and any per-story destinations across pages; confirm Close sprint
+page -> client : close(CloseSprintCommand: workspace, sprint, reviewedVersion, setAllTo?, overrides[])\nthe stories without an override take setAllTo
 client -> access : POST /api/workspaces/{id}/sprints/{sprintId}/close
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid or expired JWT; deactivated account
   access --> client : 401; audit denial without payloads
-  client --> page : Clear session; sign in with the sprint board as return route
-else Authenticated without the required permission
-  access --> client : 403; audit denial without payloads
-  client --> page : Keep the choices; explain that closing sprints is not permitted
-else Authorized
+  client --> page : SessionService.end(Unauthorized) once; sign in with the sprint board as return route
+else Authenticated (profile P: every active role closes sprints)
   access -> ctrl : Authorized request
   ctrl -> validation : Send CloseSprintCommand through MediatR 12.5.0
-  validation -> validation : Distinct story IDs; each disposition is Backlog or a sprint ID
-  alt Malformed or duplicate dispositions
+  validation -> validation : Distinct override story IDs; each destination is Backlog or a sprint ID
+  alt Malformed destination or duplicate override
     validation --> ctrl : 400 field errors; nothing read or changed
     ctrl --> client : Validation ProblemDetails
-    client --> page : Keep the choices; focus the error summary
+    client --> page : Keep the choices; one error focuses its row's destination select, several focus\nthe error summary; no Retry or reference ID
   else Valid request
     validation -> handler : Handle CloseSprintCommand
-    handler -> db : Lock workspace; read sprint state and version, current scope, story statuses, named destinations
-    db --> handler : Current closure state
+    handler -> db : BeginWorkspaceTransactionAsync (workspace lock); LoadSprintClosureAsync:\nSprint with status, version and memberships, unfinished member IDs,\nnamed destination sprints, active slot, sprint BoardState
+    db --> handler : SprintClosure
     alt Sprint not found (or in another workspace)
       handler --> ctrl : 404; nothing changed
       ctrl --> client : ProblemDetails (not found)
-      client --> page : Close dialog; reload the board; announce that the sprint no longer exists
-    else Sprint already Closed (L2-023.4, L2-026.3)
-      handler --> ctrl : 409 closed; history unchanged
-      ctrl --> client : ProblemDetails (sprint closed)
-      client --> page : Explain that the sprint is closed; link to its history; no retry
-    else Stale version: scope or story status changed since review (L2-025.3)
-      handler --> ctrl : 409 identifying changed stories with their recorded scope change; nothing changed
-      ctrl --> client : ProblemDetails (membership changed)
-      client --> page : Mark changed rows; keep choices; Review again reloads scope; no resubmission
-    else Unfinished story without a disposition (L2-025.1)
+      client --> page : SprintClosureForm emits notFound; the dialog closes with Outdated; the opening page rereads\nand shows its own state
+    else Sprint not Active: still Planned, or already Closed (L2-026.3)
+      handler --> ctrl : 409 not active, naming the sprint's state; history unchanged
+      ctrl --> client : ProblemDetails (not active)
+      client --> page : already-closed names the actual state ("Sprint 8 is already closed." or "Sprint 9 hasn't started,\nso it can't close.") in the alert region, which describes the dialog; focus moves to View sprints, or to Close when\nofferSprintsLink is false (Sprints tab); no retry; the form emits outdated, so Close returns Outdated and the opening page rereads
+    else reviewedVersion differs from the sprint version (L2-025.3, L2-041)
+      handler --> ctrl : 409 stale review; nothing changed; no actor, time, or changed rows
+      ctrl --> client : ProblemDetails (sprint changed)
+      client --> page : conflict: "Sprint 8 changed while you were reviewing. Review the updated list;\nyour choices are kept where they still apply."
+      page -> client : Read the review once from page 1; adopt its version
+      client --> page : Refreshed page; keep Set all and the overrides of stories still unfinished; no resubmission
+    else Override names a story that is not an unfinished member
+      handler --> ctrl : 400 identifying the story; nothing changed
+      ctrl --> client : Validation ProblemDetails per story
+      client --> page : unresolved presentation: keep choices; the server's reason on that row when it is on the current page;\nno Retry or reference ID
+    else No setAllTo and an unfinished story has no override (L2-025.1)
       handler --> ctrl : 400 identifying each unresolved story; sprint stays Active
       ctrl --> client : Validation ProblemDetails per story
-      client --> page : Keep choices; focus the error summary linking each destination
+      client --> page : Keep choices; one unresolved story on this page focuses its destination select; several focus\nthe error summary, which lists each story and links to rows on this page
     else Destination is not a Planned sprint in this workspace (L2-025.3)
-      handler --> ctrl : 400 identifying the story and destination; nothing changed
-      ctrl --> client : Validation ProblemDetails per story
-      client --> page : Keep choices; mark the row; reload destination choices
+      handler --> ctrl : 400 identifying the story or Set all, and the destination; nothing changed
+      ctrl --> client : Validation ProblemDetails
+      client --> page : unresolved presentation: keep choices; the reason on that row or on Set all;\nreread the review for current destinations
     else Closure accepted
-      handler -> entity : L2-025 close(dispositions, at, actorId)
-      entity --> handler : Closed sprint and SprintSnapshot with actors, scope changes, outcomes, destinations
-      handler -> db : L2-026 / L2-040 insert snapshot; move unfinished membership with unchanged status; release active slot; success audit in one transaction
+      handler -> entity : L2-025 close(setAllTo, overrides, unfinishedIds, destinations, at, actorId):\noverride, else setAllTo, for every current unfinished story
+      entity --> handler : Closed sprint; SprintSnapshot and SprintStoryOutcome children with actors and destinations;\nmembership children moved; initial scope and scope changes stay as recorded during the sprint
+      handler -> db : L2-026 / L2-040 RemoveActiveSprintSlot; RemoveBoardState; AddAuditEvent;\nSaveChangesAsync: set-based writes of tracked membership and outcome children with unchanged status;\nsnapshot header; destination versions increment; success audit; one transaction
       alt Unique open-membership violation (concurrent allocation, L2-041.2)
         db --> handler : Roll back everything
-        handler --> ctrl : 409 naming the story; sprint stays Active
-        ctrl --> client : ProblemDetails (membership changed)
-        client --> page : Mark the row; keep choices; Review again reloads scope
+        handler --> ctrl : 409 stale review; sprint stays Active
+        ctrl --> client : ProblemDetails (sprint changed)
+        client --> page : Same neutral message; reread the review; keep choices
       else Commit fails
         db --> handler : Roll back business state and success audit
         handler --> ctrl : Generic 500 with correlation ID
         ctrl --> client : Failure; no successful-close claim
-        client --> page : Failed state with reference ID; sprint still active; choices kept for retry
+        client --> page : Failed state with reference ID; sprint still active; choices kept;\nClose sprint retries only when chosen
       else Commit succeeds
         db --> handler : Closed sprint and snapshot
-        handler --> ctrl : Closure result
-        ctrl --> client : 200 with the history route
-        client --> page : Open sprint history; the board shows No active sprint
-        page --> actor : Announce the closure and carryover
+        handler --> ctrl : SprintCloseResult: ID, name, history route, done, returned and carried-over counts
+        ctrl --> client : 200 with the close result
+        client --> page : Form emits closed; the dialog closes with Closed(SprintCloseResult); the board, Sprints\nor planning page opens sprint history; the layout calls refresh(); the board shows No active sprint
+        page --> actor : Every opener, ProjectLayoutPage included, shows the "Sprint 8 closed" toast with the counts through TOAST_SERVICE
       end
     end
   end
 end
 note over ctrl, db
+A workspace lock wait beyond the timeout returns 503 with Retry-After and no change;
+the dialog shows the same failed state with the reference ID and keeps every choice.
+An unexpected 403 (access changed after sign-in) closes nothing; SprintClosureForm keeps every choice
+and emits forbidden, which the dialog relays as its own forbidden while it stays open, and the
+opening page shows the "Your access changed" toast through TOAST_SERVICE, without Retry.
+A close that gets no response is uncertain: the dialog keeps every choice, says "We couldn't
+confirm whether Sprint 8 closed." (no reference ID), and the form emits unconfirmed, which the
+dialog relays while it stays open, so the opening page rereads at once. It reads the review once
+from page 1: Closed shows the neutral "Sprint 8 is closed now." with View sprints (only when
+offerSprintsLink is true) and Close, which
+returns Outdated (unconfirmed-closed; never "Nothing changed"); Active shows the refreshed review
+with the choices kept.
+SaveChangesAsync raises ConcurrencyConflictException on a stale version, mapped to the same 409.
 Unexpected failures return generic 500 plus correlation ID (L2-043).
 Diagnostics exclude secrets and contact payloads.
 end note

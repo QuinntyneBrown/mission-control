@@ -3,6 +3,7 @@ skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
+skinparam maxMessageSize 300
 skinparam ArrowColor #344054
 skinparam rectangle {
   BorderColor #344054
@@ -16,7 +17,7 @@ skinparam package {
 title Behavior - Confirm current unfinished-task condition
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "WorkItemDetailPage / WorkItemView" as page
+  participant "WorkItemDetailPage / WorkItemDetailView" as page
   participant "UnfinishedTasksDialog" as dialog
   participant "IWorkItemService / WorkItemService" as client
 end box
@@ -27,84 +28,113 @@ end box
 box "Backend - MissionControl.Application and Domain" #ECFDF3
   participant "ValidationBehavior" as validation
   participant "CompleteStoryCommandHandler" as handler
-  participant "StoryCompletionCondition" as entity
+  participant "StoryStatusTransition / StoryCompletionPolicy" as entity
 end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
 actor -> page : Set story status to Done (detail status control)
-page -> client : Build typed CompleteStoryCommand (expected story version; no condition on first attempt)
+page -> client : WorkItemDetailView sends complete(CompleteStoryCommand: expected story version; no condition on first attempt); returns a promise
 client -> access : PUT /api/workspaces/{id}/work-items/{storyId}/completion
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid or expired JWT; deactivated account
   access --> client : 401; audit denial without payloads
-  client --> page : Keep saved status; clear session; sign in with the story as return route
-else Authenticated without permission to update work
-  access --> client : 403; audit denial without payloads
-  client --> page : Keep saved status; explain that the change is not permitted
-else Authorized
+  client -> client : sessionInterceptor: a 401 for the current session generation calls SessionService.end(Unauthorized) once
+  client --> page : The promise rejects with the 401 (nothing saved); navigation to sign-in destroys the page; the story is the return route
+else Unexpected 403 (profile P: completing a story needs only an active session)
+  access --> client : 403; Denied audit through IAuditEventWriter; nothing changed
+  client -> client : sessionInterceptor refreshes capabilities (at most one refresh in flight)
+  client --> page : The promise rejects; keep the saved status; completionStatus Forbidden: the prompt reports Forbidden, so any open dialog closes with Forbidden (focus returns to the status control)
+  page --> actor : WorkItemDetailPage shows the "Your access changed" toast through TOAST_SERVICE, without Retry or reference ID
+else Active session
   access -> ctrl : Authorized request
   ctrl -> validation : Send CompleteStoryCommand through MediatR 12.5.0
-  validation -> validation : Validate identifiers, version and condition shape
-  alt Malformed identifiers, version or condition
+  validation -> validation : Validate version and condition shape (path IDs are route-constrained GUIDs; a malformed one matches no route and returns 404)
+  alt Malformed version or condition in the body
     validation --> ctrl : 400 field errors; nothing read or changed
     ctrl --> client : Validation ProblemDetails
-    client --> page : Keep saved status; show the message by the status control
+    client --> page : The promise rejects; completionStatus Settled; keep saved status; show the message linked to the status control, which keeps focus and reads it, without Try again or reference ID
   else Valid request
     validation -> handler : Handle CompleteStoryCommand
-    handler -> db : Lock workspace/story; read status, version, unfinished task count and task revision
-    db --> handler : Current story and completion condition
-    alt Workspace or story not found
-      handler --> ctrl : 404; nothing changed
-      ctrl --> client : ProblemDetails (not found)
-      client --> page : Close any dialog; not-found state with navigation back to Work
-    else Not a story
-      handler --> ctrl : 400 only stories take a completion; nothing changed
-      ctrl --> client : Validation ProblemDetails
-      client --> page : Keep saved status; show the message by the status control
-    else Stale story version
-      handler --> ctrl : 409 stale version; nothing changed
-      ctrl --> client : ProblemDetails (stale version)
-      client --> page : Close any dialog; keep the attempted status; read the latest story once for comparison
-    else Unfinished tasks; condition absent or no longer current
-      handler -> entity : L2-021 compare sent condition with current count and task revision
-      entity --> handler : Confirmation required
-      handler --> ctrl : 409 unfinished-tasks with count and StoryCompletionCondition; nothing changed
-      ctrl --> client : ProblemDetails (unfinished-tasks)
-      client --> page : Hold returned condition
-      page -> dialog : Open with the returned count (or show server-count if already open); focus Keep in progress
-      alt Mark story Done
-        dialog --> page : Confirmed
-        page -> client : Resubmit the same CompleteStoryCommand with the returned condition
-        note right of client : Re-enters this flow; a changed count returns a new 409 (server-count)
-      else Keep in progress
-        dialog --> page : Kept
-        page -> page : Send no request; status unchanged; focus returns to the status control
+    handler -> db : BeginWorkspaceTransactionAsync takes the workspace lock first (bounded wait)
+    alt Lock wait times out
+      db --> handler : Lock timeout; nothing changed
+      handler --> ctrl : 503 with Retry-After
+      ctrl --> client : ProblemDetails (unavailable)
+      client --> page : The promise rejects; keep saved status; completionStatus Failed with the reference ID; without a dialog the status control shows it with Try again
+      opt Confirmation dialog open
+        page -> dialog : WorkItemDetailPage sets the prompt to failed with the reference ID; the change stays pending; Mark story Done retries the same request; Keep sends nothing
       end
-    else No unfinished tasks, or condition still current
-      handler -> entity : L2-021 Done permitted; child task statuses unchanged
-      entity --> handler : Story Done
-      handler -> db : L2-039 / L2-040 update story, live board placements and success audit in one transaction
-      alt Commit fails
-        db --> handler : Roll back business state and success audit
-        handler --> ctrl : Generic 500 with correlation ID
-        ctrl --> client : Failure; no successful-save claim
-        client --> page : Status unchanged; reference ID with retry
-        opt Confirmation dialog open
-          page -> dialog : Show failed state; Mark story Done retries the same request
+    else Lock held
+      handler -> db : LoadStoryPlacementsAsync: status, version, live placements, task revision and unfinished count (one aggregate over child tasks)
+      db --> handler : Current story and completion condition
+      alt Workspace or story not found
+        handler --> ctrl : 404; nothing changed
+        ctrl --> client : ProblemDetails (not found)
+        client --> page : The promise rejects; completionStatus Settled closes any dialog; WorkItemDetailView rereads its workItemResource once
+        alt The read's 404 carries category item-not-found
+          page --> actor : The item's not-found state, offering the project's work and the project list; the header still shows the project; focus moves to its heading
+        else The read's 404 carries category workspace-not-found
+          page --> actor : The project's not-found presentation (Back to projects; no Try again or reference ID); the view emits notFound and WorkItemDetailPage calls the layout's refresh(), so the header keeps only the breadcrumb
         end
-      else Commit succeeds
-        db --> handler : New story version
-        handler --> ctrl : Completed story
-        ctrl --> client : 200 with status and version
-        client --> page : Update signal state; close any dialog
-        page --> actor : Announce "Story marked Done"; open-task count unchanged
+      else Not a story
+        handler --> ctrl : 400 only stories take a completion; nothing changed
+        ctrl --> client : Validation ProblemDetails
+        client --> page : The promise rejects; completionStatus Settled; keep saved status; show the message linked to the status control, which keeps focus and reads it, without Try again or reference ID
+      else Stale story version
+        handler --> ctrl : 409 stale version; nothing changed
+        ctrl --> client : ProblemDetails (stale version)
+        client --> page : The promise rejects; completionStatus Settled closes any dialog; WorkItemDetailView reloads its workItemResource once to show the latest story
+      else Unfinished tasks; condition absent or no longer current
+        handler -> entity : L2-021 StoryStatusTransition applies StoryCompletionPolicy: compare sent condition with current count and task revision
+        entity --> handler : Confirmation required; nothing changed
+        handler --> ctrl : 409 unfinished-tasks with count and StoryCompletionCondition; nothing changed
+        ctrl --> client : ProblemDetails (unfinished-tasks)
+        client --> page : The promise rejects with the condition; WorkItemDetailView keeps the change pending; completionStatus ConfirmationRequired with the story's key, title, saved status and condition
+        page -> dialog : WorkItemDetailPage opens it with the prompt built from that status and focuses Keep in progress; if already open, it shows server-count, whose alert announces the new count without moving focus
+        alt Mark story Done
+          dialog --> page : confirmed(condition); WorkItemDetailPage passes it through completionDecision; the prompt shows saving
+          page -> client : WorkItemDetailView resubmits complete(CompleteStoryCommand) with the returned condition
+          note right of client : Re-enters this flow; a changed count returns a new 409 (server-count)
+        else Keep in progress, or Escape
+          dialog --> page : kept; WorkItemDetailPage passes it through completionDecision
+          page -> page : WorkItemDetailView sends no request; status unchanged; completionStatus Settled; the prompt reports Settled, so the dialog closes with Settled; focus returns to the status control
+        else A navigation closes the dialog with no result (another item's link, or Back or Forward)
+          page -> page : WorkItemDetailPage relays kept through completionDecision, as if Keep in progress were chosen; WorkItemDetailView drops its pending completion and sends no request
+        end
+      else No unfinished tasks, or condition still current
+        handler -> entity : L2-021 StoryStatusTransition: Done permitted; set status, move every live placement, increment the active sprint's version when the story is a member; child task statuses unchanged
+        entity --> handler : Story Done on every live placement
+        handler -> db : L2-039 / L2-040 AddAuditEvent registers the success audit; SaveChangesAsync checks tracked versions and commits story, placements, sprint version and audit
+        alt Commit fails
+          db --> handler : Roll back business state and success audit
+          handler --> ctrl : Generic 500 with correlation ID
+          ctrl --> client : Failure; no successful-save claim
+          client --> page : The promise rejects; status unchanged; completionStatus Failed with the reference ID; without a dialog the status control shows it with Try again
+          opt Confirmation dialog open
+            page -> dialog : WorkItemDetailPage sets the prompt to failed with the reference ID; the change stays pending; Mark story Done retries the same request; Keep sends nothing
+          end
+        else Commit succeeds
+          db --> handler : New story version
+          handler --> ctrl : Completed story
+          ctrl --> client : 200 with status and version
+          client --> page : The promise resolves; completionStatus Settled closes any dialog; WorkItemDetailView reloads its workItemResource
+          page --> actor : Announce "Story marked Done"; open-task count unchanged
+        end
       end
     end
   end
 end
+note over page, client
+No response (timeout or network failure) is an uncertain outcome: the story
+may or may not be Done, so the view never claims nothing changed and resends
+nothing. WorkItemDetailView reloads its workItemResource once; when the read
+settles it reports completionStatus Settled, which closes any open dialog, and
+announces the persisted status. If that read fails too, the detail shows its
+load error with Try again.
+end note
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043).
 Diagnostics exclude secrets and contact payloads.

@@ -6,7 +6,7 @@ Person(actor, "Authorized user", "Read immutable sprint history")
 System_Boundary(mc, "Mission Control") {
   Container(web, "Mission Control web client", "Angular", "Read immutable sprint history")
   Container(api, "MissionControl.Api", ".NET", "Authorized application handlers")
-  ContainerDb(db, "Mission Control database", "SQL - provider <TO SUPPLY>", "SprintSnapshot and related records")
+  ContainerDb(db, "Mission Control database", "SQL - provider <TO SUPPLY>", "Closure snapshots, initial scope, scope changes, and live work")
 }
 Rel(actor, web, "Uses")
 Rel(web, api, "Requests feature behavior", "HTTPS / JSON")

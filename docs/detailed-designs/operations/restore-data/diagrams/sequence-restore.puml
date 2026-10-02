@@ -20,8 +20,10 @@ box "Release tooling - backend/src/MissionControl.Operations" #E0F2FE
   participant "RestoreBackupOperation" as restore
   participant "RecoveryApiProbe" as probe
 end box
-box "Selected SQL provider" #FFF4E5
+box "Backup storage - facility <TO SUPPLY>" #F2F4F7
   collections "Backup storage" as storage
+end box
+box "Selected SQL provider" #FFF4E5
   database "Isolated SQL target" as target
 end box
 box "Backend - MissionControl.Api (recovery instance)" #D1FADF

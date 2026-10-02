@@ -3,6 +3,7 @@ skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
+skinparam maxMessageSize 300
 skinparam ArrowColor #344054
 skinparam rectangle {
   BorderColor #344054
@@ -33,16 +34,24 @@ box "Backend - MissionControl.Infrastructure" #FFF4E5
 end box
 actor -> page : Open /home, or Retry in Active sprints
 page -> page : state = Loading; section keeps its shape with skeletons (L2-032.1)
-page -> client : sprints(GetActiveSprintSummaryQuery page 1, pageSize 25)
+page -> client : activeSprintSummaryResource(() => GetActiveSprintSummaryQuery { page 1, pageSize 25 }) reads on view creation, or reload() on Retry or a refresh change
 client -> access : GET /api/home/active-sprints?page=1&pageSize=25
+alt No response: the connection dropped or the request timed out
+  client --> page : state = Failed, no reference ID; sessionInterceptor sets offline, so ApplicationShell shows the offline banner
+  page --> actor : Section alert with Retry and no reference ID; other sections stay
+else Response received
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt 401: token absent, invalid or expired; account deactivated or credential version changed
   access --> client : 401 ProblemDetails; denial audited without payloads
-  client -> client : Clear in-memory session and protected caches (L2-003)
-  client --> page : Unauthenticated
-  page --> actor : AuthenticationGuard stores /home; sign-in shows "Your session ended"
+  alt Request's generation is still current
+    client -> client : sessionInterceptor calls end(Unauthorized), once (L2-003)
+    client --> page : Resource keeps its state (401); section unchanged
+    page --> actor : ApplicationShell stores /home and opens sign-in: "Your session ended"
+  else Session already ended (another section's 401 came first)
+    client --> page : Discarded: the read resource keeps its state; no second session end
+  end
 else Authenticated (profile P: every active role reads sprints, so no 403 path)
   access -> ctrl : Authenticated request
   ctrl -> validation : Send GetActiveSprintSummaryQuery through MediatR 12.5.0
@@ -50,26 +59,26 @@ else Authenticated (profile P: every active role reads sprints, so no 403 path)
   alt 400: page or pageSize out of range
     validation --> ctrl : Field errors with page-size message; nothing read (L2-045.2)
     ctrl --> client : 400 Validation ProblemDetails
-    client --> page : state = Failed
-    page --> actor : Section alert with Retry (HomePage itself always sends pageSize 25)
+    client --> page : state = Failed, no reference ID
+    page --> actor : Section alert; only a direct API call can reach this path, because Home always sends page 1 and pageSize 25
   else Valid request
     validation -> handler : Handle GetActiveSprintSummaryQuery
-    handler -> db : L2-028 one read transaction: Active sprints of Scrum workspaces ordered by workspace name then sprint ID, total count, and member stories counted by status
+    handler -> db : L2-028 one statement (window count) or one explicit snapshot read transaction: Active sprints of Scrum workspaces ordered by workspace name then sprint ID, total count, and member stories counted by status
     alt SQL unavailable or unexpected failure
       db --> handler : Exception
       handler --> ctrl : Unhandled failure
-      ctrl --> client : 500 with correlation ID; diagnostic record written (L2-043)
+      ctrl --> client : 500; X-Correlation-ID header carries the reference ID; diagnostic record written (L2-043)
       client --> page : state = Failed(referenceId)
       page --> actor : Section alert with reference ID and Retry; other sections stay
     else Sprints read
       db --> handler : Active sprints, total count, story counts by status
-      handler -> projection : Fill absent statuses with 0; sprint name, workspace, dates and goal
+      handler -> projection : Fill absent statuses with 0; storiesTotal; sprint name, workspace, dates and goal
       projection --> handler : ActiveSprintSummaryPage
       handler --> ctrl : ActiveSprintSummaryPage
       ctrl --> client : 200 ActiveSprintSummaryPage
       alt totalCount = 0
         client --> page : state = Empty
-        page --> actor : "No active sprints" with View sprints (no-active-sprints)
+        page --> actor : "No active sprints": "No Scrum project has a sprint in progress. Start a planned sprint from its project's Sprints tab." with View projects (no-active-sprints and both first-run states)
       else Active sprints exist
         client --> page : state = Ready(ActiveSprintSummaryPage)
         page --> actor : Sprint cards; each sprint name opens its sprint board (L2-028.2)
@@ -77,8 +86,12 @@ else Authenticated (profile P: every active role reads sprints, so no 403 path)
     end
   end
 end
+end
 note over page, db
 One active sprint per workspace; Kanban workspaces cannot hold an Active sprint (L2-027).
-Story counts cover every member story, not a loaded batch (L2-045).
+Story counts and storiesTotal cover every member story, not a loaded batch (L2-045).
+The hint reads "N active sprints", or "Showing 25 of N - View all projects" when totalCount exceeds the page,
+because each project's Sprints tab reaches the sprints beyond the first page.
+Sections may reflect different instants. A response that arrives after the session ended is discarded.
 end note
 @enduml

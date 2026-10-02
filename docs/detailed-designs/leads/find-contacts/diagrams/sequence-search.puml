@@ -4,6 +4,7 @@ skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
 skinparam ArrowColor #344054
+skinparam maxMessageSize 300
 skinparam rectangle {
   BorderColor #344054
   FontColor #101828
@@ -16,7 +17,7 @@ skinparam package {
 title Behavior - Search and filter the directory
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "LeadDirectoryPage / LeadView" as page
+  participant "LeadDirectoryPage / LeadDirectoryView" as page
   participant "ILeadService / LeadService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,47 +32,55 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Type search text or choose a category
-page -> page : Write search and category to route query; reset to page 1; show loading skeleton
-page -> client : Build typed ListLeadsQuery
+actor -> page : Type search text, or choose a category or page
+page -> page : View emits filtersChanged; the page writes search, category, and page to the route query (a search or category change resets page 1); filters return as the view's input
+alt Typed search text
+  page -> page : The view's query signal takes the search once it has been stable for about 250 ms
+else Category, page, or Clear filter
+  page -> page : The query signal changes at once (no debounce)
+end
+page -> page : Show loading skeleton while the resource status is loading
+page -> client : leadsResource (created once in LeadDirectoryView's injection context) reads the new ListLeadsQuery
+opt This view's previous directory read is still in flight
+  client -> client : Unsubscribe the superseded request; HttpClient cancels it; it updates no state
+end
 client -> access : GET /api/leads?search&category&page&pageSize
 access -> access : L2-002 validate signature, issuer, audience, subject, expiry
 access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid, or expired JWT; inactive account
   access --> client : 401; audit denial without payloads
-  client --> page : Clear in-memory session; require login; restore the directory route after login
+  client -> client : sessionInterceptor: a 401 for the current session generation calls SessionService.end(Unauthorized) once
+  client --> page : Navigation to sign-in destroys the view, which cancels its read; the directory route is restored after sign-in
 else Authenticated (every role reads contacts in profile P)
   access -> ctrl : Authorized request
 ctrl -> validation : Send ListLeadsQuery through MediatR 12.5.0
-validation -> validation : L2-045 page size 1-100; known category
-alt Page size outside 1-100 or unknown category
-  validation --> ctrl : 400 page-size or category message; nothing read
+validation -> validation : L2-045 page >= 1; page size 1-100; known category
+alt Unknown category, page below 1, or page size outside 1-100 (an outdated or edited link)
+  validation --> ctrl : 400 field message for category, page, or pageSize; nothing read
   ctrl --> client : Validation ProblemDetails
-  client --> page : Show load-error state with the readable message; Try again reloads page 1 at 25 per page
+  client --> page : Resource status error (400); filter-invalid state: the field message and Clear filter, which writes the full directory at page 1 to the route query; no rows, paging, or chip counts; no Try again or reference ID; announce the message
 else Valid request
   validation -> handler : Handle ListLeadsQuery
-  handler -> db : L2-010 parameterized, escaped substring search AND category; order last name, first name, ID; one page
-  db --> handler : Page rows, total matching count, five category totals
+  handler -> db : One snapshot read transaction: L2-010 / L2-037.1 escaped substring search AND category, ordered last name, first name, ID; one page
+  db --> handler : Page rows, total matching count, five category totals from the same snapshot
   handler -> entity : Project safe contact rows; isCityLead from category and designated email
   entity --> handler : LeadDirectoryResult
   handler --> ctrl : Typed result
   ctrl --> client : 200 items, totalCount, categoryTotals
-  alt A newer search started meanwhile
-    client -> client : Discard this older response
-  else Latest search
-    alt Zero matches
-      client --> page : Show zero-result message with Clear filter; announce "No <category> leads found"
-    else Matches
-      client --> page : Render rows, pagination, and chip counts; announce "N leads found"
-    end
-    page --> actor : Results, counts, and controls stay reachable at every width
+  client --> page : Resource status resolved; value holds the LeadDirectoryResult for the current query
+  alt Zero matches
+    page -> page : Show zero-result message with Clear filter; announce "No <category> leads found"
+  else Matches
+    page -> page : Render rows, pagination, and chip counts; announce "N leads found"
   end
+  page --> actor : Results, counts, and controls stay reachable at every width; Add lead, Edit, and Delete only when canManageLeads, else the read-only notice
 end
 end
 note over ctrl, db
 Unexpected failures return generic 500 plus correlation ID (L2-043);
-the page shows its load-error state with the reference ID and Try again.
+the view shows its load-error state with the reference ID; Try again calls reload().
+With no response there is no reference ID, and the shell's offline banner appears.
 Diagnostics exclude secrets and contact payloads.
 end note
 @enduml

@@ -5,10 +5,10 @@ title Containers - Confirm story completion with unfinished tasks
 Person(actor, "Authorized user", "Confirm story completion with unfinished tasks")
 System_Boundary(mc, "Mission Control") {
   Container(web, "Mission Control web client", "Angular", "Confirm story completion with unfinished tasks")
-  Container(api, "MissionControl.Api", ".NET", "Authorized application handlers")
-  ContainerDb(db, "Mission Control database", "SQL - provider <TO SUPPLY>", "StoryCompletionCondition and related records")
+  Container(api, "MissionControl.Api", ".NET", "Authorized completion command")
+  ContainerDb(db, "Mission Control database", "SQL - provider <TO SUPPLY>", "Stories, tasks, board placements and audit events")
 }
 Rel(actor, web, "Uses")
-Rel(web, api, "Requests feature behavior", "HTTPS / JSON")
-Rel(api, db, "Reads or commits feature records", "Parameterized SQL")
+Rel(web, api, "Sends Done with or without the returned condition", "HTTPS / JSON")
+Rel(api, db, "Commits story status, placements and audit atomically", "Parameterized SQL")
 @enduml

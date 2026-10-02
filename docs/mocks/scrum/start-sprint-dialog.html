@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Start sprint · Mission Control mock</title>
-  <meta name="description" content="Start-sprint confirmation with the recorded initial scope, plus blocked (another sprint active, Kanban mode), starting, and failed states.">
+  <meta name="description" content="Start-sprint confirmation with the recorded initial scope, plus loading, load-failed, changed-meanwhile, already-started, blocked (another sprint active, Kanban mode), starting, failed, and unconfirmed-start states.">
   <meta name="mock-area" content="Scrum sprints">
   <meta name="mock-requirements" content="L2-023.1, L2-023.2, L2-027.3, L2-031.2, L2-033.2, L2-043.4">
   <link rel="stylesheet" href="../assets/tokens.css">
@@ -20,10 +20,15 @@
       <label class="mock-bar__state">State
         <select data-mock-state>
           <option value="default">Confirm start</option>
+          <option value="loading">Loading sprint</option>
+          <option value="load-failed">Couldn't load sprint</option>
+          <option value="stale">Sprint changed meanwhile</option>
+          <option value="not-planned">Already started</option>
           <option value="blocked-active">Another sprint is active</option>
           <option value="blocked-kanban">Project uses Kanban</option>
           <option value="starting">Starting</option>
           <option value="failed">Start failed</option>
+          <option value="unconfirmed-active">Start unconfirmed · now active</option>
         </select>
       </label>
       <a href="../index.html">All mocks</a>
@@ -31,11 +36,16 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">Opens from Start sprint on a planned sprint once no sprint is active (Sprint 8 has closed). Starting records the start time, the person who started it, and the current stories as the initial scope, then opens the sprint board. Focus starts on Cancel; Escape closes.</p>
-    <p class="mock-note" data-when="blocked-active" hidden>Sprint 8 is still active behind the dialog. A project can have one active sprint, so the API returns 409 and neither sprint changes; the dialog explains the next step instead of offering Start.</p>
-    <p class="mock-note" data-when="blocked-kanban" hidden>Sprint plans are kept in Kanban mode but can't start (409). Only an administrator can change the delivery mode.</p>
+    <p class="mock-note" data-when="default">Opens from Start sprint on a planned sprint once no sprint is active (Sprint 8 has closed). Starting records the start time, the person who started it, and the current stories as the initial scope, then opens the sprint board, where the "Sprint 9 started" toast confirms it. Focus starts on Cancel; Escape closes.</p>
+    <p class="mock-note" data-when="loading" hidden>Opens from Start on a planned sprint, the planning page's Start sprint, or the board's Start Sprint 9. The dialog reads the sprint first for its dates, goal, stories, and version, so the title stays generic and Start sprint stays disabled until the record arrives. Cancel closes without sending anything. Screen readers hear "Loading sprint…", which is the dialog's description until the summary arrives; focus stays on Cancel. A read that answers 404 closes the dialog, and the page that opened it reloads and shows its own state, with no reference ID or Try again.</p>
+    <p class="mock-note" data-when="load-failed" hidden>The read failed, so Start sprint stays disabled and nothing was changed. Try again repeats the read and shows the sprint once it arrives. A server error (500) shows the reference ID, which matches the server's diagnostic record; a read that gets no response shows the same alert without a reference ID and asks you to check your connection. The alert is announced, the dialog's description now points to it, and focus moves to Try again; Cancel closes without sending anything.</p>
+    <p class="mock-note" data-when="stale" hidden>Sprint 9's plan was saved again after this dialog opened (here HCK-128 joined it), so the API returns 409 and nothing starts. The dialog reads Sprint 9 once and shows the refreshed summary, so the initial scope you confirm is the one recorded. Nothing is sent again until Start sprint is pressed. The message names no person or time; screen readers hear the alert, and the dialog's description now points to that explanation. Start sprint stays available, so focus stays on it.</p>
+    <p class="mock-note" data-when="not-planned" hidden>Sprint 9 was started after this dialog opened, so the API returns 409 because the sprint is no longer planned; a closed sprint gets the same explanation with its own state. Nothing changed and there's nothing to retry: Close returns the dialog's outdated result, so the page that opened it rereads its sprint list, plan, or board. The explanation replaces the summary inside the dialog's alert region, so it is announced and becomes the dialog's description. Start sprint is gone, so focus moves to Close. After a start that got no response, an active sprint is named with neutral copy instead (Start unconfirmed · now active).</p>
+    <p class="mock-note" data-when="blocked-active" hidden>Sprint 8 is still active behind the dialog. The dialog opened on its confirmation, because opening reads only Sprint 9's plan; Start sprint was then answered with 409, since a project can have one active sprint, and neither sprint changed. The dialog now explains the next step instead of offering Start, naming the active sprint from the 409. The explanation sits in the dialog's alert region, so it is announced and becomes the dialog's description; Start sprint is gone, so focus moves to "Review and close Sprint 8", the first action offered. That action closes this dialog and the page that opened it (the Sprints tab, the planning page, or the board) opens Close sprint for Sprint 8. Close returns without changes.</p>
+    <p class="mock-note" data-when="blocked-kanban" hidden>Sprint plans are kept in Kanban mode but can't start (409). Only an administrator can change the delivery mode. Close returns to the Sprints tab, which reloads with the project header in Kanban mode. The explanation sits in the dialog's alert region, so it is announced and becomes the dialog's description; Start sprint is gone, so focus moves to Close.</p>
     <p class="mock-note" data-when="starting" hidden>Start shows progress and ignores repeat clicks, so concurrent starts can't create two active sprints from this screen.</p>
-    <p class="mock-note" data-when="failed" hidden>Nothing changed: Sprint 9 is still planned. Start sprint retries.</p>
+    <p class="mock-note" data-when="unconfirmed-active" hidden>Start sprint got no response, so the dialog read Sprint 9 again and found it active. It can't tell whether this start or another one went through, so it says only what is true now, never that nothing changed. The page behind already read its sprints again when the start went unconfirmed. Close returns the dialog's outdated result, so the page reads again and shows Sprint 9 active: on the Sprints tab with Open board, on the planning page with a link to the board, or as the board itself. The explanation sits in the dialog's alert region, so it is announced and becomes the dialog's description; Start sprint is gone, so focus moves to Close.</p>
+    <p class="mock-note" data-when="failed" hidden>Nothing changed: Sprint 9 is still planned. This covers a server error (500) and a busy project (503 with Retry-After). Start sprint sends again only when pressed; the reference ID matches the server's diagnostic record. The alert is announced and focus stays on Start sprint. A start that gets no response reuses this alert with "We couldn't confirm whether Sprint 9 started." and no reference ID, never saying that nothing changed. The page behind reads its sprints again at once, and the dialog reads Sprint 9 again before Start sprint is offered; if Sprint 9 is active by then, the dialog says so with neutral copy (Start unconfirmed · now active) rather than the already-started explanation. A refused start (400, a malformed version) shows its message in this alert without a reference ID; Start sprint becomes unavailable, because sending it again would be refused again, so focus moves to the alert. If the account's access changed (an unexpected 403), nothing starts, the dialog stays open, and the page shows the "Your access changed" toast instead, without Retry.</p>
   </div>
 
   <div class="mock-screen">
@@ -79,7 +89,7 @@
                 <div class="mc-card__header"><div class="mc-stack mc-stack--xs"><p class="mc-card__title">Sprint 9</p><p class="mc-text-sm mc-muted">Oct 13 – Oct 23, 2026 · 3 stories</p></div><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--calendar" aria-hidden="true"></span>Planned</span></div>
               </div>
               <div class="mc-card" data-when="blocked-kanban" hidden>
-                <div class="mc-card__header"><div class="mc-stack mc-stack--xs"><p class="mc-card__title">Sprint 3</p><p class="mc-text-sm mc-muted">Jun 1 – Jun 12, 2026 · 4 stories</p></div><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--calendar" aria-hidden="true"></span>Planned</span></div>
+                <div class="mc-card__header"><div class="mc-stack mc-stack--xs"><p class="mc-card__title">Sprint 3</p><p class="mc-text-sm mc-muted">Jun 1 – Jun 12, 2026 · 3 stories</p></div><span class="mc-pill mc-pill--info"><span class="mc-icon mc-icon--calendar" aria-hidden="true"></span>Planned</span></div>
                 <p class="mc-reason"><span class="mc-icon mc-icon--lock" aria-hidden="true"></span>Paused while the project uses Kanban.</p>
               </div>
             </div>
@@ -89,21 +99,54 @@
     </div>
 
     <div class="mc-backdrop">
-      <section class="mc-dialog mc-dialog--sm" role="alertdialog" aria-modal="true" aria-labelledby="start-title" aria-describedby="start-desc">
+      <section class="mc-dialog mc-dialog--sm" role="alertdialog" aria-modal="true" aria-labelledby="start-title" aria-describedby="start-desc"
+        data-attr-loading="aria-describedby=start-loading"
+        data-attr-load-failed="aria-describedby=start-load-failed-title start-load-failed-text"
+        data-attr-stale="aria-describedby=start-stale-title start-stale-text"
+        data-attr-not-planned="aria-describedby=start-not-planned-text"
+        data-attr-blocked-active="aria-describedby=start-blocked-active-text"
+        data-attr-blocked-kanban="aria-describedby=start-blocked-kanban-text"
+        data-attr-unconfirmed-active="aria-describedby=start-active-now-text">
         <header class="mc-dialog__header">
-          <span class="mc-dialog__icon" data-unless="blocked-active blocked-kanban"><span class="mc-icon mc-icon--play" aria-hidden="true"></span></span>
-          <span class="mc-dialog__icon mc-dialog__icon--warning" data-when="blocked-active blocked-kanban" hidden><span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span></span>
+          <span class="mc-dialog__icon" data-unless="blocked-active blocked-kanban not-planned"><span class="mc-icon mc-icon--play" aria-hidden="true"></span></span>
+          <span class="mc-dialog__icon mc-dialog__icon--warning" data-when="blocked-active blocked-kanban not-planned" hidden><span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span></span>
           <div class="mc-dialog__heading">
             <h2 class="mc-dialog__title" id="start-title">
-              <span data-unless="blocked-active blocked-kanban">Start Sprint 9?</span>
+              <span data-unless="blocked-active blocked-kanban not-planned loading load-failed unconfirmed-active">Start Sprint 9?</span>
+              <span data-when="unconfirmed-active" hidden>Sprint 9 is active now</span>
+              <span data-when="loading load-failed" hidden>Start sprint?</span>
+              <span data-when="not-planned" hidden>Sprint 9 has already started</span>
               <span data-when="blocked-active" hidden>Sprint 8 is still active</span>
               <span data-when="blocked-kanban" hidden>Sprint 3 can't start right now</span>
             </h2>
           </div>
         </header>
         <div class="mc-dialog__body">
+          <div class="mc-live" role="status" aria-live="polite">
+            <div class="mc-loading-inline" id="start-loading" data-when="loading" hidden><span class="mc-spinner" aria-hidden="true"></span>Loading sprint…</div>
+          </div>
           <div class="mc-live" role="alert">
-              <div class="mc-alert mc-alert--danger" data-when="failed" hidden>
+              <div class="mc-alert mc-alert--danger" data-when="load-failed" hidden>
+                <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title" id="start-load-failed-title">We couldn't load this sprint</p>
+                  <p class="mc-alert__text" id="start-load-failed-text">Nothing was changed. Try again.</p>
+                  <p class="mc-ref">Reference ID <code>7a3e-c105-f68d</code>
+                    <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="7a3e-c105-f68d"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                  </p>
+                  <div class="mc-alert__actions">
+                    <button class="mc-button mc-button--sm" type="button" data-goto-state="default"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again</button>
+                  </div>
+                </div>
+              </div>
+              <div class="mc-alert mc-alert--warning" data-when="stale" hidden>
+                <span class="mc-icon mc-icon--alert-triangle" aria-hidden="true"></span>
+                <div class="mc-alert__body">
+                  <p class="mc-alert__title" id="start-stale-title">Sprint 9 changed after you opened it</p>
+                  <p class="mc-alert__text" id="start-stale-text">Nothing was started. Check the updated stories below, then start it again.</p>
+                </div>
+              </div>
+              <div class="mc-alert mc-alert--danger" tabindex="-1" data-when="failed" hidden>
                 <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
                 <div class="mc-alert__body">
                   <p class="mc-alert__title">We couldn't start Sprint 9</p>
@@ -113,28 +156,36 @@
           </p>
                 </div>
               </div>
+              <p id="start-not-planned-text" data-when="not-planned" hidden>Sprint 9 is active now, so there's nothing to start. Nothing was changed.</p>
+              <p id="start-blocked-active-text" data-when="blocked-active" hidden>A project can have one active sprint at a time. Close Sprint 8 before starting Sprint 9. Nothing was changed.</p>
+              <p id="start-active-now-text" data-when="unconfirmed-active" hidden>There's nothing left to start. Sprint 9's stories are on its sprint board.</p>
+              <p id="start-blocked-kanban-text" data-when="blocked-kanban" hidden>Prayer Wall App uses Kanban, so its sprints are paused. Sprint 3's plan is kept. An administrator can switch the project to Scrum to start it.</p>
           </div>
           <div id="start-desc">
-            <p data-unless="blocked-active blocked-kanban">Starting records the start time and these 3 stories as the initial scope. The sprint board opens next.</p>
-            <p data-when="blocked-active" hidden>A project can have one active sprint at a time. Close Sprint 8 before starting Sprint 9. Nothing was changed.</p>
-            <p data-when="blocked-kanban" hidden>Prayer Wall App uses Kanban, so its sprints are paused. Sprint 3's plan is kept. An administrator can switch the project to Scrum to start it.</p>
+            <p data-unless="blocked-active blocked-kanban not-planned loading load-failed unconfirmed-active">Starting records the start time and these <span data-unless="stale">3</span><span data-when="stale" hidden>4</span> stories as the initial scope. The sprint board opens next.</p>
           </div>
-          <dl class="mc-dl" data-unless="blocked-active blocked-kanban">
+          <dl class="mc-dl" data-unless="blocked-active blocked-kanban not-planned loading load-failed unconfirmed-active">
             <dt>Dates</dt><dd>Oct 13 – Oct 23, 2026</dd>
-            <dt>Stories</dt><dd>3 stories · 10 points</dd>
+            <dt>Stories</dt><dd><span data-unless="stale">3 stories · 10 points</span><span data-when="stale" hidden>4 stories · 11 points</span></dd>
             <dt>Goal</dt><dd>Demo day judging flow ready</dd>
           </dl>
-          <p data-when="blocked-active" hidden><a class="mc-link" href="close-sprint-dialog.html">Review and close Sprint 8</a></p>
+          <div class="mc-cluster" data-when="blocked-active" hidden>
+            <button class="mc-button mc-button--sm" type="button" data-nav="close-sprint-dialog.html">
+              <span class="mc-icon mc-icon--stop-circle" aria-hidden="true"></span>Review and close Sprint 8
+            </button>
+          </div>
         </div>
         <footer class="mc-dialog__footer">
-          <button class="mc-button" type="button" data-nav="sprints.html" data-unless="blocked-active blocked-kanban" data-attr-starting="disabled">Cancel</button>
-          <button class="mc-button mc-button--primary" type="button" data-nav="sprint-board.html" data-unless="blocked-active blocked-kanban"
-            data-attr-starting="aria-busy=true|aria-disabled=true">
+          <button class="mc-button" type="button" data-nav="sprint-board.html#state=no-active" data-unless="blocked-active blocked-kanban not-planned unconfirmed-active" data-attr-starting="disabled">Cancel</button>
+          <button class="mc-button mc-button--primary" type="button" data-goto-state="starting" data-unless="blocked-active blocked-kanban not-planned unconfirmed-active"
+            data-attr-starting="aria-busy=true|aria-disabled=true"
+            data-attr-loading="disabled"
+            data-attr-load-failed="disabled">
             <span class="mc-spinner" aria-hidden="true" data-when="starting" hidden></span>
             <span data-when="starting" hidden>Starting…</span>
             <span data-unless="starting">Start sprint</span>
           </button>
-          <button class="mc-button mc-button--primary" type="button" data-nav="sprints.html" data-when="blocked-active blocked-kanban" hidden>Close</button>
+          <button class="mc-button mc-button--primary" type="button" data-nav="sprints.html" data-attr-blocked-kanban="data-nav=sprints.html#state=kanban-paused" data-when="blocked-active blocked-kanban not-planned unconfirmed-active" hidden>Close</button>
         </footer>
       </section>
     </div>

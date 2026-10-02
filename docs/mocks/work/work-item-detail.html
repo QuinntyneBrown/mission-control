@@ -22,6 +22,7 @@
       <label class="mock-bar__state">State
         <select data-mock-state>
           <option value="default">Story</option>
+          <option value="status-failed">Status change failed</option>
           <option value="initiative">Initiative</option>
           <option value="epic">Epic</option>
           <option value="task">Task</option>
@@ -38,16 +39,17 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="default">The breadcrumb gives the full parent path; each ancestor opens its own detail view. Below 576px the middle levels fold into the "…" menu. Updating the status to Done while tasks are unfinished asks for confirmation first. Task status changes are announced, for example "Add team capacity limits marked Done".</p>
+    <p class="mock-note" data-when="default">The detail is a project tab route, so the pinned project header and tabs render here too, with Work active; on phones only the tabs stay pinned. Under them, the parent path lists the item's ancestors from its initiative down, and each ancestor opens its own detail view. In the mock, ancestors without a detail state of their own open the project outline instead. Below 576px a task's middle levels fold into the "…" menu. After navigation, focus moves to the item's heading. Updating the status to Done while tasks are unfinished asks for confirmation first. Every other status change, from this control or a task row's status, saves only the new status with the version the page loaded; the detail and its tasks then reload, and the change is announced, for example "Add team capacity limits marked Done". If the item changed since it loaded, the update answers 409 and the detail reloads the story and its tasks once and announces that it changed; nothing is resent.</p>
+    <p class="mock-note" data-when="status-failed" hidden>Update status sent Done, and the API answered 500, or 503 because the project was busy, so nothing changed. The status control returns to the saved status, In Progress, and the alert under it is announced with the reference ID. Focus stays on Update status; Try again resends the same request, and nothing retries automatically. If the retry finds unfinished tasks, the confirmation opens as usual. Any other status change that fails this way, from this control or a task row, shows the same alert with its own reference ID; for a task the alert appears under that task's row, and its status returns to the saved value. A status change that gets no response may have saved, so the detail and its tasks reload once and the control shows the saved status; this alert then reads “We couldn't confirm the status change” and names the saved status, for example “Volunteers can join a build team is In Progress now.”, never “Nothing changed”, with no reference ID or Try again, any open confirmation closes, focus returns to the status control, and the saved status is announced. If that reload fails, the page shows the Load failed state. Changing status needs only an active session, so a 403 is unexpected: the control returns to the saved status without this alert, any open confirmation closes, and the page shows the "Your access changed" toast, without Retry or a reference ID. A status change or completion the API refuses (400, for example a malformed request or an item that isn't a story) keeps the saved status and shows the server's message under the control, linked to it, with no Try again or reference ID, because sending it again would be refused again; focus stays on the control, which reads the message.</p>
     <p class="mock-note" data-when="initiative" hidden>Initiatives are the top level. They have no parent and no "Move to another parent" action. Initiatives and epics are not estimated and don't join sprints.</p>
-    <p class="mock-note" data-when="epic" hidden>Each epic belongs to one initiative in the same project. Its stories keep their own sprint membership.</p>
+    <p class="mock-note" data-when="epic" hidden>Each epic belongs to one initiative in the same project. Its stories keep their own sprint membership. The count comes from the detail's child count, never from the rows on screen. The mock draws the first 4 of the 14 stories to show Load more; in the product each batch holds 25, so Load more appears only while more stories remain. Load more keeps focus on the button and announces how many more loaded; when the last batch loads, the button goes away, so focus moves to the first newly loaded story.</p>
     <p class="mock-note" data-when="task" hidden>Tasks follow their story's sprint and have no estimate of their own.</p>
     <p class="mock-note" data-when="unset" hidden>Optional values that are empty are labelled, never left blank.</p>
     <p class="mock-note" data-when="inactive-assignee" hidden>The title was saved as typed. It shows as plain text and never runs as code. Inactive people keep existing assignments but aren't offered for new assignments; an item's current inactive assignee stays selected in the edit form until changed.</p>
-    <p class="mock-note" data-when="collaborator" hidden>Collaborators can edit, change status, and move work. Delete is disabled with its reason.</p>
-    <p class="mock-note" data-when="not-found" hidden>The ID in the link doesn't exist or the item was deleted. Navigation offers the project and the project list.</p>
+    <p class="mock-note" data-when="collaborator" hidden>Collaborators can edit, change status, and move work. The page passes the layout's canDeleteWork (false without work.delete) to the detail view, so Delete is disabled with its reason. The project header shows the same notice as every project tab, and Project actions is absent.</p>
+    <p class="mock-note" data-when="not-found" hidden>The ID in the link doesn't exist or the item was deleted, so the read answered 404 and nothing about the item is known. The project header still shows the project, which loads separately; the page offers the project's work and the project list. A malformed ID in the link, such as …/work/not-an-id, shows this same Not found state. When the project itself no longer exists, the 404 says so instead: the header keeps only the breadcrumb and the page shows "Project not found" with Back to projects and no Try again or reference ID, the same presentation as the <a href="../projects/project-overview.html#state=not-found">project overview's Not found state</a>. A status change or completion that answers 404 because the item or its project was deleted meanwhile rereads once and lands on whichever of these two presentations the read reports, with focus on its heading; a task deleted meanwhile just leaves the tasks list, and because its status select went with it, focus moves to the Tasks heading.</p>
     <p class="mock-note" data-when="loading" hidden>A skeleton holds the layout while the item loads. Screen readers hear "Loading work item".</p>
-    <p class="mock-note" data-when="error" hidden>The item couldn't load, which is different from an item that doesn't exist. The reference ID matches the server's diagnostic record; Try again reloads the item.</p>
+    <p class="mock-note" data-when="error" hidden>The item couldn't load (a 500, a busy 503, or no response), which is different from an item that doesn't exist. Try again reloads the item, and the project header rereads with it in case it failed too. The reference ID appears only when the server answered and matches its diagnostic record; with no response there is none.</p>
   </div>
 
   <div class="mc-app">
@@ -118,19 +120,60 @@
 
     <main class="mc-main" id="main" tabindex="-1">
       <div class="mc-page">
+        <div class="mc-project-header">
+          <nav class="mc-breadcrumbs" aria-label="Breadcrumb">
+            <ol>
+              <li><a href="../projects/project-list.html">Projects</a></li>
+              <li><a href="../projects/project-overview.html">Community Hackathon 2026</a></li>
+            </ol>
+          </nav>
+          <header class="mc-page-header">
+            <div class="mc-page-header__main">
+              <h1 class="mc-page-header__title">Community Hackathon 2026</h1>
+              <div class="mc-page-header__meta">
+                <span class="mc-pill mc-pill--outline"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Scrum</span>
+                <span>Responsible lead: <a href="../leads/lead-detail.html#state=lead-rafael">Rafael Da Silva</a></span>
+              </div>
+            </div>
+            <div class="mc-page-header__actions">
+              <div class="mc-menu-anchor mock-admin-only">
+                <button class="mc-button" type="button" data-toggle aria-controls="project-actions" aria-expanded="false">
+                  Project actions<span class="mc-icon mc-icon--chevron-down mc-icon--sm" aria-hidden="true"></span>
+                </button>
+                <div class="mc-menu" id="project-actions">
+                  <button class="mc-menu__item" type="button" data-nav="../projects/project-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit project</button>
+                  <button class="mc-menu__item" type="button" data-nav="../projects/mode-change-dialog.html#state=blocked"><span class="mc-icon mc-icon--switch" aria-hidden="true"></span>Change delivery mode</button>
+                  <div class="mc-menu__separator"></div>
+                  <button class="mc-menu__item mc-menu__item--danger" type="button" data-nav="../projects/project-delete-dialog.html#state=blocked"><span class="mc-icon mc-icon--trash" aria-hidden="true"></span>Delete project</button>
+                </div>
+              </div>
+            </div>
+          </header>
+          <nav class="mc-project-tabs" aria-label="Project sections">
+            <ul class="mc-tabs">
+              <li><a class="mc-tabs__link" href="../projects/project-overview.html"><span class="mc-icon mc-icon--overview" aria-hidden="true"></span>Overview</a></li>
+              <li><a class="mc-tabs__link" href="work-hierarchy.html" aria-current="page"><span class="mc-icon mc-icon--hierarchy" aria-hidden="true"></span>Work</a></li>
+              <li><a class="mc-tabs__link" href="../backlog/backlog.html"><span class="mc-icon mc-icon--backlog" aria-hidden="true"></span>Backlog</a></li>
+              <li><a class="mc-tabs__link" href="../scrum/sprint-board.html"><span class="mc-icon mc-icon--board" aria-hidden="true"></span>Board</a></li>
+              <li><a class="mc-tabs__link" href="../scrum/sprints.html"><span class="mc-icon mc-icon--sprint" aria-hidden="true"></span>Sprints</a></li>
+            </ul>
+          </nav>
+        </div>
+
+        <div class="mc-alert mc-alert--neutral mc-alert--page mock-collaborator-only">
+          <span class="mc-icon mc-icon--lock" aria-hidden="true"></span>
+          <div class="mc-alert__body">
+            <p class="mc-alert__text">Only administrators can change project settings. You can add and update work, move cards, and run sprints.</p>
+          </div>
+        </div>
+
           <div class="mc-live" role="status" aria-live="polite">
             <p class="mc-visually-hidden" data-when="loading" hidden>Loading work item</p>
           </div>
-          <div data-when="default collaborator">
-            <nav class="mc-breadcrumbs" aria-label="Breadcrumb">
+          <div data-when="default status-failed collaborator">
+            <nav class="mc-breadcrumbs" aria-label="Parent path">
               <ol>
-                <li><a href="../projects/project-list.html">Projects</a></li>
-                <li class="mc-breadcrumbs__overflow"><div class="mc-menu-anchor">
-                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="crumbs-default" aria-expanded="false" aria-label="Show 2 more levels"><span class="mc-icon mc-icon--more-horizontal" aria-hidden="true"></span></button>
-                  <div class="mc-menu mc-menu--start" id="crumbs-default"><a class="mc-menu__item" href="work-hierarchy.html">Community Hackathon 2026</a><a class="mc-menu__item" href="work-item-detail.html#state=initiative">Grow Toronto's builder community</a></div>
-                </div></li>
-                <li class="mc-breadcrumbs__collapsible"><a href="work-hierarchy.html">Community Hackathon 2026</a></li>
-                <li class="mc-breadcrumbs__collapsible"><a href="work-item-detail.html#state=initiative">Grow Toronto's builder community</a></li>
+                <li><a href="work-item-detail.html#state=initiative">Grow Toronto's builder community</a></li>
                 <li><a href="work-item-detail.html#state=epic">Hackathon team formation</a></li>
                 <li><span aria-current="page">Volunteers can join a build team</span></li>
               </ol>
@@ -142,7 +185,7 @@
                   <span class="mc-mono mc-muted">HCK-112</span>
                   <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span>
                 </div>
-                <h1 class="mc-page-header__title" tabindex="-1">Volunteers can join a build team</h1>
+                <h2 class="mc-page-header__title" tabindex="-1">Volunteers can join a build team</h2>
               </div>
               <div class="mc-page-header__actions">
                 <button class="mc-button mc-button--primary" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
@@ -163,14 +206,14 @@
             <div class="mc-split">
               <div class="mc-stack mc-stack--lg">
                 <section class="mc-card" aria-labelledby="desc-default">
-                  <h2 class="mc-card__title mc-mb-4" id="desc-default">Description</h2>
+                  <h3 class="mc-card__title mc-mb-4" id="desc-default">Description</h3>
                   <p class="mc-prose">Volunteers choose a build team while they register, so mentors and the venue can plan for team sizes.
 
 A volunteer can be on one team at a time. Full teams show as full.</p>
                 </section>
                 <section class="mc-card" aria-labelledby="tasks-default">
                   <div class="mc-card__header">
-                    <h2 class="mc-card__title" id="tasks-default">Tasks</h2>
+                    <h3 class="mc-card__title" id="tasks-default" tabindex="-1">Tasks</h3>
                     <button class="mc-button mc-button--sm" type="button" data-nav="work-item-form-dialog.html#state=create-task"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add task</button>
                   </div>
                   <div class="mc-progress mc-mb-4"><span class="mc-progress__bar" aria-hidden="true"><span class="mc-progress__fill mc-w-40"></span></span><span>2 of 5 done</span></div>
@@ -214,12 +257,27 @@ A volunteer can be on one team at a time. Full teams show as full.</p>
                 </section>
               </div>
               <section class="mc-card" aria-labelledby="details-default">
-                <h2 class="mc-card__title mc-mb-4" id="details-default">Details</h2>
+                <h3 class="mc-card__title mc-mb-4" id="details-default">Details</h3>
                 <dl class="mc-dl mc-dl--stacked">
                   <dt><label for="status-default">Status</label></dt>
                   <dd><div class="mc-stack mc-stack--sm">
                       <span class="mc-select-wrap"><select class="mc-select" id="status-default"><option>To Do</option><option selected>In Progress</option><option>Done</option></select></span>
                       <button class="mc-button mc-button--sm" type="button" data-nav="../kanban/unfinished-tasks-dialog.html">Update status</button>
+                      <div class="mc-live" role="alert">
+                        <div class="mc-alert mc-alert--danger" data-when="status-failed" hidden>
+                          <span class="mc-icon mc-icon--alert-circle" aria-hidden="true"></span>
+                          <div class="mc-alert__body">
+                            <p class="mc-alert__title">We couldn't update the status</p>
+                            <p class="mc-alert__text">Nothing changed. Volunteers can join a build team is still In Progress.</p>
+                            <p class="mc-ref">Reference ID <code>b6f1-27d9-4ac3</code>
+                              <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="b6f1-27d9-4ac3"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
+                            </p>
+                            <div class="mc-alert__actions">
+                              <button class="mc-button mc-button--sm" type="button" data-goto-state="default"><span class="mc-icon mc-icon--refresh" aria-hidden="true"></span>Try again</button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div></dd>
                   <dt>Assignee</dt>
                   <dd><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">AO</span>Ada Okafor</span></dd>
@@ -240,13 +298,6 @@ A volunteer can be on one team at a time. Full teams show as full.</p>
             </div>
           </div>
           <div data-when="initiative" hidden>
-            <nav class="mc-breadcrumbs" aria-label="Breadcrumb">
-              <ol>
-                <li><a href="../projects/project-list.html">Projects</a></li>
-                <li><a href="work-hierarchy.html">Community Hackathon 2026</a></li>
-                <li><span aria-current="page">Grow Toronto's builder community</span></li>
-              </ol>
-            </nav>
             <header class="mc-page-header">
               <div class="mc-page-header__main">
                 <div class="mc-cluster mc-cluster--sm mc-mb-4">
@@ -254,7 +305,7 @@ A volunteer can be on one team at a time. Full teams show as full.</p>
                   <span class="mc-mono mc-muted">HCK-101</span>
                   <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span>
                 </div>
-                <h1 class="mc-page-header__title" tabindex="-1">Grow Toronto's builder community</h1>
+                <h2 class="mc-page-header__title" tabindex="-1">Grow Toronto's builder community</h2>
               </div>
               <div class="mc-page-header__actions">
                 <button class="mc-button mc-button--primary" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
@@ -274,12 +325,12 @@ A volunteer can be on one team at a time. Full teams show as full.</p>
             <div class="mc-split">
               <div class="mc-stack mc-stack--lg">
                 <section class="mc-card" aria-labelledby="desc-initiative">
-                  <h2 class="mc-card__title mc-mb-4" id="desc-initiative">Description</h2>
+                  <h3 class="mc-card__title mc-mb-4" id="desc-initiative">Description</h3>
                   <p class="mc-prose">Help more people in Toronto build technology together, starting with this fall's hackathon.</p>
                 </section>
                 <section class="mc-card" aria-labelledby="children-initiative">
                   <div class="mc-card__header">
-                    <h2 class="mc-card__title" id="children-initiative">Epics</h2>
+                    <h3 class="mc-card__title" id="children-initiative">Epics</h3>
                     <button class="mc-button mc-button--sm" type="button" data-nav="work-item-form-dialog.html#state=create-epic"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add epic</button>
                   </div>
                   <ul class="mc-list">
@@ -292,7 +343,7 @@ A volunteer can be on one team at a time. Full teams show as full.</p>
                     </li>
                     <li class="mc-list__item">
                       <div class="mc-list__main">
-                        <a class="mc-list__title" href="work-item-detail.html#state=epic">Venue and logistics</a>
+                        <a class="mc-list__title" href="work-hierarchy.html">Venue and logistics</a>
                         <div class="mc-list__meta"><span>HCK-105</span><span class="mc-person"><span class="mc-avatar mc-avatar--sm" aria-hidden="true">PR</span>Priya Raman</span><span>6 stories</span></div>
                       </div>
                       <div class="mc-list__aside"><span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span></div>
@@ -301,7 +352,7 @@ A volunteer can be on one team at a time. Full teams show as full.</p>
                 </section>
               </div>
               <section class="mc-card" aria-labelledby="details-initiative">
-                <h2 class="mc-card__title mc-mb-4" id="details-initiative">Details</h2>
+                <h3 class="mc-card__title mc-mb-4" id="details-initiative">Details</h3>
                 <dl class="mc-dl mc-dl--stacked">
                   <dt><label for="status-initiative">Status</label></dt>
                   <dd><div class="mc-stack mc-stack--sm">
@@ -323,14 +374,8 @@ A volunteer can be on one team at a time. Full teams show as full.</p>
             </div>
           </div>
           <div data-when="epic" hidden>
-            <nav class="mc-breadcrumbs" aria-label="Breadcrumb">
+            <nav class="mc-breadcrumbs" aria-label="Parent path">
               <ol>
-                <li><a href="../projects/project-list.html">Projects</a></li>
-                <li class="mc-breadcrumbs__overflow"><div class="mc-menu-anchor">
-                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="crumbs-epic" aria-expanded="false" aria-label="Show 1 more levels"><span class="mc-icon mc-icon--more-horizontal" aria-hidden="true"></span></button>
-                  <div class="mc-menu mc-menu--start" id="crumbs-epic"><a class="mc-menu__item" href="work-hierarchy.html">Community Hackathon 2026</a></div>
-                </div></li>
-                <li class="mc-breadcrumbs__collapsible"><a href="work-hierarchy.html">Community Hackathon 2026</a></li>
                 <li><a href="work-item-detail.html#state=initiative">Grow Toronto's builder community</a></li>
                 <li><span aria-current="page">Hackathon team formation</span></li>
               </ol>
@@ -341,8 +386,9 @@ A volunteer can be on one team at a time. Full teams show as full.</p>
                   <span class="mc-type mc-type--epic"><span class="mc-type__icon"><span class="mc-icon mc-icon--epic" aria-hidden="true"></span></span><span class="mc-type__label">Epic</span></span>
                   <span class="mc-mono mc-muted">HCK-104</span>
                   <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span>
+                  <span class="mc-muted">14 stories</span>
                 </div>
-                <h1 class="mc-page-header__title" tabindex="-1">Hackathon team formation</h1>
+                <h2 class="mc-page-header__title" tabindex="-1">Hackathon team formation</h2>
               </div>
               <div class="mc-page-header__actions">
                 <button class="mc-button mc-button--primary" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
@@ -363,12 +409,12 @@ A volunteer can be on one team at a time. Full teams show as full.</p>
             <div class="mc-split">
               <div class="mc-stack mc-stack--lg">
                 <section class="mc-card" aria-labelledby="desc-epic">
-                  <h2 class="mc-card__title mc-mb-4" id="desc-epic">Description</h2>
+                  <h3 class="mc-card__title mc-mb-4" id="desc-epic">Description</h3>
                   <p class="mc-prose">Everything volunteers need to find and join a build team before kickoff.</p>
                 </section>
                 <section class="mc-card" aria-labelledby="children-epic">
                   <div class="mc-card__header">
-                    <h2 class="mc-card__title" id="children-epic">Stories</h2>
+                    <h3 class="mc-card__title" id="children-epic">Stories</h3>
                     <button class="mc-button mc-button--sm" type="button" data-nav="work-item-form-dialog.html#state=create-story"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add story</button>
                   </div>
                   <ul class="mc-list">
@@ -401,10 +447,14 @@ A volunteer can be on one team at a time. Full teams show as full.</p>
                       <div class="mc-list__aside"><span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span></div>
                     </li>
                   </ul>
+                  <div class="mc-pagination">
+                    <span>Showing 4 of 14 stories</span>
+                    <button class="mc-button mc-button--sm" type="button"><span class="mc-icon mc-icon--chevron-down" aria-hidden="true"></span>Load more</button>
+                  </div>
                 </section>
               </div>
               <section class="mc-card" aria-labelledby="details-epic">
-                <h2 class="mc-card__title mc-mb-4" id="details-epic">Details</h2>
+                <h3 class="mc-card__title mc-mb-4" id="details-epic">Details</h3>
                 <dl class="mc-dl mc-dl--stacked">
                   <dt><label for="status-epic">Status</label></dt>
                   <dd><div class="mc-stack mc-stack--sm">
@@ -426,15 +476,13 @@ A volunteer can be on one team at a time. Full teams show as full.</p>
             </div>
           </div>
           <div data-when="task" hidden>
-            <nav class="mc-breadcrumbs" aria-label="Breadcrumb">
+            <nav class="mc-breadcrumbs" aria-label="Parent path">
               <ol>
-                <li><a href="../projects/project-list.html">Projects</a></li>
+                <li><a href="work-item-detail.html#state=initiative">Grow Toronto's builder community</a></li>
                 <li class="mc-breadcrumbs__overflow"><div class="mc-menu-anchor">
-                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="crumbs-task" aria-expanded="false" aria-label="Show 3 more levels"><span class="mc-icon mc-icon--more-horizontal" aria-hidden="true"></span></button>
-                  <div class="mc-menu mc-menu--start" id="crumbs-task"><a class="mc-menu__item" href="work-hierarchy.html">Community Hackathon 2026</a><a class="mc-menu__item" href="work-item-detail.html#state=initiative">Grow Toronto's builder community</a><a class="mc-menu__item" href="work-item-detail.html#state=epic">Hackathon team formation</a></div>
+                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="crumbs-task" aria-expanded="false" aria-label="Show 1 more level"><span class="mc-icon mc-icon--more-horizontal" aria-hidden="true"></span></button>
+                  <div class="mc-menu mc-menu--start" id="crumbs-task"><a class="mc-menu__item" href="work-item-detail.html#state=epic">Hackathon team formation</a></div>
                 </div></li>
-                <li class="mc-breadcrumbs__collapsible"><a href="work-hierarchy.html">Community Hackathon 2026</a></li>
-                <li class="mc-breadcrumbs__collapsible"><a href="work-item-detail.html#state=initiative">Grow Toronto's builder community</a></li>
                 <li class="mc-breadcrumbs__collapsible"><a href="work-item-detail.html#state=epic">Hackathon team formation</a></li>
                 <li><a href="work-item-detail.html">Volunteers can join a build team</a></li>
                 <li><span aria-current="page">Add team capacity limits</span></li>
@@ -447,7 +495,7 @@ A volunteer can be on one team at a time. Full teams show as full.</p>
                   <span class="mc-mono mc-muted">HCK-115</span>
                   <span class="mc-pill mc-pill--progress"><span class="mc-icon mc-icon--status-progress" aria-hidden="true"></span>In Progress</span>
                 </div>
-                <h1 class="mc-page-header__title" tabindex="-1">Add team capacity limits</h1>
+                <h2 class="mc-page-header__title" tabindex="-1">Add team capacity limits</h2>
               </div>
               <div class="mc-page-header__actions">
                 <button class="mc-button mc-button--primary" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
@@ -468,13 +516,13 @@ A volunteer can be on one team at a time. Full teams show as full.</p>
             <div class="mc-split">
               <div class="mc-stack mc-stack--lg">
                 <section class="mc-card" aria-labelledby="desc-task">
-                  <h2 class="mc-card__title mc-mb-4" id="desc-task">Description</h2>
+                  <h3 class="mc-card__title mc-mb-4" id="desc-task">Description</h3>
                   <p class="mc-prose">Stop new sign-ups when a team reaches its limit and show the team as full.</p>
                 </section>
 
               </div>
               <section class="mc-card" aria-labelledby="details-task">
-                <h2 class="mc-card__title mc-mb-4" id="details-task">Details</h2>
+                <h3 class="mc-card__title mc-mb-4" id="details-task">Details</h3>
                 <dl class="mc-dl mc-dl--stacked">
                   <dt><label for="status-task">Status</label></dt>
                   <dd><div class="mc-stack mc-stack--sm">
@@ -498,16 +546,10 @@ A volunteer can be on one team at a time. Full teams show as full.</p>
             </div>
           </div>
           <div data-when="unset" hidden>
-            <nav class="mc-breadcrumbs" aria-label="Breadcrumb">
+            <nav class="mc-breadcrumbs" aria-label="Parent path">
               <ol>
-                <li><a href="../projects/project-list.html">Projects</a></li>
-                <li class="mc-breadcrumbs__overflow"><div class="mc-menu-anchor">
-                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="crumbs-unset" aria-expanded="false" aria-label="Show 2 more levels"><span class="mc-icon mc-icon--more-horizontal" aria-hidden="true"></span></button>
-                  <div class="mc-menu mc-menu--start" id="crumbs-unset"><a class="mc-menu__item" href="work-hierarchy.html">Community Hackathon 2026</a><a class="mc-menu__item" href="work-item-detail.html#state=initiative">Grow Toronto's builder community</a></div>
-                </div></li>
-                <li class="mc-breadcrumbs__collapsible"><a href="work-hierarchy.html">Community Hackathon 2026</a></li>
-                <li class="mc-breadcrumbs__collapsible"><a href="work-item-detail.html#state=initiative">Grow Toronto's builder community</a></li>
-                <li><a href="work-item-detail.html#state=epic">Venue and logistics</a></li>
+                <li><a href="work-item-detail.html#state=initiative">Grow Toronto's builder community</a></li>
+                <li><a href="work-hierarchy.html">Venue and logistics</a></li>
                 <li><span aria-current="page">Confirm venue accessibility checklist</span></li>
               </ol>
             </nav>
@@ -518,7 +560,7 @@ A volunteer can be on one team at a time. Full teams show as full.</p>
                   <span class="mc-mono mc-muted">HCK-120</span>
                   <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
                 </div>
-                <h1 class="mc-page-header__title" tabindex="-1">Confirm venue accessibility checklist</h1>
+                <h2 class="mc-page-header__title" tabindex="-1">Confirm venue accessibility checklist</h2>
               </div>
               <div class="mc-page-header__actions">
                 <button class="mc-button mc-button--primary" type="button" data-nav="work-item-form-dialog.html#state=edit"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
@@ -539,23 +581,23 @@ A volunteer can be on one team at a time. Full teams show as full.</p>
             <div class="mc-split">
               <div class="mc-stack mc-stack--lg">
                 <section class="mc-card" aria-labelledby="desc-unset">
-                  <h2 class="mc-card__title mc-mb-4" id="desc-unset">Description</h2>
+                  <h3 class="mc-card__title mc-mb-4" id="desc-unset">Description</h3>
                   <p class="mc-unset">No description</p>
                 </section>
                 <section class="mc-card" aria-labelledby="tasks-unset">
                   <div class="mc-card__header">
-                    <h2 class="mc-card__title" id="tasks-unset">Tasks</h2>
+                    <h3 class="mc-card__title" id="tasks-unset" tabindex="-1">Tasks</h3>
                     <button class="mc-button mc-button--sm" type="button" data-nav="work-item-form-dialog.html#state=create-task"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add task</button>
                   </div>
                   <div class="mc-empty mc-empty--neutral mc-empty--compact">
                     <span class="mc-empty__icon"><span class="mc-icon mc-icon--task mc-icon--lg" aria-hidden="true"></span></span>
-                    <h3 class="mc-empty__title">No tasks yet</h3>
+                    <h4 class="mc-empty__title">No tasks yet</h4>
                     <p class="mc-empty__text">Break this story into tasks when you're ready to start.</p>
                   </div>
                 </section>
               </div>
               <section class="mc-card" aria-labelledby="details-unset">
-                <h2 class="mc-card__title mc-mb-4" id="details-unset">Details</h2>
+                <h3 class="mc-card__title mc-mb-4" id="details-unset">Details</h3>
                 <dl class="mc-dl mc-dl--stacked">
                   <dt><label for="status-unset">Status</label></dt>
                   <dd><div class="mc-stack mc-stack--sm">
@@ -575,22 +617,16 @@ A volunteer can be on one team at a time. Full teams show as full.</p>
                   <dt>Project</dt>
                   <dd><a href="work-hierarchy.html">Community Hackathon 2026</a></dd>
                   <dt>Parent epic</dt>
-                  <dd><a href="work-item-detail.html#state=epic">Venue and logistics</a> <span class="mc-muted">· HCK-105</span></dd>
+                  <dd><a href="work-hierarchy.html">Venue and logistics</a> <span class="mc-muted">· HCK-105</span></dd>
                 </dl>
               </section>
             </div>
           </div>
           <div data-when="inactive-assignee" hidden>
-            <nav class="mc-breadcrumbs" aria-label="Breadcrumb">
+            <nav class="mc-breadcrumbs" aria-label="Parent path">
               <ol>
-                <li><a href="../projects/project-list.html">Projects</a></li>
-                <li class="mc-breadcrumbs__overflow"><div class="mc-menu-anchor">
-                  <button class="mc-button mc-button--quiet mc-button--icon mc-button--sm" type="button" data-toggle aria-controls="crumbs-inactive-assignee" aria-expanded="false" aria-label="Show 2 more levels"><span class="mc-icon mc-icon--more-horizontal" aria-hidden="true"></span></button>
-                  <div class="mc-menu mc-menu--start" id="crumbs-inactive-assignee"><a class="mc-menu__item" href="work-hierarchy.html">Community Hackathon 2026</a><a class="mc-menu__item" href="work-item-detail.html#state=initiative">Demo day showcase</a></div>
-                </div></li>
-                <li class="mc-breadcrumbs__collapsible"><a href="work-hierarchy.html">Community Hackathon 2026</a></li>
-                <li class="mc-breadcrumbs__collapsible"><a href="work-item-detail.html#state=initiative">Demo day showcase</a></li>
-                <li><a href="work-item-detail.html#state=epic">Judging and feedback</a></li>
+                <li><a href="work-hierarchy.html">Demo day showcase</a></li>
+                <li><a href="work-hierarchy.html">Judging and feedback</a></li>
                 <li><span aria-current="page">&lt;script&gt;alert(1)&lt;/script&gt; feedback form</span></li>
               </ol>
             </nav>
@@ -601,7 +637,7 @@ A volunteer can be on one team at a time. Full teams show as full.</p>
                   <span class="mc-mono mc-muted">HCK-123</span>
                   <span class="mc-pill mc-pill--todo"><span class="mc-icon mc-icon--status-todo" aria-hidden="true"></span>To Do</span>
                 </div>
-                <h1 class="mc-page-header__title" tabindex="-1">&lt;script&gt;alert(1)&lt;/script&gt; feedback form</h1>
+                <h2 class="mc-page-header__title" tabindex="-1">&lt;script&gt;alert(1)&lt;/script&gt; feedback form</h2>
               </div>
               <div class="mc-page-header__actions">
                 <button class="mc-button mc-button--primary" type="button" data-nav="work-item-form-dialog.html#state=edit-inactive-assignee"><span class="mc-icon mc-icon--edit" aria-hidden="true"></span>Edit</button>
@@ -622,19 +658,19 @@ A volunteer can be on one team at a time. Full teams show as full.</p>
             <div class="mc-split">
               <div class="mc-stack mc-stack--lg">
                 <section class="mc-card" aria-labelledby="desc-inactive-assignee">
-                  <h2 class="mc-card__title mc-mb-4" id="desc-inactive-assignee">Description</h2>
+                  <h3 class="mc-card__title mc-mb-4" id="desc-inactive-assignee">Description</h3>
                   <p class="mc-prose">Draft the short form judges fill in after each demo: what worked, what to try next, and one encouragement.</p>
                 </section>
                 <section class="mc-card" aria-labelledby="tasks-inactive-assignee">
                   <div class="mc-card__header">
-                    <h2 class="mc-card__title" id="tasks-inactive-assignee">Tasks</h2>
+                    <h3 class="mc-card__title" id="tasks-inactive-assignee" tabindex="-1">Tasks</h3>
                     <button class="mc-button mc-button--sm" type="button" data-nav="work-item-form-dialog.html#state=create-task"><span class="mc-icon mc-icon--plus" aria-hidden="true"></span>Add task</button>
                   </div>
                   <p class="mc-muted mc-text-sm">No tasks yet.</p>
                 </section>
               </div>
               <section class="mc-card" aria-labelledby="details-inactive-assignee">
-                <h2 class="mc-card__title mc-mb-4" id="details-inactive-assignee">Details</h2>
+                <h3 class="mc-card__title mc-mb-4" id="details-inactive-assignee">Details</h3>
                 <dl class="mc-dl mc-dl--stacked">
                   <dt><label for="status-inactive-assignee">Status</label></dt>
                   <dd><div class="mc-stack mc-stack--sm">
@@ -654,19 +690,18 @@ A volunteer can be on one team at a time. Full teams show as full.</p>
                   <dt>Project</dt>
                   <dd><a href="work-hierarchy.html">Community Hackathon 2026</a></dd>
                   <dt>Parent epic</dt>
-                  <dd><a href="work-item-detail.html#state=epic">Judging and feedback</a> <span class="mc-muted">· HCK-106</span></dd>
+                  <dd><a href="work-hierarchy.html">Judging and feedback</a> <span class="mc-muted">· HCK-106</span></dd>
                 </dl>
               </section>
             </div>
           </div>
           <div data-when="not-found" hidden>
-            <nav class="mc-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../projects/project-list.html">Projects</a></li><li><a href="work-hierarchy.html">Community Hackathon 2026</a></li></ol></nav>
             <div class="mc-empty mc-empty--page mc-empty--neutral">
               <span class="mc-empty__icon"><span class="mc-icon mc-icon--compass mc-icon--lg" aria-hidden="true"></span></span>
-              <h1 class="mc-empty__title" tabindex="-1">Work item not found</h1>
-              <p class="mc-empty__text">HCK-999 doesn't exist or was deleted. Other work in the project hasn't changed.</p>
+              <h2 class="mc-empty__title" tabindex="-1">Work item not found</h2>
+              <p class="mc-empty__text">This work item doesn't exist or was deleted. Other work in the project hasn't changed.</p>
               <div class="mc-empty__actions">
-                <a class="mc-button mc-button--primary" href="work-hierarchy.html">Go to Community Hackathon 2026</a>
+                <a class="mc-button mc-button--primary" href="work-hierarchy.html">Back to the project's work</a>
                 <a class="mc-button" href="../projects/project-list.html">All projects</a>
               </div>
             </div>
@@ -682,8 +717,8 @@ A volunteer can be on one team at a time. Full teams show as full.</p>
           <div data-when="error" hidden>
             <div class="mc-empty mc-empty--error mc-empty--page" role="alert">
               <span class="mc-empty__icon"><span class="mc-icon mc-icon--alert-circle mc-icon--lg" aria-hidden="true"></span></span>
-              <h1 class="mc-empty__title" tabindex="-1">We couldn't load this work item</h1>
-              <p class="mc-empty__text">Check your connection and try again. If it keeps happening, share the reference ID with your administrator.</p>
+              <h2 class="mc-empty__title" tabindex="-1">We couldn't load this work item</h2>
+              <p class="mc-empty__text">Try again. If it keeps happening, share the reference ID with your administrator.</p>
               <p class="mc-ref">Reference ID <code>f3a7-58c1-0d2e</code>
               <button class="mc-button mc-button--ghost mc-button--sm" type="button" data-copy="f3a7-58c1-0d2e"><span class="mc-icon mc-icon--copy" aria-hidden="true"></span><span data-copy-label>Copy</span></button>
             </p>

@@ -14,6 +14,8 @@ skinparam package {
   BackgroundColor #F9FAFB
 }
 title Class structure - Navigate with context and preserve form input
+left to right direction
+skinparam ranksep 40
 skinparam class {
   BorderColor #344054
   FontColor #101828
@@ -21,31 +23,146 @@ skinparam class {
 }
 package "frontend/projects/mission-control" {
   class ApplicationShell {
-    +routeContext: Signal<RouteContext>
     +menuOpen: Signal<bool>
+    +status: Signal<ShellStatus?>
+    +showStatus(kind: StatusKind, referenceId?: string): void
     +focusHeading(): void
+    +signOut(): Promise<void>
   }
-  class RouteContext {
-    +requestedPath: string
-    +workspaceId: Guid?
-    +ancestorIds: Guid[]
+  note right of ApplicationShell
+    Layout route of every protected page; /login is outside it.
+    On endReason Expired or Unauthorized only: store the current
+    path, set loginNotice SessionEnded, navigate to /login.
+    signOut(): navigate to /login through the guard with
+    state { signOut: true }, then end(SignedOut) and
+    loginNotice SignedOut.
+    The other end(SignedOut) caller is ReplacePasswordDialog
+    (manage-accounts) after an own password replacement:
+    loginNotice SignedOut, navigate to /login with
+    { signOut: true }, then end().
+    Every navigation to /login uses replaceUrl. /login opened
+    while a session is held redirects to /home, except a
+    navigation carrying { signOut: true }.
+    Primary navigation follows currentSession; with
+    none held (null) it lists Home, Leads, Projects only.
+    Toasts, the offline banner and the status pages
+    (status, showStatus, ShellStatusView, the ** route,
+    the reload route):
+    see the feedback and status class view.
+  end note
+  class RouteContext <<root provider>> {
+    +requestedPath: Signal<string?>
+    +workspaceId: Signal<Guid?>
+    +ancestorIds: Signal<Guid[]>
+    +loginNotice: Signal<LoginNotice?>
+    +status: WritableSignal<ShellStatus?>
+  }
+  enum LoginNotice {
+    SignedOut
+    SessionEnded
+    SessionUnsaved
+    SessionSaveUnknown
+    DeepLink
   }
   class AuthenticationGuard {
-    +canActivate(path: string): Promise<bool | UrlTree>
+    +canActivate(path: string): bool | UrlTree
   }
+  note bottom of AuthenticationGuard
+    No token: store requestedPath and
+    redirect to /login with replaceUrl.
+  end note
   class PermissionGuard {
     +canActivate(path: string): Promise<bool | UrlTree>
+    +permits(path: string, session: CurrentSession): bool
   }
+  note bottom of PermissionGuard
+    permits(): /accounts needs accounts.manage,
+    /audit needs audit.read. Denied: sets
+    RouteContext.status AccessDenied, returns false.
+    Refresh failed with no summary held: a capability
+    route gets Error or Offline; other routes open.
+    LoginPage (sign-in slice) awaits refreshCapabilities()
+    and opens requestedPath only if permits(), else /home,
+    with replaceUrl.
+  end note
   class UnsavedChangesGuard {
-    +canDeactivate(form: FormDraft): Promise<bool>
+    +canDeactivate(page: FormDraft): Promise<bool>
   }
+  note bottom of UnsavedChangesGuard
+    canDeactivate of every route whose page is a form or
+    hosts form dialogs. Reason SignOut when the destination
+    is /login, otherwise Navigate.
+    Session already ended: no dialog; sets loginNotice
+    SessionSaveUnknown (FormDraft pending or unconfirmed) or
+    SessionUnsaved (dirty). Otherwise SessionEnded stays:
+    a mutation without a FormDraft (board move, reorder,
+    status control) is reread by its view after sign-in.
+  end note
   interface FormDraft {
-    +dirty: Signal<bool>
-    +pending: Signal<bool>
-    +canLeave(): bool
+    +draft: Signal<DraftState>
   }
+  class "Application form dialog\n(e.g. LeadFormDialog)" as FormDialog {
+    +draft: Signal<DraftState>
+    +requestClose(): Promise<void>
+    +close(result?: DialogOutcome): void
+  }
+  note bottom of FormDialog
+    draft = latest draftChange of its domain form.
+    Cancel, Close, or Escape on a dirty draft:
+    confirm(CancelForm, draft().summary).
+    close(result?) with its typed <Dialog>Outcome
+    union; no result means dismissed. It also closes
+    with no result once a navigation completes that
+    deactivates its hosting page: a router link inside
+    it, Back or Forward, or the navigation to login.
+    While open it relays its form's unconfirmed and
+    forbidden outputs and stays open.
+    A query-only Back or Forward that reuses the page
+    leaves it open with its draft.
+  end note
+  class "Routed page hosting form dialogs\n(e.g. LeadDirectoryPage)" as HostPage {
+    +draft: Signal<DraftState>
+    -refresh: WritableSignal<number>
+  }
+  note bottom of HostPage
+    draft = the open dialog's draft(),
+    or clean when no dialog is open. A
+    ProjectLayoutPage child page falls back to
+    inject(ProjectLayoutPage).draft(), the layout's
+    open dialog, which canDeactivate never reaches
+    on the reused layout; the layout defers its own
+    re-navigation (modeChanged() reload, sprints ->
+    overview redirect) until that dialog closes.
+    A change of the page's own route parameter runs
+    canDeactivate and closes its dialog too.
+    refresh feeds its views' refresh inputs and
+    increments after any committed, not-found or
+    outdated outcome, and at once when the open
+    dialog relays unconfirmed. A ProjectLayoutPage
+    child page calls the layout's refresh() (or
+    modeChanged()) instead when the header must
+    reread too, including on a view's
+    retryRequested and first notFound.
+    A routed form page that also hosts form
+    dialogs (the sprint plan) combines its own
+    form's draft with its open dialog's: dirty,
+    pending or unconfirmed when either is; the
+    summary names both.
+  end note
   class UnsavedChangesDialog {
-    +confirm(itemName: string): Promise<LeaveChoice>
+    +confirm(reason: LeaveReason, summary: string | null): Promise<LeaveChoice>
+    +close(result?: LeaveChoice): void
+  }
+  note bottom of UnsavedChangesDialog
+    reason sets the title and the two choices;
+    summary names what would be lost, or null
+    for generic copy. Closing with no result
+    (Escape) resolves confirm() with Stay.
+  end note
+  enum LeaveReason {
+    Navigate
+    CancelForm
+    SignOut
   }
   enum LeaveChoice {
     Stay
@@ -54,56 +171,90 @@ package "frontend/projects/mission-control" {
 }
 package "frontend/projects/domain" {
   class UserMenuView {
-    +account: Signal<CurrentSession>
-    +signOut: Output<void>
+    +account: Signal<CurrentSession?>
+    +signOutRequested: OutputEmitterRef<void>
+  }
+  note bottom of UserMenuView
+    Name, email and role from currentSession;
+    with none held (null), only Sign out.
+  end note
+  class DraftState {
+    +dirty: bool
+    +pending: bool
+    +unconfirmed: bool
+    +summary: string | null
+  }
+  class "Domain form\n(e.g. LeadForm)" as DomainForm {
+    +draftChange: OutputEmitterRef<DraftState>
   }
 }
 package "frontend/projects/api" {
   interface ISessionService {
-    +check_access(request: GetCurrentSessionQuery): Promise<FeatureResult>
+    +signedIn: Signal<bool>
+    +currentSession: Signal<CurrentSession?>
+    +endReason: Signal<SessionEndReason?>
+    +offline: Signal<bool>
+    +refreshCapabilities(): Promise<CurrentSession | null>
+    +end(reason: SessionEndReason): void
   }
-  class SessionService {
-    -http: HttpClient
-    -sessionGeneration: long
+  class SessionService
+  note bottom of SessionService
+    Protocol owner (sign-in-and-end-session):
+    generation, sessionInterceptor, stale discard,
+    and the offline signal.
+  end note
+  enum SessionEndReason {
+    SignedOut
+    Expired
+    Unauthorized
   }
 }
-package "backend" {
-  class SessionsController {
+package "backend/src" {
+  class SessionsController <<Api>> {
     -sender: ISender
   }
   class GetCurrentSessionQuery {
     +subject: Guid
   }
   class GetCurrentSessionQueryHandler {
-    +handle(request: GetCurrentSessionQuery): Task<FeatureResult>
+    +handle(request: GetCurrentSessionQuery, ct: CancellationToken): Task<CurrentSession>
   }
   class CurrentSession {
     +accountId: Guid
     +displayName: string
+    +email: string
     +role: AccountRole
     +capabilities: string[]
   }
   interface IMissionControlDataSession {
-    +query(specification): Task<ReadResult>
-    +commit(expectedVersion: long): Task<void>
-  }
-  class MissionControlDataSession {
-    -connection: DbConnection
+    +LoadCurrentSessionAsync(accountId: Guid, ct: CancellationToken): Task<CurrentSession?>
   }
 }
-ApplicationShell --> RouteContext : holds signal
-ApplicationShell --> UserMenuView : composes
-AuthenticationGuard --> RouteContext : stores requestedPath
-AuthenticationGuard ..> ISessionService : inject SESSION_SERVICE
-PermissionGuard ..> ISessionService : inject SESSION_SERVICE
+ApplicationShell --> UserMenuView : composes; signOutRequested -> signOut()
+ApplicationShell --> RouteContext : stores path and notice
+ApplicationShell ..> ISessionService : endReason; end(SignedOut)
+AuthenticationGuard ..> ISessionService : signedIn()
+AuthenticationGuard --> RouteContext : requestedPath; DeepLink or SessionEnded
+PermissionGuard ..> ISessionService : refreshCapabilities()
+PermissionGuard --> RouteContext : sets status when it denies
 UserMenuView ..> ISessionService : inject SESSION_SERVICE
-UnsavedChangesGuard ..> FormDraft : checks canLeave()
-UnsavedChangesGuard ..> UnsavedChangesDialog : opens when dirty
+DomainForm --> DraftState : emits
+FormDraft <|.. FormDialog
+FormDraft <|.. HostPage
+FormDialog --> DomainForm : hosts; keeps latest DraftState
+HostPage --> FormDialog : opens; delegates draft
+FormDialog ..> UnsavedChangesDialog : CancelForm
+UnsavedChangesGuard ..> FormDraft : reads draft()
+UnsavedChangesGuard ..> UnsavedChangesDialog : Navigate or SignOut
+UnsavedChangesGuard ..> ISessionService : reads endReason
+UnsavedChangesGuard --> RouteContext : sets loginNotice
+UnsavedChangesDialog --> LeaveReason
 UnsavedChangesDialog --> LeaveChoice
+RouteContext --> LoginNotice
 ISessionService <|.. SessionService
-IMissionControlDataSession <|.. MissionControlDataSession
+ISessionService --> SessionEndReason
 SessionsController ..> GetCurrentSessionQuery : dispatches
 GetCurrentSessionQueryHandler ..> GetCurrentSessionQuery : handles
-GetCurrentSessionQueryHandler --> CurrentSession : projects
-GetCurrentSessionQueryHandler ..> IMissionControlDataSession : uses
+GetCurrentSessionQueryHandler --> CurrentSession : returns
+GetCurrentSessionQueryHandler ..> IMissionControlDataSession : reads projection
 @enduml

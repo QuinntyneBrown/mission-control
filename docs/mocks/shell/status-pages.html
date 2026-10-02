@@ -6,7 +6,7 @@
   <title>Status pages · Mission Control mock</title>
   <meta name="description" content="Signed-in status pages: not found, access denied, unexpected error with a reference ID, and can't reach Mission Control.">
   <meta name="mock-area" content="Shell">
-  <meta name="mock-requirements" content="L2-002.4, L2-004.5, L2-010.4, L2-029.3, L2-029.4, L2-032.3, L2-033.4, L2-043.1, L2-043.4">
+  <meta name="mock-requirements" content="L2-002.4, L2-004.5, L2-029.3, L2-029.4, L2-032.3, L2-033.4, L2-043.1, L2-043.4">
   <link rel="stylesheet" href="../assets/tokens.css">
   <link rel="stylesheet" href="../assets/mocks.css">
   <script src="../assets/mocks.js" defer></script>
@@ -32,10 +32,10 @@
   </div>
 
   <div class="mock-notes">
-    <p class="mock-note" data-when="not-found">Shown for an unknown route or a record that no longer exists (the API returned 404). The shell stays, so every permitted destination is one step away. Focus moves to the heading.</p>
-    <p class="mock-note" data-when="access-denied" hidden>A collaborator opened a direct link to Accounts or the Audit log. Nothing protected was requested or shown. The same page appears if a permission was removed mid-session (API 403).</p>
-    <p class="mock-note" data-when="error" hidden>The API returned 500. The reference ID is the correlation ID of the server's diagnostic record; no stack traces or internal details are shown.</p>
-    <p class="mock-note" data-when="offline" hidden>Shown when a page's first request can't reach the API, so there is nothing saved to show yet. If content is already on screen it stays, and the offline banner (Notifications › Offline banner) appears instead. Try again repeats the request.</p>
+    <p class="mock-note" data-when="not-found">Shown for an address that matches no route in the application, for example a mistyped path. An address that matches a page but carries a malformed or unknown record ID opens that page, whose read gets 404 from the API, so it shows its own not-found state instead, for example "Lead not found" with Back to leads. The shell stays, so every permitted destination is one step away. Focus moves to the heading.</p>
+    <p class="mock-note" data-when="access-denied" hidden>A collaborator reached Accounts or the Audit log during a session, for example through browser history after an administrator changed their role. Nothing protected was requested or shown. The same page appears when the API answers 403 on Accounts or the Audit log because a permission was removed mid-session. An address opened before signing in never ends here: after sign-in, an address the role can't use opens Home instead.</p>
+    <p class="mock-note" data-when="error" hidden>The API returned 500 before any page's own view existed: the access check for Accounts or the Audit log failed and no earlier check had succeeded, so access can't be decided. Other pages need no special access, so they open and report their own failures, except a project's Board tab, whose mode is read before its page exists. A routed page whose own read fails shows its own error state instead. The reference ID is the correlation ID of the server's diagnostic record; no stack traces or internal details are shown. Try again navigates to the same address again, so the checks run again even though the address hasn't changed. Without an access summary the navigation shows Home, Leads, and Projects only, and the user menu offers Sign out without a name or role. Opening a project's Board tab shows this page too when the project's mode read fails with 500 or 503, with that response's reference ID; the address stays on the board, and Try again opens the board again. A session summary is normally held then, so the navigation keeps Administration for administrators and the user menu shows the name and role.</p>
+    <p class="mock-note" data-when="offline" hidden>Shown when a request made before any page's own view exists can't reach the API, so there is nothing saved to show yet: the access check for Accounts or the Audit log got no response and no earlier check had succeeded. Other pages need no special access, so they open and report their own failures, except a project's Board tab, whose mode is read before its page exists. A routed page whose own first read gets no response shows its own error state. If content is already on screen it stays, and the application shell shows the offline banner (Notifications › Offline banner) instead until the next response arrives; there is no offline toast. Try again here navigates to the same address again, so the checks run again even though the address hasn't changed. Without an access summary the navigation shows Home, Leads, and Projects only, and the user menu offers Sign out without a name or role. Opening a project's Board tab shows this page too when the project's mode read gets no response; the address stays on the board, and Try again opens the board again. A session summary is normally held then, so the navigation keeps Administration for administrators and the user menu shows the name and role.</p>
   </div>
 
   <div class="mc-app">
@@ -64,7 +64,7 @@
         <li><a class="mc-nav__link" href="../leads/lead-directory.html"><span class="mc-icon mc-icon--users" aria-hidden="true"></span><span class="mc-nav__text">Leads</span></a></li>
         <li><a class="mc-nav__link" href="../projects/project-list.html"><span class="mc-icon mc-icon--folder" aria-hidden="true"></span><span class="mc-nav__text">Projects</span></a></li>
       </ul>
-      <div class="mc-nav-section mock-admin-only">
+      <div class="mc-nav-section mock-admin-only" data-unless="error offline">
         <p class="mc-nav__group" id="nav-admin">Administration</p>
         <ul class="mc-nav" aria-labelledby="nav-admin">
           <li><a class="mc-nav__link" href="../admin/accounts.html"><span class="mc-icon mc-icon--shield" aria-hidden="true"></span><span class="mc-nav__text">Accounts</span></a></li>
@@ -73,18 +73,20 @@
       </div>
       <div class="mc-sidebar__foot">
         <button class="mc-user-button" type="button" data-toggle aria-controls="user-menu" aria-expanded="false">
-          <span class="mc-avatar mock-admin-only" aria-hidden="true">QB</span>
-          <span class="mc-avatar mock-collaborator-only" aria-hidden="true">AO</span>
+          <span class="mc-avatar mock-admin-only" aria-hidden="true" data-unless="error offline">QB</span>
+          <span class="mc-avatar mock-collaborator-only" aria-hidden="true" data-unless="error offline">AO</span>
+          <span class="mc-avatar mc-avatar--muted" aria-hidden="true" data-when="error offline" hidden><span class="mc-icon mc-icon--user" aria-hidden="true"></span></span>
           <span class="mc-user-button__text">
-            <span class="mc-user-button__name mock-admin-only">Quinntyne Brown</span>
-            <span class="mc-user-button__name mock-collaborator-only">Ada Okafor</span>
-            <span class="mc-user-button__role mock-admin-only">Administrator</span>
-            <span class="mc-user-button__role mock-collaborator-only">Collaborator</span>
+            <span class="mc-user-button__name mock-admin-only" data-unless="error offline">Quinntyne Brown</span>
+            <span class="mc-user-button__name mock-collaborator-only" data-unless="error offline">Ada Okafor</span>
+            <span class="mc-user-button__role mock-admin-only" data-unless="error offline">Administrator</span>
+            <span class="mc-user-button__role mock-collaborator-only" data-unless="error offline">Collaborator</span>
+            <span class="mc-user-button__name" data-when="error offline" hidden>Your account</span>
           </span>
           <span class="mc-icon mc-icon--chevron-up mc-icon--sm" aria-hidden="true"></span>
         </button>
         <div class="mc-menu" id="user-menu">
-          <div class="mc-menu__header">
+          <div class="mc-menu__header" data-unless="error offline">
             <div class="mc-stack mc-stack--xs mock-admin-only">
               <strong>Quinntyne Brown</strong>
               <span class="mc-muted mc-text-sm">quinntynebrown@gmail.com</span>
@@ -96,7 +98,7 @@
               <span><span class="mc-pill"><span class="mc-icon mc-icon--user" aria-hidden="true"></span>Collaborator</span></span>
             </div>
           </div>
-          <div class="mc-menu__separator"></div>
+          <div class="mc-menu__separator" data-unless="error offline"></div>
           <button class="mc-menu__item" type="button" data-nav="../auth/login.html#state=signed-out">
             <span class="mc-icon mc-icon--log-out" aria-hidden="true"></span>Sign out
           </button>
@@ -111,7 +113,7 @@
         <section class="mc-empty mc-empty--page mc-empty--neutral" data-when="not-found" aria-labelledby="not-found-title">
           <span class="mc-empty__icon"><span class="mc-icon mc-icon--compass mc-icon--lg" aria-hidden="true"></span></span>
           <h1 class="mc-empty__title" id="not-found-title" tabindex="-1">That page doesn't exist</h1>
-          <p class="mc-empty__text">The link may be out of date, or what it pointed to was deleted. Check the address, or pick up from one of these places.</p>
+          <p class="mc-empty__text">The address may be mistyped or out of date. Check it, or pick up from one of these places.</p>
           <div class="mc-empty__actions">
             <a class="mc-button mc-button--primary" href="../home/home.html"><span class="mc-icon mc-icon--home" aria-hidden="true"></span>Go to Home</a>
             <a class="mc-button" href="../projects/project-list.html">View projects</a>

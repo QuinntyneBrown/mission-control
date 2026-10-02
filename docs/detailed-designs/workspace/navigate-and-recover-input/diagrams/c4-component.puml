@@ -2,15 +2,15 @@
 !include <C4/C4_Component>
 LAYOUT_WITH_LEGEND()
 title Components - Navigate with context and preserve form input
-Container(web, "Mission Control web client", "Angular", "ApplicationShell, RouteContext signal, guards, UnsavedChangesDialog, UserMenuView")
+Container(web, "Mission Control web client", "Angular", "ApplicationShell (offline banner with the reload route, ToastRegion host above dialogs, ShellStatusView status pages and the ** route), root RouteContext, guards, FormDraft delegation, UnsavedChangesDialog, UserMenuView, ToastService; session protocol and offline signal from the sign-in slice")
 ContainerDb(db, "Mission Control database", "SQL", "Accounts, roles, and audit events")
 Container_Boundary(api, "MissionControl.Api runtime") {
   Component(ctrl, "SessionsController", "API boundary", "Binds request and dispatches through MediatR 12.5.0")
   Component(access, "CurrentAccountAuthorization", "API authentication / authorization", "Validates JWT and checks current SQL account access")
   Component(validation, "ValidationBehavior", "Application pipeline", "Invokes request validators")
-  Component(entity, "CurrentSession", "Application / read projection", "Account ID, display name, role, capability summary; no contact data")
+  Component(entity, "CurrentSession", "Application / read projection", "Account ID, display name, email, role, capability summary; no contact data")
   Component(store, "MissionControlDataSession", "Infrastructure", "Implements Application data port; runs read queries")
-Rel(web, access, "check_access through ISessionService / SessionService; route records use their own services", "HTTPS")
+Rel(web, access, "refreshCapabilities() through ISessionService; route records use their own services; all pass sessionInterceptor", "HTTPS")
 Rel(access, db, "Checks current access for protected requests", "SQL")
 Rel(access, ctrl, "Forwards authenticated request")
 Rel(ctrl, validation, "Sends typed request")

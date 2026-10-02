@@ -4,6 +4,7 @@ skinparam shadowing false
 skinparam roundcorner 12
 skinparam defaultFontName Arial
 skinparam ArrowColor #344054
+skinparam maxMessageSize 300
 skinparam rectangle {
   BorderColor #344054
   FontColor #101828
@@ -16,7 +17,7 @@ skinparam package {
 title Behavior - Create a typed child or initiative
 actor "Authorized user" as actor
 box "Frontend - Mission Control application" #E0F2FE
-  participant "WorkHierarchyPage / WorkItemFormDialog / WorkItemView" as page
+  participant "Opening page / WorkItemFormDialog / WorkItemForm" as page
   participant "IWorkItemService / WorkItemService" as client
 end box
 box "Backend - MissionControl.Api" #D1FADF
@@ -31,8 +32,16 @@ end box
 box "Backend - MissionControl.Infrastructure" #FFF4E5
   database "Mission Control SQL" as db
 end box
-actor -> page : Add an initiative, or a child from its parent's row or detail
-page -> page : Preselect the launching parent; offer only valid same-workspace parents
+actor -> page : Add from the pinned header (registered by the tab page), an empty state, a parent's row, or the detail's children card
+page -> page : The page that offers Add (WorkHierarchyPage, WorkItemDetailPage, WorkListPage, BacklogPage, ProjectOverviewPage, KanbanBoardPage, or SprintBoardPage) opens WorkItemFormDialog with a WorkItemFormContext
+page -> page : Preselect context.parent; the parent combobox debounces typed text about 250 ms into parentQuery (GetWorkItemsQuery for the required parent type, matching title or parent title, bounded pages), so every valid parent is reachable; a task's hint names its story's sprint
+page -> page : WorkItemForm emits draftChange on every edit; the dialog and the opening page expose FormDraft
+opt Cancel, Close, or Escape with a dirty draft
+  page -> page : UnsavedChangesDialog asks first; Keep editing returns with every value; Discard closes and sends nothing
+end
+opt Assignee chosen
+  page -> page : Searchable active-people combobox; see the assignee sequence in Edit, assign, and reparent work
+end
 actor -> page : Save the form
 page -> page : Disable Save while pending (L2-031)
 page -> client : Build typed CreateWorkItemCommand
@@ -42,54 +51,60 @@ access -> db : Read current status, role and credential version
 db --> access : Current account access
 alt Missing, invalid or expired JWT; deactivated account
   access --> client : 401; audit denial without payloads
-  client --> page : Clear session; sign in with the project as return route
-else Authenticated without permission to create work
-  access --> client : 403; audit denial without payloads
-  client --> page : Keep input; explain that adding work is not permitted
-else Authorized
+  client --> page : sessionInterceptor calls SessionService.end(Unauthorized) once for this generation; the promise rejects with its 401 (nothing written); sign-in shows session-unsaved when a draft was dirty, then returns to the project
+else Authenticated active account (profile P: creating work needs no capability beyond an active session)
   access -> ctrl : Authorized request
   ctrl -> validation : Send CreateWorkItemCommand through MediatR 12.5.0
-  validation -> validation : L2-015 / L2-016 validate title 1-200, description up to 10,000, dates, story-only estimate, parent required by type
+  validation -> validation : L2-015 / L2-016 validate title 1-200, description up to 10,000, parent required by type; the command carries the type and both dates, so the validator also checks an estimate only for a story (a whole number of 0 or more) and a due date on or after the start date
   alt Invalid fields
     validation --> ctrl : 400 field errors; nothing read or changed
     ctrl --> client : Validation ProblemDetails
-    client --> page : Keep valid input; focus the linked error summary (validation state)
+    client --> page : Keep every value; one field error moves focus to that field, which reads its error; several focus the linked error summary (validation state); no Retry or reference ID
   else Valid request
     validation -> handler : Handle CreateWorkItemCommand
-    handler -> db : Lock workspace; load workspace, parent, assignee status, sibling tail, backlog tail, Kanban To Do tail
-    db --> handler : Current reference state
-    alt Workspace not found
+    handler -> db : BeginWorkspaceTransactionAsync takes the workspace lock first; then LoadWorkItemCreationAsync (workspace, parent, tracked sibling order, and for a story the backlog order and Kanban board) and LoadAccountStatusAsync for a chosen assignee
+    db --> handler : Current reference state, or lock-wait timeout
+    alt Workspace lock wait times out
+      handler --> ctrl : 503 with Retry-After; nothing read or changed
+      ctrl --> client : ProblemDetails (unavailable)
+      client --> page : Unavailable save, as for a 500: keep every value; alert with reference ID; focus stays on Save, which resends only when chosen (failed state)
+    else Workspace not found
       handler --> ctrl : 404; nothing changed
       ctrl --> client : ProblemDetails (not found)
-      client --> page : Close the dialog; not-found state linking to Projects
+      client --> page : WorkItemForm emits notFound; the dialog closes with NotFound; the page calls the layout's refresh(), so the header and the view show the project's not-found state linking to Projects
     else Parent missing or deleted, wrong level, or in another workspace
       handler --> ctrl : 400 invalid parent reference; nothing changed
       ctrl --> client : Validation ProblemDetails (parent field)
-      client --> page : Keep input; remove the deleted parent from the choices; parent field error (parent-deleted state)
-    else Chosen assignee inactive or unknown
+      client --> page : Keep input; remove the deleted parent from the choices; focus moves to the parent field, which reads its error; no Retry or reference ID (parent-deleted state)
+    else Chosen assignee deactivated after selection, or unknown
       handler --> ctrl : 400 invalid assignee; nothing changed
       ctrl --> client : Validation ProblemDetails (assignee field)
-      client --> page : Keep input; assignee field error (rejected state)
+      client --> page : Keep the draft; focus moves to the assignee field, which reads its error; no Retry or reference ID; a new search offers active people only (rejected state)
     else References valid
       handler -> entity : L2-015 create at the level its type requires; status To Do
       entity --> handler : New work item appended after the parent's existing children
-      handler -> db : L2-039 / L2-040 insert item, sibling position, story backlog tail and Kanban To Do tail placement, and success audit in one transaction
+      handler -> db : L2-039 / L2-040 AddWorkItem and AddAuditEvent, then SaveChangesAsync: insert the item, its sibling position and, for a story, its StoryBacklogPosition and To Do BoardPlacement as tracked children of the loaded orders; for a task increment the parent story's task revision only (the story's version and sprint versions unchanged); success audit; one transaction
       alt Commit fails
         db --> handler : Roll back business state and success audit
         handler --> ctrl : Generic 500 with correlation ID
         ctrl --> client : Failure; no successful-save claim
-        client --> page : Keep every value; show reference ID; Save retries the same request (failed state)
+        client --> page : Keep every value; alert with reference ID; focus stays on Save, which retries the same request only when chosen (failed state)
       else Commit succeeds
         db --> handler : New item ID and version; order versions incremented
         handler --> ctrl : Created item
         ctrl --> client : 201 with ID and version
-        client --> page : Close dialog; insert the item in the hierarchy signal
-        page --> actor : Announce the new item; focus its row
+        client --> page : WorkItemForm emits saved with a WorkItemSavedResult (the WorkItemSaved ID and version, the saved title, and the chosen parent's title, null for an initiative); the dialog closes with Saved(saved, title, parentTitle)
+        page -> page : The opening page increments its refresh counter, so its view rereads: every expanded branch's loaded window (outline), the detail and its children, the work list page, or the backlog page
+        page --> actor : The "Story added" toast (named for the item's type) through TOAST_SERVICE names the new item from title and its parent from parentTitle; focus returns to the control that opened the dialog
       end
     end
   end
 end
+opt No response to the create (timeout or network failure)
+  client --> page : The create may have committed: keep every value; the failed alert reads "We couldn't confirm whether the story was added" without a reference ID and asks to check the outline first; WorkItemForm emits unconfirmed, which the dialog relays, so the opening page increments its refresh counter and its view rereads at once; Save resends only when pressed
+end
 note over ctrl, db
+An unexpected 403 creates nothing; WorkItemForm keeps every value and emits forbidden, WorkItemFormDialog relays it, and the routed page shows the "Your access changed" toast through TOAST_SERVICE, without Retry or reference ID; the capability refresh still runs.
 A story is appended to the story backlog and gets a Kanban BoardPlacement at the bottom of To Do in either delivery mode.
 Unexpected failures return generic 500 plus correlation ID (L2-043).
 Diagnostics exclude secrets and contact payloads.
